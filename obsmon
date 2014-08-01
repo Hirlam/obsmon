@@ -1,0 +1,13 @@
+#!/bin/bash
+
+# Set path to SQLITE data bases
+export DBDIR_ECMA=${DBDIR_ECMA-$PWD/dbfiles/ecma/ts}
+export DBDIR_ECMA_SFC=${DBDIR_ECMA_SFC-$PWD/dbfiles/ecma_sfc/ts}
+export DBDIR_CCMA=${DBDIR_CCMA-$PWD/dbfiles/ccma/ts}
+
+echo "    DBDIR_ECMA: $DBDIR_ECMA"
+echo "DBDIR_ECMA_SFC: $DBDIR_ECMA_SFC"
+echo "    DBDIR_CCMA: $DBDIR_CCMA"
+
+# Call R-script
+Rscript obsmon.R || exit 1
