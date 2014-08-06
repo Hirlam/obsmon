@@ -1,10 +1,5 @@
 library(shiny)
 
-x1<-0
-x2<-32
-y1<-52
-y2<-73
-
 shinyUI(navbarPage("OBSMON v2",
   tabPanel("Upper air (3D-VAR/4D-VAR)",
     fluidRow(
@@ -12,17 +7,14 @@ shinyUI(navbarPage("OBSMON v2",
         wellPanel(
           fluidRow(
             column(7,
-              dateRangeInput("dateRange",
-                label = h5("Date range")
-              )
+              uiOutput("select_date")
             ),
             column(4,offset=1,
-              selectInput("cycle",h5("Cycle"),c("00","03","06","09","12","15","18","21","All"))
+              uiOutput("select_cycle")
             )
           ),
           hr(),
-          uiOutput("select_experiment1"),
-          uiOutput("select_experiment2")
+          uiOutput("select_experiment")
         )
       ),
       column(10,
@@ -58,14 +50,42 @@ shinyUI(navbarPage("OBSMON v2",
              selectInput("ODBbase",h5("Monitoring level:"),c("Screening","Minimization"))
           ),
           column(3,
-            uiOutput("plotButton"),
+            actionButton("doPlot", label = "Plot!"),
             tags$style(type='text/css', "#doPlot { vertical-align: middle; height: 70px; width: 100px; background: green; color: white;}")
           )
         ),
         hr(),
         fluidRow(
-          column(10,
-            plotOutput(outputId="ObsmonPlot")
+          column(12,
+            tabsetPanel(
+              tabPanel("Plot",
+                fluidRow(
+                  column(10,
+                    plotOutput(outputId="ObsmonPlot"),
+                    tags$style(type="text/css", "body { overflow-y: scroll; }")
+                  ),
+                  column(2,
+                    conditionalPanel(
+                      condition = "input.doPlot != 0",
+                      wellPanel(
+                        radioButtons('plotTypeFormat','Format of plot to download',c('eps','pdf','png'),'eps'),
+                        downloadButton("downloadImage","Download Plot")
+                      )
+                    )
+                  )
+                )
+              ),
+              tabPanel("Query and data used in last plot",
+                wellPanel(h5("Query used:"),
+                  uiOutput("query_used")
+                ),
+                hr(),
+                br(),
+                wellPanel(h5("Data:"),
+                  uiOutput("data_plotted")
+                )
+              )
+            )
           )
         )
       )
@@ -77,17 +97,14 @@ shinyUI(navbarPage("OBSMON v2",
         wellPanel(
           fluidRow(
             column(7,
-              dateRangeInput("dateRange_SA",
-                label = h5("Date range")
-              )   
+              uiOutput("select_date_SA")
             ),  
             column(4,offset=1,
-              selectInput("cycle_SA",h5("Cycle"),c("00","03","06","09","12","15","18","21","All"))
+              uiOutput("select_cycle_SA")
             )   
           ),  
           hr(),
-          uiOutput("select_experiment1_SA"),
-          uiOutput("select_experiment2_SA"),
+          uiOutput("select_experiment_SA"),
           selectInput("ODBbase_SA",h5("Monitoring level:"),c("Surface")),
           selectInput("level_SA",label=h5("Select level"),choices=c("Surface"))
         )
@@ -111,13 +128,43 @@ shinyUI(navbarPage("OBSMON v2",
           ),  
           column(4,
             uiOutput("plotButton_SA"),
+            actionButton("doPlot_SA", label = "Plot!"),
             tags$style(type='text/css', "#doPlot_SA { vertical-align: middle; height: 70px; width: 100px; background: green; color: white;}")
           )   
         ),
         hr(),
         fluidRow(
-          column(10,
-            plotOutput(outputId="ObsmonPlot_SA")
+          column(12,
+            tabsetPanel(
+              tabPanel("Plot",
+                fluidRow(
+                  column(10,
+                    plotOutput(outputId="ObsmonPlot_SA"),
+                    tags$style(type="text/css", "body { overflow-y: scroll; }")
+                  ),
+                  column(2,
+                    conditionalPanel(
+                      condition = "input.doPlot_SA != 0",
+
+                      wellPanel(
+                        radioButtons('plotTypeFormat_SA','Format of plot to download',c('eps','pdf','png'),'eps'),
+                        downloadButton("downloadImage_SA","Download Plot")
+                      )
+                    )         
+                  )
+                )
+              ),
+              tabPanel("Query and data used in last plot",
+                wellPanel(h5("Query used:"),
+                  uiOutput("query_used_SA")
+                ),
+                hr(),
+                br(),
+                wellPanel(h5("Data"),
+                  uiOutput("data_plotted_SA")
+                )
+              )
+            )
           )
         )
       )
@@ -132,26 +179,23 @@ shinyUI(navbarPage("OBSMON v2",
         uiOutput("select_plottype_predef")
       ),
       column(4,
-        uiOutput("plotButtonPreDef"),
-            tags$style(type='text/css', "#doPlotPreDef { vertical-align: middle; height: 70px; width: 200px; background: green; color: white;}")
+         actionButton("doPlotPreDef", label = "Generate pre-defined plot!"),
+         tags$style(type='text/css', "#doPlotPreDef { vertical-align: middle; height: 70px; width: 200px; background: green; color: white;}")
       )
     ),
     hr(),
     fluidRow(
       column(10,offset=2,
-        plotOutput(outputId="ObsmonPlotPreDef")
+        plotOutput(outputId="ObsmonPlotPreDef"),
+        tags$style(type="text/css", "body { overflow-y: scroll; }")
       )
     )
   ),
   tabPanel("Settings",
     fluidRow(
       column(12,
-        wellPanel(h4("Settings"),
-          sliderInput("x1",label=h4("x1"),value=x1,min=-180,max=180),
-          sliderInput("x2",label=h4("x2"),value=x2,min=-180,max=180),
-          sliderInput("y1",label=h4("y1"),value=y1,min=-90,max=90),
-          sliderInput("y2",label=h4("y2"),value=y2,min=-90,max=90),
-          renderPrint(DBPATH_ECMA)
+        wellPanel(h2("Settings"),
+          uiOutput("set_verbosity")
         )
       )
     )

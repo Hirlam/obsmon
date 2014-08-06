@@ -4,7 +4,6 @@
 
 default_obtypes     <- c("SYNOP","SHIP","AIRCRAFT","DRIBU","TEMP","SATEM","RADAR")
 listOfSensors       <- c("AMSUA","AMSUB","MHS","IASI")
-verbosity           <- 10
 
 # Normal plots
 plotTypesStat       <- c("FG+An departure")
@@ -17,10 +16,10 @@ default_experiments <- c("MetCoOp","Shiny environment","DMI")
 
 # Predefined plots
 preDefinedGroups    <- c("MetCoOp","DMI")
-preDefinedPlots     <- c("Plot 1","Plot 2")
 
 # setExperiment
 setExperiment <- function(exp,base){
+  if ( verbose("DEBUG")) { print(paste("DEBUG: -> setExperiment(",exp,base,")"))}
   setExperiment <- NULL
   if ( !is.null(exp)) {
     dbtry_ecma     <- NULL
@@ -42,10 +41,12 @@ setExperiment <- function(exp,base){
       dbtry_ccma     <- "/data4/portal/DMI/EXP/archive/extract/ccma/ts/ccma.db"
     }
 
-    print(exp)
-    print(dbtry_ecma)
-    print(dbtry_ecma_sfc)
-    print(dbtry_ccma)
+    if ( verbose("DEBUG")) {
+      print(paste("DEBUG:     ",exp))
+      print(paste("DEBUG:     ",dbtry_ecma))
+      print(paste("DEBUG:     ",dbtry_ecma_sfc))
+      print(paste("DEBUG:     ",dbtry_ccma))
+    }
 
     # Test if files exist
     if ( base == "Screening" ){
@@ -61,12 +62,18 @@ setExperiment <- function(exp,base){
         setExperiment <- dbtry_ecma_sfc
       }
     }
+
+    # Debug
+    if (!is.null(setExperiment)){
+      if ( verbose("DEBUG")) { print(paste("DEBUG: setExperiment=",setExperiment," base=",base))}
+    }
   }
   return (setExperiment)
 }
 
 # getExperiments
 getExperiments <- function(base){
+  if ( verbose("DEBUG")) { print(paste("DEBUG: -> getExperiments(",base,")")) }
   experiments<-NULL
   if ( !is.null(base)){
    for (n in 1:length(default_experiments)){
@@ -80,6 +87,7 @@ getExperiments <- function(base){
 
 # getObtypes
 getObtypes <- function(base){
+  if ( verbose("DEBUG")) { print(paste("DEBUG: -> getObtypes(",base,")")) }
   if ( !is.null(base)) {
     if ( base == "Surface" ){
       return(c("SYNOP"))
@@ -91,6 +99,7 @@ getObtypes <- function(base){
 
 # getObNumber
 getObNumber <- function(obtype){
+  if ( verbose("DEBUG")) { print(paste("DEBUG: -> getObNumber(",obtype,")")) }
   if ( !is.null(obtype)) {
     switch(obtype,"SYNOP"    = c("1"),
                   "SHIP"     = c("1"),
@@ -106,6 +115,7 @@ getObNumber <- function(obtype){
 
 # setQSatname
 setQSatname<-function(sat){
+  if ( verbose("DEBUG")) { print(paste("DEBUG: -> setQSatname(",sat,")")) }
   if ( !is.null(sat)) {
     switch(sat,
            "NOAA-15" = satname<-"noaa15",
@@ -122,6 +132,7 @@ setQSatname<-function(sat){
 
 # getPlotTypes
 getPlotTypes <- function(obtype,dateRange){
+  if ( verbose("DEBUG")) { print(paste("DEBUG: -> getPlotTypes(",obtype,dateRange,")")) }
   if ( !is.null(obtype)) {
     switch(obtype,"SATEM" = c(plotTypesStat,plotTypesTS,plotTypesMaps,plotTypesSat),c(plotTypesStat,plotTypesMaps))
   }
@@ -129,6 +140,7 @@ getPlotTypes <- function(obtype,dateRange){
 
 # getPlotTypeShort
 getPlotTypeShort <- function(plotType){
+  if ( verbose("DEBUG")) { print(paste("DEBUG: -> getPlotTypeShort(",plotType,")")) }
   if ( !is.null(plotType)) {
     switch(plotType,
            "FG+An departure"                = "FGAnDeparture",
@@ -146,14 +158,16 @@ getPlotTypeShort <- function(plotType){
 
 # getPreDefinedPlots
 getPreDefinedGroups <- function(){
+  if ( verbose("DEBUG")) { print("DEBUG: -> getPreDefinedGroups") }
   return(preDefinedGroups)
 }
 
 # getPreDefinedPlots
 getPreDefinedPlots <- function(group){
+  if ( verbose("DEBUG")) { print(paste("DEBUG: -> getPreDefinedPlots(",group,")")) }
   if (!is.null(group)){
     switch(group,
-               "MetCoOp" = c("Plot 1"," Plot 2"),
+               "MetCoOp" = c("Plot 1","Plot 2"),
                "No plots defined!"
    )
   }
@@ -162,6 +176,7 @@ getPreDefinedPlots <- function(group){
 
 # getVariables
 getVariables <- function(obtype,base){
+  if ( verbose("DEBUG")) { print(paste("DEBUG: -> getVariables(",obtype,base,")")) }
   if ( !is.null(obtype) && !is.null(base)) {
     if ( base == "Surface" ) {
       synop_vars          <- c("t2m","rh2m","snow")
@@ -189,6 +204,7 @@ getVariables <- function(obtype,base){
 
 # getLevels
 getLevels <- function(obtype,var,plotType){
+  if ( verbose("DEBUG")) { print(paste("DEBUG: -> getLevels(",obtype,var,plotType,")")) }
   if ( !is.null(obtype) && !is.null(var)) {
     listOfLevels_p      <- c("100000","92500","80000","60000","45000","35000","27500","22500","17500","12500","8500","6500","4000","2500","1500")
     listOfLevels_z      <- c("250","500","1000","1500","2000","3000","4000","5000","6000","7000","8000","9000","10000","20000")
@@ -226,11 +242,13 @@ getLevels <- function(obtype,var,plotType){
 
 # getSensors
 getSensors <- function(){
+  if ( verbose("DEBUG")) { print("DEBUG: -> getSensors") }
   return(listOfSensors)
 }
 
 # getSatelites
 getSatelites <- function(sensor){
+  if ( verbose("DEBUG")) { print(paste("DEBUG: -> getSatelites(",sensor,")")) }
 
   if ( !is.null(sensor)) {
     # Set satelites pr. sensor
@@ -244,6 +262,7 @@ getSatelites <- function(sensor){
 
 # getChannels
 getChannels <- function(sensor){
+  if ( verbose("DEBUG")) { print(paste("DEBUG: -> getChannels",sensor,")")) }
   if ( !is.null(sensor)) {
     listOfChannelsAMSUA <- c("1","2","3","4","5","6","7","8","9","10","11","12","13","14","15")
     listOfChannelsAMSUB <- c("1","2","3","4","5")
@@ -260,6 +279,7 @@ getChannels <- function(sensor){
 }
 
 getUnit<-function(varName){
+  if ( verbose("DEBUG")) { print(paste("DEBUG: -> getUnit(",varName,")")) }
   if ( !is.null(varName)) {
     switch(varName, "u"    = "m/s",
                     "u10m" = "m/s",
@@ -276,12 +296,61 @@ getUnit<-function(varName){
   }
 }
 
+
+getLatestDate <- function(base){
+  if ( verbose("DEBUG")) { print(paste("DEBUG: -> getLatestDate(",base,")")) }
+  date<-NULL
+  dbConn <- connect(base)
+  if ( !is.null(dbConn)){
+    plotQuery<-paste("SELECT dtg FROM obsmon ORDER BY dtg DESC LIMIT 1")
+    if ( verbose("INFO")) { print(paste("INFO: ",plotQuery)) } 
+    plotData <- data.frame(dbGetQuery(dbConn,plotQuery))
+    disconnect
+    date<-paste(substr(plotData$DTG,1,4),"-",substr(plotData$DTG,5,6),"-",substr(plotData$DTG,7,8),sep="")
+  }
+  return(date)
+}
+
+getLatestCycle <- function(base){
+  if ( verbose("DEBUG")) { print(paste("DEBUG: -> getLatestCycle(",base,")")) }
+  cycle<-NULL
+  dbConn <- connect(base)
+  if ( !is.null(dbConn)){
+    plotQuery<-paste("SELECT dtg FROM obsmon ORDER BY dtg DESC LIMIT 1")
+    if (verbose("INFO")) { print(paste("INFO: ",plotQuery)) }  
+    plotData <- data.frame(dbGetQuery(dbConn,plotQuery))
+    disconnect
+    cycle<-paste(substr(plotData$DTG,9,10),sep="")
+  }
+  return(cycle)
+}
+
+verbose <- function(level){
+  verb=FALSE
+  if ( !is.null(level)) {
+    # Default if level is misspelled is DEBUG
+    switch(level,"DEBUG" = {verbositylevel=2}, "INFO" = {verbositylevel=1}, "NONE" = {verbositylevel=0}, {verbositylevel=2})
+    if ( !is.null(input$verbosity_chosen)) {
+      if ( input$verbosity_chosen == "DEBUG" && verbositylevel <= 2) {
+        verb=TRUE
+      } else if ( input$verbosity_chosen == "INFO" && verbositylevel <= 1 ){
+         verb=TRUE
+      }
+    } else {
+      # Default is verbose as long as input$verbosity is not initialized
+      verb=TRUE
+    }
+  }
+  return(verb)
+}
+
 #
 # SQLite and file functions
 #
 
 # getFile
 getFile <- function(base){
+  if ( verbose("DEBUG")) { print(paste("DEBUG: -> getFile(",base,")")) }
   fname<-NULL
   if ( !is.null(base)){
     # Set file name either from experiment description or from uploaded file
@@ -297,17 +366,17 @@ getFile <- function(base){
       fname<-setExperiment(input$experiment,base)
     }
   }
+  return(fname)
 }
 
 
 # connect
 connect <- function(base){
+  if ( verbose("DEBUG")) { print(paste("DEBUG: -> connect(",base,")")) }
   dbConn<-NULL
   if ( !is.null(base)) {
-    print(input$experiment)
-    print(base)
     fname <- getFile(base)
-    print(fname)
+    if ( verbose("DEBUG")) { print(paste("DEBUG: -> connect -> ",fname)) }
     if (!is.null(fname) && file.exists(fname)){
       dbConn <- dbConnect("SQLite",fname)
     }
@@ -317,6 +386,7 @@ connect <- function(base){
 
 # disconnect
 disconnect <- function(dbConn){
+  if ( verbose("DEBUG")) { print("DEBUG: -> disconnect") }
   if ( !is.null(dbConn)) {
     dbDisconnect(dbConn)
   }
