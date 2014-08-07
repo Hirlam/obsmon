@@ -19,7 +19,34 @@
 
       dbConn<-connect(odbBase)
       obPlot<-NULL
-      if ( plotName == "FirstGuessDepartureMap" || plotName == "FirstGuessBCDepartureMap" || plotName == "AnalysisDepartureMap" || plotName == "BiasCorrectionMap" || plotName == "ObservationsMap" ) {
+      if ( plotName == "NumberOfObservations"){
+        if (obNumber == "7") {
+          qsatelite<-setDBSatname(as.character(satelite))
+          channelListQuery<-setChannelList()
+          values$plotQuery<-paste("SELECT DTG,nobs_total,level FROM obsmon",
+                           " WHERE obnumber = ",obNumber,
+                           " AND DTG >= ",dtgbeg,
+                           " AND DTG <= ",dtgend,
+                           " AND obname == '",tolower(sensor),"'",
+                           " AND satname == '",qsatelite,"'",
+                           channelListQuery,sep="")
+          title<-paste(plotName,obName,satelite," channel=",channel,dtgstr)
+        }else{
+          levelListQuery<-setLevelList(channel)
+
+          values$plotQuery<-paste("SELECT DTG,nobs_total,level FROM obsmon",
+                           " WHERE obnumber = ",obNumber,
+                           " AND DTG >= ",dtgbeg,
+                           " AND DTG <= ",dtgend,
+                           " AND obname == '",obname,"'",
+                           " AND varname == '",varName,"'",
+                           levelListQuery,sep="")
+          title<-paste(plotName,obName,varName," Level=",channel,dtgstr)
+        }
+        if ( verbose("INFO") ) { paste("INFO: ",print(values$plotQuery))}
+        values$plotData <- data.frame(dbGetQuery(dbConn,values$plotQuery))
+        obPlot <- NumberOfObservations(title)
+      } else if ( plotName == "FirstGuessDepartureMap" || plotName == "FirstGuessBCDepartureMap" || plotName == "AnalysisDepartureMap" || plotName == "BiasCorrectionMap" || plotName == "ObservationsMap" ) {
         if ( plotName == "FirstGuessDepartureMap" ){
           sql<-"fg_dep"
         }else if ( plotName == "FirstGuessBCDepartureMap" ){
@@ -33,12 +60,12 @@
         }
 
         if (obNumber == "7") {
-          qsatelite<-setQSatname(as.character(satelite))
-          channelListQuery<-setChannelList(channel,obname,satelite)
+          qsatelite<-setDBSatname(as.character(satelite))
+          channelListQuery<-setChannelList()
           values$plotQuery<-paste("SELECT latitude,longitude,",sql," FROM usage",
                            " WHERE obnumber = ",obNumber,
                            " AND dtg == ",dtg,
-                           " AND obname == '",obname,"'",
+                           " AND obname == '",tolower(sensor),"'",
                            " AND satname == '",qsatelite,"'",
                            channelListQuery,sep="")
           title<-paste(plotName,obName,satelite," channel=",channel,dtgstr)
@@ -79,17 +106,17 @@
 #####################
 
       }else if (obNumber == "7") {
-        qsatelite<-setQSatname(as.character(satelite))
+        qsatelite<-setDBSatname(as.character(satelite))
 
 #
 # Usage map, satellite
 #
         if ( plotName == "ObservationUsage" ) {
-          channelListQuery<-setChannelList(channel,obname,satelite)
+          channelListQuery<-setChannelList()
           values$plotQuery<-paste("SELECT latitude,longitude,active,rejected,passive,blacklisted,anflag FROM usage",
                            " WHERE obnumber == ",obNumber,
                            " AND DTG == ",dtg,
-                           " AND obname == '",obname,"'",
+                           " AND obname == '",tolower(sensor),"'",
                            " AND satname == '",qsatelite,"'",
                            channelListQuery,sep="")
           if ( verbose("INFO") ) { print(paste("INFO: ",values$plotQuery))}
@@ -104,10 +131,10 @@
 # Bias correction time-series
 #
         } else if ( plotName == "BiasCorrection" || plotName == "Hovmoller" ) {
-          channelListQuery<-setChannelList(channel,obname,satelite)
+          channelListQuery<-setChannelList()
           values$plotQuery <- paste("SELECT DTG,fg_bias_total,fg_uncorr_total,nobs_total,level FROM obsmon",
                              " WHERE obnumber == ",obNumber,
-                             " AND obname == '",obname,"'",
+                             " AND obname == '",tolower(sensor),"'",
                              " AND satname == '",qsatelite,"'",
                              " AND DTG >= ",dtgbeg,
                              " AND DTG <= ",dtgend,
@@ -135,7 +162,7 @@
         } else if ( plotName == "FGAnDeparture" ) {
           values$plotQuery <- paste("SELECT DTG,fg_bias_total,an_bias_total,fg_rms_total,an_rms_total,nobs_total,level FROM obsmon",
                              " WHERE obnumber ==",obNumber,
-                             " AND obname == '",obname,"'",
+                             " AND obname == '",tolower(sensor),"'",
                              " AND satname == '",qsatelite,"'",
                              " AND DTG == ",dtg,
                              " AND level>=1 AND level<=10000",
@@ -240,30 +267,63 @@
 setLevelList<-function(level){
   if ( verbose("DEBUG") ) { print(paste("DEBUG: -> setLevelList",level)) }
 
-  if ( is.null(level) ){ level="ALL" }
-  sql<-""
-  levelList<-input$level
-  lev<-as.character(level)
-  test<-grep("-",lev)
-  if ( lev == "ALL" || lev == "Surface" ){
-    # Empty string, return sql
-  } else if (length(test)>0){
-    levels<-unlist(strsplit(lev, "-"))
-    sql<-paste(sql,"AND (")
-    first<-TRUE
-    for (i in 1:length(levelList)){
-      if ( as.numeric(levelList[i]) >= as.numeric(levels[1]) && as.numeric(levelList[i]) <= as.numeric(levels[2]) ){
-        if ( ! first ) {sql<-paste(sql," OR ")}
-        sql<-paste(sql," level == ",levelList[i],sep="")
-        first<-FALSE
+  if ( is.null(input$level) ){
+    return("")
+  }
+  selected_levels=input$level
+  all=FALSE
+  for ( i in 1:length(selected_levels)){ 
+    if ( selected_levels[i] == "ALL" ) {
+      all=TRUE
+    }
+    if ( selected_levels[i] == "Surface" ) {
+      all=TRUE
+    }
+  }
+  if ( all ) {
+    return("")
+  } else {
+    if ( length(selected_levels) > 0 ) {
+      sql=" AND ("
+      for ( i in 1:length(selected_levels)){ 
+        or=""
+        if ( i != 1 ) { or=" OR " }
+        sql=paste(sql,or,"( level == ",selected_levels[i],") ",sep="")
+      }
+      sql=paste(sql,")")
+    }
+    return(sql)
+  }
+}
+setChannelList<-function(){
+    if ( verbose("DEBUG") ) { print("DEBUG: -> setChannelList") }
+
+    if ( is.null(input$channel) ){
+      return("")
+    } 
+    selected_channels=input$channel
+    all=FALSE
+    for ( i in 1:length(selected_channels)){ 
+      if ( selected_channels[i] == "ALL" ) {
+        all=TRUE
       }
     }
-    sql<-paste(sql,")")
-  }else{
-    sql<-paste(sql,"AND ( level == ",level,")")
+    if ( all ) {
+      return("")
+    } else {
+      if ( length(selected_channels) > 0 ) {
+        sql=" AND ("
+        for ( i in 1:length(selected_channels)){ 
+      
+          or=""
+          if ( i != 1 ) { or=" OR " }
+          sql=paste(sql,or,"( level == ",selected_channels[i],") ",sep="")
+        }
+        sql=paste(sql,")")
+      }
+      return(sql)
+    }
   }
-  return(sql)
-}
 
 ###########
 #
@@ -412,4 +472,19 @@ setLevelList<-function(level){
     }
     return(obPlot)
   }
+  NumberOfObservations<- function(title){
+    if ( verbose("DEBUG") ) { print(paste("DEBUG: -> NumberOfObservations",title)) }
 
+    obPlot=NULL
+    print(values$plotData)
+    #values$plotData$datetime=strptime(c(values$plotData$DTG),"%Y%m%d%H%M")
+
+    #print(values$plotData)
+    #obPlot <- ggplot(data=values$plotData,aes(x=datetime, y=nobs_total, fill=c("red"))) + geom_bar(stat="identity") + guides(fill=FALSE) +
+    #          labs(title = title)
+    obPlot<-ggplot(values$plotData,aes(x=DTG,y=level,fill=nobs_total))+geom_raster()
+    obPlot <- obPlot + xlab("DATE")+ylab("Level/channels")
+    obPlot <- obPlot + labs(title=title)
+
+    return(obPlot) 
+  }

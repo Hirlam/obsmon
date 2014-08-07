@@ -19,7 +19,7 @@ shinyUI(navbarPage("OBSMON v2",
       ),
       column(10,
         fluidRow(
-          column(3,
+          column(5,
             fluidRow(
               column(6,
                 uiOutput("select_obtype")
@@ -46,10 +46,10 @@ shinyUI(navbarPage("OBSMON v2",
               uiOutput("select_level")
             )
           ),
-          column(3,
+          column(2,
              selectInput("ODBbase",h5("Monitoring level:"),c("Screening","Minimization"))
           ),
-          column(3,
+          column(2,
             actionButton("doPlot", label = "Plot!"),
             tags$style(type='text/css', "#doPlot { vertical-align: middle; height: 70px; width: 100px; background: green; color: white;}")
           )
@@ -186,8 +186,50 @@ shinyUI(navbarPage("OBSMON v2",
     hr(),
     fluidRow(
       column(10,offset=2,
-        plotOutput(outputId="ObsmonPlotPreDef"),
-        tags$style(type="text/css", "body { overflow-y: scroll; }")
+        tabsetPanel(
+          tabPanel("Plot",
+            fluidRow(
+              column(12,
+                uiOutput("commentPreDefined")
+              )
+            ),
+            fluidRow(
+              column(12,
+                plotOutput(outputId="ObsmonPlotPreDef"),
+                tags$style(type="text/css", "body { overflow-y: scroll; }")
+              )
+            )
+          ),
+          tabPanel("Query and data used in last plot",
+            wellPanel(h5("Query used:"),
+              uiOutput("query_usedPreDefined")
+            ),
+            hr(),
+            br(),
+            wellPanel(h5("Data:"),
+              uiOutput("data_plottedPreDefined")
+            )
+          )
+        )
+      )
+    )
+  ),
+  tabPanel("Dump database",
+    fluidRow(
+      column(4,align="right",
+             selectInput("ODBbase_dump",h5("Monitoring level to dump: (NB! Do not dump big data bases as this could be demanding for your system)"),c("Screening","Minimization","Surface"))
+      ),
+      column(4,align="right",
+             selectInput("dump_table",h5("Table to dump:"),c("obsmon","usage"))
+      ),
+      column(4,
+         actionButton("doDump", label = "Dump database"),
+         tags$style(type='text/css', "#doDump { vertical-align: middle; height: 70px; width: 200px; background: green; color: white;}")
+      )
+    ),
+    fluidRow(
+      column(12,align="right",
+        uiOutput("dumpDB")
       )
     )
   ),
@@ -195,7 +237,8 @@ shinyUI(navbarPage("OBSMON v2",
     fluidRow(
       column(12,
         wellPanel(h2("Settings"),
-          uiOutput("set_verbosity")
+          uiOutput("set_verbosity"),
+          checkboxInput(inputId="showExistingDataOnly",label=h5("Show existing data only"),value=TRUE)
         )
       )
     )
