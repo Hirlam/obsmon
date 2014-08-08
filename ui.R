@@ -3,7 +3,7 @@ library(shiny)
 shinyUI(navbarPage("OBSMON v2",
   tabPanel("Upper air (3D-VAR/4D-VAR)",
     fluidRow(
-      column(2,
+      column(3,
         wellPanel(
           fluidRow(
             column(7,
@@ -17,8 +17,11 @@ shinyUI(navbarPage("OBSMON v2",
           uiOutput("select_experiment")
         )
       ),
-      column(10,
+      column(9,
         fluidRow(
+          column(2,
+             selectInput("ODBbase",h5("Monitoring level:"),c("Screening","Minimization"))
+          ),
           column(5,
             fluidRow(
               column(6,
@@ -27,7 +30,8 @@ shinyUI(navbarPage("OBSMON v2",
             ),
             fluidRow(
               column(6,
-                uiOutput("select_plottype")
+                uiOutput("select_plottype"),
+                tags$style(type='text/css', "#select_plottype { width: 250px;}")
               )
             )
           ),
@@ -45,9 +49,6 @@ shinyUI(navbarPage("OBSMON v2",
               uiOutput("select_variable"),
               uiOutput("select_level")
             )
-          ),
-          column(2,
-             selectInput("ODBbase",h5("Monitoring level:"),c("Screening","Minimization"))
           ),
           column(2,
             actionButton("doPlot", label = "Plot!"),
@@ -93,7 +94,7 @@ shinyUI(navbarPage("OBSMON v2",
   ),
   tabPanel("Surface (CANARI)",
     fluidRow(
-      column(2,
+      column(3,
         wellPanel(
           fluidRow(
             column(7,
@@ -109,7 +110,7 @@ shinyUI(navbarPage("OBSMON v2",
           selectInput("level_SA",label=h5("Select level"),choices=c("Surface"))
         )
       ),  
-      column(10,
+      column(9,
         fluidRow(
           column(4,
             fluidRow(
@@ -119,7 +120,8 @@ shinyUI(navbarPage("OBSMON v2",
             ),  
             fluidRow(
               column(6,
-                uiOutput("select_plottype_SA")
+                uiOutput("select_plottype_SA"), 
+                tags$style(type='text/css', "#select_plottype_SA { width: 250px;}")
               )   
             )   
           ),  
@@ -216,15 +218,23 @@ shinyUI(navbarPage("OBSMON v2",
   ),
   tabPanel("Dump database",
     fluidRow(
+      column(12,align="center",
+        wellPanel(
+          h5("NB! Do not dump big data bases as this could be demanding for your system")
+        )
+      )
+    ),
+    fluidRow(
       column(4,align="right",
-             selectInput("ODBbase_dump",h5("Monitoring level to dump: (NB! Do not dump big data bases as this could be demanding for your system)"),c("Screening","Minimization","Surface"))
+             selectInput("ODBbase_dump",h5("Monitoring level to dump:"),c("Screening","Minimization","Surface"))
       ),
       column(4,align="right",
              selectInput("dump_table",h5("Table to dump:"),c("obsmon","usage"))
       ),
       column(4,
-         actionButton("doDump", label = "Dump database"),
-         tags$style(type='text/css', "#doDump { vertical-align: middle; height: 70px; width: 200px; background: green; color: white;}")
+         uiOutput("dumpDB_button"),
+         tags$style(type='text/css', "#doDump { vertical-align: middle; height: 70px; width: 200px; background: green; color: white;}"),
+         tags$style(type='text/css', "#doDumpDisabled { vertical-align: middle; height: 70px; width: 200px; background: red; color: white;}")
       )
     ),
     fluidRow(
@@ -240,6 +250,20 @@ shinyUI(navbarPage("OBSMON v2",
           uiOutput("set_verbosity"),
           checkboxInput(inputId="showExistingDataOnly",label=h5("Show existing data only"),value=TRUE)
         )
+      )
+    )
+  ),
+  tabPanel("Help",
+    fluidRow(
+      column(12,
+        wellPanel(h2("About"),
+          p("Developed by ",a("HIRLAM",href="http://hirlam.org",style = "color:blue")," as a tool to monitor observation usage in ",
+          span("HARMONIE",style = "color:blue"),".")
+        )
+      ),
+      wellPanel(h2("Help"),
+        h4("Usage"),
+        p("Shiny is reactive. It means when you change something that has a dependency, the dependency will adjust.")
       )
     )
   )

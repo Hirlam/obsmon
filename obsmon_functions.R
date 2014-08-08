@@ -179,15 +179,15 @@ getPlotTypeShort <- function(plotType){
     switch(plotType,
            "FG+An departure"                = "FGAnDeparture",
            "Observation usage (map)"        = "ObservationUsage",
-           "Bias correction"                = "BiasCorrection",
-           "Hovmoeller"                     = "Hovmoller",
+           "Bias correction (TS)"           = "BiasCorrection",
+           "Hovmoeller (TS)"                = "Hovmoller",
            "First guess departure (map)"    = "FirstGuessDepartureMap",
            "FG dep + Bias correction (map)" = "FirstGuessBCDepartureMap",
            "Analysis departure (map)"       = "AnalysisDepartureMap",
            "Bias correction (map)"          = "BiasCorrectionMap",
            "Observations (map)"             = "ObservationsMap",
            "Number of observations (TS)"    = "NumberOfObservations",
-           "Undefined")
+           NULL)
   }
 }
 
@@ -279,7 +279,7 @@ getVariables <- function(obtype,base,daterange,cycle){
 # getLevels
 getLevels <- function(obtype,var,plotType){
   if ( verbose("DEBUG")) { print(paste("DEBUG: -> getLevels(",obtype,var,plotType,")")) }
-  if ( !is.null(obtype) && !is.null(var)) {
+  if ( !is.null(obtype) && !is.null(var) && !is.null(plotType)) {
     listOfLevels_p      <- c("100000","92500","80000","60000","45000","35000","27500","22500","17500","12500","8500","6500","4000","2500","1500")
     listOfLevels_z      <- c("250","500","1000","1500","2000","3000","4000","5000","6000","7000","8000","9000","10000","20000")
 
@@ -480,10 +480,10 @@ getChannels <- function(base,sensor,sat,daterange,cycle){
     listOfChannelsIASI  <- c("16","38","49","51","55","57","59","61","63","66","70","72","74","79","81","83","85","87","89","92","95","97","99","101","104","106","109","111","113","116","119","122","125","128","131","133","135","138","141","144","146","148","151","154","157","159","161","163","165","167","170","173","176","178","179","180","183","185","187","189","191","193","195","197","199","201","203","205","207","210","212","214","217","219","222","224","226","228","230","232","234","236","239","241","242","243","246","249","252","254","256","258","260","262","265","267","269","271","272","273","275","278","280","282","284","286","288","290","292","294","296","299","301","303","306","308","310","312","314","316","318","320","323","325","327","329","331","333","335","337","339","341","343","345","347","350","352","354","356","358","360","362","364","366","369","371","373","375","377","379","381","383","386","389","398","401","404","407","410","414","416","426","428","432","434","439","445","457","515","546","552","559","566","571","573","646","662","668","756","867","906","921","1027","1046","1090","1121","1133","1191","1194","1271","1479","1509","1513","1521","1536","1574","1578","1579","1585","1587","1626","1639","1643","1652","1658","1671","1786","1805","1884","1946","1991","2019","2094","2119","2213","2239","2245","2271","2321","2398","2701","2741","2745","2819","2889","2907","2910","2919","2939","2944","2948","2951","2958","2977","2985","2988","2991","2993","3002","3008","3014","3027","3029","3036","3047","3049","3053","3058","3064","3069","3087","3093","3098","3105","3107","3110","3127","3136","3151","3160","3165","3168","3175","3178","3207","3228","3244","3248","3252","3256","3263","3281","3303","3309","3312","3322","3339","3375","3378","3411","3438","3440","3442","3444","3446","3448","3450","3452","3454","3458","3467","3476","3484","3491","3497","3499","3504","3506","3509","3518","3522","3527","3540","3555","3575","3577","3580","3582","3586","3589","3599","3645","3653","3658","3661","3943","4032","5130","5368","5371","5379","5381","5383","5397","5399","5401","5403","5405","5455","5480","5483","5485","5492","5502","5507","5509","5517","5558","5988","5992","5994","6003","6350","6458","6463","6601","6962","6978","6980","6982","6985","6987","6989","6991","6993","6995","6997","7001","7267","7269","7389","7424","7426","7428","7885","8007")
 
     # Set channels
-    switch(sensor, "AMSUA" = {channels=c("ALL",listOfChannelsAMSUA)},
-                   "AMSUB" = {channels=c("ALL",listOfChannelsAMSUB)},
-                   "MHS"   = {channels=c("ALL",listOfChannelsMHS)},
-                   "IASI"  = {channels=c("ALL",listOfChannelsIASI)}
+    switch(sensor, "AMSUA" = {channels=c(listOfChannelsAMSUA)},
+                   "AMSUB" = {channels=c(listOfChannelsAMSUB)},
+                   "MHS"   = {channels=c(listOfChannelsMHS)},
+                   "IASI"  = {channels=c(listOfChannelsIASI)}
     )
 
     if ( input$showExistingDataOnly ){
@@ -558,12 +558,14 @@ verbose <- function(level){
   verb=FALSE
   if ( !is.null(level)) {
     # Default if level is misspelled is DEBUG
-    switch(level,"DEBUG" = {verbositylevel=2}, "INFO" = {verbositylevel=1}, "NONE" = {verbositylevel=0}, {verbositylevel=2})
+    switch(level,"DEBUG" = {verbositylevel=3}, "INFO" = {verbositylevel=2},"WARNING" = {verbositylevel=1}, "NONE" = {verbositylevel=0}, {verbositylevel=2})
     if ( !is.null(input$verbosity_chosen)) {
-      if ( input$verbosity_chosen == "DEBUG" && verbositylevel <= 2) {
+      if ( input$verbosity_chosen == "DEBUG" && verbositylevel <= 3) {
         verb=TRUE
-      } else if ( input$verbosity_chosen == "INFO" && verbositylevel <= 1 ){
-         verb=TRUE
+      } else if ( input$verbosity_chosen == "INFO" && verbositylevel <= 2 ){
+        verb=TRUE
+      } else if ( input$verbosity_chosen == "WARNING" && verbositylevel <= 1 ){
+        verb=TRUE
       }
     } else {
       # Default is verbose as long as input$verbosity is not initialized
@@ -635,5 +637,60 @@ disconnect <- function(dbConn){
   if ( !is.null(dbConn)) {
     dbDisconnect(dbConn)
   }
+}
+
+# Help functions for SQL extraction
+# setLevelList
+setLevelList<-function(selected_levels){
+  if ( verbose("DEBUG") ) { print(paste("DEBUG: -> setLevelList",selected_levels)) }
+
+  if ( is.null(selected_levels) ){
+    return("")
+  }
+  all=FALSE
+  for ( i in 1:length(selected_levels)){
+    if ( selected_levels[i] == "ALL" ) {
+      all=TRUE
+    }
+    if ( selected_levels[i] == "Surface" ) {
+      all=TRUE
+    }
+  }
+  if ( all ) {
+    return("")
+  } else {
+    if ( length(selected_levels) > 0 ) {
+      sql=" AND ("
+      for ( i in 1:length(selected_levels)){ 
+        or=""
+        if ( i != 1 ) { or=" OR " }
+        sql=paste(sql,or,"( level == ",selected_levels[i],") ",sep="")
+      }
+      sql=paste(sql,")",sep="")
+    }
+    return(sql)
+  }
+}
+
+# setChannelList
+setChannelList<-function(selected_channels){
+  if ( verbose("DEBUG") ) { print(paste("DEBUG: -> setChannelList(",selected_channels,")")) }
+
+  if ( is.null(selected_channels) ){
+    return("")
+  }
+  if ( length(selected_channels) > 0 ) {
+    sql=" AND ("
+    for ( i in 1:length(selected_channels)){
+      if ( selected_channels[i] != "ALL" ) {
+
+        or=""
+        if ( i != 1 ) { or=" OR " }
+        sql=paste(sql,or,"( level == ",selected_channels[i],") ",sep="")
+      }
+    }
+    sql=paste(sql,")",sep="")
+  }
+  return(sql)
 }
 

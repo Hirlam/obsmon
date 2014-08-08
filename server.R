@@ -5,6 +5,7 @@ require(RSQLite)
 library(ggplot2)
 require(jpeg)
 require(reshape2)
+require(chron)
 
 widthOfPlot=800
 map.world<-map_data(map="world")
@@ -12,6 +13,7 @@ map.world<-map_data(map="world")
 values<-reactiveValues()
 values$plotData=NULL
 values$plotQuery=NULL
+values$productionSite=FALSE
 
 shinyServer(function(input,output) {
 
@@ -79,20 +81,20 @@ shinyServer(function(input,output) {
   output$select_cycle <- renderUI({
     if ( verbose("DEBUG")) { print("DEBUG: -> select_cycle") }
     if ( is.null(input$base)) {
-      selectInput("cycle",h5("Cycle"),c("00","03","06","09","12","15","18","21","All"),selected = getLatestCycle("Screening")
+      selectInput("cycle",h5("Cycle"),c("00","03","06","09","12","15","18","21"),selected = getLatestCycle("Screening")
       )
     }else{
-      selectInput("cycle",h5("Cycle"),c("00","03","06","09","12","15","18","21","All"),selected = getLatestCycle(input$base))
+      selectInput("cycle",h5("Cycle"),c("00","03","06","09","12","15","18","21"),selected = getLatestCycle(input$base))
     }
   })
   # select_cycle_SA
   output$select_cycle_SA <- renderUI({
     print("DEBUG: -> select_cycle_SA")
     if ( is.null(input$base_SA)) {
-      selectInput("cycle_SA",h5("Cycle"),c("00","03","06","09","12","15","18","21","All"),selected = getLatestCycle("Screening")
+      selectInput("cycle_SA",h5("Cycle"),c("00","03","06","09","12","15","18","21"),selected = getLatestCycle("Screening")
       )
     }else{
-      selectInput("cycle_SA",h5("Cycle"),c("00","03","06","09","12","15","18","21","All"),selected = getLatestCycle(input$base_SA))
+      selectInput("cycle_SA",h5("Cycle"),c("00","03","06","09","12","15","18","21"),selected = getLatestCycle(input$base_SA))
     }
   })
 
@@ -105,7 +107,7 @@ shinyServer(function(input,output) {
   # select_obtype_SA
   output$select_obtype_SA <- renderUI({
      if ( verbose("DEBUG")) { print("DEBUG: -> select_obtype_SA") }
-     selectInput(inputId = "obtype_SA",label=h5("Select observation type"),choices=getObtypes(input$ODBbase_SA,input$dateRange_SA,input$cycle_SA))
+     selectInput(inputId = "obtype_SA",label=h5("Select observation type"),choices=getObtypes(input$ODBbase_SA,input$dateRange_SA,input$cycle_SA),selected=values$last_obtype)
   })
 
 
@@ -199,7 +201,11 @@ shinyServer(function(input,output) {
 
   # set_verbosity
   output$set_verbosity <- renderUI({
-    selectInput(inputId="verbosity_chosen",label=h4("Verbosity"),choices=c("NONE","INFO","DEBUG"),selected=c("DEBUG"))
+    if ( values$productionSite ) {
+      selectInput(inputId="verbosity_chosen",label=h4("Verbosity"),choices=c("NONE"),selected=c("NONE"))
+    }else{
+      selectInput(inputId="verbosity_chosen",label=h4("Verbosity"),choices=c("NONE","WARNING","INFO","DEBUG"),selected=c("DEBUG"))
+    }
   })
 
   # ObsmonPlot
@@ -218,7 +224,7 @@ shinyServer(function(input,output) {
       }else{
         isolate({
           switch(input$obtype, SATEM = {var = "rad"},{ var = input$variable})
-          obPlot <- generatePlot(input$ODBbase,getPlotTypeShort(input$plottype),getObNumber(input$obtype),var,getUnit(var),input$obtype,input$sensor,input$satelite,input$channel,input$dateRange,input$cycle) 
+          obPlot <- generatePlot(input$ODBbase,getPlotTypeShort(input$plottype),input$obtype,var,input$level,input$sensor,input$satelite,input$channel,input$dateRange,input$cycle) 
 
           return(obPlot)
         })
@@ -243,7 +249,7 @@ shinyServer(function(input,output) {
       }else{
         isolate({
 
-          obPlot <- generatePlot(input$ODBbase_SA,getPlotTypeShort(input$plottype_SA),getObNumber(input$obtype_SA),input$variable_SA,getUnit(input$variable_SA),input$obtype_SA,NA,NA,"Surface",input$dateRange_SA,input$cycle_SA)
+          obPlot <- generatePlot(input$ODBbase_SA,getPlotTypeShort(input$plottype_SA),input$obtype_SA,input$variable_SA,input$level_SA,NULL,NULL,NULL,input$dateRange_SA,input$cycle_SA)
 
           return(obPlot)
         })
@@ -269,9 +275,9 @@ shinyServer(function(input,output) {
 
           obPlot<-NULL
           switch(isolate(input$plottypePreDef),
-                 "Plot 1" ={ obPlot <- generatePlot(c("Surface"),getPlotTypeShort("Observation usage (map)"),getObNumber(c("SYNOP")),c("t2m"),getUnit("t2m"),c("SYNOP"),NA,NA,"Surface",c(getLatestDate("Surface"),getLatestDate("Surface")),c(getLatestCycle("Surface")))},
-                 "Plot 2" ={ obPlot <- generatePlot(c("Surface"),getPlotTypeShort("Observation usage (map)"),getObNumber(c("SYNOP")),c("snow"),getUnit("snow"),c("SYNOP"),NA,NA,"Surface",c(getLatestDate("Surface"),getLatestDate("Surface")),c(getLatestCycle("Surface")))},
-                 "Plot 3" ={obPlot <- generatePlot(c("Minimization"),getPlotTypeShort("Number of observations (TS)"),getObNumber(c("TEMP")),c("t"),getUnit("t"),c("TEMP"),NA,NA,"ALL",c(getLatestDate("Minimization"),getLatestDate("Minimization")),c(getLatestCycle("Minimization")))}
+                 "Plot 1" ={ obPlot <- generatePlot(c("Surface"),getPlotTypeShort("Observation usage (map)"),c("SYNOP"),c("t2m"),c("Surface"),NULL,NULL,NULL,c(getLatestDate("Surface"),getLatestDate("Surface")),c(getLatestCycle("Surface")))},
+                 "Plot 2" ={ obPlot <- generatePlot(c("Surface"),getPlotTypeShort("Observation usage (map)"),c("SYNOP"),c("snow"),c("Surface"),NULL,NULL,NULL,c(getLatestDate("Surface"),getLatestDate("Surface")),c(getLatestCycle("Surface")))},
+                 "Plot 3" ={obPlot <- generatePlot(c("Minimization"),getPlotTypeShort("Number of observations (TS)"),c("TEMP"),c("t"),c("92500","45000"),NULL,NULL,NULL,c(getLatestDate("Minimization"),getLatestDate("Minimization")),c(getLatestCycle("Minimization")))}
           )
           return(obPlot)
         })
@@ -311,6 +317,15 @@ shinyServer(function(input,output) {
     values$plotData
   })
 
+  #dumpDB_button
+  output$dumpDB_button<-renderUI({
+    if ( values$productionSite ){
+      actionButton("doDumpDisabled", label = "Disabled for productions sites")
+    }else{
+      actionButton("doDump", label = "Dump database")
+    }
+  })
+
   # dumpDB
   output$dumpDB <- renderTable({
     if ( verbose("DEBUG") ) { print("DEBUG: dumpDB")}
@@ -320,19 +335,20 @@ shinyServer(function(input,output) {
       if ( is.null(input$ODBbase_dump)) {
         return(NULL)
       } else {
-        if ( as.integer(input$doDump) == 0 ) {
-          return(NULL)
-        }else{
-          if ( !is.null(input$dump_table)) {
-            getDumpData(input$ODBbase_dump,input$dump_table)
-          }else{
+        if ( !is.null(input$doDump)) {
+          if ( as.integer(input$doDump) == 0 ) {
             return(NULL)
+          }else{
+            if ( !is.null(input$dump_table)) {
+              getDumpData(input$ODBbase_dump,input$dump_table)
+            }else{
+              return(NULL)
+            }
           }
         }
       }
     )
   })
-  
 
   # downloadImage
   output$downloadImage <- downloadHandler (
@@ -351,7 +367,7 @@ shinyServer(function(input,output) {
              "pdf" =  pdf(file,width=xWidth,height=yHeight),
              "png" =  png(file,width=xWidth*DPI,height=yHeight*DPI,res=DPI)
       )
-      obPlot <- generatePlot(input$ODBbase,getPlotTypeShort(input$plottype),getObNumber(input$obtype),var,getUnit(var),input$obtype,input$sensor,input$satelite,input$channel,input$dateRange,input$cycle)
+      obPlot <- generatePlot(input$ODBbase,getPlotTypeShort(input$plottype),input$obtype,var,input$level,input$sensor,input$satelite,input$channel,input$dateRange,input$cycle)
       print(obPlot)
       dev.off()
     }
@@ -360,7 +376,7 @@ shinyServer(function(input,output) {
   # downloadImage
   output$downloadImage_SA <- downloadHandler (
     filename = function () {
-      paste(input$ODBbase_SA,"_",input$plottype_SA,"_",input$variable_SA,"_",input$obtype_SA,"_",input$channel,"_",input$dateRange,"_",input$cycle,".",input$plotTypeFormat,sep="")
+      paste(input$ODBbase_SA,"_",input$plottype_SA,"_",input$obtype_SA,"_",input$variable_SA,"_",input$level_SA,"_",input$dateRange,"_",input$cycle,".",input$plotTypeFormat,sep="")
     },
     content = function(file) {
       xWidth=10
@@ -372,7 +388,7 @@ shinyServer(function(input,output) {
              "pdf" =  pdf(file,width=xWidth,height=yHeight),
              "png" =  png(file,width=xWidth*DPI,height=yHeight*DPI,res=DPI)
       )
-      obPlot <- generatePlot(input$ODBbase_SA,getPlotTypeShort(input$plottype_SA),getObNumber(input$obtype_SA),input$variable_SA,getUnit(input$variable_SA),input$obtype_SA,NA,NA,input$channel_SA,input$dateRange_SA,input$cycle_SA)
+      obPlot <- generatePlot(input$ODBbase_SA,getPlotTypeShort(input$plottype_SA),input$obtype_SA,input$variable_SA,input$level_SA,NULL,NULL,NULL,input$dateRange_SA,input$cycle_SA)
       print(obPlot)
       dev.off()
     }
