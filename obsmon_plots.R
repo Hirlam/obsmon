@@ -33,9 +33,27 @@ generatePlot<-function(odbBase,plotName,obName,varName,levels,sensor,satelite,ch
     return(NULL)
   }
 
+  # Save these values to easier change values
+  values$last_base=odbBase
+  values$last_obtype=obName
+  values$last_variable=varName
+  values$last_level=levels
+  values$last_plot=plotName
+  values$last_sensor=sensor
+  values$last_satelite=satelite
+  values$last_channel=channels
+ 
   # Set needed values from mandatory
   obNumber=getObNumber(obName)
+  if ( is.null(obNumber) ) {
+    if ( verbose("WARNING") ) { print("WARNING: The obNumber for plotting is not defined!") }
+    return(NULL)
+  }
   unit=getUnit(varName)
+  if ( is.null(unit) ) {
+    if ( verbose("WARNING") ) { print("WARNING: The unit for plotting is not defined!") }
+    return(NULL)
+  }
 
   # Manipulate selected date
   date1 = dateRange[1]
@@ -46,8 +64,8 @@ generatePlot<-function(odbBase,plotName,obName,varName,levels,sensor,satelite,ch
   dtgend = date2dtg(date2,cycle)
   obname = tolower(obName)
   # DTG string for plotting
-  dtgstr_range = paste(date1," ",paste0(cycle,"Z"),"-",date2," ",paste0(cycle,"Z"),sep=" ")
-  dtgstr = paste(date1," ",paste0(cycle,"Z"),sep="")
+  dtgstr_range = paste("[",date1," ",paste0(cycle,"Z")," - ",date2," ",paste0(cycle,"Z]"),sep="")
+  dtgstr = paste("[",date1," ",paste0(cycle,"Z"),"]",sep="")
 
   # Set level string
   if ( !is.null(levels)) {
@@ -92,7 +110,7 @@ generatePlot<-function(odbBase,plotName,obName,varName,levels,sensor,satelite,ch
                            " AND satname == '",qsatelite,"'",
                            channelListQuery,sep="")
         ylab="Channel"
-        title=paste(plotName,obName,satelite,dtgstr)
+        title=paste(plotName,obName,satelite,dtgstr_range)
       }else{
         levelListQuery<-setLevelList(levels)
         values$plotQuery<-paste("SELECT DTG,nobs_total,level FROM obsmon",
@@ -103,7 +121,7 @@ generatePlot<-function(odbBase,plotName,obName,varName,levels,sensor,satelite,ch
                            " AND varname == '",varName,"'",
                            levelListQuery,sep="")
         ylab="Level"
-        title<-paste(plotName,obName,varName,level_string,dtgstr)
+        title<-paste(plotName,obName,varName,level_string,dtgstr_range)
       }
       if ( verbose("INFO") ) { paste("INFO: ",print(values$plotQuery))}
       values$plotData <- data.frame(dbGetQuery(dbConn,values$plotQuery))
@@ -139,7 +157,7 @@ generatePlot<-function(odbBase,plotName,obName,varName,levels,sensor,satelite,ch
         title<-paste(plotName,obName,satelite,channel_string,dtgstr)
       }else{
         levelListQuery<-setLevelList(levels)
-        values$plotQuery<-paste("SELECT latitude,longitude,",sql," FROM usage",
+        values$plotQuery<-paste("SELECT latitude,longitude,statid,",sql," FROM usage",
                            " WHERE obnumber = ",obNumber,
                            " AND dtg == ",dtg,
                            " AND obname == '",obname,"'",
@@ -191,7 +209,7 @@ generatePlot<-function(odbBase,plotName,obName,varName,levels,sensor,satelite,ch
         # Non SATEMs
         levelListQuery<-setLevelList(levels)
         obPlot<-NULL
-        values$plotQuery<-paste("SELECT latitude,longitude,active,rejected,passive,blacklisted,anflag FROM usage",
+        values$plotQuery<-paste("SELECT latitude,longitude,statid,active,rejected,passive,blacklisted,anflag FROM usage",
                            " WHERE obnumber == ",obNumber,
                            " AND dtg == ",dtg,
                            " AND obname == '",obname,"'",
@@ -220,7 +238,7 @@ generatePlot<-function(odbBase,plotName,obName,varName,levels,sensor,satelite,ch
                              " AND DTG <= ",dtgend,
                              channelListQuery,sep="")
         if ( verbose("INFO") ) { print(paste("INFO: ",values$plotQuery))}
-        title<-paste(plotName,satelite,sensor,channel_string,sep=" ")
+        title<-paste(plotName,satelite,sensor,channel_string,dtgstr_range,sep=" ")
         values$plotData <- data.frame(dbGetQuery(dbConn,values$plotQuery))
         if ( nrow(values$plotData) > 0 ) {
           obPlot <- SatBcorrCycle(title,cycle,plotName)
@@ -258,7 +276,7 @@ generatePlot<-function(odbBase,plotName,obName,varName,levels,sensor,satelite,ch
         # Surface
         if ( obNumber == 1 || obNumber == 4 ) {
           if ( verbose("DEBUG") ) { print(paste("DEBUG: ",obname))}
-          values$plotQuery<-paste("SELECT fg_bias_total,an_bias_total,fg_rms_total,an_rms_total FROM obsmon",
+          values$plotQuery<-paste("SELECT statid,fg_bias_total,an_bias_total,fg_rms_total,an_rms_total FROM obsmon",
                              " WHERE obnumber == ",obNumber,
                              " AND dtg == ",dtg,
                              " AND obname == '",obname,"'",
@@ -276,7 +294,7 @@ generatePlot<-function(odbBase,plotName,obName,varName,levels,sensor,satelite,ch
           }
         } else {
           # Vertical profile (Aircraft/Temp)
-          values$plotQuery<-paste("SELECT fg_bias_total,an_bias_total,fg_rms_total,an_rms_total,level,varname FROM obsmon ",
+          values$plotQuery<-paste("SELECT statid,fg_bias_total,an_bias_total,fg_rms_total,an_rms_total,level,varname FROM obsmon ",
                              " WHERE obnumber == ",obNumber,
                              " AND dtg == ",dtg,
                              " AND obname == '",obname,"'",
@@ -474,10 +492,52 @@ generatePlot<-function(odbBase,plotName,obName,varName,levels,sensor,satelite,ch
 
     localPlotData=values$plotData
     localPlotData$datetime = chron(dates=dtg2date(values$plotData$DTG),times=paste(dtg2utc(values$plotData$DTG),":00:00",sep=""),format=c('y-m-d','h:m:s'))
-
+    
     obPlot<-ggplot(localPlotData,aes(x=datetime,y=level,fill=nobs_total))+geom_raster()
     obPlot <- obPlot + xlab("DATE") + scale_x_continuous(label=function(datetime) strftime(chron(datetime), "%Y-%m-%d"))
     obPlot <- obPlot + labs(title=title,ylab=ylab)
 
     return(obPlot) 
   }
+
+
+
+
+generate_surfdia <- function(var,station){
+  if ( verbose("DEBUG") ) { print(paste("DEBUG: -> generate_surfdia",var,station)) }
+
+  base=NULL
+  switch(var,"U10M" = { base="Minimization"}, "V10M" = { base="Minimization"},"Z" = { base="Minimization"},{ base="Surface"})
+ 
+  date2=getLatestDate(base)
+  date1=getPastDate(date2,7)
+  cycle=getLatestCycle(base)
+  dtg2=date2dtg(date2,cycle)
+  dtg1=date2dtg(date1,cycle)
+
+  obPlot=NULL
+  plotQuery<-paste("SELECT dtg,obsvalue,fg_dep,an_dep,statid FROM usage ",
+                             " WHERE statid LIKE '%",station,"%'",
+                             " AND obname == 'synop' ",
+                             " AND varname == '",tolower(var),"'",sep="")
+  if ( verbose("INFO") ) { print(paste("INFO: ",plotQuery))}
+  title<-paste(var,station)
+  dbConn=connect(base)
+  if ( !is.null(dbConn)){
+    plotData <- data.frame(dbGetQuery(dbConn,plotQuery))
+    if ( nrow(plotData) > 0 ) {
+      plotData$datetime = chron(dates=dtg2date(plotData$DTG),times=paste(dtg2utc(plotData$DTG),":00:00",sep=""),format=c('y-m-d','h:m:s'))
+
+      obPlot <- ggplot(plotData,aes(x=datetime,y=obsvalue),group="")
+      obPlot <- obPlot + geom_line(aes(y=obsvalue,colour="Obs",group=""))
+      obPlot <- obPlot + geom_line(aes(y=obsvalue-fg_dep,colour="obs - FG dep",group=""))
+      obPlot <- obPlot + geom_line(aes(y=obsvalue-an_dep,colour="obs - AN dep",group=""))
+      obPlot <- obPlot + xlab("DATE") + scale_x_continuous(label=function(datetime) strftime(chron(datetime), "%Y-%m-%d"))
+      obPlot <- obPlot + scale_colour_manual(values=c("black", "red","green"))
+      obPlot <- obPlot + labs(title=title,ylab=ylab)
+    }
+    disconnect(dbConn)
+  }
+  return(obPlot)
+}
+ 

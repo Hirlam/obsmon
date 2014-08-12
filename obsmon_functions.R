@@ -12,10 +12,6 @@ plotTypesTS         <- c("Number of observations (TS)")
 plotTypesSat        <- c("Bias correction (TS)","Hovmoeller (TS)","FG dep + Bias correction (map)","Bias correction (map)")
 
 default_experiments <- c("MetCoOp","Shiny environment","DMI")
-#default_experiments <- c("MetCoOp","DMI")
-
-# Predefined plots
-preDefinedGroups    <- c("MetCoOp","DMI")
 
 # setExperiment
 setExperiment <- function(exp,base){
@@ -72,9 +68,14 @@ setExperiment <- function(exp,base){
 }
 
 # getExperiments
-getExperiments <- function(base){
+getExperiments <- function(base=NULL){
   if ( verbose("DEBUG")) { print(paste("DEBUG: -> getExperiments(",base,")")) }
   experiments<-NULL
+
+  if ( input$tabs == "Surface" ){
+    base="Surface"
+  }
+
   if ( !is.null(base)){
    for (n in 1:length(default_experiments)){
       if ( !is.null(setExperiment(default_experiments[n],base))){
@@ -86,9 +87,23 @@ getExperiments <- function(base){
 }
 
 # obtypeExists
-obtypeExists<- function(base,obtype,daterange,cycle){
-  if ( verbose("DEBUG")) { print(paste("DEBUG: -> obtypeExists(",base,obtype,daterange,cycle,")")) }
+obtypeExists<- function(obtype){
+  if ( verbose("DEBUG")) { print(paste("DEBUG: -> obtypeExists(",obtype,")")) }
   exists=FALSE
+
+  base=NULL
+  daterange=NULL
+  cycle=NULL
+  if ( input$tabs == "Surface" ){
+    base="Surface"
+    if ( !is.null(input$dateRange_SA)){ daterange=input$dateRange_SA }
+    if ( !is.null(input$cycle_SA)){ cycle=input$cycle_SA }
+  }else{
+    if ( !is.null(input$ODBbase)){ base=input$ODBbase }
+    if ( !is.null(input$dateRange)){ daterange=input$dateRange }
+    if ( !is.null(input$cycle)){ cycle=input$cycle }
+  }
+
   if (!is.null(base) && !is.null(obtype) && !is.null(daterange) && !is.null(cycle)){
     dbConn<-connect(base)
     if ( !is.null(dbConn)) {
@@ -103,30 +118,40 @@ obtypeExists<- function(base,obtype,daterange,cycle){
 }
 
 # getObtypes
-getObtypes <- function(base,daterange,cycle){
-  if ( verbose("DEBUG")) { print(paste("DEBUG: -> getObtypes(",base,daterange,cycle,")")) }
+getObtypes <- function(){
+  if ( verbose("DEBUG")) { print(paste("DEBUG: -> getObtypes")) }
 
-  if ( !is.null(base)) {
-    if ( base == "Surface" ){
-      obtypes=c("SYNOP")
-    }else{
-      obtypes=default_obtypes
-    }
-    if ( input$showExistingDataOnly ){
-      if ( !is.null(daterange) && !is.null(cycle)) {
-        obtypes_orig=obtypes
-        obtypes=NULL
-        for (i in 1:length(obtypes_orig)) {
-          if ( obtypeExists(base,obtypes_orig[i],daterange,cycle)) {
-            obtypes=c(obtypes,obtypes_orig[i])
-          }
-        }
+  obtypes=NULL
+  if ( input$tabs == "Surface" ){
+    obtypes=c("SYNOP")
+  }else{
+    obtypes=default_obtypes
+  }
+  if ( input$showExistingDataOnly ){
+    obtypes_orig=obtypes
+    obtypes=NULL
+    for (i in 1:length(obtypes_orig)) {
+      if ( obtypeExists(obtypes_orig[i])) {
+        obtypes=c(obtypes,obtypes_orig[i])
       }
     }
-    return(obtypes)
-  } else {
-    return(NULL)
   }
+  return(obtypes)
+}
+
+# getLastSelectedObtype
+getLastSelected <- function(mode){
+  if ( verbose("DEBUG")) { print(paste("DEBUG: -> getLastSelectedObtype(",mode,")")) }
+
+  last_selected=NULL
+  if ( input$showExistingDataOnly ){
+    switch(mode,"last_obtype"   = {last_selected=values$last_obtype   },
+                "last_sensor"   = {last_selected=values$last_sensor   },
+                "last_sensor"   = {last_satelite=values$last_satelite },
+                "last_variable" = {last_satelite=values$last_variable }
+    )
+  }
+  return(last_selected)
 }
 
 # getObNumber
@@ -165,8 +190,8 @@ setDBSatname<-function(sat){
 }
 
 # getPlotTypes
-getPlotTypes <- function(obtype,dateRange,cycle){
-  if ( verbose("DEBUG")) { print(paste("DEBUG: -> getPlotTypes(",obtype,dateRange,")")) }
+getPlotTypes <- function(obtype){
+  if ( verbose("DEBUG")) { print(paste("DEBUG: -> getPlotTypes(",obtype,")")) }
   if ( !is.null(obtype)) {
     switch(obtype,"SATEM" = c(plotTypesStat,plotTypesTS,plotTypesMaps,plotTypesSat),c(plotTypesStat,plotTypesMaps,plotTypesTS))
   }
@@ -187,31 +212,28 @@ getPlotTypeShort <- function(plotType){
            "Bias correction (map)"          = "BiasCorrectionMap",
            "Observations (map)"             = "ObservationsMap",
            "Number of observations (TS)"    = "NumberOfObservations",
-           NULL)
-  }
-}
-
-# getPreDefinedPlots
-getPreDefinedGroups <- function(){
-  if ( verbose("DEBUG")) { print("DEBUG: -> getPreDefinedGroups") }
-  return(preDefinedGroups)
-}
-
-# getPreDefinedPlots
-getPreDefinedPlots <- function(group){
-  if ( verbose("DEBUG")) { print(paste("DEBUG: -> getPreDefinedPlots(",group,")")) }
-  if (!is.null(group)){
-    switch(group,
-               "MetCoOp" = c("Plot 1","Plot 2","Plot 3"),
-               "No plots defined!"
-   )
+           plotType)
   }
 }
 
 # variableExists
-variableExists<- function(base,obtype,var,daterange,cycle){
-  if ( verbose("DEBUG")) { print(paste("DEBUG: -> variableExists(",base,obtype,var,daterange,cycle,")")) }
+variableExists<- function(obtype,var){
+  if ( verbose("DEBUG")) { print(paste("DEBUG: -> variableExists(",obtype,var,")")) }
   exists=FALSE
+
+  base=NULL
+  daterange=NULL
+  cycle=NULL
+  if ( input$tabs == "Surface" ){
+    base="Surface"
+    if ( !is.null(input$dateRange_SA)){ daterange=input$dateRange_SA }
+    if ( !is.null(input$cycle_SA)){ cycle=input$cycle_SA }
+  }else{
+    if ( !is.null(input$ODBbase)){ base=input$ODBbase }
+    if ( !is.null(input$dateRange)){ daterange=input$dateRange }
+    if ( !is.null(input$cycle)){ cycle=input$cycle }
+  }
+
   if (!is.null(base) && !is.null(obtype) && !is.null(var) && !is.null(daterange) && !is.null(cycle)){
     dbConn<-connect(base)
     if ( !is.null(dbConn)) {
@@ -232,10 +254,10 @@ variableExists<- function(base,obtype,var,daterange,cycle){
 }
 
 # getVariables
-getVariables <- function(obtype,base,daterange,cycle){
-  if ( verbose("DEBUG")) { print(paste("DEBUG: -> getVariables(",obtype,base,daterange,cycle,")")) }
-  if ( !is.null(obtype) && !is.null(base)) {
-    if ( base == "Surface" ) {
+getVariables <- function(obtype){
+  if ( verbose("DEBUG")) { print(paste("DEBUG: -> getVariables(",obtype,")")) } 
+  if ( !is.null(obtype)) {
+    if ( input$tabs == "Surface" ) {
       synop_vars          <- c("t2m","rh2m","snow")
       ship_vars           <- c("t2m","rh2m")
       dribu_vars          <- c("t2m","rh2m")
@@ -256,17 +278,15 @@ getVariables <- function(obtype,base,daterange,cycle){
                    "DRIBU"    = {vars=c(dribu_vars)},
                    "TEMP"     = {vars=c(temp_vars)},
                    "RADAR"    = {vars=c(radar_vars_z,radar_vars_p)},
-                   "SATEM"    = {vars=c("rad")},
+                   #"SATEM"    = {vars=c("rad")},
                    {vars=NULL})
 
     if ( input$showExistingDataOnly ){
-      if ( !is.null(daterange) && !is.null(cycle)) {
-        vars_orig=vars
-        vars=NULL
-        for (i in 1:length(vars_orig)) {
-          if ( variableExists(base,obtype,vars_orig[i],daterange,cycle)) {
-            vars=c(vars,vars_orig[i])
-          }
+      vars_orig=vars
+      vars=NULL
+      for (i in 1:length(vars_orig)) {
+        if ( variableExists(obtype,vars_orig[i])) {
+          vars=c(vars,vars_orig[i])
         }
       }
     }
@@ -301,7 +321,7 @@ getLevels <- function(obtype,var,plotType){
                      "DRIBU"    = c("Surface"),
                      "TEMP"     = c("ALL",listOfLevels_p),
                      "RADAR"    = c("ALL",getRadarLevels(var)),
-                     "Undefined")
+                     NULL)
      }else{
        switch(obtype,"SYNOP"    = c("Surface"),
                      "SHIP"     = c("Surface"),
@@ -309,16 +329,25 @@ getLevels <- function(obtype,var,plotType){
                      "DRIBU"    = c("Surface"),
                      "TEMP"     = c("ALL"),
                      "RADAR"    = c("ALL"),
-                     "Undefined")
+                     NULL)
      }
   }
 }
 
 
 # sensorExists
-sensorExists<- function(base,sensor,daterange,cycle){
-  if ( verbose("DEBUG")) { print(paste("DEBUG: -> sensorExists(",base,sensor,daterange,cycle,")")) }
+sensorExists<- function(sensor){
+  if ( verbose("DEBUG")) { print(paste("DEBUG: -> sensorExists(",sensor,")")) }
   exists=FALSE
+
+  base=NULL
+  daterange=NULL
+  cycle=NULL
+  if ( !is.null(input$ODBbase)){ base=input$ODBbase }
+  if ( !is.null(input$dateRange)){ daterange=input$dateRange }
+  if ( !is.null(input$cycle)){ cycle=input$cycle }
+
+
   if (!is.null(base) && !is.null(sensor) && !is.null(daterange) && !is.null(cycle)){
     dbConn<-connect(base)
     if ( !is.null(dbConn)) {
@@ -341,16 +370,16 @@ sensorExists<- function(base,sensor,daterange,cycle){
 
 
 # getSensors
-getSensors <- function(base,daterange,cycle){
-  if ( verbose("DEBUG")) { print(paste("DEBUG: -> getSensors(",base,daterange,cycle,")")) }
+getSensors <- function(){
+  if ( verbose("DEBUG")) { print(paste("DEBUG: -> getSensors")) }
   sensors=listOfSensors
   
   if ( input$showExistingDataOnly ){
     sensors_orig=sensors
     sensors=NULL
-    if (!is.null(base) && !is.null(daterange) && !is.null(cycle)){
+    if (!is.null(sensors_orig)){
       for (i in 1:length(sensors_orig)) {
-        if ( sensorExists(base,sensors_orig[i],daterange,cycle)) {
+        if ( sensorExists(sensors_orig[i])) {
           sensors=c(sensors,sensors_orig[i])
         }
       }
@@ -360,11 +389,24 @@ getSensors <- function(base,daterange,cycle){
 }
 
 # sateliteExists
-sateliteExists<- function(base,sensor,satelite,daterange,cycle){
-  if ( verbose("DEBUG")) { print(paste("DEBUG: -> sateliteExists(",base,sensor,satelite,daterange,cycle,")")) }
+sateliteExists<- function(sensor,satelite){
+  if ( verbose("DEBUG")) { print(paste("DEBUG: -> sateliteExists(",sensor,satelite,")")) }
 
   exists=FALSE
-  if (!is.null(base) && !is.null(sensor) && !is.null(satelite) && !is.null(daterange)){
+  base=NULL
+  daterange=NULL
+  cycle=NULL
+  if ( input$tabs == "Surface" ){
+    base="Surface"
+    if ( !is.null(input$dateRange_SA)){ daterange=input$dateRange_SA }
+    if ( !is.null(input$cycle_SA)){ cycle=input$cycle_SA }
+  }else{
+    if ( !is.null(input$ODBbase)){ base=input$ODBbase }
+    if ( !is.null(input$dateRange)){ daterange=input$dateRange }
+    if ( !is.null(input$cycle)){ cycle=input$cycle }
+  }
+
+  if (!is.null(base) && !is.null(sensor) && !is.null(satelite) && !is.null(daterange) && !is.null(cycle)){
     dbConn<-connect(base)
     if ( !is.null(dbConn)) {
 
@@ -384,11 +426,11 @@ sateliteExists<- function(base,sensor,satelite,daterange,cycle){
 }
 
 # getSatelites
-getSatelites <- function(base,sensor,daterange,cycle){
-  if ( verbose("DEBUG")) { print(paste("DEBUG: -> getSatelites(",base,sensor,daterange,cycle,")")) }
+getSatelites <- function(sensor){
+  if ( verbose("DEBUG")) { print(paste("DEBUG: -> getSatelites(",sensor,")")) }
 
   satelites=NULL
-  if ( !is.null(base) && !is.null(sensor)) {
+  if ( !is.null(sensor)) {
     # Set satelites pr. sensor
     switch(sensor, "AMSUA" = {satelites=c("NOAA-15","NOAA-16","NOAA-17","NOAA-18","NOAA-19","METOP-A","METOP-B")},
                    "AMSUB" = {satelites=c("NOAA-15","NOAA-16","NOAA-17","NOAA-18")},
@@ -397,11 +439,11 @@ getSatelites <- function(base,sensor,daterange,cycle){
                    NULL)
 
     if ( input$showExistingDataOnly ){
-      if ( !is.null(daterange) && !is.null(cycle)) {
-        satelites_orig=satelites
-        satelites=NULL
+      satelites_orig=satelites
+      satelites=NULL
+      if ( !is.null(satelites_orig)) {
         for (i in 1:length(satelites_orig)) {
-          if ( sateliteExists(base,sensor,satelites_orig[i],daterange,cycle)) {
+          if ( sateliteExists(sensor,satelites_orig[i])) {
             satelites=c(satelites,satelites_orig[i])
           }
         }
@@ -445,10 +487,17 @@ date2dtg<-function(date,utc){
 }
 
 # channelExists
-channelExists<-  function(base,sensor,sat,channel,daterange,cycle){
-  if ( verbose("DEBUG")) { print(paste("DEBUG: -> channelExists",base,sensor,sat,channel,daterange,cycle,")")) }
+channelExists<-  function(sensor,sat,channel){
+  if ( verbose("DEBUG")) { print(paste("DEBUG: -> channelExists",sensor,sat,channel,")")) }
 
   exists=FALSE
+  base=NULL
+  daterange=NULL
+  cycle=NULL
+  if ( !is.null(input$ODBbase)){ base=input$ODBbase }
+  if ( !is.null(input$dateRange)){ daterange=input$dateRange }
+  if ( !is.null(input$cycle)){ cycle=input$cycle }
+
   if (!is.null(base) && !is.null(sensor) && !is.null(sat) && !is.null(channel) && !is.null(daterange) && !is.null(cycle)){
     dbConn<-connect(base)
     if ( !is.null(dbConn)) {
@@ -469,8 +518,8 @@ channelExists<-  function(base,sensor,sat,channel,daterange,cycle){
 }
 
 # getChannels
-getChannels <- function(base,sensor,sat,daterange,cycle){
-  if ( verbose("DEBUG")) { print(paste("DEBUG: -> getChannels",base,sensor,sat,daterange,cycle,")")) }
+getChannels <- function(sensor,sat){
+  if ( verbose("DEBUG")) { print(paste("DEBUG: -> getChannels",sensor,sat,")")) }
 
   channels=NULL
   if ( !is.null(sensor)) {
@@ -487,15 +536,15 @@ getChannels <- function(base,sensor,sat,daterange,cycle){
     )
 
     if ( input$showExistingDataOnly ){
-      if ( !is.null(base) && !is.null(sat) && !is.null(daterange) && !is.null(cycle)) {
-        channels_orig=channels
-        channels=NULL
+      channels_orig=channels
+      channels=NULL
+      if ( !is.null(channels_orig)) {
         if ( length(channels_orig) > 0 ) {
           for (i in 1:length(channels_orig)) {
             if ( channels_orig[i] == "ALL" ){
               channels=c(channels,channels_orig[i])
             }else{
-              if ( channelExists(base,sensor,sat,channels_orig[i],daterange,cycle)) {
+              if ( channelExists(sensor,sat,channels_orig[i])) {
                 channels=c(channels,channels_orig[i])
               }
             }
@@ -521,11 +570,11 @@ getUnit<-function(varName){
                     "rh2m" = "%",
                     "snow" = "kg/m2",
                     "rad"  = "K",
-                    "")
+                    NULL)
   }
 }
 
-
+# getLatestDate
 getLatestDate <- function(base){
   if ( verbose("DEBUG")) { print(paste("DEBUG: -> getLatestDate(",base,")")) }
   date<-NULL
@@ -534,12 +583,14 @@ getLatestDate <- function(base){
     plotQuery<-paste("SELECT dtg FROM obsmon ORDER BY dtg DESC LIMIT 1")
     if ( verbose("INFO")) { print(paste("INFO: ",plotQuery)) } 
     plotData <- data.frame(dbGetQuery(dbConn,plotQuery))
-    disconnect
+    disconnect(dbConn)
     date<-paste(substr(plotData$DTG,1,4),"-",substr(plotData$DTG,5,6),"-",substr(plotData$DTG,7,8),sep="")
   }
   return(date)
 }
 
+
+# getLatestCycle
 getLatestCycle <- function(base){
   if ( verbose("DEBUG")) { print(paste("DEBUG: -> getLatestCycle(",base,")")) }
   cycle<-NULL
@@ -548,12 +599,46 @@ getLatestCycle <- function(base){
     plotQuery<-paste("SELECT dtg FROM obsmon ORDER BY dtg DESC LIMIT 1")
     if (verbose("INFO")) { print(paste("INFO: ",plotQuery)) }  
     plotData <- data.frame(dbGetQuery(dbConn,plotQuery))
-    disconnect
+    disconnect(dbConn)
     cycle<-paste(substr(plotData$DTG,9,10),sep="")
   }
   return(cycle)
 }
 
+# getPastDate
+getPastDate<-function(date,increment){
+  if ( verbose("DEBUG")) { print(paste("DEBUG: -> getPastDate(",date,increment,")")) }
+
+  date = chron(dates=date,times=c(00:00:00),format=c('Y-m-d','h:m:s'))
+  date=date-increment
+  date=strftime(chron(date), "%Y-%m-%d")
+
+  return(date)
+}
+
+# getStations
+getStations<-function(variable){
+  if ( verbose("DEBUG")) { print(paste("DEBUG: -> getStations(",variable,")")) }
+
+  base=NULL
+  switch(variable,"U10M" = { base="Minimization"}, "V10M" = { base="Minimization"},"Z" = { base="Minimization"},{ base="Surface"})
+
+  stations=NULL
+  dbConn=connect(base)
+  if ( !is.null(dbConn)){
+    plotQuery<-paste("SELECT DISTINCT statid FROM usage WHERE DTG ==",date2dtg(getLatestDate(base),getLatestCycle(base))," AND varname == '",tolower(variable),"' AND ( active == 1 OR anflag != 0 ) ORDER BY statid",sep="")
+    if (verbose("INFO")) { print(paste("INFO: ",plotQuery)) }
+    data <- data.frame(dbGetQuery(dbConn,plotQuery))
+    stations=data$statid
+    stations=gsub("'","",stations)
+    stations=gsub(" ","",stations)
+    disconnect(dbConn)
+  }
+  return(stations)
+}
+
+
+# verbose
 verbose <- function(level){
   verb=FALSE
   if ( !is.null(level)) {
