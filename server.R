@@ -2,11 +2,12 @@
 
 require(shiny)
 require(RSQLite)
-library(ggplot2)
+require(ggplot2)
 require(jpeg)
 require(reshape2)
 require(chron)
 require(scales)
+require(mapproj)
 
 widthOfPlot=800
 map.world<-map_data(map="world")

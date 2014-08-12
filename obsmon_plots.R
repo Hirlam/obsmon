@@ -276,7 +276,7 @@ generatePlot<-function(odbBase,plotName,obName,varName,levels,sensor,satelite,ch
         # Surface
         if ( obNumber == 1 || obNumber == 4 ) {
           if ( verbose("DEBUG") ) { print(paste("DEBUG: ",obname))}
-          values$plotQuery<-paste("SELECT statid,fg_bias_total,an_bias_total,fg_rms_total,an_rms_total FROM obsmon",
+          values$plotQuery<-paste("SELECT fg_bias_total,an_bias_total,fg_rms_total,an_rms_total FROM obsmon",
                              " WHERE obnumber == ",obNumber,
                              " AND dtg == ",dtg,
                              " AND obname == '",obname,"'",
@@ -294,7 +294,7 @@ generatePlot<-function(odbBase,plotName,obName,varName,levels,sensor,satelite,ch
           }
         } else {
           # Vertical profile (Aircraft/Temp)
-          values$plotQuery<-paste("SELECT statid,fg_bias_total,an_bias_total,fg_rms_total,an_rms_total,level,varname FROM obsmon ",
+          values$plotQuery<-paste("SELECT fg_bias_total,an_bias_total,fg_rms_total,an_rms_total,level,varname FROM obsmon ",
                              " WHERE obnumber == ",obNumber,
                              " AND dtg == ",dtg,
                              " AND obname == '",obname,"'",

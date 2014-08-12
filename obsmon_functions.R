@@ -147,8 +147,8 @@ getLastSelected <- function(mode){
   if ( input$showExistingDataOnly ){
     switch(mode,"last_obtype"   = {last_selected=values$last_obtype   },
                 "last_sensor"   = {last_selected=values$last_sensor   },
-                "last_sensor"   = {last_satelite=values$last_satelite },
-                "last_variable" = {last_satelite=values$last_variable }
+                "last_sensor"   = {last_selected=values$last_satelite },
+                "last_variable" = {last_selected=values$last_variable }
     )
   }
   return(last_selected)
@@ -278,7 +278,6 @@ getVariables <- function(obtype){
                    "DRIBU"    = {vars=c(dribu_vars)},
                    "TEMP"     = {vars=c(temp_vars)},
                    "RADAR"    = {vars=c(radar_vars_z,radar_vars_p)},
-                   #"SATEM"    = {vars=c("rad")},
                    {vars=NULL})
 
     if ( input$showExistingDataOnly ){

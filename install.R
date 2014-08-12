@@ -1,0 +1,8 @@
+install.packages("shiny")
+install.packages("RSQLite")
+install.packages("ggplot2")
+install.packages("jpeg")
+install.packages("reshape2")
+install.packages("chron")
+install.packages("scales")
+install.packages("mapproj")
