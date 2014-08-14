@@ -505,41 +505,49 @@ generatePlot<-function(odbBase,plotName,obName,varName,levels,sensor,satelite,ch
 generate_surfdia <- function(var,station){
   if ( verbose("DEBUG") ) { print(paste("DEBUG: -> generate_surfdia",var,station)) }
 
-  base=NULL
-  switch(var,"U10M" = { base="Minimization"}, "V10M" = { base="Minimization"},"Z" = { base="Minimization"},{ base="Surface"})
+  if ( !is.null(var) && !is.null(station)){
+
+    base=NULL
+    switch(var,"U10M" = { base="Minimization"}, "V10M" = { base="Minimization"},"Z" = { base="Minimization"},{ base="Surface"})
+
+    values$last_variable=var
+    values$last_station=station
  
-  date2=getLatestDate(base)
-  date1=getPastDate(date2,7)
-  cycle=getLatestCycle(base)
-  dtg2=date2dtg(date2,cycle)
-  dtg1=date2dtg(date1,cycle)
+    date2=getLatestDate(base)
+    date1=getPastDate(date2,7)
+    cycle=getLatestCycle(base)
+    dtg2=date2dtg(date2,cycle)
+    dtg1=date2dtg(date1,cycle)
 
-  stationstr=strsplit(station,'\\[')
-  station2=gsub('\\]','',stationstr[[1]][2])
+    stationstr=strsplit(station,'\\[')
+    station2=gsub('\\]','',stationstr[[1]][2])
 
-  obPlot=NULL
-  plotQuery<-paste("SELECT dtg,obsvalue,fg_dep,an_dep,statid FROM usage ",
+    obPlot=NULL
+    plotQuery<-paste("SELECT dtg,obsvalue,fg_dep,an_dep,statid FROM usage ",
                              " WHERE statid LIKE '%",station2,"%'",
                              " AND obname == 'synop' ",
                              " AND varname == '",tolower(var),"'",sep="")
-  if ( verbose("INFO") ) { print(paste("INFO: ",plotQuery))}
-  title<-paste(var,station)
-  dbConn=connect(base)
-  if ( !is.null(dbConn)){
-    plotData <- data.frame(dbGetQuery(dbConn,plotQuery))
-    if ( nrow(plotData) > 0 ) {
-      plotData$datetime = chron(dates=dtg2date(plotData$DTG),times=paste(dtg2utc(plotData$DTG),":00:00",sep=""),format=c('y-m-d','h:m:s'))
+    if ( verbose("INFO") ) { print(paste("INFO: ",plotQuery))}
+    title<-paste(var,station)
+    dbConn=connect(base)
+    if ( !is.null(dbConn)){
+      plotData <- data.frame(dbGetQuery(dbConn,plotQuery))
+      if ( nrow(plotData) > 0 ) {
+        plotData$datetime = chron(dates=dtg2date(plotData$DTG),times=paste(dtg2utc(plotData$DTG),":00:00",sep=""),format=c('y-m-d','h:m:s'))
 
-      obPlot <- ggplot(plotData,aes(x=datetime,y=obsvalue),group="")
-      obPlot <- obPlot + geom_line(aes(y=obsvalue,colour="Obs",group=""))
-      obPlot <- obPlot + geom_line(aes(y=obsvalue-fg_dep,colour="obs - FG dep",group=""))
-      obPlot <- obPlot + geom_line(aes(y=obsvalue-an_dep,colour="obs - AN dep",group=""))
-      obPlot <- obPlot + xlab("DATE") + scale_x_continuous(label=function(datetime) strftime(chron(datetime), "%Y-%m-%d"))
-      obPlot <- obPlot + scale_colour_manual(values=c("black", "green","red"))
-      obPlot <- obPlot + labs(title=title,ylab=ylab)
+        obPlot <- ggplot(plotData,aes(x=datetime,y=obsvalue),group="")
+        obPlot <- obPlot + geom_line(aes(y=obsvalue,colour="Obs",group=""))
+        obPlot <- obPlot + geom_line(aes(y=obsvalue-fg_dep,colour="obs - FG dep",group=""))
+        obPlot <- obPlot + geom_line(aes(y=obsvalue-an_dep,colour="obs - AN dep",group=""))
+        obPlot <- obPlot + xlab("DATE") + scale_x_continuous(label=function(datetime) strftime(chron(datetime), "%Y-%m-%d"))
+        obPlot <- obPlot + scale_colour_manual(values=c("black", "green","red"))
+        obPlot <- obPlot + labs(title=title,ylab=ylab)
+      }
+      disconnect(dbConn)
     }
-    disconnect(dbConn)
+    return(obPlot)
+  }else{
+    return(NULL)
   }
-  return(obPlot)
 }
  

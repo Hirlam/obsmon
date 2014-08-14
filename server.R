@@ -24,6 +24,7 @@ values$last_plot=NULL
 values$last_sensor=NULL
 values$last_satelite=NULL
 values$last_channel=NULL
+values$last_station=NULL
 values$synops=NULL
 
 shinyServer(function(input,output) {
@@ -416,8 +417,14 @@ shinyServer(function(input,output) {
     }
   )
 
+  # select_variable_surfdia
+  output$select_variable_surfdia<-renderUI({
+    selectInput(inputId="variable_surfdia",h5("Select variable:"),c("T2M","RH2M","Snow","U10M","V10M","Z"),selected=getLastSelected("last_variable"))
+  })
+
+  # select_stations_surfdia
   output$select_stations_surfdia<-renderUI({
-    selectInput(inputId = "station",label=h5("Select station:"),choices=getStations(input$variable_surfdia),width="100%")
+    selectInput(inputId = "station",label=h5("Select station:"),choices=getStations(input$variable_surfdia),width="100%",,selected=getLastSelected("last_station"))
   })
   
   # ObsmonPlotPreDef

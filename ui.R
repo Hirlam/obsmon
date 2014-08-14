@@ -207,7 +207,7 @@ shinyUI(navbarPage("OBSMON v2",id="tabs",
   tabPanel("Surface diagnostics",value="surfdia",
     fluidRow(
       column(4,align="right",
-        selectInput(inputId="variable_surfdia",h5("Select variable:"),c("T2M","RH2M","Snow","U10M","V10M","Z"))
+        uiOutput("select_variable_surfdia")
       ),
       column(4,
         uiOutput("select_stations_surfdia"),

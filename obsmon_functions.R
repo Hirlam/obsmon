@@ -152,7 +152,8 @@ getLastSelected <- function(mode){
                 "last_level"    = {last_selected=values$last_level    },
                 "last_sensor"   = {last_selected=values$last_sensor   },
                 "last_satelite" = {last_selected=values$last_satelite },
-                "last_channel"  = {last_selected=values$last_channel  }
+                "last_channel"  = {last_selected=values$last_channel  },
+                "last_station"  = {last_selected=values$last_station  }
     )
   }
   if ( verbose("DEBUG")) { print(paste("DEBUG: last_selected=",last_selected,"")) }
@@ -623,6 +624,7 @@ getPastDate<-function(date,increment){
 # getStations
 getStations<-function(variable){
   if ( verbose("DEBUG")) { print(paste("DEBUG: -> getStations(",variable,")")) }
+  if (is.null(variable)) { return(NULL)}
 
   base=NULL
   switch(variable,"U10M" = { base="Minimization"}, "V10M" = { base="Minimization"},"Z" = { base="Minimization"},{ base="Surface"})
@@ -791,14 +793,13 @@ getSynopName<-function(number){
  
   name=NA
   # Read synops first time
-#  if ( is.null(values$synops)) {
-#     stations=read.csv("allsynop.list.csv",sep=";")
-#     values$synops=c(stations[2])
-#     names(values$synops) = as.character(c(stations[1]))
-#     #values$synops=c("01490"="TRYVANNSHOGDA","01492"="OSLO-BLINDERN")
-#     print(values$synops)
-#  }
-#  
-#  name=values$synops[as.character(number)]
+  if ( is.null(values$synops)) {
+    if ( verbose("DEBUG") ) { print(paste("DEBUG: Reading file")) }
+    stations=read.csv("allsynop.list.csv",sep=";",header=FALSE)
+    values$synops = as.character(stations$V2)
+    names(values$synops) = as.character(stations$V1)
+  }
+  
+  name=values$synops[as.character(number)]
   return(name)
 }
