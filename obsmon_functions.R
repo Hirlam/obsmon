@@ -141,16 +141,21 @@ getObtypes <- function(){
 
 # getLastSelectedObtype
 getLastSelected <- function(mode){
-  if ( verbose("DEBUG")) { print(paste("DEBUG: -> getLastSelectedObtype(",mode,")")) }
+  if ( verbose("DEBUG")) { print(paste("DEBUG: -> getLastSelected(",mode,")")) }
 
   last_selected=NULL
   if ( input$showExistingDataOnly ){
-    switch(mode,"last_obtype"   = {last_selected=values$last_obtype   },
+    switch(mode,"last_plot"     = {last_selected=values$last_plot     },
+                "last_base"     = {last_selected=values$last_base     },
+                "last_obtype"   = {last_selected=values$last_obtype   },
+                "last_variable" = {last_selected=values$last_variable },
+                "last_level"    = {last_selected=values$last_level    },
                 "last_sensor"   = {last_selected=values$last_sensor   },
-                "last_sensor"   = {last_selected=values$last_satelite },
-                "last_variable" = {last_selected=values$last_variable }
+                "last_satelite" = {last_selected=values$last_satelite },
+                "last_channel"  = {last_selected=values$last_channel  }
     )
   }
+  if ( verbose("DEBUG")) { print(paste("DEBUG: last_selected=",last_selected,"")) }
   return(last_selected)
 }
 
@@ -631,6 +636,8 @@ getStations<-function(variable){
     stations=data$statid
     stations=gsub("'","",stations)
     stations=gsub(" ","",stations)
+    name=getSynopName(stations)
+    stations=paste(name,"  [",stations,"]",sep="")
     disconnect(dbConn)
   }
   return(stations)
@@ -778,3 +785,20 @@ setChannelList<-function(selected_channels){
   return(sql)
 }
 
+# getSynopName
+getSynopName<-function(number){
+  if ( verbose("DEBUG") ) { print(paste("DEBUG: -> getSynopName(",number,")")) }
+ 
+  name=NA
+  # Read synops first time
+#  if ( is.null(values$synops)) {
+#     stations=read.csv("allsynop.list.csv",sep=";")
+#     values$synops=c(stations[2])
+#     names(values$synops) = as.character(c(stations[1]))
+#     #values$synops=c("01490"="TRYVANNSHOGDA","01492"="OSLO-BLINDERN")
+#     print(values$synops)
+#  }
+#  
+#  name=values$synops[as.character(number)]
+  return(name)
+}

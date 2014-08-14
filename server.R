@@ -17,12 +17,14 @@ values$plotData=NULL
 values$plotQuery=NULL
 values$productionSite=FALSE
 values$last_obtype=NULL
+values$last_base=NULL
 values$last_variable=NULL
 values$last_level=NULL
 values$last_plot=NULL
 values$last_sensor=NULL
 values$last_satelite=NULL
 values$last_channel=NULL
+values$synops=NULL
 
 shinyServer(function(input,output) {
 
@@ -62,6 +64,17 @@ shinyServer(function(input,output) {
   ###############################################################################################
 
   ####################### Selects ############################
+
+  # select_base 
+  output$select_base<- renderUI({
+    selectInput("ODBbase",h5("Monitoring level:"),c("Screening","Minimization"),selected=getLastSelected("last_base"))
+  })
+
+  # select_dump_base 
+  output$select_dump_base<- renderUI({
+     selectInput("ODBbase_dump",h5("Monitoring level to dump:"),c("Screening","Minimization","Surface"),selected=getLastSelected("last_base"))
+  })
+
   # select_date
   output$select_date <- renderUI({
     if ( verbose("DEBUG") ) { print("DEBUG: -> select_date") }
@@ -118,19 +131,19 @@ shinyServer(function(input,output) {
   # select_obtype_SA
   output$select_obtype_SA <- renderUI({
      if ( verbose("DEBUG")) { print("DEBUG: -> select_obtype_SA") }
-     selectInput(inputId = "obtype_SA",label=h5("Select observation type"),choices=getObtypes())
+     selectInput(inputId = "obtype_SA",label=h5("Select observation type"),choices=getObtypes(),selected=getLastSelected("last_obtype"))
   })
 
 
   # select_plottype
   output$select_plottype <- renderUI({
     if ( verbose("DEBUG") ) { print("DEBUG: -> select_plottype") }
-    selectInput(inputId = "plottype",label=h5("Select type of plot"),choices=getPlotTypes(input$obtype))
+    selectInput(inputId = "plottype",label=h5("Select type of plot"),choices=getPlotTypes(input$obtype),selected=getLastSelected("last_plot"))
   })
   # select_plottype_SA
   output$select_plottype_SA <- renderUI({
     if ( verbose("DEBUG") ) { print("DEBUG: -> select_plottype_SA") }
-    selectInput(inputId = "plottype_SA",label=h5("Select type of plot"),choices=getPlotTypes(input$obtype_SA))
+    selectInput(inputId = "plottype_SA",label=h5("Select type of plot"),choices=getPlotTypes(input$obtype_SA),selected=getLastSelected("last_plot"))
   })
 
 
@@ -143,7 +156,7 @@ shinyServer(function(input,output) {
   # select_plottype_predef
   output$select_plottype_predef <- renderUI({
     if ( verbose("DEBUG") ) { print("DEBUG: -> select_plottype_predef") }
-    selectInput(inputId = "plottypePreDef",label=h5("Select type of plot"),choices=getPreDefinedPlots(input$groupPreDef),width="100%")
+    selectInput(inputId = "plottypePreDef",label=h5("Select type of plot"),choices=getPreDefinedPlots(input$groupPreDef),width="100%",selected=getLastSelected("last_plot"))
   })
 
   # select_variable
@@ -160,7 +173,7 @@ shinyServer(function(input,output) {
   # select_level
   output$select_level <- renderUI({
     if ( verbose("DEBUG") ) { print("DEBUG: -> select_level") }
-    selectInput(inputId = "level",label=h5("Select level"),choices=getLevels(input$obtype,input$variable,getPlotTypeShort(input$plottype)),multiple=T)
+    selectInput(inputId = "level",label=h5("Select level"),choices=getLevels(input$obtype,input$variable,getPlotTypeShort(input$plottype)),multiple=T,selected=getLastSelected("last_level"))
   })
 
   # select_sensor
@@ -178,7 +191,7 @@ shinyServer(function(input,output) {
   # select_channel
   output$select_channel <- renderUI({
     if ( verbose("DEBUG") ) { print("DEBUG: -> select_channel") }
-    selectInput(inputId = "channel",label=h5("Select channel"),choices=getChannels(input$sensor,input$satelite),multiple=T)
+    selectInput(inputId = "channel",label=h5("Select channel"),choices=getChannels(input$sensor,input$satelite),multiple=T,selected=getLastSelected("last_channel"))
   })
 
   # select_experiment
@@ -234,6 +247,7 @@ shinyServer(function(input,output) {
         return(NULL)
       }else{
         isolate({
+          values$last_plot=input$plottype
           switch(input$obtype, SATEM = {var = "rad"},{ var = input$variable})
           obPlot <- generatePlot(input$ODBbase,getPlotTypeShort(input$plottype),input$obtype,var,input$level,input$sensor,input$satelite,input$channel,input$dateRange,input$cycle) 
 
@@ -260,6 +274,7 @@ shinyServer(function(input,output) {
       }else{
         isolate({
 
+          values$last_plot=input$plottype_SA
           obPlot <- generatePlot("Surface",getPlotTypeShort(input$plottype_SA),input$obtype_SA,input$variable_SA,"Surface",NULL,NULL,NULL,input$dateRange_SA,input$cycle_SA)
 
           return(obPlot)
@@ -284,6 +299,7 @@ shinyServer(function(input,output) {
       }else{
         isolate({
 
+          values$last_plot=input$plottypePreDef
           obPlot=generatePreDefinedPlot(input$plottypePreDef)
           return(obPlot)
         })
@@ -401,7 +417,7 @@ shinyServer(function(input,output) {
   )
 
   output$select_stations_surfdia<-renderUI({
-    selectInput(inputId = "station",label=h5("Select station:"),choices=getStations(input$variable_surfdia))
+    selectInput(inputId = "station",label=h5("Select station:"),choices=getStations(input$variable_surfdia),width="100%")
   })
   
   # ObsmonPlotPreDef

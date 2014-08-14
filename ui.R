@@ -20,7 +20,7 @@ shinyUI(navbarPage("OBSMON v2",id="tabs",
       column(9,
         fluidRow(
           column(2,
-             selectInput("ODBbase",h5("Monitoring level:"),c("Screening","Minimization"))
+             uiOutput("select_base")
           ),
           column(3,
             uiOutput("select_obtype")
@@ -210,7 +210,8 @@ shinyUI(navbarPage("OBSMON v2",id="tabs",
         selectInput(inputId="variable_surfdia",h5("Select variable:"),c("T2M","RH2M","Snow","U10M","V10M","Z"))
       ),
       column(4,
-        uiOutput("select_stations_surfdia")
+        uiOutput("select_stations_surfdia"),
+        tags$style(type='text/css', "#select_stations_surfdia { width: 100%;}")
       ),
       column(4,
          actionButton("doPlotSurfdia", label = "Plot!"),
@@ -239,7 +240,7 @@ shinyUI(navbarPage("OBSMON v2",id="tabs",
     ),
     fluidRow(
       column(4,align="right",
-             selectInput("ODBbase_dump",h5("Monitoring level to dump:"),c("Screening","Minimization","Surface"))
+             uiOutput("select_dump_base")
       ),
       column(4,align="right",
              selectInput("dump_table",h5("Table to dump:"),c("obsmon","usage"))

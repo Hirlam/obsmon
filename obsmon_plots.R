@@ -37,11 +37,10 @@ generatePlot<-function(odbBase,plotName,obName,varName,levels,sensor,satelite,ch
   values$last_base=odbBase
   values$last_obtype=obName
   values$last_variable=varName
-  values$last_level=levels
-  values$last_plot=plotName
+  values$last_level=c(levels)
   values$last_sensor=sensor
   values$last_satelite=satelite
-  values$last_channel=channels
+  values$last_channel=c(channels)
  
   # Set needed values from mandatory
   obNumber=getObNumber(obName)
@@ -515,9 +514,12 @@ generate_surfdia <- function(var,station){
   dtg2=date2dtg(date2,cycle)
   dtg1=date2dtg(date1,cycle)
 
+  stationstr=strsplit(station,'\\[')
+  station2=gsub('\\]','',stationstr[[1]][2])
+
   obPlot=NULL
   plotQuery<-paste("SELECT dtg,obsvalue,fg_dep,an_dep,statid FROM usage ",
-                             " WHERE statid LIKE '%",station,"%'",
+                             " WHERE statid LIKE '%",station2,"%'",
                              " AND obname == 'synop' ",
                              " AND varname == '",tolower(var),"'",sep="")
   if ( verbose("INFO") ) { print(paste("INFO: ",plotQuery))}
@@ -533,7 +535,7 @@ generate_surfdia <- function(var,station){
       obPlot <- obPlot + geom_line(aes(y=obsvalue-fg_dep,colour="obs - FG dep",group=""))
       obPlot <- obPlot + geom_line(aes(y=obsvalue-an_dep,colour="obs - AN dep",group=""))
       obPlot <- obPlot + xlab("DATE") + scale_x_continuous(label=function(datetime) strftime(chron(datetime), "%Y-%m-%d"))
-      obPlot <- obPlot + scale_colour_manual(values=c("black", "red","green"))
+      obPlot <- obPlot + scale_colour_manual(values=c("black", "green","red"))
       obPlot <- obPlot + labs(title=title,ylab=ylab)
     }
     disconnect(dbConn)
