@@ -11,7 +11,7 @@ plotTypesMaps       <- c("Observation usage (map)","First guess departure (map)"
 plotTypesTS         <- c("Number of observations (TS)")
 plotTypesSat        <- c("Bias correction (TS)","Hovmoeller (TS)","FG dep + Bias correction (map)","Bias correction (map)")
 
-default_experiments <- c("MetCoOp","Shiny environment","DMI")
+default_experiments <- c("MetCoOp","Shiny environment","Shiny environment II","DMI")
 
 # setExperiment
 setExperiment <- function(exp,base){
@@ -30,6 +30,11 @@ setExperiment <- function(exp,base){
       dbtry_ecma     <- paste(Sys.getenv('DBDIR_ECMA'),"/ecma.db",sep="")
       dbtry_ecma_sfc <- paste(Sys.getenv('DBDIR_ECMA_SFC'),"/ecma.db",sep="")
       dbtry_ccma     <- paste(Sys.getenv('DBDIR_CCMA'),"/ccma.db",sep="")
+    } else if ( exp == "Shiny environment II" ){
+      # Default paths to data bases from environment
+      dbtry_ecma     <- paste(Sys.getenv('DBDIR_ECMA2'),"/ecma.db",sep="")
+      dbtry_ecma_sfc <- paste(Sys.getenv('DBDIR_ECMA_SFC2'),"/ecma.db",sep="")
+      dbtry_ccma     <- paste(Sys.getenv('DBDIR_CCMA2'),"/ccma.db",sep="")
     } else if ( exp == "DMI" ){
       # No paths available yet
       dbtry_ecma     <- "/data4/portal/DMI/EXP/archive/extract/ecma/ts/ecma.db"
@@ -145,15 +150,16 @@ getLastSelected <- function(mode){
 
   last_selected=NULL
   if ( input$showExistingDataOnly ){
-    switch(mode,"last_plot"     = {last_selected=values$last_plot     },
-                "last_base"     = {last_selected=values$last_base     },
-                "last_obtype"   = {last_selected=values$last_obtype   },
-                "last_variable" = {last_selected=values$last_variable },
-                "last_level"    = {last_selected=values$last_level    },
-                "last_sensor"   = {last_selected=values$last_sensor   },
-                "last_satelite" = {last_selected=values$last_satelite },
-                "last_channel"  = {last_selected=values$last_channel  },
-                "last_station"  = {last_selected=values$last_station  }
+    switch(mode,"last_experiment" = {last_selected=values$last_experiment },
+                "last_plot"       = {last_selected=values$last_plot       },
+                "last_base"       = {last_selected=values$last_base       },
+                "last_obtype"     = {last_selected=values$last_obtype     },
+                "last_variable"   = {last_selected=values$last_variable   },
+                "last_level"      = {last_selected=values$last_level      },
+                "last_sensor"     = {last_selected=values$last_sensor     },
+                "last_satelite"   = {last_selected=values$last_satelite   },
+                "last_channel"    = {last_selected=values$last_channel    },
+                "last_station"    = {last_selected=values$last_station    }
     )
   }
   if ( verbose("DEBUG")) { print(paste("DEBUG: last_selected=",last_selected,"")) }
@@ -706,7 +712,11 @@ getFile <- function(base){
         if (!is.null(input$ODBbase_surface)) { fname <- input$ODBbase_surface$datapath }
       }
     } else {
-      fname<-setExperiment(input$experiment,base)
+      if ( base == "Surface" ){
+        fname<-setExperiment(input$experiment_SA,base)
+      }else{
+        fname<-setExperiment(input$experiment,base)
+      }
     }
   }
   return(fname)

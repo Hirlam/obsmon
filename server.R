@@ -18,6 +18,7 @@ values<-reactiveValues()
 values$plotData=NULL
 values$plotQuery=NULL
 values$productionSite=FALSE
+values$last_experiment=FALSE
 values$last_obtype=NULL
 values$last_base=NULL
 values$last_variable=NULL
@@ -71,7 +72,7 @@ shinyServer(function(input,output) {
 
   # select_base 
   output$select_base<- renderUI({
-    selectInput("ODBbase",h5("Monitoring level:"),c("Screening","Minimization"),selected=getLastSelected("last_base"))
+    selectInput("ODBbase",h5("Monitoring level:"),c("Screening","Minimization"),selected=getLastSelected("last_base"),width="100%")
   })
 
   # select_dump_base 
@@ -130,24 +131,24 @@ shinyServer(function(input,output) {
   # select_obtype
   output$select_obtype <- renderUI({
      if ( verbose("DEBUG") ) {print("DEBUG: -> select_obtype") }
-     selectInput(inputId = "obtype",label=h5("Select observation type"),choices=getObtypes(),selected=getLastSelected("last_obtype")) 
+     selectInput(inputId = "obtype",label=h5("Select observation type"),choices=getObtypes(),selected=getLastSelected("last_obtype"),width="100%") 
   })
   # select_obtype_SA
   output$select_obtype_SA <- renderUI({
      if ( verbose("DEBUG")) { print("DEBUG: -> select_obtype_SA") }
-     selectInput(inputId = "obtype_SA",label=h5("Select observation type"),choices=getObtypes(),selected=getLastSelected("last_obtype"))
+     selectInput(inputId = "obtype_SA",label=h5("Select observation type"),choices=getObtypes(),selected=getLastSelected("last_obtype"),width="100%")
   })
 
 
   # select_plottype
   output$select_plottype <- renderUI({
     if ( verbose("DEBUG") ) { print("DEBUG: -> select_plottype") }
-    selectInput(inputId = "plottype",label=h5("Select type of plot"),choices=getPlotTypes(input$obtype),selected=getLastSelected("last_plot"))
+    selectInput(inputId = "plottype",label=h5("Select type of plot"),choices=getPlotTypes(input$obtype),selected=getLastSelected("last_plot"),width="100%")
   })
   # select_plottype_SA
   output$select_plottype_SA <- renderUI({
     if ( verbose("DEBUG") ) { print("DEBUG: -> select_plottype_SA") }
-    selectInput(inputId = "plottype_SA",label=h5("Select type of plot"),choices=getPlotTypes(input$obtype_SA),selected=getLastSelected("last_plot"))
+    selectInput(inputId = "plottype_SA",label=h5("Select type of plot"),choices=getPlotTypes(input$obtype_SA),selected=getLastSelected("last_plot"),width="100%")
   })
 
 
@@ -202,7 +203,7 @@ shinyServer(function(input,output) {
   output$select_experiment <- renderUI({
     if ( verbose("DEBUG") ) { print("DEBUG: -> select_experiment") }
     if ( !is.null(getExperiments(input$ODBbase))) {
-      selectInput(inputId = "experiment",label=h5("Select pre-defined experiment"),choices=getExperiments(input$ODBbase))
+      selectInput(inputId = "experiment",label=h5("Select pre-defined experiment"),choices=getExperiments(input$ODBbase),selected=getLastSelected("last_experiment"),width="100%")
     } else {
       if ( !is.null(input$ODBbase) ) {
         if ( input$ODBbase == "Screening" ) {
@@ -217,7 +218,7 @@ shinyServer(function(input,output) {
   output$select_experiment_SA <- renderUI({
     if ( verbose("DEBUG") ) { print("DEBUG: -> select_experiment_SA") }
     if ( !is.null(getExperiments())) {
-      selectInput(inputId = "experiment_SA",label=h5("Select pre-defined experiment"),choices=getExperiments())
+      selectInput(inputId = "experiment_SA",label=h5("Select pre-defined experiment"),choices=getExperiments(),selected=getLastSelected("last_experiment"),width="100%")
     } else {
       if ( !is.null(input$tabs) ) {
         if ( input$tabs == "Surface" ) {
@@ -251,6 +252,8 @@ shinyServer(function(input,output) {
         return(NULL)
       }else{
         isolate({
+
+          values$last_experiment=input$experiment
           values$last_plot=input$plottype
           switch(input$obtype, SATEM = {var = "rad"},{ var = input$variable})
           obPlot <- generatePlot(input$ODBbase,getPlotTypeShort(input$plottype),input$obtype,var,input$level,input$sensor,input$satelite,input$channel,input$dateRange,input$cycle) 
@@ -278,6 +281,7 @@ shinyServer(function(input,output) {
       }else{
         isolate({
 
+          values$last_experiment=input$experiment
           values$last_plot=input$plottype_SA
           obPlot <- generatePlot("Surface",getPlotTypeShort(input$plottype_SA),input$obtype_SA,input$variable_SA,"Surface",NULL,NULL,NULL,input$dateRange_SA,input$cycle_SA)
 
@@ -303,6 +307,7 @@ shinyServer(function(input,output) {
       }else{
         isolate({
 
+          values$last_experiment=input$experiment
           values$last_plot=input$plottypePreDef
           obPlot=generatePreDefinedPlot(input$plottypePreDef)
           return(obPlot)
@@ -386,16 +391,21 @@ shinyServer(function(input,output) {
       yHeight=5.5
       DPI <- 150
 
-      switch(input$obtype, SATEM = {var = "rad"},{ var = input$variable})
-      switch(input$plotTypeFormat,
+      if ( !is.null(input$obtype) && !is.null(plotTypeFormat)){
+        switch(input$obtype, SATEM = {var = "rad"},{ var = input$variable})
+        switch(input$plotTypeFormat,
              "eps" = {setEPS()
                       postscript(file,width=xWidth,height=yHeight)},
              "pdf" =  pdf(file,width=xWidth,height=yHeight),
              "png" =  png(file,width=xWidth*DPI,height=yHeight*DPI,res=DPI)
-      )
-      obPlot <- generatePlot(input$ODBbase,getPlotTypeShort(input$plottype),input$obtype,var,input$level,input$sensor,input$satelite,input$channel,input$dateRange,input$cycle)
-      print(obPlot)
-      dev.off()
+        )
+
+        values$last_experiment=input$experiment
+        values$last_plot=input$plottype
+        obPlot <- generatePlot(input$ODBbase,getPlotTypeShort(input$plottype),input$obtype,var,input$level,input$sensor,input$satelite,input$channel,input$dateRange,input$cycle)
+        print(obPlot)
+        dev.off()
+      }
     }
   )
 
@@ -408,15 +418,20 @@ shinyServer(function(input,output) {
       xWidth=10
       yHeight=5.5
       DPI <- 150
-      switch(input$plotTypeFormat_SA,
-             "eps" = {setEPS()
-                      postscript(file,width=xWidth,height=yHeight)},
-             "pdf" =  pdf(file,width=xWidth,height=yHeight),
-             "png" =  png(file,width=xWidth*DPI,height=yHeight*DPI,res=DPI)
-      )
-      obPlot <- generatePlot("Surface",getPlotTypeShort(input$plottype_SA),input$obtype_SA,input$variable_SA,"Surface",NULL,NULL,NULL,input$dateRange_SA,input$cycle_SA)
-      print(obPlot)
-      dev.off()
+      if ( !is.null(plotTypeFormat_SA)){
+        switch(input$plotTypeFormat_SA,
+               "eps" = {setEPS()
+                        postscript(file,width=xWidth,height=yHeight)},
+               "pdf" =  pdf(file,width=xWidth,height=yHeight),
+               "png" =  png(file,width=xWidth*DPI,height=yHeight*DPI,res=DPI)
+        )
+
+        values$last_experiment=input$experiment_SA
+        values$last_plot=input$plottype_SA
+        obPlot <- generatePlot("Surface",getPlotTypeShort(input$plottype_SA),input$obtype_SA,input$variable_SA,"Surface",NULL,NULL,NULL,input$dateRange_SA,input$cycle_SA)
+        print(obPlot)
+        dev.off()
+      }
     }
   )
 

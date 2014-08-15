@@ -512,7 +512,7 @@ generate_surfdia <- function(var,station){
 
     values$last_variable=var
     values$last_station=station
- 
+
     date2=getLatestDate(base)
     date1=getPastDate(date2,7)
     cycle=getLatestCycle(base)
