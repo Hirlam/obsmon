@@ -9,8 +9,10 @@ require(chron)
 require(scales)
 require(mapproj)
 
-widthOfPlot=800
 map.world<-map_data(map="world")
+
+widthOfPlot=800
+heightOfPlot=600
 
 values<-reactiveValues()
 values$plotData=NULL
@@ -29,6 +31,7 @@ values$synops=NULL
 
 shinyServer(function(input,output) {
 
+  # Check for upload size
   maxUpload<-observe({
     # Set upload file size
     if ( is.null(input$maxUpload)){
@@ -256,7 +259,7 @@ shinyServer(function(input,output) {
         })
       }
     }
-  },height="auto",width=widthOfPlot)
+  },height=heightOfPlot,width=widthOfPlot)
 
   # ObsmonPlot_SA
   output$ObsmonPlot_SA <- renderPlot({
@@ -282,7 +285,7 @@ shinyServer(function(input,output) {
         })
       }
     }
-  },height="auto",width=widthOfPlot)
+  },height=heightOfPlot,width=widthOfPlot)
 
   # ObsmonPlotPreDef
   output$ObsmonPlotPreDef <- renderPlot({
@@ -306,7 +309,7 @@ shinyServer(function(input,output) {
         })
       }
     }
-  },height="auto",width=widthOfPlot) 
+  },height=heightOfPlot,width=widthOfPlot) 
 
   #commentPreDefined
   output$commentPreDefined <- renderText({"(*) Right click to save figures as .png"})
@@ -449,7 +452,7 @@ shinyServer(function(input,output) {
         })
       }
     }
-  },height="auto",width=widthOfPlot)
+  },height=heightOfPlot,width=widthOfPlot)
 
   ###############################################################
 

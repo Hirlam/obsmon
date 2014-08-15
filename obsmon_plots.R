@@ -392,7 +392,7 @@ generatePlot<-function(odbBase,plotName,obName,varName,levels,sensor,satelite,ch
      lastLevel<-values$plotData$level[length(values$plotData$level)]
      if ( verbose("DEBUG") ) { print(paste("DEBUG: ",values$plotData$level))}
      if ( verbose("DEBUG") ) { print(paste("DEBUG: ",lastLevel))}
-     if ( lastLevel > 9000 ) {
+     if ( lastLevel > 90000 ) {
        obPlot <- ggplot(values$plotData, aes(level)) +
                geom_line(aes(y=fg_bias_total,colour="fg_bias_total")) +
                geom_point(aes(y=fg_bias_total,colour="fg_bias_total"),size=4) +

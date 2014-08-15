@@ -55,7 +55,7 @@ shinyUI(navbarPage("OBSMON v2",id="tabs",
               tabPanel("Plot",
                 fluidRow(
                   column(10,
-                    plotOutput(outputId="ObsmonPlot"),
+                    plotOutput(outputId="ObsmonPlot",height="auto",width="auto"),
                     tags$style(type="text/css", "body { overflow-y: scroll; }")
                   ),
                   column(2,
@@ -128,7 +128,7 @@ shinyUI(navbarPage("OBSMON v2",id="tabs",
               tabPanel("Plot",
                 fluidRow(
                   column(10,
-                    plotOutput(outputId="ObsmonPlot_SA"),
+                    plotOutput(outputId="ObsmonPlot_SA",height="auto",width="auto"),
                     tags$style(type="text/css", "body { overflow-y: scroll; }")
                   ),
                   column(2,
@@ -185,7 +185,7 @@ shinyUI(navbarPage("OBSMON v2",id="tabs",
             ),
             fluidRow(
               column(12,
-                plotOutput(outputId="ObsmonPlotPreDef"),
+                plotOutput(outputId="ObsmonPlotPreDef",height="auto",width="auto"),
                 tags$style(type="text/css", "body { overflow-y: scroll; }")
               )
             )
@@ -223,7 +223,7 @@ shinyUI(navbarPage("OBSMON v2",id="tabs",
       column(10,offset=2,
         fluidRow(
           column(12,
-            plotOutput(outputId="surfdiaPlot"),
+            plotOutput(outputId="surfdiaPlot",height="auto",width="auto"),
             tags$style(type="text/css", "body { overflow-y: scroll; }")
           )
         )
@@ -263,6 +263,7 @@ shinyUI(navbarPage("OBSMON v2",id="tabs",
         wellPanel(h2("Settings"),
           uiOutput("set_verbosity"),
           checkboxInput(inputId="showExistingDataOnly",label=h5("Show existing data only"),value=TRUE),
+          hr(),
           numericInput(inputId="maxUpload",label=h5("Max file size for SQLite data bases (MB)"),value=30,min = 0)
         )
       )
@@ -276,18 +277,26 @@ shinyUI(navbarPage("OBSMON v2",id="tabs",
           span("HARMONIE",style = "color:blue"),".")
         )
       ),
-      wellPanel(h2("Help"),
-        h4("Usage"),
+      wellPanel(h1("Help"),
+        h3("General usage"),
+        hr(),
         p("Shiny is reactive. It means when you change something that has a dependency, the dependency will adjust."),
-        p("There is one tab for upper air assimilation and one for surface assimilation. The menus have a dependency from left to right, and you will need to press the button for plotting to get the current plot. Next to the plot you can see the SQL query and extracted data for the last plot excecuted."), 
-        h5("Pre-defined plots"),
+        p("There is one tab for upper air assimilation and one for surface assimilation. The selection menus have a dependency from left to right and top to bottom. It means that if you change something to the left or above your settings durther downstream could be canceled. You will need to press the button for plotting to get the current plot and by doing this your current settings will be remembered. Next to the plot you can see the SQL query and extracted data for the last plot excecuted."), 
+        hr(),
+        br(),
+        h4("Pre-defined plots"),
         p("This tab is meant as a short-cut for frequently used plots. It is designed for several groups so that e.g. duty forecasters can monitor the production by using their own group of pre-defined plots."),
-        h5("Settings"),
+        br(),
+        h4("Dump database"),
+        p("This tab is good for debugging of small data bases, but should not be used on large operational data bases as it could overload your system."),
+        br(),
+        h4("Settings"),
         span("Show existing data only",style="color:red"),
         p("By enabling this, the user experience will be slower but you will only show options found in the selected SQLite table. The menus have a dependency from left to right. It means if you change the timing, most of the other options will have a dependency and will be re-checked. There has been implemented a solution that will remember the last values when plotting is executed. It means you will start on the last plotted values as your current settings, if you plot a figure and then adjust the time period. If you disable the check for exixting data the options will have a normal dependency from left to right."),
-        p("In the scripts there is a setting productionSite which should be set TRUE for sites running the OBSMON shiny interface as a constantly running daemon. This switch disables potentially performance destroying features like the dumping of the SQLite data base"),
-        h5("Dump database"),
-        p("This tab is good for debugging of small data bases, but should not be used on large operational data bases as it could overload your system.") 
+        span("Max file size for SQLite data bases (MB)",style="color:red"),
+        p("You can upload a data base to your /tmp directory from local disc. This data base will then be used in OBSMON. If you have a big data base you might have to adjust this setting."),
+        hr(),
+        p("In the scripts there is a setting ",span("productionSite",style="color:red")," which should be set TRUE for sites running the OBSMON shiny interface as a constantly running daemon. This switch disables potentially performance destroying features like the dumping of the SQLite data base")
       )
     )
   )

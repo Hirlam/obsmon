@@ -575,6 +575,9 @@ getUnit<-function(varName){
                     "rh2m" = "%",
                     "snow" = "kg/m2",
                     "rad"  = "K",
+                    "radv" = "m/s",
+                    "dbz"  = "db",
+                    "rh"   = "%",
                     NULL)
   }
 }
