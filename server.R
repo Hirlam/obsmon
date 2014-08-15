@@ -399,7 +399,7 @@ shinyServer(function(input,output) {
   # downloadImage
   output$downloadImage_SA <- downloadHandler (
     filename = function () {
-      paste("Surface_",input$plottype_SA,"_",input$obtype_SA,"_",input$variable_SA,"_Surface_",input$dateRange,"_",input$cycle,".",input$plotTypeFormat,sep="")
+      paste("Surface_",input$plottype_SA,"_",input$obtype_SA,"_",input$variable_SA,"_Surface_",input$dateRange_SA,"_",input$cycle_SA,".",input$plotTypeFormat_SA,sep="")
     },
     content = function(file) {
       xWidth=10
@@ -424,7 +424,7 @@ shinyServer(function(input,output) {
 
   # select_stations_surfdia
   output$select_stations_surfdia<-renderUI({
-    selectInput(inputId = "station",label=h5("Select station:"),choices=getStations(input$variable_surfdia),width="100%",,selected=getLastSelected("last_station"))
+    selectInput(inputId = "station",label=h5("Select station:"),choices=getStations(input$variable_surfdia),width="100%",selected=getLastSelected("last_station"))
   })
   
   # ObsmonPlotPreDef
