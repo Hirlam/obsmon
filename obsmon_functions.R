@@ -638,10 +638,16 @@ getStations<-function(variable){
   base=NULL
   switch(variable,"U10M" = { base="Minimization"}, "V10M" = { base="Minimization"},"Z" = { base="Minimization"},{ base="Surface"})
 
+  date2=getLatestDate(base)
+  cycle=getLatestCycle(base)
+  dtg2=date2dtg(date2,cycle)
+  date1=getPastDate(date2,7)
+  dtg1=date2dtg(date1,cycle)
+
   stations=NULL
   dbConn=connect(base)
   if ( !is.null(dbConn)){
-    plotQuery<-paste("SELECT DISTINCT statid FROM usage WHERE DTG ==",date2dtg(getLatestDate(base),getLatestCycle(base))," AND varname == '",tolower(variable),"' AND ( active == 1 OR anflag != 0 ) ORDER BY statid",sep="")
+    plotQuery<-paste("SELECT DISTINCT statid FROM usage WHERE DTG >=",dtg1," AND DTG <= ",dtg2," AND varname == '",tolower(variable),"' AND ( active == 1 OR anflag != 0 ) ORDER BY statid",sep="")
     if (verbose("INFO")) { print(paste("INFO: ",plotQuery)) }
     data <- data.frame(dbGetQuery(dbConn,plotQuery))
     stations=data$statid

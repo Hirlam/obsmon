@@ -525,6 +525,7 @@ generate_surfdia <- function(var,station){
     obPlot=NULL
     plotQuery<-paste("SELECT dtg,obsvalue,fg_dep,an_dep,statid FROM usage ",
                              " WHERE statid LIKE '%",station2,"%'",
+                             " AND DTG >= ",dtg1," AND DTG <= ",dtg2,
                              " AND obname == 'synop' ",
                              " AND varname == '",tolower(var),"'",sep="")
     if ( verbose("INFO") ) { print(paste("INFO: ",plotQuery))}

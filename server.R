@@ -391,7 +391,7 @@ shinyServer(function(input,output) {
       yHeight=5.5
       DPI <- 150
 
-      if ( !is.null(input$obtype) && !is.null(plotTypeFormat)){
+      if ( !is.null(input$obtype) && !is.null(input$plotTypeFormat)){
         switch(input$obtype, SATEM = {var = "rad"},{ var = input$variable})
         switch(input$plotTypeFormat,
              "eps" = {setEPS()
@@ -418,7 +418,7 @@ shinyServer(function(input,output) {
       xWidth=10
       yHeight=5.5
       DPI <- 150
-      if ( !is.null(plotTypeFormat_SA)){
+      if ( !is.null(input$plotTypeFormat_SA)){
         switch(input$plotTypeFormat_SA,
                "eps" = {setEPS()
                         postscript(file,width=xWidth,height=yHeight)},
