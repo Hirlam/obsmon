@@ -99,23 +99,32 @@ obtypeExists<- function(obtype){
   base=NULL
   daterange=NULL
   cycle=NULL
+  exp=NULL
   if ( input$tabs == "Surface" ){
     base="Surface"
     if ( !is.null(input$dateRange_SA)){ daterange=input$dateRange_SA }
     if ( !is.null(input$cycle_SA)){ cycle=input$cycle_SA }
+    if ( !is.null(input$experiment_SA)){ exp=input$experiment_SA }
   }else{
     if ( !is.null(input$ODBbase)){ base=input$ODBbase }
     if ( !is.null(input$dateRange)){ daterange=input$dateRange }
     if ( !is.null(input$cycle)){ cycle=input$cycle }
+    if ( !is.null(input$experiment)){ exp=input$experiment }  
   }
 
-  if (!is.null(base) && !is.null(obtype) && !is.null(daterange) && !is.null(cycle)){
-    dbConn<-connect(base)
+  if (!is.null(base) && !is.null(exp) && !is.null(obtype) && !is.null(daterange) && !is.null(cycle)){
+    dbConn<-connect(base,exp)
     if ( !is.null(dbConn)) {
      
-      query<-paste("SELECT obnumber FROM obsmon WHERE obnumber == ",getObNumber(obtype)," AND DTG >= ",date2dtg(daterange[1],cycle)," AND DTG <= ",date2dtg(daterange[2],cycle)," LIMIT 1",sep="")
+      query<-paste("SELECT nobs_total FROM obsmon WHERE obnumber == ",getObNumber(obtype)," AND DTG >= ",date2dtg(daterange[1],cycle)," AND DTG <= ",date2dtg(daterange[2],cycle)," ORDER BY nobs_total DESC LIMIT 1",sep="")
       if ( verbose("INFO") ) { print(paste("INFO: ",query))}
-      if ( nrow(dbGetQuery(dbConn,query)) > 0 ) { exists=TRUE}
+      if ( nrow(dbGetQuery(dbConn,query)) > 0 ) {
+        checkData=dbGetQuery(dbConn,query)
+        if ( verbose("INFO") ) { print(paste("INFO: nobs_total=",as.character(checkData$nobs_total)))}
+        if ( checkData$nobs_total > 0 ) {
+          exists=TRUE
+        }
+      }
       disconnect(dbConn)
     } 
   }
@@ -236,18 +245,21 @@ variableExists<- function(obtype,var){
   base=NULL
   daterange=NULL
   cycle=NULL
+  exp=NULL
   if ( input$tabs == "Surface" ){
     base="Surface"
     if ( !is.null(input$dateRange_SA)){ daterange=input$dateRange_SA }
     if ( !is.null(input$cycle_SA)){ cycle=input$cycle_SA }
+    if ( !is.null(input$experiment_SA)){ exp=input$experiment_SA }
   }else{
     if ( !is.null(input$ODBbase)){ base=input$ODBbase }
     if ( !is.null(input$dateRange)){ daterange=input$dateRange }
     if ( !is.null(input$cycle)){ cycle=input$cycle }
+    if ( !is.null(input$experiment)){ exp=input$experiment }
   }
 
-  if (!is.null(base) && !is.null(obtype) && !is.null(var) && !is.null(daterange) && !is.null(cycle)){
-    dbConn<-connect(base)
+  if (!is.null(base) && !is.null(exp) && !is.null(obtype) && !is.null(var) && !is.null(daterange) && !is.null(cycle)){
+    dbConn<-connect(base,exp)
     if ( !is.null(dbConn)) {
        
       query<-paste("SELECT nobs_total FROM obsmon WHERE obnumber == ",getObNumber(obtype)," AND varname == '",var,"' AND DTG >= ",date2dtg(daterange[1],cycle)," AND DTG <= ",date2dtg(daterange[2],cycle)," ORDER BY nobs_total DESC LIMIT 1",sep="")
@@ -354,13 +366,14 @@ sensorExists<- function(sensor){
   base=NULL
   daterange=NULL
   cycle=NULL
+  exp=NULL
   if ( !is.null(input$ODBbase)){ base=input$ODBbase }
   if ( !is.null(input$dateRange)){ daterange=input$dateRange }
   if ( !is.null(input$cycle)){ cycle=input$cycle }
+  if ( !is.null(input$experiment)){ exp=input$experiment }
 
-
-  if (!is.null(base) && !is.null(sensor) && !is.null(daterange) && !is.null(cycle)){
-    dbConn<-connect(base)
+  if (!is.null(base) && !is.null(exp) && !is.null(sensor) && !is.null(daterange) && !is.null(cycle)){
+    dbConn<-connect(base,exp)
     if ( !is.null(dbConn)) {
 
       query<-paste("SELECT nobs_total FROM obsmon WHERE obname == '",tolower(sensor),"' AND DTG >= ",date2dtg(daterange[1],cycle)," AND DTG <= ",date2dtg(daterange[2],cycle)," ORDER BY nobs_total DESC LIMIT 1",sep="")
@@ -405,20 +418,23 @@ sateliteExists<- function(sensor,satelite){
 
   exists=FALSE
   base=NULL
+  exp=NULL
   daterange=NULL
   cycle=NULL
   if ( input$tabs == "Surface" ){
     base="Surface"
     if ( !is.null(input$dateRange_SA)){ daterange=input$dateRange_SA }
     if ( !is.null(input$cycle_SA)){ cycle=input$cycle_SA }
+    if ( !is.null(input$experiment_SA)){ exp=input$experiment_SA }
   }else{
     if ( !is.null(input$ODBbase)){ base=input$ODBbase }
     if ( !is.null(input$dateRange)){ daterange=input$dateRange }
     if ( !is.null(input$cycle)){ cycle=input$cycle }
+    if ( !is.null(input$experiment)){ exp=input$experiment }
   }
 
-  if (!is.null(base) && !is.null(sensor) && !is.null(satelite) && !is.null(daterange) && !is.null(cycle)){
-    dbConn<-connect(base)
+  if (!is.null(base) && !is.null(exp) && !is.null(sensor) && !is.null(satelite) && !is.null(daterange) && !is.null(cycle)){
+    dbConn<-connect(base,exp)
     if ( !is.null(dbConn)) {
 
       query<-paste("SELECT nobs_total FROM obsmon WHERE obname == '",tolower(sensor),"' AND satname == '",setDBSatname(satelite),"' AND DTG >= ",date2dtg(daterange[1],cycle)," AND DTG <= ",date2dtg(daterange[2],cycle)," ORDER BY nobs_total DESC LIMIT 1",sep="")
@@ -503,14 +519,16 @@ channelExists<-  function(sensor,sat,channel){
 
   exists=FALSE
   base=NULL
+  exp=NULL
   daterange=NULL
   cycle=NULL
   if ( !is.null(input$ODBbase)){ base=input$ODBbase }
   if ( !is.null(input$dateRange)){ daterange=input$dateRange }
   if ( !is.null(input$cycle)){ cycle=input$cycle }
+  if ( !is.null(input$experiment)){ exp=input$experiment }
 
-  if (!is.null(base) && !is.null(sensor) && !is.null(sat) && !is.null(channel) && !is.null(daterange) && !is.null(cycle)){
-    dbConn<-connect(base)
+  if (!is.null(base) && !is.null(exp) && !is.null(sensor) && !is.null(sat) && !is.null(channel) && !is.null(daterange) && !is.null(cycle)){
+    dbConn<-connect(base,exp)
     if ( !is.null(dbConn)) {
 
       query<-paste("SELECT nobs_total FROM obsmon WHERE obname == '",tolower(sensor),"' AND satname == '",setDBSatname(sat),"' AND level == ",channel," AND DTG >= ",date2dtg(daterange[1],cycle)," AND DTG <= ",date2dtg(daterange[2],cycle)," ORDER BY nobs_total DESC LIMIT 1",sep="")
@@ -588,33 +606,39 @@ getUnit<-function(varName){
   }
 }
 
-# getLatestDate
-getLatestDate <- function(base){
-  if ( verbose("DEBUG")) { print(paste("DEBUG: -> getLatestDate(",base,")")) }
+#getLatestDate
+getLatestDate <- function(base,exp){
+  if ( verbose("DEBUG")) { print(paste("DEBUG: -> getLatestDate(",base,exp,")")) }
+
   date<-NULL
-  dbConn <- connect(base)
-  if ( !is.null(dbConn)){
-    plotQuery<-paste("SELECT dtg FROM obsmon ORDER BY dtg DESC LIMIT 1")
-    if ( verbose("INFO")) { print(paste("INFO: ",plotQuery)) } 
-    plotData <- data.frame(dbGetQuery(dbConn,plotQuery))
-    disconnect(dbConn)
-    date<-paste(substr(plotData$DTG,1,4),"-",substr(plotData$DTG,5,6),"-",substr(plotData$DTG,7,8),sep="")
+  if ( !is.null(base) && !is.null(exp)){
+    dbConn <- connect(base,exp)
+    if ( !is.null(dbConn)){
+      plotQuery<-paste("SELECT dtg FROM obsmon ORDER BY dtg DESC LIMIT 1")
+      if ( verbose("INFO")) { print(paste("INFO: ",plotQuery)) } 
+      plotData <- data.frame(dbGetQuery(dbConn,plotQuery))
+      disconnect(dbConn)
+      date<-paste(substr(plotData$DTG,1,4),"-",substr(plotData$DTG,5,6),"-",substr(plotData$DTG,7,8),sep="")
+    }
   }
   return(date)
 }
 
 
 # getLatestCycle
-getLatestCycle <- function(base){
-  if ( verbose("DEBUG")) { print(paste("DEBUG: -> getLatestCycle(",base,")")) }
-  cycle<-NULL
-  dbConn <- connect(base)
-  if ( !is.null(dbConn)){
-    plotQuery<-paste("SELECT dtg FROM obsmon ORDER BY dtg DESC LIMIT 1")
-    if (verbose("INFO")) { print(paste("INFO: ",plotQuery)) }  
-    plotData <- data.frame(dbGetQuery(dbConn,plotQuery))
-    disconnect(dbConn)
-    cycle<-paste(substr(plotData$DTG,9,10),sep="")
+getLatestCycle <- function(base,exp){
+  if ( verbose("DEBUG")) { print(paste("DEBUG: -> getLatestCycle(",base,exp,")")) }
+
+  cycle<-NULL 
+  if ( !is.null(base) && !is.null(exp)){
+    dbConn <- connect(base,exp)
+    if ( !is.null(dbConn)){
+      plotQuery<-paste("SELECT dtg FROM obsmon ORDER BY dtg DESC LIMIT 1")
+      if (verbose("INFO")) { print(paste("INFO: ",plotQuery)) }  
+      plotData <- data.frame(dbGetQuery(dbConn,plotQuery))
+      disconnect(dbConn)
+      cycle<-paste(substr(plotData$DTG,9,10),sep="")
+    }
   }
   return(cycle)
 }
@@ -633,29 +657,31 @@ getPastDate<-function(date,increment){
 # getStations
 getStations<-function(variable){
   if ( verbose("DEBUG")) { print(paste("DEBUG: -> getStations(",variable,")")) }
-  if (is.null(variable)) { return(NULL)}
-
-  base=NULL
-  switch(variable,"U10M" = { base="Minimization"}, "V10M" = { base="Minimization"},"Z" = { base="Minimization"},{ base="Surface"})
-
-  date2=getLatestDate(base)
-  cycle=getLatestCycle(base)
-  dtg2=date2dtg(date2,cycle)
-  date1=getPastDate(date2,7)
-  dtg1=date2dtg(date1,cycle)
 
   stations=NULL
-  dbConn=connect(base)
-  if ( !is.null(dbConn)){
-    plotQuery<-paste("SELECT DISTINCT statid FROM usage WHERE DTG >=",dtg1," AND DTG <= ",dtg2," AND varname == '",tolower(variable),"' AND ( active == 1 OR anflag != 0 ) ORDER BY statid",sep="")
-    if (verbose("INFO")) { print(paste("INFO: ",plotQuery)) }
-    data <- data.frame(dbGetQuery(dbConn,plotQuery))
-    stations=data$statid
-    stations=gsub("'","",stations)
-    stations=gsub(" ","",stations)
-    name=getSynopName(stations)
-    stations=paste(name,"  [",stations,"]",sep="")
-    disconnect(dbConn)
+  if ( !is.null(variable)) {
+    base=NULL
+
+    switch(variable,"U10M" = { base="Minimization"}, "V10M" = { base="Minimization"},"Z" = { base="Minimization"},{ base="Surface"})
+
+    date2=getLatestDate(base,input$experiment_SD)
+    cycle=getLatestCycle(base,input$experiment_SD)
+    dtg2=date2dtg(date2,cycle)
+    date1=getPastDate(date2,input$ndays)
+    dtg1=date2dtg(date1,cycle)
+
+    dbConn=connect(base,input$experiment_SD)
+    if ( !is.null(dbConn)){
+      plotQuery<-paste("SELECT DISTINCT statid FROM usage WHERE DTG >=",dtg1," AND DTG <= ",dtg2," AND varname == '",tolower(variable),"' AND ( active == 1 OR anflag != 0 ) ORDER BY statid",sep="")
+      if (verbose("INFO")) { print(paste("INFO: ",plotQuery)) }
+      data <- data.frame(dbGetQuery(dbConn,plotQuery))
+      stations=data$statid
+      stations=gsub("'","",stations)
+      stations=gsub(" ","",stations)
+      name=getSynopName(stations)
+      stations=paste(name,"  [",stations,"]",sep="")
+      disconnect(dbConn)
+    }
   }
   return(stations)
 }
@@ -684,11 +710,12 @@ verbose <- function(level){
 }
 
 # getDumpData
-getDumpData<-function(base,table){
+getDumpData<-function(base,table,exp){
   if ( verbose("DEBUG") ) { print(paste("DEBUG: getDumpData(",base,")"))}
   dumpData=NULL
-  if ( !is.null(base) && !is.null(table)){
-    dbConn=connect(base)
+
+  if ( !is.null(base) && !is.null(exp) && !is.null(table)){
+    dbConn=connect(base,exp)
     if (!is.null(dbConn)){
       plotQuery<-paste("SELECT * from ",table,sep="")
       if ( verbose("INFO") ) { print(paste("INFO: ",plotQuery))}
@@ -704,12 +731,12 @@ getDumpData<-function(base,table){
 #
 
 # getFile
-getFile <- function(base){
-  if ( verbose("DEBUG")) { print(paste("DEBUG: -> getFile(",base,")")) }
+getFile <- function(base,experiment){
+  if ( verbose("DEBUG")) { print(paste("DEBUG: -> getFile(",base,experiment,")")) }
   fname<-NULL
-  if ( !is.null(base)){
+  if ( !is.null(base)) {
     # Set file name either from experiment description or from uploaded file
-    if ( is.null(input$experiment)){ 
+    if ( is.null(experiment)){ 
       if ( base == "Screening" ){
         if (!is.null(input$ODBbase_screening)){ fname <- input$ODBbase_screening$datapath }
       } else if ( base == "Minimization" ){
@@ -718,11 +745,7 @@ getFile <- function(base){
         if (!is.null(input$ODBbase_surface)) { fname <- input$ODBbase_surface$datapath }
       }
     } else {
-      if ( base == "Surface" ){
-        fname<-setExperiment(input$experiment_SA,base)
-      }else{
-        fname<-setExperiment(input$experiment,base)
-      }
+      fname<-setExperiment(experiment,base)
     }
   }
   return(fname)
@@ -730,12 +753,12 @@ getFile <- function(base){
 
 
 # connect
-connect <- function(base){
-  if ( verbose("DEBUG")) { print(paste("DEBUG: -> connect(",base,")")) }
+connect <- function(base,exp){
+  if ( verbose("DEBUG")) { print(paste("DEBUG: -> connect(",base,exp,")")) }
   dbConn<-NULL
-  if ( !is.null(base)) {
-    fname <- getFile(base)
-    if ( verbose("DEBUG")) { print(paste("DEBUG: -> connect -> ",fname)) }
+  if ( !is.null(base) && !is.null(exp)) {
+    fname <- getFile(base,exp)
+    if ( verbose("DEBUG")) { print(paste("DEBUG: -> connect -> ",fname,exp)) }
     if (!is.null(fname) && file.exists(fname)){
       dbConn <- dbConnect("SQLite",fname)
     }
@@ -808,7 +831,7 @@ setChannelList<-function(selected_channels){
 
 # getSynopName
 getSynopName<-function(number){
-  if ( verbose("DEBUG") ) { print(paste("DEBUG: -> getSynopName(",number,")")) }
+  #if ( verbose("DEBUG") ) { print(paste("DEBUG: -> getSynopName(",number,")")) }
  
   name=NA
   # Read synops first time

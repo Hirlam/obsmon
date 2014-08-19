@@ -210,14 +210,18 @@ shinyUI(navbarPage("OBSMON v2",id="tabs",
   ),
   tabPanel("Surface diagnostics",value="surfdia",
     fluidRow(
-      column(4,align="right",
+      column(3,align="right",
         uiOutput("select_variable_surfdia")
+      ),
+      column(3,align="right",
+        uiOutput("select_experiment_SD"),
+        uiOutput("select_days_surfdia")
       ),
       column(4,
         uiOutput("select_stations_surfdia"),
         tags$style(type='text/css', "#select_stations_surfdia { width: 100%;}")
       ),
-      column(4,
+      column(2,
          actionButton("doPlotSurfdia", label = "Plot!"),
          tags$style(type='text/css', "#doPlotSurfdia { vertical-align: middle; height: 70px; width: 200px; background: green; color: white;}")
       )
@@ -243,13 +247,16 @@ shinyUI(navbarPage("OBSMON v2",id="tabs",
       )
     ),
     fluidRow(
-      column(4,align="right",
+      column(3,align="right",
              uiOutput("select_dump_base")
       ),
-      column(4,align="right",
+      column(3,align="right",
+             uiOutput("select_dump_experiment")
+      ),
+      column(3,align="right",
              selectInput("dump_table",h5("Table to dump:"),c("obsmon","usage"))
       ),
-      column(4,
+      column(3,
          uiOutput("dumpDB_button"),
          tags$style(type='text/css', "#doDump { vertical-align: middle; height: 70px; width: 200px; background: green; color: white;}"),
          tags$style(type='text/css', "#doDumpDisabled { vertical-align: middle; height: 70px; width: 200px; background: red; color: white;}")

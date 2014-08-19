@@ -4,12 +4,16 @@
 # Organized in if tests for the different plot types
 #
 
-generatePlot<-function(odbBase,plotName,obName,varName,levels,sensor,satelite,channels,dateRange,cycle) {
-  if ( verbose("DEBUG") ) { print(paste("DEBUG: -> generatePlot",odbBase,plotName,obName,varName,levels,sensor,satelite,channels,dateRange,cycle)) }
+generatePlot<-function(odbBase,exp,plotName,obName,varName,levels,sensor,satelite,channels,dateRange,cycle) {
+  if ( verbose("DEBUG") ) { print(paste("DEBUG: -> generatePlot",odbBase,exp,plotName,obName,varName,levels,sensor,satelite,channels,dateRange,cycle)) }
 
   # Sanity checks on mandatory values!
   if ( is.null(odbBase) ) {
     if ( verbose("WARNING") ) { print("WARNING: The odb base for plotting is not defined!") }
+    return(NULL)
+  }
+  if ( is.null(exp) ) {
+    if ( verbose("WARNING") ) { print("WARNING: The experiment for plotting is not defined!") }
     return(NULL)
   }
   if ( is.null(plotName) ) {
@@ -35,6 +39,7 @@ generatePlot<-function(odbBase,plotName,obName,varName,levels,sensor,satelite,ch
 
   # Save these values to easier change values
   values$last_base=odbBase
+  values$last_experiment=exp
   values$last_obtype=obName
   values$last_variable=varName
   values$last_level=c(levels)
@@ -93,7 +98,7 @@ generatePlot<-function(odbBase,plotName,obName,varName,levels,sensor,satelite,ch
 
 
   obPlot=NULL
-  dbConn<-connect(odbBase)
+  dbConn<-connect(odbBase,exp)
   if ( !is.null(odbBase)){
 
 # NumberOfObservations
@@ -502,8 +507,8 @@ generatePlot<-function(odbBase,plotName,obName,varName,levels,sensor,satelite,ch
 
 
 
-generate_surfdia <- function(var,station){
-  if ( verbose("DEBUG") ) { print(paste("DEBUG: -> generate_surfdia",var,station)) }
+generate_surfdia <- function(var,station,exp){
+  if ( verbose("DEBUG") ) { print(paste("DEBUG: -> generate_surfdia",var,station,exp)) }
 
   if ( !is.null(var) && !is.null(station)){
 
@@ -513,9 +518,9 @@ generate_surfdia <- function(var,station){
     values$last_variable=var
     values$last_station=station
 
-    date2=getLatestDate(base)
-    date1=getPastDate(date2,7)
-    cycle=getLatestCycle(base)
+    date2=getLatestDate(base,exp)
+    date1=getPastDate(date2,input$ndays)
+    cycle=getLatestCycle(base,exp)
     dtg2=date2dtg(date2,cycle)
     dtg1=date2dtg(date1,cycle)
 
@@ -529,8 +534,8 @@ generate_surfdia <- function(var,station){
                              " AND obname == 'synop' ",
                              " AND varname == '",tolower(var),"'",sep="")
     if ( verbose("INFO") ) { print(paste("INFO: ",plotQuery))}
-    title<-paste(var,station)
-    dbConn=connect(base)
+    title<-paste(exp,var,station)
+    dbConn=connect(base,exp)
     if ( !is.null(dbConn)){
       plotData <- data.frame(dbGetQuery(dbConn,plotQuery))
       if ( nrow(plotData) > 0 ) {

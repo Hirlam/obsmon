@@ -86,14 +86,14 @@ shinyServer(function(input,output) {
     if ( is.null(input$base)) {
         dateRangeInput("dateRange",
         label = h5("Date range"),
-        start = getLatestDate("Screening"),
-        end   = getLatestDate("Screening")
+        start = getLatestDate("Screening",input$experiment),
+        end   = getLatestDate("Screening",input$experiment)
       )
     }else{
       dateRangeInput("dateRange",
         label = h5("Date range"),
-        start = getLatestDate(input$base),
-        end   = getLatestDate(input$base)
+        start = getLatestDate(input$base,input$experiment),
+        end   = getLatestDate(input$base,input$experiment)
       )
     }
   })
@@ -102,28 +102,28 @@ shinyServer(function(input,output) {
     if ( verbose("DEBUG")) { print("DEBUG: -> select_date_SA") }
       dateRangeInput("dateRange_SA",
         label = h5("Date range"),
-        start = getLatestDate("Surface"),
-        end   = getLatestDate("Surface")
+        start = getLatestDate("Surface",input$experiment_SA),
+        end   = getLatestDate("Surface",input$experiment_SA)
     )
   })
   # select_cycle
   output$select_cycle <- renderUI({
     if ( verbose("DEBUG")) { print("DEBUG: -> select_cycle") }
     if ( is.null(input$base)) {
-      selectInput("cycle",h5("Cycle"),c("00","03","06","09","12","15","18","21"),selected = getLatestCycle("Screening")
+      selectInput("cycle",h5("Cycle"),c("00","03","06","09","12","15","18","21"),selected = getLatestCycle("Screening",input$experiment)
       )
     }else{
-      selectInput("cycle",h5("Cycle"),c("00","03","06","09","12","15","18","21"),selected = getLatestCycle(input$base))
+      selectInput("cycle",h5("Cycle"),c("00","03","06","09","12","15","18","21"),selected = getLatestCycle(input$base),input$experiment)
     }
   })
   # select_cycle_SA
   output$select_cycle_SA <- renderUI({
     print("DEBUG: -> select_cycle_SA")
     if ( is.null(input$base_SA)) {
-      selectInput("cycle_SA",h5("Cycle"),c("00","03","06","09","12","15","18","21"),selected = getLatestCycle("Screening")
+      selectInput("cycle_SA",h5("Cycle"),c("00","03","06","09","12","15","18","21"),selected = getLatestCycle("Screening",input$experiment_SA)
       )
     }else{
-      selectInput("cycle_SA",h5("Cycle"),c("00","03","06","09","12","15","18","21"),selected = getLatestCycle(input$base_SA))
+      selectInput("cycle_SA",h5("Cycle"),c("00","03","06","09","12","15","18","21"),selected = getLatestCycle(input$base_SA,input$experiment_SA))
     }
   })
 
@@ -155,7 +155,7 @@ shinyServer(function(input,output) {
   # select_group_predef
   output$select_group_predef <- renderUI({
     if ( verbose("DEBUG") ) { print("DEBUG: -> select_group_predef") }
-    selectInput(inputId = "groupPreDef",label=h5("Which group?"),choices=getPreDefinedGroups())
+    selectInput(inputId = "groupPreDef",label=h5("Which experiment?"),choices=getPreDefinedGroups())
   })
 
   # select_plottype_predef
@@ -217,8 +217,8 @@ shinyServer(function(input,output) {
   # select_experiment_SA
   output$select_experiment_SA <- renderUI({
     if ( verbose("DEBUG") ) { print("DEBUG: -> select_experiment_SA") }
-    if ( !is.null(getExperiments())) {
-      selectInput(inputId = "experiment_SA",label=h5("Select pre-defined experiment"),choices=getExperiments(),selected=getLastSelected("last_experiment"),width="100%")
+    if ( !is.null(getExperiments("Surface"))) {
+      selectInput(inputId = "experiment_SA",label=h5("Select pre-defined experiment"),choices=getExperiments("Surface"),selected=getLastSelected("last_experiment"),width="100%")
     } else {
       if ( !is.null(input$tabs) ) {
         if ( input$tabs == "Surface" ) {
@@ -227,6 +227,27 @@ shinyServer(function(input,output) {
       }
     }
   })
+  # select_experiment_SD
+  output$select_experiment_SD <- renderUI({
+    if ( verbose("DEBUG") ) { print("DEBUG: -> select_experiment_SD") }
+
+    if ( !is.null(input$variable_surfdia)) {
+      if ( input$variable_surfdia == "U10" || input$variable_surfdia == "V10" || input$variable_surfdia == "Z" ){
+        if ( !is.null(getExperiments("Minimization"))) {
+          selectInput(inputId = "experiment_SD",label=h5("Select pre-defined experiment"),choices=getExperiments("Minimization"),selected=getLastSelected("last_experiment"),width="100%")
+        } else {
+          fileInput('ODBbase_minimization', 'Choose SQLite data base from minimization',accept = c('.db'))
+        }
+      }else{
+        if ( !is.null(getExperiments("Surface"))) {
+          selectInput(inputId = "experiment_SD",label=h5("Select pre-defined experiment"),choices=getExperiments("Surface"),selected=getLastSelected("last_experiment"),width="100%")
+        } else {
+          fileInput('ODBbase_surface', 'Choose SQLite data base from surface assimilation',accept = c('.db'))
+        }
+      }
+    }
+  })
+
 
   # set_verbosity
   output$set_verbosity <- renderUI({
@@ -253,10 +274,9 @@ shinyServer(function(input,output) {
       }else{
         isolate({
 
-          values$last_experiment=input$experiment
           values$last_plot=input$plottype
           switch(input$obtype, SATEM = {var = "rad"},{ var = input$variable})
-          obPlot <- generatePlot(input$ODBbase,getPlotTypeShort(input$plottype),input$obtype,var,input$level,input$sensor,input$satelite,input$channel,input$dateRange,input$cycle) 
+          obPlot <- generatePlot(input$ODBbase,input$experiment,getPlotTypeShort(input$plottype),input$obtype,var,input$level,input$sensor,input$satelite,input$channel,input$dateRange,input$cycle) 
 
           return(obPlot)
         })
@@ -281,9 +301,8 @@ shinyServer(function(input,output) {
       }else{
         isolate({
 
-          values$last_experiment=input$experiment
           values$last_plot=input$plottype_SA
-          obPlot <- generatePlot("Surface",getPlotTypeShort(input$plottype_SA),input$obtype_SA,input$variable_SA,"Surface",NULL,NULL,NULL,input$dateRange_SA,input$cycle_SA)
+          obPlot <- generatePlot("Surface",input$experiment_SA,getPlotTypeShort(input$plottype_SA),input$obtype_SA,input$variable_SA,"Surface",NULL,NULL,NULL,input$dateRange_SA,input$cycle_SA)
 
           return(obPlot)
         })
@@ -307,9 +326,8 @@ shinyServer(function(input,output) {
       }else{
         isolate({
 
-          values$last_experiment=input$experiment
           values$last_plot=input$plottypePreDef
-          obPlot=generatePreDefinedPlot(input$plottypePreDef)
+          obPlot=generatePreDefinedPlot(input$plottypePreDef,input$groupPreDef)
           return(obPlot)
         })
       }
@@ -357,6 +375,22 @@ shinyServer(function(input,output) {
     }
   })
 
+  output$select_dump_experiment<-renderUI({
+    if ( !is.null(getExperiments(input$ODBbase_dump))) {
+      selectInput(inputId = "dump_experiment",label=h5("Select experiment"),choices=getExperiments(input$ODBbase_dump),selected=getLastSelected("last_experiment"),width="100%")
+    } else {
+      if ( !is.null(input$ODBbase_dump)) {
+        if ( input$ODBbase_dump == "Screening" ) {
+          fileInput('ODBbase_screening', 'Choose SQLite data base from screening',accept = c('.db'))
+        } else if ( input$ODBbase_dump == "Minimization" ) {
+          fileInput('ODBbase_minimization', 'Choose SQLite data base from minimization',accept = c('.db'))
+        } else if ( input$ODBbase_dump == "Surface" ) {
+          fileInput('ODBbase_surface', 'Choose SQLite data base from surface assimilation',accept = c('.db'))
+        }
+      }
+    }
+  })
+
   # dumpDB
   output$dumpDB <- renderTable({
     if ( verbose("DEBUG") ) { print("DEBUG: dumpDB")}
@@ -371,7 +405,7 @@ shinyServer(function(input,output) {
             return(NULL)
           }else{
             if ( !is.null(input$dump_table)) {
-              getDumpData(input$ODBbase_dump,input$dump_table)
+              getDumpData(input$ODBbase_dump,input$dump_table,input$dump_experiment)
             }else{
               return(NULL)
             }
@@ -400,9 +434,8 @@ shinyServer(function(input,output) {
              "png" =  png(file,width=xWidth*DPI,height=yHeight*DPI,res=DPI)
         )
 
-        values$last_experiment=input$experiment
         values$last_plot=input$plottype
-        obPlot <- generatePlot(input$ODBbase,getPlotTypeShort(input$plottype),input$obtype,var,input$level,input$sensor,input$satelite,input$channel,input$dateRange,input$cycle)
+        obPlot <- generatePlot(input$ODBbase,input$experiment,getPlotTypeShort(input$plottype),input$obtype,var,input$level,input$sensor,input$satelite,input$channel,input$dateRange,input$cycle)
         print(obPlot)
         dev.off()
       }
@@ -426,9 +459,8 @@ shinyServer(function(input,output) {
                "png" =  png(file,width=xWidth*DPI,height=yHeight*DPI,res=DPI)
         )
 
-        values$last_experiment=input$experiment_SA
         values$last_plot=input$plottype_SA
-        obPlot <- generatePlot("Surface",getPlotTypeShort(input$plottype_SA),input$obtype_SA,input$variable_SA,"Surface",NULL,NULL,NULL,input$dateRange_SA,input$cycle_SA)
+        obPlot <- generatePlot("Surface",input$experiment_SA,getPlotTypeShort(input$plottype_SA),input$obtype_SA,input$variable_SA,"Surface",NULL,NULL,NULL,input$dateRange_SA,input$cycle_SA)
         print(obPlot)
         dev.off()
       }
@@ -444,7 +476,13 @@ shinyServer(function(input,output) {
   output$select_stations_surfdia<-renderUI({
     selectInput(inputId = "station",label=h5("Select station:"),choices=getStations(input$variable_surfdia),width="100%",selected=getLastSelected("last_station"))
   })
-  
+
+  # select_days_surfdia 
+  output$select_days_surfdia<-renderUI({
+    numericInput(inputId = "ndays",label=h5("Select time period (days):"),min=1,value=7)
+  })
+
+ 
   # ObsmonPlotPreDef
   output$surfdiaPlot <- renderPlot({
     input$doPlotSurfdia
@@ -462,7 +500,7 @@ shinyServer(function(input,output) {
         isolate({
 
           obPlot=NULL
-          obPlot=generate_surfdia(input$variable_surfdia,input$station)
+          obPlot=generate_surfdia(input$variable_surfdia,input$station,input$experiment_SD)
           return(obPlot)
         })
       }
