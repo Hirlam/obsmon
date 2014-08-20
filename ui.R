@@ -4,17 +4,25 @@ shinyUI(navbarPage("OBSMON v2",id="tabs",
   tabPanel("Upper air (3D-VAR/4D-VAR)",
     fluidRow(
       column(5,
-        wellPanel("I",
+        wellPanel("I: Time and file",
           fluidRow(
             column(6,
-              uiOutput("select_base"),
-              uiOutput("select_experiment")
+              uiOutput("select_base")
             ),
-            column(4,
-              uiOutput("select_date")
-            ),  
-            column(2,
-              uiOutput("select_cycle")
+            column(6,
+              fluidRow(
+                column(12,
+                  uiOutput("select_experiment")
+                )
+              ),
+              fluidRow( 
+                column(8,
+                  uiOutput("select_date")
+                ),  
+                column(4,
+                  uiOutput("select_cycle")
+                )
+              )
             )
           ),
           hr()
@@ -22,7 +30,7 @@ shinyUI(navbarPage("OBSMON v2",id="tabs",
       ),
       column(7,
         fluidRow(
-          wellPanel("II",
+          wellPanel("II: Variable selection",
             fluidRow(
               column(4,
                 uiOutput("select_obtype")
@@ -74,7 +82,7 @@ shinyUI(navbarPage("OBSMON v2",id="tabs",
                 )
               )
             ),
-            tabPanel("Query and data used in last plot",
+            tabPanel("Query and data",
               wellPanel(h5("Query used:"),
                 uiOutput("query_used")
               ),
@@ -93,6 +101,8 @@ shinyUI(navbarPage("OBSMON v2",id="tabs",
     fluidRow(
       column(3,
         wellPanel(
+          uiOutput("select_experiment_SA"),
+          hr(),
           fluidRow(
             column(7,
               uiOutput("select_date_SA")
@@ -100,9 +110,7 @@ shinyUI(navbarPage("OBSMON v2",id="tabs",
             column(4,offset=1,
               uiOutput("select_cycle_SA")
             )   
-          ),  
-          hr(),
-          uiOutput("select_experiment_SA")
+          )  
         )
       ),  
       column(9,
@@ -147,7 +155,7 @@ shinyUI(navbarPage("OBSMON v2",id="tabs",
                   )
                 )
               ),
-              tabPanel("Query and data used in last plot",
+              tabPanel("Query and data",
                 wellPanel(h5("Query used:"),
                   uiOutput("query_used_SA")
                 ),
@@ -194,7 +202,7 @@ shinyUI(navbarPage("OBSMON v2",id="tabs",
               )
             )
           ),
-          tabPanel("Query and data used in last plot",
+          tabPanel("Query and data",
             wellPanel(h5("Query used:"),
               uiOutput("query_usedPreDefined")
             ),
@@ -229,10 +237,22 @@ shinyUI(navbarPage("OBSMON v2",id="tabs",
     hr(),
     fluidRow(
       column(10,offset=2,
-        fluidRow(
-          column(12,
-            plotOutput(outputId="surfdiaPlot",height="auto",width="auto"),
-            tags$style(type="text/css", "body { overflow-y: scroll; }")
+        tabsetPanel(
+          tabPanel("Plot",
+            column(12,
+              plotOutput(outputId="surfdiaPlot",height="auto",width="auto"),
+              tags$style(type="text/css", "body { overflow-y: scroll; }")
+            )
+          ),
+          tabPanel("Query and data",
+            wellPanel(h5("Query used:"),
+              uiOutput("query_used_SD")
+            ),
+            hr(),
+            br(),
+            wellPanel(h5("Data:"),
+              uiOutput("data_plotted_SD")
+            )
           )
         )
       )
@@ -292,7 +312,7 @@ shinyUI(navbarPage("OBSMON v2",id="tabs",
         h3("General usage"),
         hr(),
         p("Shiny is reactive. It means when you change something that has a dependency, the dependency will adjust."),
-        p("There is one tab for upper air assimilation and one for surface assimilation. The selection menus have a dependency from left to right and top to bottom. It means that if you change something to the left or above your settings durther downstream could be canceled. You will need to press the button for plotting to get the current plot and by doing this your current settings will be remembered. Next to the plot you can see the SQL query and extracted data for the last plot excecuted."), 
+        p("There is one tab for upper air assimilation and one for surface assimilation. The selection menus have a dependency from left to right and top to bottom. It means that if you change something to the left or above your settings durther downstream could be canceled. You will need to press the button for plotting to get the current plot. Next to the plot you can see the SQL query and extracted data for the last plot excecuted."), 
         p("You set you selections in the left grey box first, before selecting the details in the right grey box."),
         p("Date range is valid for time series. For other plots the ",em("start")," of the time range is plotted."),
         p("When you start the Shiny interface you can set the following environment variables:"),
@@ -324,7 +344,7 @@ shinyUI(navbarPage("OBSMON v2",id="tabs",
         br(),
         h4("Settings"),
         span("Show existing data only",style="color:red"),
-        p("By enabling this, the user experience will be slower but you will only show options found in the selected SQLite table. The menus have a dependency from left to right. It means if you change the timing, most of the other options will have a dependency and will be re-checked. There has been implemented a solution that will remember the last values when plotting is executed. It means you will start on the last plotted values as your current settings, if you plot a figure and then adjust the time period. If you disable the check for exixting data the options will have a normal dependency from left to right."),
+        p("By enabling this, the user experience will be slower but you will only show options found in the selected SQLite table. The menus have a dependency from left to right and top to bottom. It means if you change the timing or the monitoring level, most of the other options will have a dependency and will be re-checked. If you disable the check for exixting data the options will have a normal dependency from left to right. NB! The whole date range is checked. You might have observations from another cycle, but not the one you are trying to plot."),
         span("Max file size for SQLite data bases (MB)",style="color:red"),
         p("You can upload a data base to your /tmp directory from local disc. This data base will then be used in OBSMON. If you have a big data base you might have to adjust this setting."),
         hr(),

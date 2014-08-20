@@ -41,7 +41,7 @@ getPreDefinedPlots<- function(group){
 }
 
 # generatePreDefinedPlot
-generatePreDefinedPlot<- function(plot,exp){
+generatePreDefinedPlot<- function(plot,exp,mode="plot"){
   if ( verbose("DEBUG") ) { print(paste("DEBUG: -> generatePreDefinedPlot(",plot,exp,")")) }
 
   obPlot=NULL
@@ -88,7 +88,7 @@ generatePreDefinedPlot<- function(plot,exp){
       },
       NULL
     )
-    obPlot=generatePlot(base,exp,shortPlotType,obtype,variable,level,sensor,satelite,channel,c(date1,date2),cycle)
+    obPlot=generatePlot(base,exp,shortPlotType,obtype,variable,level,sensor,satelite,channel,c(date1,date2),cycle,mode)
   }
   return(obPlot)
 }

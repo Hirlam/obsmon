@@ -153,28 +153,6 @@ getObtypes <- function(){
   return(obtypes)
 }
 
-# getLastSelectedObtype
-getLastSelected <- function(mode){
-  if ( verbose("DEBUG")) { print(paste("DEBUG: -> getLastSelected(",mode,")")) }
-
-  last_selected=NULL
-  if ( input$showExistingDataOnly ){
-    switch(mode,"last_experiment" = {last_selected=values$last_experiment },
-                "last_plot"       = {last_selected=values$last_plot       },
-                "last_base"       = {last_selected=values$last_base       },
-                "last_obtype"     = {last_selected=values$last_obtype     },
-                "last_variable"   = {last_selected=values$last_variable   },
-                "last_level"      = {last_selected=values$last_level      },
-                "last_sensor"     = {last_selected=values$last_sensor     },
-                "last_satelite"   = {last_selected=values$last_satelite   },
-                "last_channel"    = {last_selected=values$last_channel    },
-                "last_station"    = {last_selected=values$last_station    }
-    )
-  }
-  if ( verbose("DEBUG")) { print(paste("DEBUG: last_selected=",last_selected,"")) }
-  return(last_selected)
-}
-
 # getObNumber
 getObNumber <- function(obtype){
   if ( verbose("DEBUG")) { print(paste("DEBUG: -> getObNumber(",obtype,")")) }
@@ -607,18 +585,29 @@ getUnit<-function(varName){
 }
 
 #getLatestDate
-getLatestDate <- function(base,exp){
+getLatestDate <- function(base,exp,dtg=NULL){
   if ( verbose("DEBUG")) { print(paste("DEBUG: -> getLatestDate(",base,exp,")")) }
 
-  date<-NULL
+  date = NULL
   if ( !is.null(base) && !is.null(exp)){
     dbConn <- connect(base,exp)
     if ( !is.null(dbConn)){
-      plotQuery<-paste("SELECT dtg FROM obsmon ORDER BY dtg DESC LIMIT 1")
-      if ( verbose("INFO")) { print(paste("INFO: ",plotQuery)) } 
-      plotData <- data.frame(dbGetQuery(dbConn,plotQuery))
+      query<-paste("SELECT dtg FROM obsmon ORDER BY dtg DESC LIMIT 1")
+      if ( verbose("INFO")) { print(paste("INFO: ",query)) } 
+      queryData <- data.frame(dbGetQuery(dbConn,query))
       disconnect(dbConn)
-      date<-paste(substr(plotData$DTG,1,4),"-",substr(plotData$DTG,5,6),"-",substr(plotData$DTG,7,8),sep="")
+      date<-paste(substr(queryData$DTG,1,4),"-",substr(queryData$DTG,5,6),"-",substr(queryData$DTG,7,8),sep="")
+    }
+    # If a DTG is already selected keep this if found in data base
+    if ( !is.null(dtg)) {
+      dbConn = connect(base,exp)
+      if ( !is.null(dbConn)){
+        query = paste("SELECT dtg FROM obsmon where DTG == ",dtg," ORDER BY dtg DESC LIMIT 1")
+        if ( verbose("INFO")) { print(paste("INFO: ",query)) }
+        queryData <- data.frame(dbGetQuery(dbConn,query))
+        disconnect(dbConn)
+        date = paste(substr(queryData$DTG,1,4),"-",substr(queryData$DTG,5,6),"-",substr(queryData$DTG,7,8),sep="")
+      }
     }
   }
   return(date)
@@ -626,18 +615,29 @@ getLatestDate <- function(base,exp){
 
 
 # getLatestCycle
-getLatestCycle <- function(base,exp){
+getLatestCycle <- function(base,exp,dtg=NULL){
   if ( verbose("DEBUG")) { print(paste("DEBUG: -> getLatestCycle(",base,exp,")")) }
 
   cycle<-NULL 
   if ( !is.null(base) && !is.null(exp)){
-    dbConn <- connect(base,exp)
+    dbConn = connect(base,exp)
     if ( !is.null(dbConn)){
-      plotQuery<-paste("SELECT dtg FROM obsmon ORDER BY dtg DESC LIMIT 1")
-      if (verbose("INFO")) { print(paste("INFO: ",plotQuery)) }  
-      plotData <- data.frame(dbGetQuery(dbConn,plotQuery))
+      query = paste("SELECT dtg FROM obsmon ORDER BY dtg DESC LIMIT 1")
+      if (verbose("INFO")) { print(paste("INFO: ",query)) }  
+      queryData = data.frame(dbGetQuery(dbConn,query))
       disconnect(dbConn)
-      cycle<-paste(substr(plotData$DTG,9,10),sep="")
+      cycle = paste(substr(queryData$DTG,9,10),sep="")
+    }
+    # If a DTG is already selected keep this if found in data base
+    if ( !is.null(dtg)) {
+      dbConn = connect(base,exp)
+      if ( !is.null(dbConn)){
+        query = paste("SELECT dtg FROM obsmon where DTG == ",dtg," ORDER BY dtg DESC LIMIT 1")
+        if ( verbose("INFO")) { print(paste("INFO: ",query)) }
+        queryData <- data.frame(dbGetQuery(dbConn,query))
+        disconnect(dbConn)
+        cycle = paste(substr(queryData$DTG,9,10),sep="")
+      }
     }
   }
   return(cycle)
@@ -672,9 +672,9 @@ getStations<-function(variable){
 
     dbConn=connect(base,input$experiment_SD)
     if ( !is.null(dbConn)){
-      plotQuery<-paste("SELECT DISTINCT statid FROM usage WHERE DTG >=",dtg1," AND DTG <= ",dtg2," AND varname == '",tolower(variable),"' AND ( active == 1 OR anflag != 0 ) ORDER BY statid",sep="")
-      if (verbose("INFO")) { print(paste("INFO: ",plotQuery)) }
-      data <- data.frame(dbGetQuery(dbConn,plotQuery))
+      query<-paste("SELECT DISTINCT statid FROM usage WHERE DTG >=",dtg1," AND DTG <= ",dtg2," AND varname == '",tolower(variable),"' AND ( active == 1 OR anflag != 0 ) ORDER BY statid",sep="")
+      if (verbose("INFO")) { print(paste("INFO: ",query)) }
+      data <- data.frame(dbGetQuery(dbConn,query))
       stations=data$statid
       stations=gsub("'","",stations)
       stations=gsub(" ","",stations)
@@ -717,9 +717,9 @@ getDumpData<-function(base,table,exp){
   if ( !is.null(base) && !is.null(exp) && !is.null(table)){
     dbConn=connect(base,exp)
     if (!is.null(dbConn)){
-      plotQuery<-paste("SELECT * from ",table,sep="")
-      if ( verbose("INFO") ) { print(paste("INFO: ",plotQuery))}
-      dumpData <- data.frame(dbGetQuery(dbConn,plotQuery))
+      query<-paste("SELECT * from ",table,sep="")
+      if ( verbose("INFO") ) { print(paste("INFO: ",query))}
+      dumpData <- data.frame(dbGetQuery(dbConn,query))
       disconnect(dbConn)
     }
   }
