@@ -298,7 +298,9 @@ shinyUI(navbarPage("OBSMON v2",id="tabs",
           numericInput(inputId="maxUpload",label=h5("Max file size for SQLite data bases (MB)"),value=30,min = 0)
         )
       )
-    )
+    ),
+    h3("clientData values"),
+    verbatimTextOutput("clientdataText")
   ),
   tabPanel("Help",
     fluidRow(

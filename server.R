@@ -18,7 +18,7 @@ values<-reactiveValues()
 values$productionSite=FALSE
 values$synops=NULL
 
-shinyServer(function(input,output) {
+shinyServer(function(input,output,session) {
 
   # Check for upload size
   maxUpload<-observe({
@@ -166,7 +166,7 @@ shinyServer(function(input,output) {
   # select_level
   output$select_level <- renderUI({
     if ( verbose("DEBUG") ) { print("DEBUG: -> select_level") }
-    selectInput(inputId = "level",label=h5("Select level"),choices=getLevels(input$obtype,input$variable,getPlotTypeShort(input$plottype)),multiple=T)
+    selectInput(inputId = "level",label=h5("Select levels"),choices=getLevels(input$obtype,input$variable,getPlotTypeShort(input$plottype)),multiple=T,selectize=FALSE)
   })
 
   # select_sensor
@@ -183,8 +183,8 @@ shinyServer(function(input,output) {
 
   # select_channel
   output$select_channel <- renderUI({
-    if ( verbose("DEBUG") ) { print("DEBUG: -> select_channel") }
-    selectInput(inputId = "channel",label=h5("Select channel"),choices=getChannels(input$sensor,input$satelite),multiple=T)
+    if ( verbose("DEBUG") ) { print("DEBUG: -> select_channels") }
+    selectInput(inputId = "channel",label=h5("Select channel"),choices=getChannels(input$sensor,input$satelite),multiple=T,selectize=FALSE)
   })
 
   # select_experiment
@@ -600,6 +600,19 @@ shinyServer(function(input,output) {
       }
     }
   },height=heightOfPlot,width=widthOfPlot)
+
+  # Store in a convenience variable
+  cdata <- session$clientData
+
+  # Values from cdata returned as text
+  output$clientdataText <- renderText({
+    cnames <- names(cdata)
+
+    allvalues <- lapply(cnames, function(name) {
+      paste(name, cdata[[name]], sep=" = ")
+    })
+    paste(allvalues, collapse = "\n")
+  })
 
   ###############################################################
 
