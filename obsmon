@@ -1,5 +1,7 @@
 #!/bin/bash
 
+export R_LIBS_USER=${R_LIBS_USER-"$HOME/R/library"}
+
 # Set path to SQLITE data bases
 export DBDIR_ECMA=${DBDIR_ECMA-$PWD/dbfiles/ecma/ts}
 export DBDIR_ECMA_SFC=${DBDIR_ECMA_SFC-$PWD/dbfiles/ecma_sfc/ts}
