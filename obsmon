@@ -17,5 +17,5 @@ echo "    DBDIR_ECMA2: $DBDIR_ECMA2"
 echo "DBDIR_ECMA_SFC2: $DBDIR_ECMA_SFC2"
 echo "    DBDIR_CCMA2: $DBDIR_CCMA2"
 
-# Call R-script
-Rscript obsmon.R || exit 1
+# Call R-script (or alternatively CMD BATCH)
+Rscript obsmon.R || R CMD BATCH obsmon.R || exit 1

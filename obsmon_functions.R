@@ -2,7 +2,7 @@
 # Help functions and settings for shiny interface
 #
 
-default_obtypes     <- c("SYNOP","SHIP","AIRCRAFT","DRIBU","TEMP","SATEM","RADAR")
+default_obtypes     <- c("SYNOP","SHIP","AIRCRAFT","DRIBU","TEMP","SATEM","SCATT","RADAR")
 listOfSensors       <- c("AMSUA","AMSUB","MHS","IASI")
 
 # Normal plots
@@ -163,6 +163,7 @@ getObNumber <- function(obtype){
                   "DRIBU"    = c("4"),
                   "TEMP"     = c("5"),
                   "SATEM"    = c("7"),
+                  "SCATT"    = c("9"),
                   "RADAR"    = c("13"),
                   NULL
     )
@@ -268,6 +269,7 @@ getVariables <- function(obtype){
       ship_vars           <- c("u10m","v10m","z")
       dribu_vars          <- c("u10m","v10m","z")
     }
+    scatt_vars          <- c("u10m","v10m")
     aircraft_vars       <- c("u","v","t")
     temp_vars           <- c("u","v","t","q")
     radar_vars_z        <- c("dbz","radv")
@@ -279,6 +281,7 @@ getVariables <- function(obtype){
                    "AIRCRAFT" = {vars=c(aircraft_vars)},
                    "DRIBU"    = {vars=c(dribu_vars)},
                    "TEMP"     = {vars=c(temp_vars)},
+                   "SCATT"    = {vars=c(scatt_vars)},
                    "RADAR"    = {vars=c(radar_vars_z,radar_vars_p)},
                    {vars=NULL})
 
@@ -322,6 +325,7 @@ getLevels <- function(obtype,var,plotType){
                      "DRIBU"    = c("Surface"),
                      "TEMP"     = c("ALL",listOfLevels_p),
                      "RADAR"    = c("ALL",getRadarLevels(var)),
+                     "SCATT"    = c("Surface"),
                      NULL)
      }else{
        switch(obtype,"SYNOP"    = c("Surface"),
@@ -330,6 +334,7 @@ getLevels <- function(obtype,var,plotType){
                      "DRIBU"    = c("Surface"),
                      "TEMP"     = c("ALL"),
                      "RADAR"    = c("ALL"),
+                     "SCATT"    = c("Surface"),
                      NULL)
      }
   }
@@ -760,7 +765,7 @@ connect <- function(base,exp){
     fname <- getFile(base,exp)
     if ( verbose("DEBUG")) { print(paste("DEBUG: -> connect -> ",fname,exp)) }
     if (!is.null(fname) && file.exists(fname)){
-      dbConn <- dbConnect("SQLite",fname)
+      dbConn <- dbConnect(RSQLite::SQLite(),fname)
     }
   }
   return(dbConn)
