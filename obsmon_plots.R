@@ -105,7 +105,7 @@ generatePlot <- function(odbBase,exp,plotName,obName,varName,levels,sensor,satel
                            " AND satname == '",qsatelite,"'",
                            channelListQuery,sep="")
       ylab="Channel"
-      title=paste(plotName,obName,satelite,dtgstr_range)
+      title=paste(exp,":",plotName,obName,satelite,dtgstr_range)
     }else{
       levelListQuery = setLevelList(levels)
       plotQuery = paste("SELECT DTG,nobs_total,level FROM obsmon",
@@ -116,7 +116,7 @@ generatePlot <- function(odbBase,exp,plotName,obName,varName,levels,sensor,satel
                            " AND varname == '",varName,"'",
                            levelListQuery,sep="")
       ylab="Level"
-      title = paste(plotName,obName,varName,level_string,dtgstr_range)
+      title = paste(exp,":",plotName,obName,varName,level_string,dtgstr_range)
     }
     if ( verbose("INFO") ) { paste("INFO: ",print(plotQuery))}
     if ( mode == "query" ) { return(plotQuery)}
@@ -153,7 +153,7 @@ generatePlot <- function(odbBase,exp,plotName,obName,varName,levels,sensor,satel
                            " AND obname == '",tolower(sensor),"'",
                            " AND satname == '",qsatelite,"'",
                            channelListQuery,sep="")
-      title = paste(plotName,obName,satelite,channel_string,dtgstr)
+      title = paste(exp,":",plotName,obName,satelite,channel_string,dtgstr)
     }else{
       levelListQuery = setLevelList(levels)
       plotQuery = paste("SELECT latitude,longitude,statid,",sql," FROM usage",
@@ -162,7 +162,7 @@ generatePlot <- function(odbBase,exp,plotName,obName,varName,levels,sensor,satel
                            " AND obname == '",obname,"'",
                            " AND varname == '",varName,"'",
                            levelListQuery,sep="")
-      title = paste(plotName,obName,varName,level_string,dtgstr)
+      title = paste(exp,":",plotName,obName,varName,level_string,dtgstr)
     }
     if ( verbose("INFO") ) { paste("INFO: ",print(plotQuery))}
     if ( mode == "query" ) { return(plotQuery)}
@@ -202,7 +202,7 @@ generatePlot <- function(odbBase,exp,plotName,obName,varName,levels,sensor,satel
                            channelListQuery,sep="")
       if ( verbose("INFO") ) { print(paste("INFO: ",plotQuery))}
       if ( mode == "query" ) { return(plotQuery)}
-      title = paste(plotName,sensor,satelite,channel_string,dtgstr)
+      title = paste(exp,":",plotName,sensor,satelite,channel_string,dtgstr)
       dbConn = connect(odbBase,exp)
       plotData = dbGetQuery(dbConn,plotQuery)
       disconnect(dbConn)
@@ -224,7 +224,7 @@ generatePlot <- function(odbBase,exp,plotName,obName,varName,levels,sensor,satel
                           levelListQuery,sep="")
       if ( verbose("INFO") ) { print(paste("INFO: ",plotQuery))}
       if ( mode == "query" ) { return(plotQuery)}
-      title = paste(plotName,obName,varName,level_string,dtgstr)
+      title = paste(exp,":",plotName,obName,varName,level_string,dtgstr)
       dbConn = connect(odbBase,exp)
       plotData = dbGetQuery(dbConn,plotQuery)
       disconnect(dbConn)
@@ -251,7 +251,7 @@ generatePlot <- function(odbBase,exp,plotName,obName,varName,levels,sensor,satel
       if ( verbose("INFO") ) { print(paste("INFO: ",plotQuery))}
       if ( mode == "query" ) { return(plotQuery)}
       dbConn = connect(odbBase,exp)
-      title = paste(plotName,satelite,sensor,channel_string,dtgstr_range,sep=" ")
+      title = paste(exp,":",plotName,satelite,sensor,channel_string,dtgstr_range,sep=" ")
       plotData = data.frame(dbGetQuery(dbConn,plotQuery))
       disconnect(dbConn)
       if ( mode == "data" ) { return(plotData)}
@@ -279,7 +279,7 @@ generatePlot <- function(odbBase,exp,plotName,obName,varName,levels,sensor,satel
       if ( verbose("INFO") ) { print(paste("INFO: ",plotQuery))}
       if ( mode == "query" ) { return(plotQuery)}
       dbConn = connect(odbBase,exp)
-      title = paste(plotName,sensor,satelite,dtgstr)
+      title = paste(exp,":",plotName,sensor,satelite,dtgstr)
       plotData = data.frame(dbGetQuery(dbConn,plotQuery))
       disconnect(dbConn)
       if ( mode == "data" ) { return(plotData)}
@@ -303,12 +303,12 @@ generatePlot <- function(odbBase,exp,plotName,obName,varName,levels,sensor,satel
         if ( verbose("INFO") ) { print(paste("INFO: ",plotQuery)) }
         if ( mode == "query" ) { return(plotQuery)}
         dbConn = connect(odbBase,exp)
-        title = paste(plotName,obName,varName,dtgstr)
+        title = paste(exp,":",plotName,obName,varName,dtgstr)
         plotData = data.frame(dbGetQuery(dbConn,plotQuery))
         disconnect(dbConn)
         if ( mode == "data" ) { return(plotData)}
         if ( nrow(plotData) > 0 ) {
-          title = paste(plotName,obName,varName,dtgstr)
+          title = paste(exp,":",plotName,obName,varName,dtgstr)
           xlab = paste(varName)
           ylab = paste("Bias/RMS (",unit,")")
           obPlot = FGAnDeparture(title,xlab,ylab,plotData)
@@ -326,7 +326,7 @@ generatePlot <- function(odbBase,exp,plotName,obName,varName,levels,sensor,satel
         if ( verbose("INFO") ) { print(paste("INFO: ",plotQuery))}
         if ( mode == "query" ) { return(plotQuery)}
         dbConn = connect(odbBase,exp)
-        title = paste(plotName,obName,varName,dtgstr)
+        title = paste(exp,":",plotName,obName,varName,dtgstr)
         plotData = data.frame(dbGetQuery(dbConn,plotQuery))
         disconnect(dbConn)
         if ( mode == "data" ) { return(plotData)}
@@ -341,7 +341,7 @@ generatePlot <- function(odbBase,exp,plotName,obName,varName,levels,sensor,satel
     }
   }else{
     if ( verbose("WARNING")) { print(paste("WARNING: ",plotName,"not found!")) }
-    obPlot = emptyPlot(paste(plotName,"not found!"))
+    obPlot = emptyPlot(paste(exp,":",plotName,"not found!"))
   }
   return(obPlot)
 }

@@ -11,7 +11,10 @@ plotTypesMaps       <- c("Observation usage (map)","First guess departure (map)"
 plotTypesTS         <- c("Number of observations (TS)")
 plotTypesSat        <- c("Bias correction (TS)","Hovmoeller (TS)","FG dep + Bias correction (map)","Bias correction (map)")
 
-default_experiments <- c("MetCoOp","Shiny environment","Shiny environment II","DMI")
+exp1 <- Sys.getenv('OBSMON_EXP1', unset = "exp1")
+exp2 <- Sys.getenv('OBSMON_EXP2', unset = "exp2")
+
+default_experiments <- c(exp1,exp2,"MetCoOp","DMI")
 
 # setExperiment
 setExperiment <- function(exp,base){
@@ -25,12 +28,12 @@ setExperiment <- function(exp,base){
       dbtry_ecma     <- "/data4/portal/metcoop/AM25/archive/extract/ecma/ts/ecma.db"
       dbtry_ecma_sfc <- "/data4/portal/metcoop/AM25/archive/extract/ecma_sfc/ts/ecma.db"
       dbtry_ccma     <- "/data4/portal/metcoop/AM25/archive/extract/ccma/ts/ccma.db"
-    } else if ( exp == "Shiny environment" ){
+    } else if ( exp == exp1 ){
       # Default paths to data bases from environment
       dbtry_ecma     <- paste(Sys.getenv('DBDIR_ECMA'),"/ecma.db",sep="")
       dbtry_ecma_sfc <- paste(Sys.getenv('DBDIR_ECMA_SFC'),"/ecma.db",sep="")
       dbtry_ccma     <- paste(Sys.getenv('DBDIR_CCMA'),"/ccma.db",sep="")
-    } else if ( exp == "Shiny environment II" ){
+    } else if ( exp == exp2 ){
       # Default paths to data bases from environment
       dbtry_ecma     <- paste(Sys.getenv('DBDIR_ECMA2'),"/ecma.db",sep="")
       dbtry_ecma_sfc <- paste(Sys.getenv('DBDIR_ECMA_SFC2'),"/ecma.db",sep="")
