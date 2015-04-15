@@ -8,7 +8,7 @@ listOfSensors       <- c("AMSUA","AMSUB","MHS","IASI")
 # Normal plots
 plotTypesStat       <- c("FG+An departure")
 plotTypesMaps       <- c("Observation usage (map)","First guess departure (map)","Analysis departure (map)","Observations (map)")
-plotTypesTS         <- c("Number of observations (TS)")
+plotTypesTS         <- c("Number of observations (TS)","Obs fit (TS)")
 plotTypesSat        <- c("Bias correction (TS)","Hovmoeller (TS)","FG dep + Bias correction (map)","Bias correction (map)")
 
 exp1 <- Sys.getenv('OBSMON_EXP1', unset = "exp1")
@@ -215,6 +215,7 @@ getPlotTypeShort <- function(plotType){
            "Bias correction (map)"          = "BiasCorrectionMap",
            "Observations (map)"             = "ObservationsMap",
            "Number of observations (TS)"    = "NumberOfObservations",
+           "Obs fit (TS)"                   = "ObsFitTs",
            plotType)
   }
 }

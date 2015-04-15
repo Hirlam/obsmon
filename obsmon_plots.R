@@ -98,23 +98,23 @@ generatePlot <- function(odbBase,exp,plotName,obName,varName,levels,sensor,satel
       qsatelite = setDBSatname(as.character(satelite))
       channelListQuery = setChannelList(channels)
       plotQuery = paste("SELECT DTG,nobs_total,level FROM obsmon",
-                           " WHERE obnumber = ",obNumber,
-                           " AND DTG >= ",dtgbeg,
-                           " AND DTG <= ",dtgend,
-                           " AND obname == '",tolower(sensor),"'",
-                           " AND satname == '",qsatelite,"'",
-                           channelListQuery,sep="")
+                        " WHERE obnumber = ",obNumber,
+                        " AND DTG >= ",dtgbeg,
+                        " AND DTG <= ",dtgend,
+                        " AND obname == '",tolower(sensor),"'",
+                        " AND satname == '",qsatelite,"'",
+                        channelListQuery,sep="")
       ylab="Channel"
       title=paste(exp,":",plotName,obName,satelite,dtgstr_range)
     }else{
       levelListQuery = setLevelList(levels)
       plotQuery = paste("SELECT DTG,nobs_total,level FROM obsmon",
-                           " WHERE obnumber = ",obNumber,
-                           " AND DTG >= ",dtgbeg,
-                           " AND DTG <= ",dtgend,
-                           " AND obname == '",obname,"'",
-                           " AND varname == '",varName,"'",
-                           levelListQuery,sep="")
+                        " WHERE obnumber = ",obNumber,
+                        " AND DTG >= ",dtgbeg,
+                        " AND DTG <= ",dtgend,
+                        " AND obname == '",obname,"'",
+                        " AND varname == '",varName,"'",
+                        levelListQuery,sep="")
       ylab="Level"
       title = paste(exp,":",plotName,obName,varName,level_string,dtgstr_range)
     }
@@ -125,6 +125,28 @@ generatePlot <- function(odbBase,exp,plotName,obName,varName,levels,sensor,satel
     disconnect(dbConn)
     if ( mode == "data" ) { return(plotData)}
     obPlot = NumberOfObservations(title,ylab,plotData)
+
+# ObsFitTs
+    } else if ( plotName ==  "ObsFitTs" ) {
+
+      levelListQuery = setLevelList(levels)
+      plotQuery = paste("SELECT DTG,nobs_total,level,an_bias_total,fg_bias_total,an_rms_total,fg_rms_total FROM obsmon",
+                        " WHERE obnumber = ",obNumber,
+                        " AND DTG >= ",dtgbeg,
+                        " AND DTG <= ",dtgend,
+                        " AND obname == '",obname,"'",
+                        " AND varname == '",varName,"'",
+                        levelListQuery,sep="")
+      ylab=getUnit(varName)
+      title = paste(exp,":",plotName,obName,varName,level_string,dtgstr_range)
+
+      if ( verbose("INFO") ) { paste("INFO: ",print(plotQuery))}
+      if ( mode == "query" ) { return(plotQuery)}
+      dbConn = connect(odbBase,exp)
+      plotData = data.frame(dbGetQuery(dbConn,plotQuery))
+      disconnect(dbConn)
+      if ( mode == "data" ) { return(plotData)}
+      obPlot = ObsFitTs(title,ylab,plotData)
 
 # FirstGuessDepartureMap
 # FirstGuessBCDepartureMap
@@ -317,7 +339,7 @@ generatePlot <- function(odbBase,exp,plotName,obName,varName,levels,sensor,satel
         }
       } else {
         # Vertical profile (Aircraft/Temp)
-        plotQuery = paste("SELECT fg_bias_total,an_bias_total,fg_rms_total,an_rms_total,level,varname FROM obsmon ",
+        plotQuery = paste("SELECT fg_bias_total,an_bias_total,fg_rms_total,an_rms_total,level,varname,nobs_total FROM obsmon ",
                            " WHERE obnumber == ",obNumber,
                            " AND dtg == ",dtg,
                            " AND obname == '",obname,"'",
@@ -419,22 +441,28 @@ generatePlot <- function(odbBase,exp,plotName,obName,varName,levels,sensor,satel
      if ( verbose("DEBUG") ) { print(paste("DEBUG: ",plotData$level))}
      if ( verbose("DEBUG") ) { print(paste("DEBUG: ",lastLevel))}
      if ( lastLevel > 90000 ) {
-       obPlot = ggplot(plotData, aes(level)) +
-               geom_line(aes(y=fg_bias_total,colour="fg_bias_total")) +
-               geom_point(aes(y=fg_bias_total,colour="fg_bias_total"),size=4) +
-               geom_line(aes(y=an_bias_total,colour="an_bias_total"))+
-               geom_point(aes(y=an_bias_total,colour="an_bias_total"),size=4) +
-               geom_line(aes(y=fg_rms_total,colour="fg_rms_total")) +
-               geom_point(aes(y=fg_rms_total,colour="fg_rms_total"),size=4) +
-               geom_line(aes(y=an_rms_total,colour="an_rms_total")) +
-               geom_point(aes(y=an_rms_total,colour="an_rms_total"),size=4) +
-               coord_flip()+
-               scale_x_continuous(breaks=plotData$level) +
-               # Rotated beacuse of coord_flip
-               ylab(xlab)+
-               xlab(ylab) +
-               xlim(100000,0) +
-               labs(title = title)
+
+         DTG=plotData$DTG
+         level=plotData$level
+         RMS_FGdep=plotData$fg_rms_total
+         RMS_ANdep=plotData$an_rms_total
+         BIAS_FGdep=plotData$fg_bias_total
+         BIAS_ANdep=plotData$an_bias_total
+         NROBS=plotData$nobs_total
+
+         testData=data.frame(level,RMS_FGdep,RMS_ANdep,BIAS_FGdep,BIAS_ANdep)
+         localPlotData <- melt(testData,id=c("level"))
+
+         obPlot = ggplot(data=localPlotData,aes(x=level,y=value,group=variable,colour=variable,shape=variable))
+         obPlot = obPlot + geom_line() + geom_point(size=4) +
+                    scale_shape_manual(values=c(16,16,32,32)) +
+                    scale_colour_manual(values=c("blue", "red", "blue", "red")) +
+                    coord_flip()+
+                    # Rotated beacuse of coord_flip
+                    ylab(xlab) + xlab(ylab) + 
+                    xlim(100000,0) + 
+                    labs(title = title)
+
      }else{
        obPlot = ggplot(plotData, aes(level)) +
                geom_line(aes(y=fg_bias_total,colour="fg_bias_total")) +
@@ -516,16 +544,62 @@ generatePlot <- function(odbBase,exp,plotName,obName,varName,levels,sensor,satel
     if ( verbose("DEBUG") ) { print(paste("DEBUG: -> NumberOfObservations",title)) }
 
     localPlotData=plotData
-    localPlotData$datetime = chron(dates=dtg2date(plotData$DTG),times=paste(dtg2utc(plotData$DTG),":00:00",sep=""),format=c('y-m-d','h:m:s'))
+    if ( nrow(localPlotData) > 0 ) {
+        localPlotData$DTG <- paste0(substr(localPlotData$DTG,1,4),"-",
+                                    substr(localPlotData$DTG,5,6),"-",
+                                    substr(localPlotData$DTG,7,8)," ",
+                                    substr(localPlotData$DTG,9,10),":00")
+        localPlotData$DTG <- as.POSIXct(localPlotData$DTG,"%Y-%m-%d %h:%m")
+    }else{
+        obPlot<-emptyPlot(title)
+    }
     
-    obPlot = ggplot(localPlotData,aes(x=datetime,y=level,fill=nobs_total))+geom_raster()
-    obPlot = obPlot + xlab("DATE") + scale_x_continuous(label=function(datetime) strftime(chron(datetime), "%Y-%m-%d"))
+    obPlot = ggplot(data=localPlotData)
+    obPlot = obPlot+geom_line(aes(x=DTG,y=nobs_total))
+    obPlot = obPlot + xlab("DATE")+ylab("nrobs")
     obPlot = obPlot + labs(title=title,ylab=ylab)
-
+    obPlot = obPlot + facet_wrap(~ level)
+    
     return(obPlot) 
   }
 
+  # ObsFitTs
+  ObsFitTs <- function(title,ylab,plotData){
+    if ( verbose("DEBUG") ) { print(paste("DEBUG: -> ObsFitTs",title)) }
 
+    localPlotData=plotData
+
+    if ( nrow(localPlotData) > 0 ) {
+        localPlotData$DTG <- paste0(substr(localPlotData$DTG,1,4),"-",
+                                    substr(localPlotData$DTG,5,6),"-",
+                                    substr(localPlotData$DTG,7,8)," ",
+                                    substr(localPlotData$DTG,9,10),":00")
+        localPlotData$DTG <- as.POSIXct(localPlotData$DTG,"%Y-%m-%d %h:%m")
+    }else{
+        obPlot<-emptyPlot(title)
+    }
+
+    DTG=localPlotData$DTG
+    level=localPlotData$level
+    RMS_FGdep=localPlotData$fg_rms_total
+    RMS_ANdep=localPlotData$an_rms_total
+    BIAS_FGdep=localPlotData$fg_bias_total
+    BIAS_ANdep=localPlotData$an_bias_total
+
+    testData=data.frame(DTG,level,RMS_FGdep,RMS_ANdep,BIAS_FGdep,BIAS_ANdep)
+    localPlotData <- melt(testData,id=c("DTG","level"))
+
+    obPlot = ggplot(data=localPlotData,aes(x=DTG,y=value,group=variable,colour=variable,shape=variable))
+    obPlot = obPlot + geom_line() + geom_point(size=2) +
+        scale_shape_manual(values=c(16,16,32,32)) +
+            scale_colour_manual(values=c("blue", "red", "blue", "red"))
+
+    obPlot = obPlot + xlab("DATE")+ylab(ylab)
+    obPlot = obPlot + labs(title=title,ylab=ylab)
+    obPlot = obPlot + facet_wrap(~ level)
+
+    return(obPlot)
+  }
 
 
 generate_surfdia <- function(var,station,exp,mode="plot"){
