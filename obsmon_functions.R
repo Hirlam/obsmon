@@ -560,8 +560,13 @@ getChannels <- function(sensor,sat){
             if ( channels_orig[i] == "ALL" ){
               channels=c(channels,channels_orig[i])
             }else{
-              if ( channelExists(sensor,sat,channels_orig[i])) {
+              # Disable checking for IASI as this is huge!
+              if ( sensor == "IASI" ){
                 channels=c(channels,channels_orig[i])
+              }else{
+                if ( channelExists(sensor,sat,channels_orig[i])){
+                  channels=c(channels,channels_orig[i])
+                }
               }
             }
           }
