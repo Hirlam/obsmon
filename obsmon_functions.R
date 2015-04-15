@@ -269,7 +269,7 @@ getVariables <- function(obtype){
       ship_vars           <- c("t2m","rh2m")
       dribu_vars          <- c("t2m","rh2m")
     }else{
-      synop_vars          <- c("u10m","v10m","z")
+      synop_vars          <- c("u10m","v10m","z","apd")
       ship_vars           <- c("u10m","v10m","z")
       dribu_vars          <- c("u10m","v10m","z")
     }
@@ -577,6 +577,7 @@ getUnit<-function(varName){
   if ( !is.null(varName)) {
     switch(varName, "u"    = "m/s",
                     "u10m" = "m/s",
+                    "apd"  = "m",
                     "v"    = "m/s",
                     "v10m" = "m/s",
                     "t2m"  = "K",
