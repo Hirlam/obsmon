@@ -609,7 +609,7 @@ generate_surfdia <- function(var,station,exp,mode="plot"){
   if ( !is.null(var) && !is.null(station)){
 
     base=NULL
-    switch(var,"U10M" = { base="Minimization"}, "V10M" = { base="Minimization"},"Z" = { base="Minimization"},{ base="Surface"})
+    switch(var,"U10M" = { base="Minimization"}, "V10M" = { base="Minimization"},"APD" = { base="Minimization"},"Z" = { base="Minimization"},{ base="Surface"})
 
     date2=getLatestDate(base,exp)
     date1=getPastDate(date2,input$ndays)
@@ -621,7 +621,7 @@ generate_surfdia <- function(var,station,exp,mode="plot"){
     station2=gsub('\\]','',stationstr[[1]][2])
 
     obPlot=NULL
-    plotQuery = paste("SELECT dtg,obsvalue,fg_dep,an_dep,statid FROM usage ",
+    plotQuery = paste("SELECT dtg,obsvalue,fg_dep,an_dep,biascrl,statid FROM usage ",
                              " WHERE statid LIKE '%",station2,"%'",
                              " AND DTG >= ",dtg1," AND DTG <= ",dtg2,
                              " AND obname == 'synop' ",
@@ -633,16 +633,30 @@ generate_surfdia <- function(var,station,exp,mode="plot"){
     plotData = data.frame(dbGetQuery(dbConn,plotQuery))
     disconnect(dbConn)
     if ( mode == "data" ) { return(plotData)}
-    if ( nrow(plotData) > 0 ) {
-      plotData$datetime = chron(dates=dtg2date(plotData$DTG),times=paste(dtg2utc(plotData$DTG),":00:00",sep=""),format=c('y-m-d','h:m:s'))
+    if ( var == "APD" ) {
+      if ( nrow(plotData) > 0 ) {
+        plotData$datetime = chron(dates=dtg2date(plotData$DTG),times=paste(dtg2utc(plotData$DTG),":00:00",sep=""),format=c('y-m-d','h:m:s'))
       
-      obPlot = ggplot(plotData,aes(x=datetime,y=obsvalue),group="")
-      obPlot = obPlot + geom_line(aes(y=obsvalue,colour="Obs",group=""))
-      obPlot = obPlot + geom_line(aes(y=obsvalue-fg_dep,colour="obs - FG dep",group=""))
-      obPlot = obPlot + geom_line(aes(y=obsvalue-an_dep,colour="obs - AN dep",group=""))
-      obPlot = obPlot + xlab("DATE") + scale_x_continuous(label=function(datetime) strftime(chron(datetime), "%Y-%m-%d"))
-      obPlot = obPlot + scale_colour_manual(values=c("black", "green","red"))
-      obPlot = obPlot + labs(title=title,ylab=ylab)
+        obPlot = ggplot(plotData,aes(x=datetime,y=obsvalue),group="")
+        obPlot = obPlot + geom_line(aes(y=obsvalue,colour="Obs",group=""))
+        obPlot = obPlot + geom_line(aes(y=obsvalue+biascrl,colour="Obs raw",group=""))
+        obPlot = obPlot + geom_line(aes(y=obsvalue-fg_dep,colour="FG",group=""))
+        obPlot = obPlot + geom_line(aes(y=obsvalue-an_dep,colour="AN",group=""))
+        obPlot = obPlot + xlab("DATE") + scale_x_continuous(label=function(datetime) strftime(chron(datetime), "%Y-%m-%d"))
+        obPlot = obPlot + scale_colour_manual(values=c("black","blue","green","red"))
+        obPlot = obPlot + labs(title=title,ylab=ylab)
+      }
+    }else{
+      if ( nrow(plotData) > 0 ) {
+        plotData$datetime = chron(dates=dtg2date(plotData$DTG),times=paste(dtg2utc(plotData$DTG),":00:00",sep=""),format=c('y-m-d','h:m:s'))      
+        obPlot = ggplot(plotData,aes(x=datetime,y=obsvalue),group="")
+        obPlot = obPlot + geom_line(aes(y=obsvalue,colour="Obs",group=""))
+        obPlot = obPlot + geom_line(aes(y=obsvalue-fg_dep,colour="FG",group=""))
+        obPlot = obPlot + geom_line(aes(y=obsvalue-an_dep,colour="AN",group=""))
+        obPlot = obPlot + xlab("DATE") + scale_x_continuous(label=function(datetime) strftime(chron(datetime), "%Y-%m-%d"))
+        obPlot = obPlot + scale_colour_manual(values=c("black","green","red"))
+        obPlot = obPlot + labs(title=title,ylab=ylab)
+      }
     }
     return(obPlot)
   }else{

@@ -220,7 +220,7 @@ shinyServer(function(input,output,session) {
     if ( verbose("DEBUG") ) { print("DEBUG: -> select_experiment_SD") }
 
     if ( !is.null(input$variable_surfdia)) {
-      if ( input$variable_surfdia == "U10" || input$variable_surfdia == "V10" || input$variable_surfdia == "Z" ){
+      if ( input$variable_surfdia == "U10" || input$variable_surfdia == "V10" || input$variable_surfdia == "APD" || input$variable_surfdia == "Z" ){
         if ( !is.null(getExperiments("Minimization"))) {
           selectInput(inputId = "experiment_SD",label=h5("Select pre-defined experiment"),choices=getExperiments("Minimization"),width="100%")
         } else {
@@ -563,7 +563,7 @@ shinyServer(function(input,output,session) {
 
   # select_variable_surfdia
   output$select_variable_surfdia<-renderUI({
-    selectInput(inputId="variable_surfdia",h5("Select variable:"),c("T2M","RH2M","Snow","U10M","V10M","Z"))
+    selectInput(inputId="variable_surfdia",h5("Select variable:"),c("T2M","RH2M","Snow","U10M","V10M","APD","Z"))
   })
 
   # select_stations_surfdia
