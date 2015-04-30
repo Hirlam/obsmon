@@ -8,6 +8,7 @@ require(reshape2)
 require(chron)
 require(scales)
 require(mapproj)
+require(gridExtra)
 
 map.world<-map_data(map="world")
 

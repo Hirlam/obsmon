@@ -633,8 +633,9 @@ generate_surfdia <- function(var,station,exp,mode="plot"){
     plotData = data.frame(dbGetQuery(dbConn,plotQuery))
     disconnect(dbConn)
     if ( mode == "data" ) { return(plotData)}
-    if ( var == "APD" ) {
-      if ( nrow(plotData) > 0 ) {
+    if ( nrow(plotData) > 0 ) {
+      if ( var == "APD" ) {
+
         plotData$datetime = chron(dates=dtg2date(plotData$DTG),times=paste(dtg2utc(plotData$DTG),":00:00",sep=""),format=c('y-m-d','h:m:s'))
       
         obPlot = ggplot(plotData,aes(x=datetime,y=obsvalue),group="")
@@ -645,9 +646,7 @@ generate_surfdia <- function(var,station,exp,mode="plot"){
         obPlot = obPlot + xlab("DATE") + scale_x_continuous(label=function(datetime) strftime(chron(datetime), "%Y-%m-%d"))
         obPlot = obPlot + scale_colour_manual(values=c("black","blue","green","red"))
         obPlot = obPlot + labs(title=title,ylab=ylab)
-      }
-    }else{
-      if ( nrow(plotData) > 0 ) {
+      }else{
         plotData$datetime = chron(dates=dtg2date(plotData$DTG),times=paste(dtg2utc(plotData$DTG),":00:00",sep=""),format=c('y-m-d','h:m:s'))      
         obPlot = ggplot(plotData,aes(x=datetime,y=obsvalue),group="")
         obPlot = obPlot + geom_line(aes(y=obsvalue,colour="Obs",group=""))
@@ -657,6 +656,21 @@ generate_surfdia <- function(var,station,exp,mode="plot"){
         obPlot = obPlot + scale_colour_manual(values=c("black","green","red"))
         obPlot = obPlot + labs(title=title,ylab=ylab)
       }
+
+      maxval=max(plotData$fg_dep,plotData$an_dep)
+      minval=min(plotData$fg_dep,plotData$an_dep)
+      bw=(maxval-minval)/20
+
+      bottom1 = ggplot(plotData)
+      bottom1 = bottom1 + geom_histogram(aes(x=fg_dep),colour = "black", fill = "red", binwidth = bw,xlim=c(minval,maxval))
+      bottom1 = bottom1 + geom_vline(xintercept = 0.0)
+
+      bottom2 = ggplot(plotData)
+      bottom2 = bottom2 + geom_histogram(aes(x=an_dep),colour = "black", fill = "green", binwidth = bw,xlim=c(minval,maxval))
+      bottom2 = bottom2 + geom_vline(xintercept = 0.0)
+      bottom = grid.arrange(bottom1, bottom2, ncol=2)
+
+      obPlot = grid.arrange(obPlot, bottom1, bottom2,  ncol=1)
     }
     return(obPlot)
   }else{
