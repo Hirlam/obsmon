@@ -488,8 +488,11 @@ generatePlot <- function(odbBase,exp,plotName,obName,varName,levels,sensor,satel
     status = rep("NA",length(plotData$longitude))
     status = ifelse(plotData$anflag == 0,"Rejected",status)
     status = ifelse(plotData$active  > 0,"Active",status)
+    status = ifelse(plotData$rejected > 0,"Rejected",status)
     status = ifelse(plotData$passive > 0,"Passive",status)
+    status = ifelse(plotData$blacklisted > 0,"Blacklisted",status)
     status = ifelse(plotData$anflag  > 0,"Active",status)
+
 
 
     plotData$status=status

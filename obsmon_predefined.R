@@ -34,7 +34,8 @@ getPreDefinedPlots<- function(group){
   if (!is.null(group)) {
     switch(group,
       "MetCoOp" = { c("T2M observation usage latest cycle","Snow observation usage latest cycle","TEMP number of temperature observations last week")},
-      "DMI"     = { NULL},
+      "DMI" = { c("T2M observation usage latest cycle","Snow observation usage latest cycle","TEMP number of temperature observations last week")},
+      "FMI" = { c("T2M observation usage latest cycle","Snow observation usage latest cycle","TEMP number of temperature observations last week")},
       { c("T2M observation usage latest cycle","Snow observation usage latest cycle")}
     )
   } 

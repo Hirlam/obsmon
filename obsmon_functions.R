@@ -13,8 +13,7 @@ plotTypesSat        <- c("Bias correction (TS)","Hovmoeller (TS)","FG dep + Bias
 
 exp1 <- Sys.getenv('OBSMON_EXP1', unset = "exp1")
 exp2 <- Sys.getenv('OBSMON_EXP2', unset = "exp2")
-
-default_experiments <- c(exp1,exp2,"MetCoOp","DMI")
+default_experiments <- c(exp1,exp2,"MetCoOp","DMI","DMI","FMI","MetCoOp-backup","MetCoOp-preop")
 
 # setExperiment
 setExperiment <- function(exp,base){
@@ -28,6 +27,14 @@ setExperiment <- function(exp,base){
       dbtry_ecma     <- "/data4/portal/metcoop/AM25/archive/extract/ecma/ts/ecma.db"
       dbtry_ecma_sfc <- "/data4/portal/metcoop/AM25/archive/extract/ecma_sfc/ts/ecma.db"
       dbtry_ccma     <- "/data4/portal/metcoop/AM25/archive/extract/ccma/ts/ccma.db"
+    } else if ( exp == "MetCoOp-backup" ){
+      dbtry_ecma     <- "/data4/portal/metcoop/AM25_backup/archive/extract/ecma/ts/ecma.db"
+      dbtry_ecma_sfc <- "/data4/portal/metcoop/AM25_backup/archive/extract/ecma_sfc/ts/ecma.db"
+      dbtry_ccma     <- "/data4/portal/metcoop/AM25_backup/archive/extract/ccma/ts/ccma.db"
+    } else if ( exp == "MetCoOp-preop" ){
+      dbtry_ecma     <- "/data4/portal/metcoop/AM25_preop/archive/extract/ecma/ts/ecma.db"
+      dbtry_ecma_sfc <- "/data4/portal/metcoop/AM25_preop/archive/extract/ecma_sfc/ts/ecma.db"
+      dbtry_ccma     <- "/data4/portal/metcoop/AM25_preop/archive/extract/ccma/ts/ccma.db"
     } else if ( exp == exp1 ){
       # Default paths to data bases from environment
       dbtry_ecma     <- paste(Sys.getenv('DBDIR_ECMA'),"/ecma.db",sep="")
@@ -39,10 +46,13 @@ setExperiment <- function(exp,base){
       dbtry_ecma_sfc <- paste(Sys.getenv('DBDIR_ECMA_SFC2'),"/ecma.db",sep="")
       dbtry_ccma     <- paste(Sys.getenv('DBDIR_CCMA2'),"/ccma.db",sep="")
     } else if ( exp == "DMI" ){
-      # No paths available yet
-      dbtry_ecma     <- "/data4/portal/DMI/EXP/archive/extract/ecma/ts/ecma.db"
-      dbtry_ecma_sfc <- "/data4/portal/DMI/EXP/archive/extract/ecma_sfc/ts/ecma.db"
-      dbtry_ccma     <- "/data4/portal/DMI/EXP/archive/extract/ccma/ts/ccma.db"
+      dbtry_ecma     <- "/data4/portal/dmi/dka38h12/archive/extract/ecma/ts/ecma.db"
+      dbtry_ecma_sfc <- "/data4/portal/dmi/dka38h12/archive/extract/ecma_sfc/ts/ecma.db"
+      dbtry_ccma     <- "/data4/portal/dmi/dka38h12/archive/extract/ccma/ts/ccma.db"
+    } else if ( exp == "FMI" ){
+      dbtry_ecma     <- "/data4/portal/fmi/aro38h12/extract/ecma/ts/ecma.db"
+      dbtry_ecma_sfc <- "/data4/portal/fmi/aro38h12/extract/ecma_sfc/ts/ecma.db"
+      dbtry_ccma     <- "/data4/portal/fmi/aro38h12/extract/ccma/ts/ccma.db"
     }
 
     if ( verbose("DEBUG")) {
@@ -308,7 +318,9 @@ getVariables <- function(obtype){
 getLevels <- function(obtype,var,plotType){
   if ( verbose("DEBUG")) { print(paste("DEBUG: -> getLevels(",obtype,var,plotType,")")) }
   if ( !is.null(obtype) && !is.null(var) && !is.null(plotType)) {
-    listOfLevels_p      <- c("100000","92500","80000","60000","45000","35000","27500","22500","17500","12500","8500","6500","4000","2500","1500")
+    #listOfLevels_p      <- c("100000","92500","85000","70000","50000","40000","30000","25000","20000","15000","10000","8500","6500","4000","2500","1500")
+    # 1500,2500,4000,6500,8500,12500,17500,22500,27500,35000,45000,60000,80000,92500,100000
+    listOfLevels_p      <- c("100000","92500","80000","60000","45000","35000","27500","22500","17500","12500","8500","4000","2500","1500")
     listOfLevels_z      <- c("250","500","1000","1500","2000","3000","4000","5000","6000","7000","8000","9000","10000","20000")
 
     # getRadarLevels (Both pressure and z)
