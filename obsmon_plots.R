@@ -129,17 +129,32 @@ generatePlot <- function(odbBase,exp,plotName,obName,varName,levels,sensor,satel
 # ObsFitTs
     } else if ( plotName ==  "ObsFitTs" ) {
 
-      levelListQuery = setLevelList(levels)
-      plotQuery = paste("SELECT DTG,nobs_total,level,an_bias_total,fg_bias_total,an_rms_total,fg_rms_total FROM obsmon",
-                        " WHERE obnumber = ",obNumber,
-                        " AND DTG >= ",dtgbeg,
-                        " AND DTG <= ",dtgend,
-                        " AND obname == '",obname,"'",
-                        " AND varname == '",varName,"'",
-                        levelListQuery,sep="")
-      ylab=getUnit(varName)
-      title = paste(exp,":",plotName,obName,varName,level_string,dtgstr_range)
+      if (obNumber == "7") {
+        qsatelite = setDBSatname(as.character(satelite))
+        channelListQuery = setChannelList(channels)
+        plotQuery = paste("SELECT DTG,nobs_total,level,an_bias_total,fg_bias_total,an_rms_total,fg_rms_total FROM obsmon",
+                          " WHERE obnumber = ",obNumber,
+                          " AND DTG >= ",dtgbeg,
+                          " AND DTG <= ",dtgend,
+                          " AND obname == '",tolower(sensor),"'",
+                          " AND satname == '",qsatelite,"'",
+                          channelListQuery,sep="")
+        ylab="Channel"
+        title=paste(exp,":",plotName,obName,satelite,dtgstr_range)
+      }else{
 
+        levelListQuery = setLevelList(levels)
+        plotQuery = paste("SELECT DTG,nobs_total,level,an_bias_total,fg_bias_total,an_rms_total,fg_rms_total FROM obsmon",
+                          " WHERE obnumber = ",obNumber,
+                          " AND DTG >= ",dtgbeg,
+                          " AND DTG <= ",dtgend,
+                          " AND obname == '",obname,"'",
+                          " AND varname == '",varName,"'",
+                          levelListQuery,sep="")
+        ylab=getUnit(varName)
+        title = paste(exp,":",plotName,obName,varName,level_string,dtgstr_range)
+
+      }
       if ( verbose("INFO") ) { paste("INFO: ",print(plotQuery))}
       if ( mode == "query" ) { return(plotQuery)}
       dbConn = connect(odbBase,exp)
