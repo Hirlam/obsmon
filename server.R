@@ -8,6 +8,7 @@ require(reshape2)
 require(chron)
 require(scales)
 require(mapproj)
+require(leaflet)
 require(gridExtra)
 
 map.world<-map_data(map="world")
@@ -271,6 +272,64 @@ shinyServer(function(input,output,session) {
     }
   },height=heightOfPlot,width=widthOfPlot)
 
+  # Map
+  output$Map <- renderLeaflet({
+    input$doPlot
+    if ( verbose("DEBUG") ) {
+      print("======================")
+      print("> DEBUG: -> Map       ")
+      print("======================")
+    }
+    if ( is.null(input$doPlot)) {
+      return(NULL)
+    }else{
+      if ( as.integer(input$doPlot) == 0 ) {
+        return(NULL)
+      }else{
+        isolate({
+          switch(input$obtype, SATEM = {var = "rad"},{ var = input$variable})
+          obMap = generatePlot(input$ODBbase,input$experiment,getPlotTypeShort(input$plottype),input$obtype,var,input$level,input$sensor,input$satelite,input$channel,input$dateRange,input$cycle,mode="map") 
+          return(obMap)
+        })
+      }
+    }
+  })
+
+  output$map_title <- renderText({
+    input$doPlot
+    if ( is.null(input$doPlot)) {
+      return(NULL)
+    }else{
+      if ( as.integer(input$doPlot) == 0 ) {
+        return(NULL)
+      }else{
+        isolate({
+          #(input$ODBbase,input$experiment,getPlotTypeShort(input$plottype),input$obtype,var,input$level,input$sensor,input$satelite,input$channel,input$dateRange,input$cycle,mode="map")
+          sensor=""
+          if ( is.null(input$sensor)) {sensor=""}else{sensor=input$sensor}
+          if ( is.null(input$satelite)) {satelite=""}else{satelite=input$satelite}
+          if ( is.null(input$channel)) {channel=""}else{channel=input$channel}
+          switch(input$obtype, SATEM = {var = "rad"},{ var = input$variable})
+          paste(input$ODBbase,input$experiment,getPlotTypeShort(input$plottype),input$obtype,var,sensor,satelite,channel,input$dateRange[1],input$cycle,"Z",sep=" ")
+        })
+      }
+    }
+  })
+
+  # Map observer (experimental)
+#  observe({
+#    p <- input$Map_marker_click
+#    if (is.null(p)) return()
+#    if (is.null(p$id)) return()
+#    ix <- as.integer(p$id)
+#    row <- plotData[ix,]  #plotData not known here
+#    text2 <- paste("Object: ",toJSON(row))
+#    text2 <- paste("Index: ",p$id)    
+#    output$click_text <- renderText({ text2 })
+#    text <- paste(row$statid,": ",row$value)
+#    leafletProxy("Map") %>% clearPopups() %>% addPopups(p$lng, p$lat, text)
+#  })
+
   # ObsmonPlot_SA
   output$ObsmonPlot_SA <- renderPlot({
     input$doPlot_SA
@@ -293,6 +352,43 @@ shinyServer(function(input,output,session) {
       }
     }
   },height=heightOfPlot,width=widthOfPlot)
+
+  # Map
+  output$Map_SA <- renderLeaflet({
+    input$doPlot_SA
+    if ( verbose("DEBUG") ) {
+      print("======================")
+      print("> DEBUG: -> Map       ")
+      print("======================")
+    }
+    if ( is.null(input$doPlot_SA)) {
+      return(NULL)
+    }else{
+      if ( as.integer(input$doPlot_SA) == 0 ) {
+        return(NULL)
+      }else{
+        isolate({
+          obMap = generatePlot("Surface",input$experiment_SA,getPlotTypeShort(input$plottype_SA),input$obtype_SA,input$variable_SA,"Surface",NULL,NULL,NULL,input$dateRange_SA,input$cycle_SA,mode="map")
+          return(obMap)
+        })
+      }
+    }
+  })
+
+  output$map_title_SA <- renderText({ 
+    input$doPlot_SA
+    if ( is.null(input$doPlot_SA)) {
+      return(NULL)
+    }else{
+      if ( as.integer(input$doPlot_SA) == 0 ) {
+        return(NULL)
+      }else{
+        isolate({
+          paste("Surface",input$experiment_SA,getPlotTypeShort(input$plottype_SA),input$obtype_SA,input$variable_SA,input$dateRange_SA[1],input$cycle_SA,"Z",sep=" ") 
+        })
+      }
+    }
+  })
 
   # ObsmonPlotPreDef
   output$ObsmonPlotPreDef <- renderPlot({

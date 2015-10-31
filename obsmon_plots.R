@@ -193,12 +193,41 @@ generatePlot <- function(odbBase,exp,plotName,obName,varName,levels,sensor,satel
       title = paste(exp,":",plotName,obName,satelite,channel_string,dtgstr)
     }else{
       levelListQuery = setLevelList(levels)
-      plotQuery = paste("SELECT latitude,longitude,statid,",sql," FROM usage",
+      ff=""
+      if ( varName == "ff10m" ){
+        ff="ff10m"
+        var1="u10m"
+        var2="v10m"
+      }
+      if ( varName == "ff" ){
+        ff="ff"
+        var1="u"
+        var2="v"
+      }
+      if ( ff != "" ){
+        plotQuery = paste("SELECT latitude,longitude,statid,",sql," FROM usage",
+                           " WHERE obnumber = ",obNumber,
+                           " AND dtg == ",dtg,
+                           " AND obname == '",obname,"'",
+                           " AND varname == '",var1,"'",
+                           levelListQuery,sep="")
+                           dbConn = connect(odbBase,exp)
+                           plotData1 = data.frame(dbGetQuery(dbConn,plotQuery))
+                           disconnect(dbConn)
+        plotQuery = paste("SELECT latitude,longitude,statid,",sql," FROM usage",
+                           " WHERE obnumber = ",obNumber,
+                           " AND dtg == ",dtg,
+                           " AND obname == '",obname,"'",
+                           " AND varname == '",var2,"'",
+                           levelListQuery,sep="")
+      }else{
+        plotQuery = paste("SELECT latitude,longitude,statid,",sql," FROM usage",
                            " WHERE obnumber = ",obNumber,
                            " AND dtg == ",dtg,
                            " AND obname == '",obname,"'",
                            " AND varname == '",varName,"'",
                            levelListQuery,sep="")
+      }
       title = paste(exp,":",plotName,obName,varName,level_string,dtgstr)
     }
     if ( verbose("INFO") ) { paste("INFO: ",print(plotQuery))}
@@ -206,20 +235,36 @@ generatePlot <- function(odbBase,exp,plotName,obName,varName,levels,sensor,satel
     dbConn = connect(odbBase,exp)
     plotData = data.frame(dbGetQuery(dbConn,plotQuery))
     disconnect(dbConn)
+    plotData$scale = "reverse"
     if ( plotName == "FirstGuessDepartureMap" ){
+      if ( ff != "" ) plotData1$values = plotData1$fg_dep
       plotData$values = plotData$fg_dep
     }else if ( plotName == "FirstGuessBCDepartureMap" ){
+      if ( ff != "" ) plotData1$values = plotData1$fg_dep+plotData1$biascrl
       plotData$values = plotData$fg_dep+plotData$biascrl
     }else if ( plotName == "AnalysisDepartureMap" ){
+      if ( ff != "" ) plotData1$values = plotData1$an_dep
       plotData$values = plotData$an_dep
     }else if ( plotName == "BiasCorrectionMap") {
+      if ( ff != "" ) plotData1$values = plotData1$biascrl
       plotData$values = plotData$biascrl
+      plotData$scale = "normal"
     }else if ( plotName == "ObservationsMap") {
+      if ( ff != "" ) plotData1$values = plotData1$obsvalue
       plotData$values = plotData$obsvalue
+      plotData$scale = "obs"
+    }
+    if ( ff != "" ){
+      plotData2=plotData
+      plotData$values=sqrt((plotData1$values*plotData1$values)+(plotData2$values*plotData2$values))
     }
     if ( mode == "data" ) { return(plotData)}
     if ( nrow(plotData) > 0 ) {
-      obPlot = ThresholdMap(title,plotData)
+      if ( ff != "" ){
+        obPlot = ThresholdMap(title,plotData,mode,u=plotData1$values,v=plotData2$values)
+      }else{
+        obPlot = ThresholdMap(title,plotData,mode)
+      }
     }else{
       obPlot = emptyPlot(title)
     }
@@ -245,7 +290,7 @@ generatePlot <- function(odbBase,exp,plotName,obName,varName,levels,sensor,satel
       disconnect(dbConn)
       if ( mode == "data" ) { return(plotData)}
       if ( nrow(plotData) > 0 ) {
-        obPlot = usageMap(title,plotData)
+        obPlot = usageMap(title,plotData,mode)
       }else{
         obPlot = emptyPlot(title)
       }
@@ -267,7 +312,7 @@ generatePlot <- function(odbBase,exp,plotName,obName,varName,levels,sensor,satel
       disconnect(dbConn)
       if ( mode == "data" ) { return(plotData)}
       if ( nrow(plotData) > 0 ) {
-        obPlot = usageMap(title,plotData)
+        obPlot = usageMap(title,plotData,mode)
       }else{
         obPlot = emptyPlot(title)
       }
@@ -416,7 +461,7 @@ generatePlot <- function(odbBase,exp,plotName,obName,varName,levels,sensor,satel
   }
 
   # ThresholdMap
-  ThresholdMap <- function(title,plotData){
+  ThresholdMap <- function(title,plotData,mode,u=NULL,v=NULL){
     if ( verbose("DEBUG") ) { print(paste("DEBUG: -> ThresholdMap",title)) }
 
     obPlot = NULL
@@ -426,15 +471,70 @@ generatePlot <- function(odbBase,exp,plotName,obName,varName,levels,sensor,satel
     y1=min(plotData$latitude)-2
     y2=max(plotData$latitude)+2
 
-    obPlot = ggplot(map.world,aes(long,lat))
-    obPlot = obPlot + geom_path(data=map.world, aes (group = group),colour="black",show_guide=FALSE) +
-                     coord_map("stereographic",xlim=c(x1,x2),ylim=c(y1,y2)) +
-                     geom_point(data=plotData,aes(x=longitude,y=latitude,colour=values),size=3) +
-                     scale_colour_gradientn(colours = rainbow(15)) +
-                     ylab("lat") +
-                     xlab("lon") +
-                     labs(title = title)
-    return(obPlot)
+    if ( mode == "map" ) {
+      zoomLevel=4
+      zoomLevels=c(2000,4000,6000,10000,15000,45000,70000,90000)
+      for ( i in 2:length(zoomLevels)){
+        if ((length(plotData$values) > zoomLevels[i-1]) && (length(plotData$values) <= zoomLevels[i])){
+          zoomLevel=i+3
+          if ( verbose("DEBUG") ) { print(paste("DEBUG: -> zoomLevel=",zoomLevel)) }
+        }
+      }
+      dmin <- min(plotData$values)
+      dmax <- max(plotData$values)
+      ulim <- max(1.0,abs(dmin),abs(dmax))
+      if (plotData$scale[1] == "reverse") {
+        pal <- colorNumeric(palette=c("#FF0000","#FFFFFF","#0000FF"),domain=c(-ulim,ulim))
+      } else if (plotData$scale[1] == "normal") {
+        pal <- colorNumeric(palette=c("#0000FF","#FFFFFF","#FF0000"),domain=c(-ulim,ulim))
+      } else if (plotData$scale[1] == "obs") {
+        if (dmin*dmax < 0) {  # both signs, normal scale
+          pal <- colorNumeric(palette=c("#0000FF","#FFFFFF","#FF0000"),domain=c(-ulim,ulim))
+        } else if (dmin < 0) {  # all negative, blue to white
+          pal <- colorNumeric(palette=c("#0000FF","#FFFFFF"),domain=c(dmin,dmax))
+        } else {  # all positive, white to red
+          pal <- colorNumeric(palette=c("#FFFFFF","#FF0000"),domain=c(dmin,dmax))
+        }
+      }
+      plotData$popup = paste("Statid: ",plotData$statid,"<br>Value: ",signif(plotData$value,digits=5))
+      if ( max(plotData$values) > 0 ) {
+        plotData$radius=(plotData$values/max(plotData$values))*10
+        if ( length(plotData$radius) > 0 ) {
+          for (i in 1:length(plotData$radius)) {
+            if ( plotData$radius[i] < 3 ){ plotData$radius[i]=3}
+          }
+        }
+      }else{
+        plotData$radius=5
+      }
+      obMap <- leaflet(plotData) %>%
+        addProviderTiles("OpenTopoMap", options=providerTileOptions(opacity=0.5)) %>%
+          fitBounds(x1, y1, x2, y2) %>%
+            addCircleMarkers(~longitude, ~latitude, popup=~popup, radius=~radius,
+                             stroke=TRUE, weight=1, opacity=1, color="black",
+                             fillColor=~pal(values), fillOpacity=1,clusterOptions = markerClusterOptions(disableClusteringAtZoom=zoomLevel)) %>%
+                             addLegend("topright", pal=pal, values=~values, opacity=1)
+      return(obMap)
+    } else {
+
+      obPlot = ggplot(map.world,aes(long,lat))
+      obPlot = obPlot + geom_path(data=map.world, aes (group = group),colour="black",show_guide=FALSE) +
+                       coord_map("stereographic",xlim=c(x1,x2),ylim=c(y1,y2)) +
+                       geom_point(data=plotData,aes(x=longitude,y=latitude,colour=values),size=3) +
+                       scale_colour_gradientn(colours = rainbow(15)) +
+                       ylab("lat") +
+                       xlab("lon") +
+                       labs(title = title)
+      if ( !is.null(u) && !is.null(v) ){
+        plotData$u=-u
+        plotData$v=-v
+        plotData$un=plotData$u/max(plotData$values)
+        plotData$vn=plotData$v/max(plotData$values)
+        print(plotData)
+        obPlot = obPlot + geom_segment(data=plotData,aes(x=longitude,y=latitude,xend=longitude+un,yend=latitude+vn))
+      }
+      return(obPlot)
+    }
   }
 
   # FGAnDeparture
@@ -499,16 +599,16 @@ generatePlot <- function(odbBase,exp,plotName,obName,varName,levels,sensor,satel
   }
 
   # usageMap
-  usageMap <- function(title,plotData){
+  usageMap <- function(title,plotData,mode){
     status = rep("NA",length(plotData$longitude))
     status = ifelse(plotData$anflag == 0,"Rejected",status)
     status = ifelse(plotData$active  > 0,"Active",status)
     status = ifelse(plotData$rejected > 0,"Rejected",status)
     status = ifelse(plotData$passive > 0,"Passive",status)
     status = ifelse(plotData$blacklisted > 0,"Blacklisted",status)
-    status = ifelse(plotData$anflag  > 0,"Active",status)
-
-
+    status = ifelse(plotData$anflag  > 0,"Active(2)",status)
+    status = ifelse(plotData$anflag == 8,"Blacklisted",status)
+    obPlot = NULL
 
     plotData$status=status
 
@@ -517,15 +617,37 @@ generatePlot <- function(odbBase,exp,plotName,obName,varName,levels,sensor,satel
     y1=min(plotData$latitude)-2
     y2=max(plotData$latitude)+2
  
-    obPlot = ggplot(map.world,aes(long,lat))
-    obPlot = obPlot + geom_path(data=map.world, aes (group = group), colour="black") +
-                     coord_map("stereographic",xlim=c(x1,x2),ylim=c(y1,y2)) +
-                     geom_point(data=plotData[rev(order(status)),],aes(x=longitude,y=latitude,colour=status),size=3) +
-                     ylab("lat") +
-                     xlab("lon") +
-                     labs(title = title) +
-                     scale_colour_manual(name="Legend",values=c("Active"="green","Active(2)"="blue","Rejected"="red","Passive"="yellow","Blacklisted"="black","NA"="grey"))
-    return(obPlot)
+    if ( mode == "map" ) {
+      zoomLevel=4
+      zoomLevels=c(2000,4000,6000,10000,15000,45000,70000,90000)
+      for ( i in 2:length(zoomLevels)){
+        if ((length(plotData$status) > zoomLevels[i-1]) && (length(plotData$status) <= zoomLevels[i])){
+          zoomLevel=i+3
+          if ( verbose("DEBUG") ) { print(paste("DEBUG: -> zoomLevel=",zoomLevel)) }
+        }
+      }
+      pal <- colorFactor(c("green","blue","black","grey","yellow","red"),
+                         domain=c("Active","Active(2)","Blacklisted","NA","Passive","Rejected"))
+      plotData$popup = paste("Statid: ",plotData$statid,"<br>Anflag: ",plotData$anflag)
+      obMap <- leaflet(data=plotData[rev(order(status)),]) %>%
+        addProviderTiles("OpenTopoMap", options=providerTileOptions(opacity=0.5)) %>%
+          fitBounds(x1, y1, x2, y2 ) %>%
+            addCircleMarkers(~longitude, ~latitude, popup=~popup, radius=8,
+                             stroke=TRUE, weight=1, opacity=1, color="black",
+                             fillColor=~pal(status), fillOpacity=1,clusterOptions = markerClusterOptions(disableClusteringAtZoom=zoomLevel)) %>%
+                               addLegend("topright", pal=pal, values=~status, opacity=1)
+      return(obMap)
+    } else {
+      obPlot = ggplot(map.world,aes(long,lat))
+      obPlot = obPlot + geom_path(data=map.world, aes (group = group), colour="black") +
+        coord_map("stereographic",xlim=c(x1,x2),ylim=c(y1,y2)) +
+          geom_point(data=plotData[rev(order(status)),],aes(x=longitude,y=latitude,colour=status),size=3) +
+            ylab("lat") +
+              xlab("lon") +
+                labs(title = title) +
+                  scale_colour_manual(name="Legend",values=c("Active"="green","Active(2)"="blue","Rejected"="red","Passive"="yellow","Blacklisted"="black","NA"="grey"))
+      return(obPlot)
+    }
   }
 
   # SatBcorrCycle

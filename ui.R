@@ -1,4 +1,5 @@
 library(shiny)
+library(leaflet)
 
 shinyUI(navbarPage("OBSMON v2",id="tabs",
   tabPanel("Upper air (3D-VAR/4D-VAR)",
@@ -82,6 +83,19 @@ shinyUI(navbarPage("OBSMON v2",id="tabs",
                 )
               )
             ),
+            tabPanel("Map",
+              fluidRow(
+                column(12,
+                  textOutput("map_title"),
+                  tags$style(type="text/css", ".shiny-text-output { text-align: center; }")
+                )
+              ),
+              fluidRow(
+                column(12,
+                  leafletOutput(outputId="Map",height="600",width="900")
+                )
+              )
+            ),
             tabPanel("Query and data",
               wellPanel(h5("Query used:"),
                 uiOutput("query_used")
@@ -152,6 +166,19 @@ shinyUI(navbarPage("OBSMON v2",id="tabs",
                         downloadButton("downloadImage_SA","Download Plot")
                       )
                     )         
+                  )
+                )
+              ),
+              tabPanel("Map",
+                fluidRow(
+                  column(12,
+                    textOutput("map_title_SA"),
+                    tags$style(type="text/css", ".shiny-text-output { text-align: center; }")
+                  )
+                ),
+                fluidRow(
+                  column(12,
+                    leafletOutput(outputId="Map_SA",height="600",width="900")
                   )
                 )
               ),
