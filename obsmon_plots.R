@@ -241,6 +241,8 @@ generatePlot <- function(odbBase,exp,plotName,obName,varName,levels,sensor,satel
     plotData$scale = "reverse"
     if ( plotName == "BiasCorrectionMap") {
       plotData$scale = "normal"
+    }else if ( plotName == "AnalysisIncrementMap" ){
+      plotData$scale = "normal"
     }else if ( plotName == "ObservationsMap") {
       plotData$scale = "obs"
     }
@@ -488,7 +490,7 @@ generatePlot <- function(odbBase,exp,plotName,obName,varName,levels,sensor,satel
       }
       plotData$popup = paste("Statid: ",plotData$statid,"<br>Value: ",signif(plotData$plotValues,digits=5),"<br>Level: ",plotData$level)
       if ( max(plotData$plotValues) > 0 ) {
-        plotData$radius=(plotData$plotValues/max(plotData$plotValues))*10
+        plotData$radius=(abs(plotData$plotValues)/max(abs(plotData$plotValues)))*10
         if ( length(plotData$radius) > 0 ) {
           for (i in 1:length(plotData$radius)) {
             if ( plotData$radius[i] < 3 ){ plotData$radius[i]=3}
