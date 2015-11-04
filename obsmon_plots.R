@@ -177,7 +177,7 @@ generatePlot <- function(odbBase,exp,plotName,obName,varName,levels,sensor,satel
     }else if ( plotName == "AnalysisDepartureMap" ){
       sql = "(an_dep) as plotValues"
     }else if ( plotName == "AnalysisIncrementMap" ){
-      sql = "(an_dep-fg_dep) as plotValues"
+      sql = "(fg_dep-an_dep) as plotValues"
     }else if ( plotName == "BiasCorrectionMap") {
       sql = "(biascrl) as plotValues"
     }else if ( plotName == "ObservationsMap") {
@@ -472,8 +472,10 @@ generatePlot <- function(odbBase,exp,plotName,obName,varName,levels,sensor,satel
           if ( verbose("DEBUG") ) { print(paste("DEBUG: -> zoomLevel=",zoomLevel)) }
         }
       }
-      dmin <- min(plotData$plotValues)
-      dmax <- max(plotData$plotValues)
+      #dmin <- quantile(plotData$plotValues,c(0.01),type=3,names=F)
+      #dmax <- quantile(plotData$plotValues,c(0.99),type=3,names=F)
+      dmin = min(plotData$plotValues)
+      dmax = max(plotData$plotValues)
       ulim <- max(1.0,abs(dmin),abs(dmax))
       if (plotData$scale[1] == "reverse") {
         pal <- colorNumeric(palette=c("#FF0000","#FFFFFF","#0000FF"),domain=c(-ulim,ulim))
@@ -494,6 +496,7 @@ generatePlot <- function(odbBase,exp,plotName,obName,varName,levels,sensor,satel
         if ( length(plotData$radius) > 0 ) {
           for (i in 1:length(plotData$radius)) {
             if ( plotData$radius[i] < 3 ){ plotData$radius[i]=3}
+            #if ( plotData$radius[i] >10 ){ plotData$radius[i]=10}
           }
         }
       }else{
@@ -599,6 +602,7 @@ generatePlot <- function(odbBase,exp,plotName,obName,varName,levels,sensor,satel
     status = ifelse(plotData$passive > 0,"Passive",status)
     status = ifelse(plotData$blacklisted > 0,"Blacklisted",status)
     status = ifelse(plotData$anflag  > 0,"Active(2)",status)
+    status = ifelse(plotData$anflag == 4,"Rejected",status)
     status = ifelse(plotData$anflag == 8,"Blacklisted",status)
     obPlot = NULL
 

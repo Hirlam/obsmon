@@ -13,7 +13,7 @@ plotTypesSat        <- c("Bias correction (TS)","Hovmoeller (TS)","FG dep + Bias
 
 exp1 <- Sys.getenv('OBSMON_EXP1', unset = "exp1")
 exp2 <- Sys.getenv('OBSMON_EXP2', unset = "exp2")
-default_experiments <- c(exp1,exp2,"MetCoOp","DMI","DMI","FMI","MetCoOp-backup","MetCoOp-preop","AROME-Arctic")
+default_experiments <- c(exp1,exp2,"MetCoOp","DMI","DMI","FMI","MetCoOp-backup","MetCoOp-preop","DMI-dka38h12b","AROME-Arctic")
 
 # setExperiment
 setExperiment <- function(exp,base){
@@ -49,6 +49,10 @@ setExperiment <- function(exp,base){
       dbtry_ecma     <- "/data4/portal/dmi/dka38h12/archive/extract/ecma/ts/ecma.db"
       dbtry_ecma_sfc <- "/data4/portal/dmi/dka38h12/archive/extract/ecma_sfc/ts/ecma.db"
       dbtry_ccma     <- "/data4/portal/dmi/dka38h12/archive/extract/ccma/ts/ccma.db"
+    } else if ( exp == "DMI-dka38h12b" ){
+      dbtry_ecma     <- "/data4/portal/dmi/dka38h12b/archive/extract/ecma/ts/ecma.db"
+      dbtry_ecma_sfc <- "/data4/portal/dmi/dka38h12b/archive/extract/ecma_sfc/ts/ecma.db"
+      dbtry_ccma     <- "/data4/portal/dmi/dka38h12b/archive/extract/ccma/ts/ccma.db"
     } else if ( exp == "FMI" ){
       dbtry_ecma     <- "/data4/portal/fmi/aro38h12/extract/ecma/ts/ecma.db"
       dbtry_ecma_sfc <- "/data4/portal/fmi/aro38h12/extract/ecma_sfc/ts/ecma.db"
