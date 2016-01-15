@@ -14,8 +14,7 @@ plotTypesSatTS      <- c("Bias correction","Hovmoeller")
 
 exp1 <- Sys.getenv('OBSMON_EXP1', unset = "exp1")
 exp2 <- Sys.getenv('OBSMON_EXP2', unset = "exp2")
-#default_experiments <- c(exp1,exp2,"MetCoOp","DMI","DMI","FMI","MetCoOp-backup","MetCoOp-preop","DMI-dka38h12b","AROME-Arctic")
-default_experiments <- c(exp1,exp2,"MetCoOp")
+default_experiments <- c(exp1,exp2,"MetCoOp","DMI","DMI","FMI","MetCoOp-backup","MetCoOp-preop","DMI-dka38h12b","AROME-Arctic")
 
 # setExperiment
 setExperiment <- function(exp,base,dtg=NULL,dir=F){
@@ -771,15 +770,16 @@ getStations<-function(variable){
   if ( !is.null(variable)) {
     base=NULL
 
-    switch(variable,"U10M" = { base="Minimization (TS)"}, "V10M" = { base="Minimization (TS)"},"Z" = { base="Minimization (TS)"},{ base="Surface (TS)"})
+    switch(variable,"U10M" = { base="Minimization"}, "V10M" = { base="Minimization"},"Z" = { base="Minimization"},{ base="Surface"})
 
-    date2=getLatestDate(base,input$experiment_SD)
-    cycle=getLatestCycle(base,input$experiment_SD)
+    dtg2=getLatestDTG(base,input$experiment_SD)
+    date2=dtg2date(dtg2)
+    cycle=dtg2utc(dtg2)
     dtg2=date2dtg(date2,cycle)
     date1=getPastDate(date2,input$ndays)
     dtg1=date2dtg(date1,cycle)
 
-    dbConn=connect(base,input$experiment_SD)
+    dbConn=connect(base,input$experiment_SD,dtg=dtg2)
     if ( !is.null(dbConn)){
       query<-paste("SELECT DISTINCT statid FROM usage WHERE DTG >=",dtg1," AND DTG <= ",dtg2," AND varname == '",tolower(variable),"' AND ( active == 1 OR anflag != 0 ) ORDER BY statid",sep="")
       if (verbose("INFO")) { print(paste("INFO: ",query)) }

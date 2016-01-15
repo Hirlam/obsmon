@@ -745,29 +745,44 @@ generate_surfdia <- function(var,station,exp,mode="plot"){
   if ( !is.null(var) && !is.null(station)){
 
     base=NULL
-    switch(var,"U10M" = { base="Minimization (TS)"}, "V10M" = { base="Minimization (TS)"},"APD" = { base="Minimization (TS)"},"Z" = { base="Minimization (TS)"},{ base="Surface (TS)"})
+    switch(var,"U10M" = { base="Minimization"}, "V10M" = { base="Minimization"},"APD" = { base="Minimization"},"Z" = { base="Minimization"},{ base="Surface"})
 
-    date2=getLatestDate(base,exp)
+    dtg2=getLatestDTG(base,exp)
+    date2=dtg2date(dtg2)
+    cycle=dtg2utc(dtg2)
     date1=getPastDate(date2,input$ndays)
     cycle=getLatestCycle(base,exp)
-    dtg2=date2dtg(date2,cycle)
     dtg1=date2dtg(date1,cycle)
 
     stationstr=strsplit(station,'\\[')
     station2=gsub('\\]','',stationstr[[1]][2])
 
     obPlot=NULL
-    plotQuery = paste("SELECT dtg,obsvalue,fg_dep,an_dep,biascrl,statid FROM usage ",
+    # Loop cycles and do queries
+    plotData=data.frame()
+    if ( !is.null(base) && !is.null(exp) ){
+      dir = getFile(base,exp,dir=T)
+      x=list.dirs(path=dir)
+      y=sort(suppressWarnings(as.numeric(substr(x,nchar(x)-9,nchar(x)))))
+      for (i in 1:length(y) ) {
+        dtg=y[i]
+        if ( dtg >= dtg1 && dtg <= dtg2 ) { 
+          plotQuery = paste("SELECT dtg,obsvalue,fg_dep,an_dep,biascrl,statid FROM usage ",
                              " WHERE statid LIKE '%",station2,"%'",
                              " AND DTG >= ",dtg1," AND DTG <= ",dtg2,
                              " AND obname == 'synop' ",
                              " AND varname == '",tolower(var),"'",sep="")
-    if ( verbose("INFO") ) { print(paste("INFO: ",plotQuery))}
-    if ( mode == "query" ) { return(plotQuery)}
+          if ( verbose("INFO") ) { print(paste("INFO: ",plotQuery))}
+          if ( mode == "query" ) { return(plotQuery)}
+          dbConn=connect(base,exp,dtg=dtg)
+          plotData2 = data.frame(dbGetQuery(dbConn,plotQuery))
+          plotData=rbind(plotData,plotData2) 
+          disconnect(dbConn)
+        }
+      }
+    }
+
     title = paste(exp,var,station)
-    dbConn=connect(base,exp)
-    plotData = data.frame(dbGetQuery(dbConn,plotQuery))
-    disconnect(dbConn)
     if ( mode == "data" ) { return(plotData)}
     if ( nrow(plotData) > 0 ) {
       if ( var == "APD" ) {

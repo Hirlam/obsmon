@@ -241,14 +241,14 @@ shinyServer(function(input,output,session) {
 
     if ( !is.null(input$variable_surfdia)) {
       if ( input$variable_surfdia == "U10" || input$variable_surfdia == "V10" || input$variable_surfdia == "APD" || input$variable_surfdia == "Z" ){
-        if ( !is.null(getExperiments("Minimization (TS)"))) {
-          selectInput(inputId = "experiment_SD",label=h5("Select pre-defined experiment"),choices=getExperiments("Minimization (TS)"),selected=input$experiment_SD,width="100%")
+        if ( !is.null(getExperiments("Minimization"))) {
+          selectInput(inputId = "experiment_SD",label=h5("Select pre-defined experiment"),choices=getExperiments("Minimization"),selected=input$experiment_SD,width="100%")
         #} else {
         #  fileInput('ODBbase_minimization', 'Choose SQLite data base from minimization',accept = c('.db'))
         }
       }else{
-        if ( !is.null(getExperiments("Surface (TS)"))) {
-          selectInput(inputId = "experiment_SD",label=h5("Select pre-defined experiment"),choices=getExperiments("Surface (TS)"),width="100%")
+        if ( !is.null(getExperiments("Surface"))) {
+          selectInput(inputId = "experiment_SD",label=h5("Select pre-defined experiment"),choices=getExperiments("Surface"),width="100%")
         } else {
           fileInput('ODBbase_surface', 'Choose SQLite data base from surface assimilation',accept = c('.db'))
         }
