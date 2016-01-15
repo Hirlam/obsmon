@@ -62,18 +62,23 @@ shinyServer(function(input,output,session) {
 
   # select_base 
   output$select_base<- renderUI({
-    selectInput("ODBbase",h5("Monitoring level:"),c("Screening","Minimization"),width="100%")
+    selectInput("ODBbase",h5("Monitoring level:"),c("Screening","Screening (TS)","Minimization","Minimization (TS)"),width="100%")
+  })
+
+  # select_base_SA
+  output$select_base_SA<- renderUI({
+    selectInput("ODBbase_SA",h5("Base types:"),c("Surface","Surface (TS)"),width="100%")
   })
 
   # select_dump_base 
   output$select_dump_base<- renderUI({
-     selectInput("ODBbase_dump",h5("Monitoring level to dump:"),c("Screening","Minimization","Surface"))
+     selectInput("ODBbase_dump",h5("Monitoring level to dump:"),c("Screening","Screening (TS)","Minimization","Minimization (TS)","Surface","Surface (TS)"))
   })
 
   # select_date
   output$select_date <- renderUI({
-    if ( verbose("DEBUG") ) { print("DEBUG: -> select_date") }
-    if ( is.null(input$base)) {
+    if ( verbose("DEBUG") ) { print(paste("DEBUG: -> select_date",input$ODBbase,input$experiment)) }
+    if ( is.null(input$ODBbase)) {
         dateRangeInput("dateRange",
         label = h5("Date range"),
         start = getLatestDate("Screening",input$experiment),
@@ -82,8 +87,8 @@ shinyServer(function(input,output,session) {
     }else{
       dateRangeInput("dateRange",
         label = h5("Date range"),
-        start = getLatestDate(input$base,input$experiment),
-        end   = getLatestDate(input$base,input$experiment)
+        start = getLatestDate(input$ODBbase,input$experiment),
+        end   = getLatestDate(input$ODBbase,input$experiment)
       )
     }
   })
@@ -99,21 +104,23 @@ shinyServer(function(input,output,session) {
   # select_cycle
   output$select_cycle <- renderUI({
     if ( verbose("DEBUG")) { print("DEBUG: -> select_cycle") }
-    if ( is.null(input$base)) {
+    if ( is.null(input$ODBbase)) {
+      if ( verbose("DEBUG") ) { print("DEBUG: -> select_cycle ==== NULL START ======") }
       selectInput("cycle",h5("Cycle"),c("00","03","06","09","12","15","18","21"),selected = getLatestCycle("Screening",input$experiment)
       )
     }else{
-      selectInput("cycle",h5("Cycle"),c("00","03","06","09","12","15","18","21"),selected = getLatestCycle(input$base),input$experiment)
+      if ( verbose("DEBUG") ) { print("DEBUG: -> select_cycle ====  OK  ======") }
+      selectInput("cycle",h5("Cycle"),c("00","03","06","09","12","15","18","21"),selected = getLatestCycle(input$ODBbase,input$experiment))
     }
   })
   # select_cycle_SA
   output$select_cycle_SA <- renderUI({
     print("DEBUG: -> select_cycle_SA")
-    if ( is.null(input$base_SA)) {
-      selectInput("cycle_SA",h5("Cycle"),c("00","03","06","09","12","15","18","21"),selected = getLatestCycle("Screening",input$experiment_SA)
+    if ( is.null(input$ODBbase_SA)) {
+      selectInput("cycle_SA",h5("Cycle"),c("00","03","06","09","12","15","18","21"),selected = getLatestCycle("Surface",input$experiment_SA)
       )
     }else{
-      selectInput("cycle_SA",h5("Cycle"),c("00","03","06","09","12","15","18","21"),selected = getLatestCycle(input$base_SA,input$experiment_SA))
+      selectInput("cycle_SA",h5("Cycle"),c("00","03","06","09","12","15","18","21"),selected = getLatestCycle(input$ODBbase_SA,input$experiment_SA))
     }
   })
 
@@ -133,12 +140,12 @@ shinyServer(function(input,output,session) {
   # select_plottype
   output$select_plottype <- renderUI({
     if ( verbose("DEBUG") ) { print("DEBUG: -> select_plottype") }
-    selectInput(inputId = "plottype",label=h5("Select type of plot"),choices=getPlotTypes(input$obtype),width="100%")
+    selectInput(inputId = "plottype",label=h5("Select type of plot"),choices=getPlotTypes(input$obtype,input$ODBbase),width="100%")
   })
   # select_plottype_SA
   output$select_plottype_SA <- renderUI({
     if ( verbose("DEBUG") ) { print("DEBUG: -> select_plottype_SA") }
-    selectInput(inputId = "plottype_SA",label=h5("Select type of plot"),choices=getPlotTypes(input$obtype_SA),width="100%")
+    selectInput(inputId = "plottype_SA",label=h5("Select type of plot"),choices=getPlotTypes(input$obtype_SA,input$ODBbase_SA),width="100%")
   })
 
 
@@ -168,7 +175,12 @@ shinyServer(function(input,output,session) {
   # select_level
   output$select_level <- renderUI({
     if ( verbose("DEBUG") ) { print("DEBUG: -> select_level") }
-    selectInput(inputId = "level",label=h5("Select levels"),choices=getLevels(input$obtype,input$variable,getPlotTypeShort(input$plottype)),multiple=T,selectize=FALSE)
+    choices=getLevels(input$obtype,input$variable,getPlotTypeShort(input$plottype))
+    if ( !is.null(choices)) { 
+      selectInput(inputId = "level",label=h5("Select levels"),choices=choices,multiple=T,selectize=FALSE)
+    }else{
+      selectInput(inputId = "level",label=h5("Select levels"),choices=NULL)
+    }
   })
 
   # select_sensor
@@ -192,29 +204,35 @@ shinyServer(function(input,output,session) {
   # select_experiment
   output$select_experiment <- renderUI({
     if ( verbose("DEBUG") ) { print("DEBUG: -> select_experiment") }
-    if ( !is.null(getExperiments(input$ODBbase))) {
-      selectInput(inputId = "experiment",label=h5("Select pre-defined experiment"),choices=getExperiments(input$ODBbase),width="100%")
-    } else {
-      if ( !is.null(input$ODBbase) ) {
-        if ( input$ODBbase == "Screening" ) {
-          fileInput('ODBbase_screening', 'Choose SQLite data base from screening',accept = c('.db'))
-        } else if ( input$ODBbase == "Minimization" ) {
-          fileInput('ODBbase_minimization', 'Choose SQLite data base from minimization',accept = c('.db'))
-        }
-      }
+    if ( !is.null(getExperiments(input$ODBbase,date2dtg(input$dateRange[1],input$cycle)))) {
+      selectInput(inputId = "experiment",label=h5("Select pre-defined experiment"),choices=getExperiments(input$ODBbase,date2dtg(input$dateRange[1],input$cycle)),selected=input$experiment,width="100%")
+    #} else {
+    #  if ( !is.null(input$ODBbase) ) {
+    #    if ( input$ODBbase == "Screening" ) {
+    #      fileInput('ODBbase_screening', 'Choose SQLite data base from screening',accept = c('.db'))
+    #    } else if ( input$ODBbase == "Screening (TS)" ) {
+    #      fileInput('ODBbase_screening', 'Choose SQLite data base from screening',accept = c('.db'))
+    #    } else if ( input$ODBbase == "Minimization" ) {
+    #      fileInput('ODBbase_minimization', 'Choose SQLite data base from minimization',accept = c('.db'))
+    #    } else if ( input$ODBbase == "Minimization (TS)" ) {
+    #      fileInput('ODBbase_minimization', 'Choose SQLite data base from minimization',accept = c('.db'))
+    #    }
+    #  }
     }
   })
   # select_experiment_SA
   output$select_experiment_SA <- renderUI({
     if ( verbose("DEBUG") ) { print("DEBUG: -> select_experiment_SA") }
-    if ( !is.null(getExperiments("Surface"))) {
-      selectInput(inputId = "experiment_SA",label=h5("Select pre-defined experiment"),choices=getExperiments("Surface"),width="100%")
-    } else {
-      if ( !is.null(input$tabs) ) {
-        if ( input$tabs == "Surface" ) {
-          fileInput('ODBbase_surface', 'Choose SQLite data base from surface assimilation',accept = c('.db'))
-        }
-      }
+    if ( !is.null(getExperiments(input$ODBbase_SA,date2dtg(input$dateRange_SA[1],input$cycle_SA)))) {
+      selectInput(inputId = "experiment_SA",label=h5("Select pre-defined experiment"),choices=getExperiments(input$ODBbase_SA,date2dtg(input$dateRange_SA[1],input$cycle_SA)),selected=input$experiment_SA,width="100%")
+    #} else {
+    #  if ( !is.null(input$ODBbase_SA) ) {
+    #    if ( !is.null(input$tabs) ) {
+    #      if ( input$tabs == "Surface" ) {
+    #        fileInput('ODBbase_surface', 'Choose SQLite data base from surface assimilation',accept = c('.db'))
+    #      }
+    #    }
+    #  }
     }
   })
   # select_experiment_SD
@@ -223,14 +241,14 @@ shinyServer(function(input,output,session) {
 
     if ( !is.null(input$variable_surfdia)) {
       if ( input$variable_surfdia == "U10" || input$variable_surfdia == "V10" || input$variable_surfdia == "APD" || input$variable_surfdia == "Z" ){
-        if ( !is.null(getExperiments("Minimization"))) {
-          selectInput(inputId = "experiment_SD",label=h5("Select pre-defined experiment"),choices=getExperiments("Minimization"),width="100%")
-        } else {
-          fileInput('ODBbase_minimization', 'Choose SQLite data base from minimization',accept = c('.db'))
+        if ( !is.null(getExperiments("Minimization (TS)"))) {
+          selectInput(inputId = "experiment_SD",label=h5("Select pre-defined experiment"),choices=getExperiments("Minimization (TS)"),selected=input$experiment_SD,width="100%")
+        #} else {
+        #  fileInput('ODBbase_minimization', 'Choose SQLite data base from minimization',accept = c('.db'))
         }
       }else{
-        if ( !is.null(getExperiments("Surface"))) {
-          selectInput(inputId = "experiment_SD",label=h5("Select pre-defined experiment"),choices=getExperiments("Surface"),width="100%")
+        if ( !is.null(getExperiments("Surface (TS)"))) {
+          selectInput(inputId = "experiment_SD",label=h5("Select pre-defined experiment"),choices=getExperiments("Surface (TS)"),width="100%")
         } else {
           fileInput('ODBbase_surface', 'Choose SQLite data base from surface assimilation',accept = c('.db'))
         }
@@ -346,7 +364,7 @@ shinyServer(function(input,output,session) {
         return(NULL)
       }else{
         isolate({
-          obPlot = generatePlot("Surface",input$experiment_SA,getPlotTypeShort(input$plottype_SA),input$obtype_SA,input$variable_SA,"Surface",NULL,NULL,NULL,input$dateRange_SA,input$cycle_SA)
+          obPlot = generatePlot(input$ODBbase_SA,input$experiment_SA,getPlotTypeShort(input$plottype_SA),input$obtype_SA,input$variable_SA,"Surface",NULL,NULL,NULL,input$dateRange_SA,input$cycle_SA)
           return(obPlot)
         })
       }
@@ -368,7 +386,7 @@ shinyServer(function(input,output,session) {
         return(NULL)
       }else{
         isolate({
-          obMap = generatePlot("Surface",input$experiment_SA,getPlotTypeShort(input$plottype_SA),input$obtype_SA,input$variable_SA,"Surface",NULL,NULL,NULL,input$dateRange_SA,input$cycle_SA,mode="map")
+          obMap = generatePlot(input$ODBbase_SA,input$experiment_SA,getPlotTypeShort(input$plottype_SA),input$obtype_SA,input$variable_SA,"Surface",NULL,NULL,NULL,input$dateRange_SA,input$cycle_SA,mode="map")
           return(obMap)
         })
       }
@@ -444,7 +462,7 @@ shinyServer(function(input,output,session) {
         return(NULL)
       }else{
         isolate({
-          query=generatePlot("Surface",input$experiment_SA,getPlotTypeShort(input$plottype_SA),input$obtype_SA,input$variable_SA,"Surface",NULL,NULL,NULL,input$dateRange_SA,input$cycle_SA,mode="query")
+          query=generatePlot(input$ODBbase_SA,input$experiment_SA,getPlotTypeShort(input$plottype_SA),input$obtype_SA,input$variable_SA,"Surface",NULL,NULL,NULL,input$dateRange_SA,input$cycle_SA,mode="query")
           return(query)
         })
       }
@@ -517,7 +535,7 @@ shinyServer(function(input,output,session) {
       }else{
 
         isolate({
-          data = generatePlot("Surface",input$experiment_SA,getPlotTypeShort(input$plottype_SA),input$obtype_SA,input$variable_SA,"Surface",NULL,NULL,NULL,input$dateRange_SA,input$cycle_SA,mode="data")
+          data = generatePlot(input$ODBbase_SA,input$experiment_SA,getPlotTypeShort(input$plottype_SA),input$obtype_SA,input$variable_SA,"Surface",NULL,NULL,NULL,input$dateRange_SA,input$cycle_SA,mode="data")
           return(data)
         })
       }
@@ -575,9 +593,15 @@ shinyServer(function(input,output,session) {
       if ( !is.null(input$ODBbase_dump)) {
         if ( input$ODBbase_dump == "Screening" ) {
           fileInput('ODBbase_screening', 'Choose SQLite data base from screening',accept = c('.db'))
+        } else if (input$ODBbase_dump == "Screening (TS)" ) {
+          fileInput('ODBbase_screening', 'Choose SQLite data base from screening',accept = c('.db'))
         } else if ( input$ODBbase_dump == "Minimization" ) {
           fileInput('ODBbase_minimization', 'Choose SQLite data base from minimization',accept = c('.db'))
+        } else if ( input$ODBbase_dump == "Minimization (TS)" ) {
+          fileInput('ODBbase_minimization', 'Choose SQLite data base from minimization',accept = c('.db'))
         } else if ( input$ODBbase_dump == "Surface" ) {
+          fileInput('ODBbase_surface', 'Choose SQLite data base from surface assimilation',accept = c('.db'))
+        } else if ( input$ODBbase_dump == "Surface (TS)" ) {
           fileInput('ODBbase_surface', 'Choose SQLite data base from surface assimilation',accept = c('.db'))
         }
       }
@@ -651,7 +675,7 @@ shinyServer(function(input,output,session) {
                "png" =  png(file,width=xWidth*DPI,height=yHeight*DPI,res=DPI)
         )
 
-        obPlot <- generatePlot("Surface",input$experiment_SA,getPlotTypeShort(input$plottype_SA),input$obtype_SA,input$variable_SA,"Surface",NULL,NULL,NULL,input$dateRange_SA,input$cycle_SA)
+        obPlot <- generatePlot(input$ODBbase_SA,input$experiment_SA,getPlotTypeShort(input$plottype_SA),input$obtype_SA,input$variable_SA,"Surface",NULL,NULL,NULL,input$dateRange_SA,input$cycle_SA)
         print(obPlot)
         dev.off()
       }

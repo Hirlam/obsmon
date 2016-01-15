@@ -8,61 +8,77 @@ listOfSensors       <- c("AMSUA","AMSUB","MHS","IASI")
 # Normal plots
 plotTypesStat       <- c("FG+An departure")
 plotTypesMaps       <- c("Observation usage (map)","First guess departure (map)","Analysis departure (map)","Analysis increment (map)","Observations (map)")
-plotTypesTS         <- c("Number of observations (TS)","Obs fit (TS)")
-plotTypesSat        <- c("Bias correction (TS)","Hovmoeller (TS)","FG dep + Bias correction (map)","Bias correction (map)")
+plotTypesTS         <- c("Number of observations","Obs fit")
+plotTypesSat        <- c("FG dep + Bias correction (map)","Bias correction (map)")
+plotTypesSatTS      <- c("Bias correction","Hovmoeller")
 
 exp1 <- Sys.getenv('OBSMON_EXP1', unset = "exp1")
 exp2 <- Sys.getenv('OBSMON_EXP2', unset = "exp2")
-default_experiments <- c(exp1,exp2,"MetCoOp","DMI","DMI","FMI","MetCoOp-backup","MetCoOp-preop","DMI-dka38h12b","AROME-Arctic")
+#default_experiments <- c(exp1,exp2,"MetCoOp","DMI","DMI","FMI","MetCoOp-backup","MetCoOp-preop","DMI-dka38h12b","AROME-Arctic")
+default_experiments <- c(exp1,exp2,"MetCoOp")
 
 # setExperiment
-setExperiment <- function(exp,base){
-  if ( verbose("DEBUG")) { print(paste("DEBUG: -> setExperiment(",exp,base,")"))}
-  setExperiment <- NULL
+setExperiment <- function(exp,base,dtg=NULL,dir=F){
+  if ( verbose("DEBUG")) { print(paste("DEBUG: -> setExperiment(",exp,base,dtg,dir,")"))}
+  setExperiment=NULL
+
   if ( !is.null(exp)) {
     dbtry_ecma     <- NULL
     dbtry_ecma_sfc <- NULL
     dbtry_ccma     <- NULL
     if ( exp == "MetCoOp" ){
-      dbtry_ecma     <- "/data4/portal/metcoop/AM25/archive/extract/ecma/ts/ecma.db"
-      dbtry_ecma_sfc <- "/data4/portal/metcoop/AM25/archive/extract/ecma_sfc/ts/ecma.db"
-      dbtry_ccma     <- "/data4/portal/metcoop/AM25/archive/extract/ccma/ts/ccma.db"
+      dbtry_ecma     =  "/data4/portal/metcoop/AM25/archive/extract/ecma/"
+      dbtry_ecma_sfc =  "/data4/portal/metcoop/AM25/archive/extract/ecma_sfc/"
+      dbtry_ccma     =  "/data4/portal/metcoop/AM25/archive/extract/ccma/"
     } else if ( exp == "MetCoOp-backup" ){
-      dbtry_ecma     <- "/data4/portal/metcoop/AM25_backup/archive/extract/ecma/ts/ecma.db"
-      dbtry_ecma_sfc <- "/data4/portal/metcoop/AM25_backup/archive/extract/ecma_sfc/ts/ecma.db"
-      dbtry_ccma     <- "/data4/portal/metcoop/AM25_backup/archive/extract/ccma/ts/ccma.db"
+      dbtry_ecma     =  "/data4/portal/metcoop/AM25_backup/archive/extract/ecma/"
+      dbtry_ecma_sfc =  "/data4/portal/metcoop/AM25_backup/archive/extract/ecma_sfc/"
+      dbtry_ccma     =  "/data4/portal/metcoop/AM25_backup/archive/extract/ccma/"
     } else if ( exp == "MetCoOp-preop" ){
-      dbtry_ecma     <- "/data4/portal/metcoop/AM25_preop/archive/extract/ecma/ts/ecma.db"
-      dbtry_ecma_sfc <- "/data4/portal/metcoop/AM25_preop/archive/extract/ecma_sfc/ts/ecma.db"
-      dbtry_ccma     <- "/data4/portal/metcoop/AM25_preop/archive/extract/ccma/ts/ccma.db"
+      dbtry_ecma     =  "/data4/portal/metcoop/AM25_preop/archive/extract/ecma/"
+      dbtry_ecma_sfc =  "/data4/portal/metcoop/AM25_preop/archive/extract/ecma_sfc/"
+      dbtry_ccma     =  "/data4/portal/metcoop/AM25_preop/archive/extract/ccma/"
     } else if ( exp == exp1 ){
       # Default paths to data bases from environment
-      dbtry_ecma     <- paste(Sys.getenv('DBDIR_ECMA'),"/ecma.db",sep="")
-      dbtry_ecma_sfc <- paste(Sys.getenv('DBDIR_ECMA_SFC'),"/ecma.db",sep="")
-      dbtry_ccma     <- paste(Sys.getenv('DBDIR_CCMA'),"/ccma.db",sep="")
+      dbtry_ecma     =  Sys.getenv('DBDIR_ECMA')
+      dbtry_ecma_sfc =  Sys.getenv('DBDIR_ECMA_SFC')
+      dbtry_ccma     =  Sys.getenv('DBDIR_CCMA')
     } else if ( exp == exp2 ){
       # Default paths to data bases from environment
-      dbtry_ecma     <- paste(Sys.getenv('DBDIR_ECMA2'),"/ecma.db",sep="")
-      dbtry_ecma_sfc <- paste(Sys.getenv('DBDIR_ECMA_SFC2'),"/ecma.db",sep="")
-      dbtry_ccma     <- paste(Sys.getenv('DBDIR_CCMA2'),"/ccma.db",sep="")
+      dbtry_ecma     =  Sys.getenv('DBDIR_ECMA2')
+      dbtry_ecma_sfc =  Sys.getenv('DBDIR_ECMA_SFC2')
+      dbtry_ccma     =  Sys.getenv('DBDIR_CCMA2')
     } else if ( exp == "DMI" ){
-      dbtry_ecma     <- "/data4/portal/dmi/dka38h12/archive/extract/ecma/ts/ecma.db"
-      dbtry_ecma_sfc <- "/data4/portal/dmi/dka38h12/archive/extract/ecma_sfc/ts/ecma.db"
-      dbtry_ccma     <- "/data4/portal/dmi/dka38h12/archive/extract/ccma/ts/ccma.db"
+      dbtry_ecma     =  "/data4/portal/dmi/dka38h12/archive/extract/ecma/"
+      dbtry_ecma_sfc =  "/data4/portal/dmi/dka38h12/archive/extract/ecma_sfc/"
+      dbtry_ccma     =  "/data4/portal/dmi/dka38h12/archive/extract/ccma/"
     } else if ( exp == "DMI-dka38h12b" ){
-      dbtry_ecma     <- "/data4/portal/dmi/dka38h12b/archive/extract/ecma/ts/ecma.db"
-      dbtry_ecma_sfc <- "/data4/portal/dmi/dka38h12b/archive/extract/ecma_sfc/ts/ecma.db"
-      dbtry_ccma     <- "/data4/portal/dmi/dka38h12b/archive/extract/ccma/ts/ccma.db"
+      dbtry_ecma     =  "/data4/portal/dmi/dka38h12b/archive/extract/ecma/"
+      dbtry_ecma_sfc =  "/data4/portal/dmi/dka38h12b/archive/extract/ecma_sfc/"
+      dbtry_ccma     =  "/data4/portal/dmi/dka38h12b/archive/extract/ccma/"
     } else if ( exp == "FMI" ){
-      dbtry_ecma     <- "/data4/portal/fmi/aro38h12/extract/ecma/ts/ecma.db"
-      dbtry_ecma_sfc <- "/data4/portal/fmi/aro38h12/extract/ecma_sfc/ts/ecma.db"
-      dbtry_ccma     <- "/data4/portal/fmi/aro38h12/extract/ccma/ts/ccma.db"
+      dbtry_ecma     =  "/data4/portal/fmi/aro38h12/extract/ecma/"
+      dbtry_ecma_sfc =  "/data4/portal/fmi/aro38h12/extract/ecma_sfc/"
+      dbtry_ccma     =  "/data4/portal/fmi/aro38h12/extract/ccma/"
     } else if ( exp == "AROME-Arctic" ){
-      dbtry_ecma     <- "/data4/portal/metno/AROME_Arctic/archive/extract/ecma/ts/ecma.db"
-      dbtry_ecma_sfc <- "/data4/portal/metno/AROME_Arctic/archive/extract/ecma_sfc/ts/ecma.db"
-      dbtry_ccma     <- "/data4/portal/metno/AROME_Arctic/archive/extract/ccma/ts/ccma.db"
+      dbtry_ecma     =  "/data4/portal/metno/AROME_Arctic/archive/extract/ecma/"
+      dbtry_ecma_sfc =  "/data4/portal/metno/AROME_Arctic/archive/extract/ecma_sfc/"
+      dbtry_ccma     =  "/data4/portal/metno/AROME_Arctic/archive/extract/ccma/"
     }
 
+    if ( grepl('(TS)',base) == 1 ) {
+      dbtry_ecma     = paste(dbtry_ecma,"/ts/ecma.db",sep="")
+      dbtry_ecma_sfc = paste(dbtry_ecma_sfc,"/ts/ecma.db",sep="")
+      dbtry_ccma     = paste(dbtry_ccma,"/ts/ccma.db",sep="")
+    }else{
+      # Keep directories if no DTG is set
+      if ( !dir ) {
+        if ( is.null(dtg)) { print(paste("WARNING: dtg is not set and should be set")) }
+        dbtry_ecma     = paste(dbtry_ecma,"/",dtg,"/ecma.db",sep="")
+        dbtry_ecma_sfc = paste(dbtry_ecma_sfc,"/",dtg,"/ecma.db",sep="")
+        dbtry_ccma     = paste(dbtry_ccma,"/",dtg,"/ccma.db",sep="")
+      }
+    }
     if ( verbose("DEBUG")) {
       print(paste("DEBUG:     ",exp))
       print(paste("DEBUG:     ",dbtry_ecma))
@@ -70,41 +86,65 @@ setExperiment <- function(exp,base){
       print(paste("DEBUG:     ",dbtry_ccma))
     }
 
-    # Test if files exist
     if ( base == "Screening" ){
-      if ( !is.null(dbtry_ecma) && file.exists(dbtry_ecma)) {
-        setExperiment <- dbtry_ecma
+      if ( dir ) { 
+        setExperiment = dbtry_ecma
+      } else{
+        if ( !is.null(dbtry_ecma) ) {
+          dtg=getLatestDTG(base,exp)
+          if ( !is.null(dtg)) { setExperiment = dbtry_ecma }
+        }
       }
+    } else if ( base == "Screening (TS)" ){
+      if ( !is.null(dbtry_ecma) && file.exists(dbtry_ecma)) {
+        setExperiment = dbtry_ecma
+      } 
     } else if ( base == "Minimization" ){
+      if ( dir ) { 
+        setExperiment = dbtry_ccma
+      }else{
+        if ( !is.null(dbtry_ccma) ) {
+          dtg=getLatestDTG(base,exp)
+          if ( !is.null(dtg)) { setExperiment = dbtry_ccma }
+        }
+      }
+    } else if ( base == "Minimization (TS)" ){
       if ( !is.null(dbtry_ccma) && file.exists(dbtry_ccma)) {
-        setExperiment <- dbtry_ccma
+        setExperiment = dbtry_ccma
       }
     } else if ( base == "Surface" ){
+      if ( dir ) { 
+        setExperiment = dbtry_ecma_sfc 
+      }else{
+        if ( !is.null(dbtry_ecma_sfc) ) {
+          dtg=getLatestDTG(base,exp)
+          if ( !is.null(dtg)) { setExperiment = dbtry_ecma_sfc }
+        }
+      }
+    } else if ( base == "Surface (TS)" ){
       if ( !is.null(dbtry_ecma_sfc) && file.exists(dbtry_ecma_sfc)) {
-        setExperiment <- dbtry_ecma_sfc
+        setExperiment = dbtry_ecma_sfc
       }
     }
 
     # Debug
     if (!is.null(setExperiment)){
-      if ( verbose("DEBUG")) { print(paste("DEBUG: setExperiment=",setExperiment," base=",base))}
+      if ( verbose("DEBUG")) { print(paste("DEBUG: setExperiment=",setExperiment," base=",base,sep=""))}
+    }else{
+      if ( verbose("DEBUG")) { print("DEBUG: setExperiment=NULL") }
     }
   }
   return (setExperiment)
 }
 
 # getExperiments
-getExperiments <- function(base=NULL){
-  if ( verbose("DEBUG")) { print(paste("DEBUG: -> getExperiments(",base,")")) }
-  experiments<-NULL
-
-  if ( input$tabs == "Surface" ){
-    base="Surface"
-  }
+getExperiments <- function(base,dtg=NULL){
+  if ( verbose("DEBUG")) { print(paste("DEBUG: -> getExperiments(",base,dtg,")")) }
+  experiments=NULL
 
   if ( !is.null(base)){
    for (n in 1:length(default_experiments)){
-      if ( !is.null(setExperiment(default_experiments[n],base))){
+      if ( !is.null(setExperiment(default_experiments[n],base,dtg))){
         experiments=c(experiments,default_experiments[n])
       }
     }
@@ -122,7 +162,7 @@ obtypeExists<- function(obtype){
   cycle=NULL
   exp=NULL
   if ( input$tabs == "Surface" ){
-    base="Surface"
+    if ( !is.null(input$ODBbase_SA)){ base=input$ODBbase_SA }
     if ( !is.null(input$dateRange_SA)){ daterange=input$dateRange_SA }
     if ( !is.null(input$cycle_SA)){ cycle=input$cycle_SA }
     if ( !is.null(input$experiment_SA)){ exp=input$experiment_SA }
@@ -134,7 +174,7 @@ obtypeExists<- function(obtype){
   }
 
   if (!is.null(base) && !is.null(exp) && !is.null(obtype) && !is.null(daterange) && !is.null(cycle)){
-    dbConn<-connect(base,exp)
+    dbConn<-connect(base,exp,date2dtg(daterange[1],cycle))
     if ( !is.null(dbConn)) {
      
       query<-paste("SELECT nobs_total FROM obsmon WHERE obnumber == ",getObNumber(obtype)," AND DTG >= ",date2dtg(daterange[1],cycle)," AND DTG <= ",date2dtg(daterange[2],cycle)," ORDER BY nobs_total DESC LIMIT 1",sep="")
@@ -211,30 +251,34 @@ setDBSatname<-function(sat){
 }
 
 # getPlotTypes
-getPlotTypes <- function(obtype){
-  if ( verbose("DEBUG")) { print(paste("DEBUG: -> getPlotTypes(",obtype,")")) }
-  if ( !is.null(obtype)) {
-    switch(obtype,"SATEM" = c(plotTypesStat,plotTypesTS,plotTypesMaps,plotTypesSat),c(plotTypesStat,plotTypesMaps,plotTypesTS))
+getPlotTypes <- function(obtype,base){
+  if ( verbose("DEBUG")) { print(paste("DEBUG: -> getPlotTypes(",obtype,base,")")) }
+  if ( !is.null(obtype) && !is.null(base) ) {
+    if ( grepl('(TS)',base) == 1 ) {
+      switch(obtype,"SATEM" = c(plotTypesTS,plotTypesSatTS),c(plotTypesTS))
+    }else{
+      switch(obtype,"SATEM" = c(plotTypesStat,plotTypesMaps,plotTypesSat),c(plotTypesStat,plotTypesMaps))
+    }
   }
 }
 
 # getPlotTypeShort
 getPlotTypeShort <- function(plotType){
-  if ( verbose("DEBUG")) { print(paste("DEBUG: -> getPlotTypeShort(",plotType,")")) }
+  if ( verbose("DEBUG")) { print(paste("DEBUG: -> getPlotTypeShort(",plotType,")",sep="")) }
   if ( !is.null(plotType)) {
     switch(plotType,
            "FG+An departure"                = "FGAnDeparture",
            "Observation usage (map)"        = "ObservationUsage",
-           "Bias correction (TS)"           = "BiasCorrection",
-           "Hovmoeller (TS)"                = "Hovmoller",
+           "Bias correction"                = "BiasCorrection",
+           "Hovmoeller"                     = "Hovmoller",
            "First guess departure (map)"    = "FirstGuessDepartureMap",
            "FG dep + Bias correction (map)" = "FirstGuessBCDepartureMap",
            "Analysis departure (map)"       = "AnalysisDepartureMap",
            "Analysis increment (map)"       = "AnalysisIncrementMap",
            "Bias correction (map)"          = "BiasCorrectionMap",
            "Observations (map)"             = "ObservationsMap",
-           "Number of observations (TS)"    = "NumberOfObservations",
-           "Obs fit (TS)"                   = "ObsFitTs",
+           "Number of observations"         = "NumberOfObservations",
+           "Obs fit"                        = "ObsFitTs",
            plotType)
   }
 }
@@ -257,7 +301,7 @@ variableExists<- function(obtype,var){
   cycle=NULL
   exp=NULL
   if ( input$tabs == "Surface" ){
-    base="Surface"
+    if ( !is.null(input$ODBbase_SA)){ base=input$ODBbase_SA }
     if ( !is.null(input$dateRange_SA)){ daterange=input$dateRange_SA }
     if ( !is.null(input$cycle_SA)){ cycle=input$cycle_SA }
     if ( !is.null(input$experiment_SA)){ exp=input$experiment_SA }
@@ -269,7 +313,7 @@ variableExists<- function(obtype,var){
   }
 
   if (!is.null(base) && !is.null(exp) && !is.null(obtype) && !is.null(var) && !is.null(daterange) && !is.null(cycle)){
-    dbConn<-connect(base,exp)
+    dbConn<-connect(base,exp,date2dtg(daterange[1],cycle))
     if ( !is.null(dbConn)) {
        
       query<-paste("SELECT nobs_total FROM obsmon WHERE obnumber == ",getObNumber(obtype)," AND varname == '",var,"' AND DTG >= ",date2dtg(daterange[1],cycle)," AND DTG <= ",date2dtg(daterange[2],cycle)," ORDER BY nobs_total DESC LIMIT 1",sep="")
@@ -370,6 +414,9 @@ getLevels <- function(obtype,var,plotType){
                      "SCATT"    = c("Surface"),
                      NULL)
      }
+  }else{
+    if ( verbose("DEBUG")) { print("DEBUG: -> getLevels: Not all needed arguments set") }
+    return(NULL)
   }
 }
 
@@ -389,7 +436,7 @@ sensorExists<- function(sensor){
   if ( !is.null(input$experiment)){ exp=input$experiment }
 
   if (!is.null(base) && !is.null(exp) && !is.null(sensor) && !is.null(daterange) && !is.null(cycle)){
-    dbConn<-connect(base,exp)
+    dbConn<-connect(base,exp,date2dtg(daterange[1],cycle))
     if ( !is.null(dbConn)) {
 
       query<-paste("SELECT nobs_total FROM obsmon WHERE obname == '",tolower(sensor),"' AND DTG >= ",date2dtg(daterange[1],cycle)," AND DTG <= ",date2dtg(daterange[2],cycle)," ORDER BY nobs_total DESC LIMIT 1",sep="")
@@ -438,7 +485,7 @@ sateliteExists<- function(sensor,satelite){
   daterange=NULL
   cycle=NULL
   if ( input$tabs == "Surface" ){
-    base="Surface"
+    if ( !is.null(input$ODBbase_SA)){ base=input$ODBbase_SA }
     if ( !is.null(input$dateRange_SA)){ daterange=input$dateRange_SA }
     if ( !is.null(input$cycle_SA)){ cycle=input$cycle_SA }
     if ( !is.null(input$experiment_SA)){ exp=input$experiment_SA }
@@ -450,7 +497,7 @@ sateliteExists<- function(sensor,satelite){
   }
 
   if (!is.null(base) && !is.null(exp) && !is.null(sensor) && !is.null(satelite) && !is.null(daterange) && !is.null(cycle)){
-    dbConn<-connect(base,exp)
+    dbConn<-connect(base,exp,date2dtg(daterange[1],cycle))
     if ( !is.null(dbConn)) {
 
       query<-paste("SELECT nobs_total FROM obsmon WHERE obname == '",tolower(sensor),"' AND satname == '",setDBSatname(satelite),"' AND DTG >= ",date2dtg(daterange[1],cycle)," AND DTG <= ",date2dtg(daterange[2],cycle)," ORDER BY nobs_total DESC LIMIT 1",sep="")
@@ -544,7 +591,7 @@ channelExists<-  function(sensor,sat,channel){
   if ( !is.null(input$experiment)){ exp=input$experiment }
 
   if (!is.null(base) && !is.null(exp) && !is.null(sensor) && !is.null(sat) && !is.null(channel) && !is.null(daterange) && !is.null(cycle)){
-    dbConn<-connect(base,exp)
+    dbConn<-connect(base,exp,date2dtg(daterange[1],cycle))
     if ( !is.null(dbConn)) {
 
       query<-paste("SELECT nobs_total FROM obsmon WHERE obname == '",tolower(sensor),"' AND satname == '",setDBSatname(sat),"' AND level == ",channel," AND DTG >= ",date2dtg(daterange[1],cycle)," AND DTG <= ",date2dtg(daterange[2],cycle)," ORDER BY nobs_total DESC LIMIT 1",sep="")
@@ -633,60 +680,60 @@ getUnit<-function(varName){
 }
 
 #getLatestDate
-getLatestDate <- function(base,exp,dtg=NULL){
+getLatestDate <- function(base,exp){
   if ( verbose("DEBUG")) { print(paste("DEBUG: -> getLatestDate(",base,exp,")")) }
 
   date = NULL
   if ( !is.null(base) && !is.null(exp)){
-    dbConn <- connect(base,exp)
+    dtg=NULL
+    if ( grepl('(TS)',base) != 1 ) {
+      dtg=getLatestDTG(base,exp)
+      if ( verbose("DEBUG")) { print(paste("DEBUG: Latest DTG=",dtg)) }
+    } else{
+      if ( verbose("DEBUG")) { print(paste("DEBUG: Finding latest date from data base")) }
+    }
+    
+    dbConn <- connect(base,exp,dtg)
     if ( !is.null(dbConn)){
       query<-paste("SELECT dtg FROM obsmon ORDER BY dtg DESC LIMIT 1")
       if ( verbose("INFO")) { print(paste("INFO: ",query)) } 
       queryData <- data.frame(dbGetQuery(dbConn,query))
       disconnect(dbConn)
       date<-paste(substr(queryData$DTG,1,4),"-",substr(queryData$DTG,5,6),"-",substr(queryData$DTG,7,8),sep="")
+    }else{
+      if ( verbose("DEBUG")) { print(paste("Can not connect to ",base,exp,dtg)) }
     }
-    # If a DTG is already selected keep this if found in data base
-    if ( !is.null(dtg)) {
-      dbConn = connect(base,exp)
-      if ( !is.null(dbConn)){
-        query = paste("SELECT dtg FROM obsmon where DTG == ",dtg," ORDER BY dtg DESC LIMIT 1")
-        if ( verbose("INFO")) { print(paste("INFO: ",query)) }
-        queryData <- data.frame(dbGetQuery(dbConn,query))
-        disconnect(dbConn)
-        date = paste(substr(queryData$DTG,1,4),"-",substr(queryData$DTG,5,6),"-",substr(queryData$DTG,7,8),sep="")
-      }
-    }
+ 
   }
   return(date)
 }
 
 
 # getLatestCycle
-getLatestCycle <- function(base,exp,dtg=NULL){
+getLatestCycle <- function(base,exp){
   if ( verbose("DEBUG")) { print(paste("DEBUG: -> getLatestCycle(",base,exp,")")) }
 
-  cycle<-NULL 
+  cycle=NULL
   if ( !is.null(base) && !is.null(exp)){
-    dbConn = connect(base,exp)
+    dtg=NULL
+    if ( grepl('(TS)',base) != 1 ) {
+      dtg=getLatestDTG(base,exp)
+      if ( verbose("DEBUG")) { print(paste("DEBUG: Latest DTG=",dtg)) }
+    }else{
+      if ( verbose("DEBUG")) { print(paste("DEBUG: Finding latest date from data base")) }
+    }
+
+    dbConn = connect(base,exp,dtg)
     if ( !is.null(dbConn)){
       query = paste("SELECT dtg FROM obsmon ORDER BY dtg DESC LIMIT 1")
       if (verbose("INFO")) { print(paste("INFO: ",query)) }  
       queryData = data.frame(dbGetQuery(dbConn,query))
       disconnect(dbConn)
       cycle = paste(substr(queryData$DTG,9,10),sep="")
+    }else{
+      if ( verbose("DEBUG")) { print(paste("Can not connect to ",base,exp,dtg)) }
     }
-    # If a DTG is already selected keep this if found in data base
-    if ( !is.null(dtg)) {
-      dbConn = connect(base,exp)
-      if ( !is.null(dbConn)){
-        query = paste("SELECT dtg FROM obsmon where DTG == ",dtg," ORDER BY dtg DESC LIMIT 1")
-        if ( verbose("INFO")) { print(paste("INFO: ",query)) }
-        queryData <- data.frame(dbGetQuery(dbConn,query))
-        disconnect(dbConn)
-        cycle = paste(substr(queryData$DTG,9,10),sep="")
-      }
-    }
+
   }
   return(cycle)
 }
@@ -702,6 +749,20 @@ getPastDate<-function(date,increment){
   return(date)
 }
 
+getLatestDTG<-function(base,exp){
+  if ( verbose("DEBUG")) { print(paste("DEBUG: getLatestDTG(",base,exp,")")) }
+
+  getLatestDTG=NULL
+  if ( !is.null(base) && !is.null(exp) ){
+    dir = getFile(base,exp,dir=T)
+    x=list.dirs(path=dir)
+    y=sort(suppressWarnings(as.numeric(substr(x,nchar(x)-9,nchar(x)))))
+    if ( length(y) > 0 ) {
+      getLatestDTG=y[length(y)]
+    }
+  }
+}
+
 # getStations
 getStations<-function(variable){
   if ( verbose("DEBUG")) { print(paste("DEBUG: -> getStations(",variable,")")) }
@@ -710,7 +771,7 @@ getStations<-function(variable){
   if ( !is.null(variable)) {
     base=NULL
 
-    switch(variable,"U10M" = { base="Minimization"}, "V10M" = { base="Minimization"},"Z" = { base="Minimization"},{ base="Surface"})
+    switch(variable,"U10M" = { base="Minimization (TS)"}, "V10M" = { base="Minimization (TS)"},"Z" = { base="Minimization (TS)"},{ base="Surface (TS)"})
 
     date2=getLatestDate(base,input$experiment_SD)
     cycle=getLatestCycle(base,input$experiment_SD)
@@ -779,21 +840,21 @@ getDumpData<-function(base,table,exp){
 #
 
 # getFile
-getFile <- function(base,experiment){
-  if ( verbose("DEBUG")) { print(paste("DEBUG: -> getFile(",base,experiment,")")) }
-  fname<-NULL
+getFile <- function(base,experiment,dtg=NULL,dir=F){
+  if ( verbose("DEBUG")) { print(paste("DEBUG: -> getFile(",base,experiment,dtg,dir,")")) }
+  fname=NULL
   if ( !is.null(base)) {
     # Set file name either from experiment description or from uploaded file
     if ( is.null(experiment)){ 
-      if ( base == "Screening" ){
+      if ( base == "Screening" || base == "Screening (TS)" ){
         if (!is.null(input$ODBbase_screening)){ fname <- input$ODBbase_screening$datapath }
-      } else if ( base == "Minimization" ){
+      } else if ( base == "Minimization" || base == "Minimization (TS)" ){
         if (!is.null(input$ODBbase_minimization)) { fname <- input$ODBbase_minimization$datapath }
-      } else if ( base == "Surface" ){
+      } else if ( base == "Surface" || base == "Surface (TS)" ){
         if (!is.null(input$ODBbase_surface)) { fname <- input$ODBbase_surface$datapath }
       }
     } else {
-      fname<-setExperiment(experiment,base)
+      fname<-setExperiment(experiment,base,dtg,dir)
     }
   }
   return(fname)
@@ -801,13 +862,13 @@ getFile <- function(base,experiment){
 
 
 # connect
-connect <- function(base,exp){
-  if ( verbose("DEBUG")) { print(paste("DEBUG: -> connect(",base,exp,")")) }
+connect <- function(base,exp,dtg=NULL){
+  if ( verbose("DEBUG")) { print(paste("DEBUG: -> connect(",base,exp,dtg,")")) }
   dbConn<-NULL
   if ( !is.null(base) && !is.null(exp)) {
-    fname <- getFile(base,exp)
-    if ( verbose("DEBUG")) { print(paste("DEBUG: -> connect -> ",fname,exp)) }
+    fname <- getFile(base,exp,dtg)
     if (!is.null(fname) && file.exists(fname)){
+      if ( verbose("DEBUG")) { print(paste("DEBUG: -> dbConnect ",fname)) }
       dbConn <- dbConnect(RSQLite::SQLite(),fname)
     }
   }

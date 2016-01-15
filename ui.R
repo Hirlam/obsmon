@@ -115,6 +115,7 @@ shinyUI(navbarPage("OBSMON v2",id="tabs",
     fluidRow(
       column(3,
         wellPanel(
+          uiOutput("select_base_SA"),
           uiOutput("select_experiment_SA"),
           hr(),
           fluidRow(
@@ -124,7 +125,7 @@ shinyUI(navbarPage("OBSMON v2",id="tabs",
             column(4,offset=1,
               uiOutput("select_cycle_SA")
             )   
-          )  
+          )
         )
       ),  
       column(9,

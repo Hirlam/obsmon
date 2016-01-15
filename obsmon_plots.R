@@ -214,7 +214,7 @@ generatePlot <- function(odbBase,exp,plotName,obName,varName,levels,sensor,satel
                            " AND obname == '",obname,"'",
                            " AND varname == '",var1,"'",
                            levelListQuery,sep="")
-                           dbConn = connect(odbBase,exp)
+                           dbConn = connect(odbBase,exp,date2dtg(dateRange[1],cycle))
                            plotData1 = data.frame(dbGetQuery(dbConn,plotQuery))
                            disconnect(dbConn)
         plotQuery = paste("SELECT latitude,longitude,level,statid,",sql," FROM usage",
@@ -235,7 +235,7 @@ generatePlot <- function(odbBase,exp,plotName,obName,varName,levels,sensor,satel
     }
     if ( verbose("INFO") ) { paste("INFO: ",print(plotQuery))}
     if ( mode == "query" ) { return(plotQuery)}
-    dbConn = connect(odbBase,exp)
+    dbConn = connect(odbBase,exp,date2dtg(dateRange[1],cycle))
     plotData = data.frame(dbGetQuery(dbConn,plotQuery))
     disconnect(dbConn)
     plotData$scale = "reverse"
@@ -277,7 +277,7 @@ generatePlot <- function(odbBase,exp,plotName,obName,varName,levels,sensor,satel
       if ( verbose("INFO") ) { print(paste("INFO: ",plotQuery))}
       if ( mode == "query" ) { return(plotQuery)}
       title = paste(exp,":",plotName,sensor,satelite,channel_string,dtgstr)
-      dbConn = connect(odbBase,exp)
+      dbConn = connect(odbBase,exp,date2dtg(dateRange[1],cycle))
       plotData = dbGetQuery(dbConn,plotQuery)
       disconnect(dbConn)
       if ( mode == "data" ) { return(plotData)}
@@ -299,7 +299,7 @@ generatePlot <- function(odbBase,exp,plotName,obName,varName,levels,sensor,satel
       if ( verbose("INFO") ) { print(paste("INFO: ",plotQuery))}
       if ( mode == "query" ) { return(plotQuery)}
       title = paste(exp,":",plotName,obName,varName,level_string,dtgstr)
-      dbConn = connect(odbBase,exp)
+      dbConn = connect(odbBase,exp,date2dtg(dateRange[1],cycle))
       plotData = dbGetQuery(dbConn,plotQuery)
       disconnect(dbConn)
       if ( mode == "data" ) { return(plotData)}
@@ -352,7 +352,7 @@ generatePlot <- function(odbBase,exp,plotName,obName,varName,levels,sensor,satel
                              " ORDER BY level",sep="")
       if ( verbose("INFO") ) { print(paste("INFO: ",plotQuery))}
       if ( mode == "query" ) { return(plotQuery)}
-      dbConn = connect(odbBase,exp)
+      dbConn = connect(odbBase,exp,date2dtg(dateRange[1],cycle))
       title = paste(exp,":",plotName,sensor,satelite,dtgstr)
       plotData = data.frame(dbGetQuery(dbConn,plotQuery))
       disconnect(dbConn)
@@ -376,7 +376,7 @@ generatePlot <- function(odbBase,exp,plotName,obName,varName,levels,sensor,satel
                              " AND varname == '",varName,"'",sep="")
         if ( verbose("INFO") ) { print(paste("INFO: ",plotQuery)) }
         if ( mode == "query" ) { return(plotQuery)}
-        dbConn = connect(odbBase,exp)
+        dbConn = connect(odbBase,exp,date2dtg(dateRange[1],cycle))
         title = paste(exp,":",plotName,obName,varName,dtgstr)
         plotData = data.frame(dbGetQuery(dbConn,plotQuery))
         disconnect(dbConn)
@@ -399,7 +399,7 @@ generatePlot <- function(odbBase,exp,plotName,obName,varName,levels,sensor,satel
                            " ORDER BY level",sep="")
         if ( verbose("INFO") ) { print(paste("INFO: ",plotQuery))}
         if ( mode == "query" ) { return(plotQuery)}
-        dbConn = connect(odbBase,exp)
+        dbConn = connect(odbBase,exp,date2dtg(dateRange[1],cycle))
         title = paste(exp,":",plotName,obName,varName,dtgstr)
         plotData = data.frame(dbGetQuery(dbConn,plotQuery))
         disconnect(dbConn)
@@ -745,7 +745,7 @@ generate_surfdia <- function(var,station,exp,mode="plot"){
   if ( !is.null(var) && !is.null(station)){
 
     base=NULL
-    switch(var,"U10M" = { base="Minimization"}, "V10M" = { base="Minimization"},"APD" = { base="Minimization"},"Z" = { base="Minimization"},{ base="Surface"})
+    switch(var,"U10M" = { base="Minimization (TS)"}, "V10M" = { base="Minimization (TS)"},"APD" = { base="Minimization (TS)"},"Z" = { base="Minimization (TS)"},{ base="Surface (TS)"})
 
     date2=getLatestDate(base,exp)
     date1=getPastDate(date2,input$ndays)
