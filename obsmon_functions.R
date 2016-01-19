@@ -8,9 +8,9 @@ listOfSensors       <- c("AMSUA","AMSUB","MHS","IASI")
 # Normal plots
 plotTypesStat       <- c("FG+An departure")
 plotTypesMaps       <- c("Observation usage (map)","First guess departure (map)","Analysis departure (map)","Analysis increment (map)","Observations (map)")
-plotTypesTS         <- c("Number of observations","Obs fit")
+plotTypesTS         <- c("Number of observations (TS)","Obs fit (TS)")
 plotTypesSat        <- c("FG dep + Bias correction (map)","Bias correction (map)")
-plotTypesSatTS      <- c("Bias correction","Hovmoeller")
+plotTypesSatTS      <- c("Bias correction (TS)","Hovmoeller (TS)")
 
 exp1 <- Sys.getenv('OBSMON_EXP1', unset = "exp1")
 exp2 <- Sys.getenv('OBSMON_EXP2', unset = "exp2")
@@ -65,18 +65,12 @@ setExperiment <- function(exp,base,dtg=NULL,dir=F){
       dbtry_ccma     =  "/data4/portal/metno/AROME_Arctic/archive/extract/ccma/"
     }
 
-    if ( grepl('(TS)',base) == 1 ) {
-      dbtry_ecma     = paste(dbtry_ecma,"/ts/ecma.db",sep="")
-      dbtry_ecma_sfc = paste(dbtry_ecma_sfc,"/ts/ecma.db",sep="")
-      dbtry_ccma     = paste(dbtry_ccma,"/ts/ccma.db",sep="")
-    }else{
-      # Keep directories if no DTG is set
-      if ( !dir ) {
-        if ( is.null(dtg)) { print(paste("WARNING: dtg is not set and should be set")) }
-        dbtry_ecma     = paste(dbtry_ecma,"/",dtg,"/ecma.db",sep="")
-        dbtry_ecma_sfc = paste(dbtry_ecma_sfc,"/",dtg,"/ecma.db",sep="")
-        dbtry_ccma     = paste(dbtry_ccma,"/",dtg,"/ccma.db",sep="")
-      }
+    # Keep directories if no DTG is set
+    if ( !dir ) {
+      if ( is.null(dtg)) { print(paste("WARNING: dtg is not set and should be set")) }
+      dbtry_ecma     = paste(dbtry_ecma,"/",dtg,"/ecma.db",sep="")
+      dbtry_ecma_sfc = paste(dbtry_ecma_sfc,"/",dtg,"/ecma.db",sep="")
+      dbtry_ccma     = paste(dbtry_ccma,"/",dtg,"/ccma.db",sep="")
     }
     if ( verbose("DEBUG")) {
       print(paste("DEBUG:     ",exp))
@@ -94,10 +88,6 @@ setExperiment <- function(exp,base,dtg=NULL,dir=F){
           if ( !is.null(dtg)) { setExperiment = dbtry_ecma }
         }
       }
-    } else if ( base == "Screening (TS)" ){
-      if ( !is.null(dbtry_ecma) && file.exists(dbtry_ecma)) {
-        setExperiment = dbtry_ecma
-      } 
     } else if ( base == "Minimization" ){
       if ( dir ) { 
         setExperiment = dbtry_ccma
@@ -107,10 +97,6 @@ setExperiment <- function(exp,base,dtg=NULL,dir=F){
           if ( !is.null(dtg)) { setExperiment = dbtry_ccma }
         }
       }
-    } else if ( base == "Minimization (TS)" ){
-      if ( !is.null(dbtry_ccma) && file.exists(dbtry_ccma)) {
-        setExperiment = dbtry_ccma
-      }
     } else if ( base == "Surface" ){
       if ( dir ) { 
         setExperiment = dbtry_ecma_sfc 
@@ -119,10 +105,6 @@ setExperiment <- function(exp,base,dtg=NULL,dir=F){
           dtg=getLatestDTG(base,exp)
           if ( !is.null(dtg)) { setExperiment = dbtry_ecma_sfc }
         }
-      }
-    } else if ( base == "Surface (TS)" ){
-      if ( !is.null(dbtry_ecma_sfc) && file.exists(dbtry_ecma_sfc)) {
-        setExperiment = dbtry_ecma_sfc
       }
     }
 
@@ -253,11 +235,7 @@ setDBSatname<-function(sat){
 getPlotTypes <- function(obtype,base){
   if ( verbose("DEBUG")) { print(paste("DEBUG: -> getPlotTypes(",obtype,base,")")) }
   if ( !is.null(obtype) && !is.null(base) ) {
-    if ( grepl('(TS)',base) == 1 ) {
-      switch(obtype,"SATEM" = c(plotTypesTS,plotTypesSatTS),c(plotTypesTS))
-    }else{
-      switch(obtype,"SATEM" = c(plotTypesStat,plotTypesMaps,plotTypesSat),c(plotTypesStat,plotTypesMaps))
-    }
+    switch(obtype,"SATEM" = c(plotTypesStat,plotTypesMaps,plotTypesSat,plotTypesTS,plotTypesSatTS),c(plotTypesStat,plotTypesMaps,plotTypesTS))
   }
 }
 
@@ -268,16 +246,16 @@ getPlotTypeShort <- function(plotType){
     switch(plotType,
            "FG+An departure"                = "FGAnDeparture",
            "Observation usage (map)"        = "ObservationUsage",
-           "Bias correction"                = "BiasCorrection",
-           "Hovmoeller"                     = "Hovmoller",
+           "Bias correction (TS)"           = "BiasCorrection",
+           "Hovmoeller (TS)"                = "Hovmoller",
            "First guess departure (map)"    = "FirstGuessDepartureMap",
            "FG dep + Bias correction (map)" = "FirstGuessBCDepartureMap",
            "Analysis departure (map)"       = "AnalysisDepartureMap",
            "Analysis increment (map)"       = "AnalysisIncrementMap",
            "Bias correction (map)"          = "BiasCorrectionMap",
            "Observations (map)"             = "ObservationsMap",
-           "Number of observations"         = "NumberOfObservations",
-           "Obs fit"                        = "ObsFitTs",
+           "Number of observations (TS)"    = "NumberOfObservations",
+           "Obs fit (TS)"                   = "ObsFitTs",
            plotType)
   }
 }
@@ -684,13 +662,8 @@ getLatestDate <- function(base,exp){
 
   date = NULL
   if ( !is.null(base) && !is.null(exp)){
-    dtg=NULL
-    if ( grepl('(TS)',base) != 1 ) {
-      dtg=getLatestDTG(base,exp)
-      if ( verbose("DEBUG")) { print(paste("DEBUG: Latest DTG=",dtg)) }
-    } else{
-      if ( verbose("DEBUG")) { print(paste("DEBUG: Finding latest date from data base")) }
-    }
+    dtg=getLatestDTG(base,exp)
+    if ( verbose("DEBUG")) { print(paste("DEBUG: Latest DTG=",dtg)) }
     
     dbConn <- connect(base,exp,dtg)
     if ( !is.null(dbConn)){
@@ -714,13 +687,8 @@ getLatestCycle <- function(base,exp){
 
   cycle=NULL
   if ( !is.null(base) && !is.null(exp)){
-    dtg=NULL
-    if ( grepl('(TS)',base) != 1 ) {
-      dtg=getLatestDTG(base,exp)
-      if ( verbose("DEBUG")) { print(paste("DEBUG: Latest DTG=",dtg)) }
-    }else{
-      if ( verbose("DEBUG")) { print(paste("DEBUG: Finding latest date from data base")) }
-    }
+    dtg=getLatestDTG(base,exp)
+    if ( verbose("DEBUG")) { print(paste("DEBUG: Latest DTG=",dtg)) }
 
     dbConn = connect(base,exp,dtg)
     if ( !is.null(dbConn)){
@@ -846,11 +814,11 @@ getFile <- function(base,experiment,dtg=NULL,dir=F){
   if ( !is.null(base)) {
     # Set file name either from experiment description or from uploaded file
     if ( is.null(experiment)){ 
-      if ( base == "Screening" || base == "Screening (TS)" ){
+      if ( base == "Screening" ){
         if (!is.null(input$ODBbase_screening)){ fname <- input$ODBbase_screening$datapath }
-      } else if ( base == "Minimization" || base == "Minimization (TS)" ){
+      } else if ( base == "Minimization" ){
         if (!is.null(input$ODBbase_minimization)) { fname <- input$ODBbase_minimization$datapath }
-      } else if ( base == "Surface" || base == "Surface (TS)" ){
+      } else if ( base == "Surface" ){
         if (!is.null(input$ODBbase_surface)) { fname <- input$ODBbase_surface$datapath }
       }
     } else {
@@ -954,3 +922,37 @@ getSynopName<-function(number){
   name=values$synops[as.character(number)]
   return(name)
 }
+
+getDataTS<-function(base,exp,dtg1,dtg2,mode,plotQuery,utc=NULL){
+  if ( verbose("DEBUG") ) { print(paste("DEBUG: -> getDataTS(",base,exp,dtg1,dtg2,mode,plotQuery,")")) }
+
+  getDataTS=data.frame()
+  # Loop cycles and do queries
+  if ( !is.null(base) && !is.null(exp) && !is.null(dtg1) && !is.null(dtg2) ){
+    dir = getFile(base,exp,dir=T)
+    x=list.dirs(path=dir)
+    y=sort(suppressWarnings(as.numeric(substr(x,nchar(x)-9,nchar(x)))))
+    for (i in 1:length(y) ) {
+      dtg=y[i]
+      hh=substr(dtg,9,10)
+      if ( is.null(utc) || hh == utc ){
+        if ( dtg >= dtg1 && dtg <= dtg2 ) {
+          if ( verbose("INFO") ) {print(paste("INFO: ",plotQuery))}
+          if ( mode == "query" ) {return(plotQuery)}
+          dbConn=connect(base,exp,dtg=dtg)
+          if ( !is.null(dbConn)){
+            getDataTS_tmp = data.frame(dbGetQuery(dbConn,plotQuery))
+            if ( is.data.frame(getDataTS_tmp) && nrow(getDataTS_tmp)!=0 ){
+              getDataTS=rbind(getDataTS,getDataTS_tmp)
+            }else{
+              if ( verbose("DEBUG") ) { print(paste("No data found for dtg=",dtg,sep=""))}
+            }
+            disconnect(dbConn)
+          }
+        }
+      }
+    }
+  }
+  return(getDataTS)
+}
+

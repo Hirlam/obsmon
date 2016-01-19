@@ -62,17 +62,17 @@ shinyServer(function(input,output,session) {
 
   # select_base 
   output$select_base<- renderUI({
-    selectInput("ODBbase",h5("Monitoring level:"),c("Screening","Screening (TS)","Minimization","Minimization (TS)"),width="100%")
+    selectInput("ODBbase",h5("Monitoring level:"),c("Screening","Minimization"),width="100%")
   })
 
   # select_base_SA
   output$select_base_SA<- renderUI({
-    selectInput("ODBbase_SA",h5("Base types:"),c("Surface","Surface (TS)"),width="100%")
+    selectInput("ODBbase_SA",h5("Base types:"),c("Surface"),width="100%")
   })
 
   # select_dump_base 
   output$select_dump_base<- renderUI({
-     selectInput("ODBbase_dump",h5("Monitoring level to dump:"),c("Screening","Screening (TS)","Minimization","Minimization (TS)","Surface","Surface (TS)"))
+     selectInput("ODBbase_dump",h5("Monitoring level to dump:"),c("Screening","Minimization","Surface"))
   })
 
   # select_date
@@ -210,11 +210,7 @@ shinyServer(function(input,output,session) {
     #  if ( !is.null(input$ODBbase) ) {
     #    if ( input$ODBbase == "Screening" ) {
     #      fileInput('ODBbase_screening', 'Choose SQLite data base from screening',accept = c('.db'))
-    #    } else if ( input$ODBbase == "Screening (TS)" ) {
-    #      fileInput('ODBbase_screening', 'Choose SQLite data base from screening',accept = c('.db'))
     #    } else if ( input$ODBbase == "Minimization" ) {
-    #      fileInput('ODBbase_minimization', 'Choose SQLite data base from minimization',accept = c('.db'))
-    #    } else if ( input$ODBbase == "Minimization (TS)" ) {
     #      fileInput('ODBbase_minimization', 'Choose SQLite data base from minimization',accept = c('.db'))
     #    }
     #  }
@@ -593,15 +589,9 @@ shinyServer(function(input,output,session) {
       if ( !is.null(input$ODBbase_dump)) {
         if ( input$ODBbase_dump == "Screening" ) {
           fileInput('ODBbase_screening', 'Choose SQLite data base from screening',accept = c('.db'))
-        } else if (input$ODBbase_dump == "Screening (TS)" ) {
-          fileInput('ODBbase_screening', 'Choose SQLite data base from screening',accept = c('.db'))
         } else if ( input$ODBbase_dump == "Minimization" ) {
           fileInput('ODBbase_minimization', 'Choose SQLite data base from minimization',accept = c('.db'))
-        } else if ( input$ODBbase_dump == "Minimization (TS)" ) {
-          fileInput('ODBbase_minimization', 'Choose SQLite data base from minimization',accept = c('.db'))
         } else if ( input$ODBbase_dump == "Surface" ) {
-          fileInput('ODBbase_surface', 'Choose SQLite data base from surface assimilation',accept = c('.db'))
-        } else if ( input$ODBbase_dump == "Surface (TS)" ) {
           fileInput('ODBbase_surface', 'Choose SQLite data base from surface assimilation',accept = c('.db'))
         }
       }

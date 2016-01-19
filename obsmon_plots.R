@@ -120,9 +120,7 @@ generatePlot <- function(odbBase,exp,plotName,obName,varName,levels,sensor,satel
     }
     if ( verbose("INFO") ) { paste("INFO: ",print(plotQuery))}
     if ( mode == "query" ) { return(plotQuery)}
-    dbConn = connect(odbBase,exp)
-    plotData = data.frame(dbGetQuery(dbConn,plotQuery))
-    disconnect(dbConn)
+    plotData=getDataTS(odbBase,exp,dtgbeg,dtgend,mode,plotQuery)
     if ( mode == "data" ) { return(plotData)}
     obPlot = NumberOfObservations(title,ylab,plotData)
 
@@ -155,11 +153,10 @@ generatePlot <- function(odbBase,exp,plotName,obName,varName,levels,sensor,satel
         title = paste(exp,":",plotName,obName,varName,level_string,dtgstr_range)
 
       }
+
       if ( verbose("INFO") ) { paste("INFO: ",print(plotQuery))}
       if ( mode == "query" ) { return(plotQuery)}
-      dbConn = connect(odbBase,exp)
-      plotData = data.frame(dbGetQuery(dbConn,plotQuery))
-      disconnect(dbConn)
+      plotData=getDataTS(odbBase,exp,dtgbeg,dtgend,mode,plotQuery)
       if ( mode == "data" ) { return(plotData)}
       obPlot = ObsFitTs(title,ylab,plotData)
 
@@ -184,6 +181,7 @@ generatePlot <- function(odbBase,exp,plotName,obName,varName,levels,sensor,satel
       sql = "(obsvalue) as plotValues"
     }
 
+    ff=""
     if (obNumber == "7") {
       qsatelite = setDBSatname(as.character(satelite))
       channelListQuery = setChannelList(channels)
@@ -196,7 +194,6 @@ generatePlot <- function(odbBase,exp,plotName,obName,varName,levels,sensor,satel
       title = paste(exp,":",plotName,obName,satelite,channel_string,dtgstr)
     }else{
       levelListQuery = setLevelList(levels)
-      ff=""
       if ( varName == "ff10m" ){
         ff="ff10m"
         var1="u10m"
@@ -324,10 +321,12 @@ generatePlot <- function(odbBase,exp,plotName,obName,varName,levels,sensor,satel
                              channelListQuery,sep="")
       if ( verbose("INFO") ) { print(paste("INFO: ",plotQuery))}
       if ( mode == "query" ) { return(plotQuery)}
-      dbConn = connect(odbBase,exp)
+      if ( plotName == "BiasCorrection" ){
+        plotData=getDataTS(odbBase,exp,dtgbeg,dtgend,mode,plotQuery,cycle)
+      }else{
+        plotData=getDataTS(odbBase,exp,dtgbeg,dtgend,mode,plotQuery)
+      }
       title = paste(exp,":",plotName,satelite,sensor,channel_string,dtgstr_range,sep=" ")
-      plotData = data.frame(dbGetQuery(dbConn,plotQuery))
-      disconnect(dbConn)
       if ( mode == "data" ) { return(plotData)}
       if ( nrow(plotData) > 0 ) {
         obPlot = SatBcorrCycle(title,cycle,plotName,plotData)
@@ -525,7 +524,6 @@ generatePlot <- function(odbBase,exp,plotName,obName,varName,levels,sensor,satel
         plotData$v=-v
         plotData$un=plotData$u/max(plotData$plotValues)
         plotData$vn=plotData$v/max(plotData$plotValues)
-        print(plotData)
         obPlot = obPlot + geom_segment(data=plotData,aes(x=longitude,y=latitude,xend=longitude+un,yend=latitude+vn))
       }
       return(obPlot)
@@ -660,7 +658,7 @@ generatePlot <- function(odbBase,exp,plotName,obName,varName,levels,sensor,satel
       obPlot = obPlot + labs(title=paste(title," (All cycles)"))
     }else if ( plotName == "BiasCorrection" ){
       LXX = as.integer(dtg2utc(plotData$DTG))==as.integer(cycle)
-      print(LXX)
+      #print(LXX)
       plotDataXX = plotData[LXX,]
       localPlotDataXX=plotDataXX
       localPlotDataXX$datetime = chron(dates=dtg2date(plotDataXX$DTG),times=paste(dtg2utc(plotDataXX$DTG),":00:00",sep=""),format=c('y-m-d','h:m:s'))
@@ -758,31 +756,16 @@ generate_surfdia <- function(var,station,exp,mode="plot"){
     station2=gsub('\\]','',stationstr[[1]][2])
 
     obPlot=NULL
-    # Loop cycles and do queries
-    plotData=data.frame()
-    if ( !is.null(base) && !is.null(exp) ){
-      dir = getFile(base,exp,dir=T)
-      x=list.dirs(path=dir)
-      y=sort(suppressWarnings(as.numeric(substr(x,nchar(x)-9,nchar(x)))))
-      for (i in 1:length(y) ) {
-        dtg=y[i]
-        if ( dtg >= dtg1 && dtg <= dtg2 ) { 
-          plotQuery = paste("SELECT dtg,obsvalue,fg_dep,an_dep,biascrl,statid FROM usage ",
+    plotQuery = paste("SELECT dtg,obsvalue,fg_dep,an_dep,biascrl,statid FROM usage ",
                              " WHERE statid LIKE '%",station2,"%'",
                              " AND DTG >= ",dtg1," AND DTG <= ",dtg2,
                              " AND obname == 'synop' ",
                              " AND varname == '",tolower(var),"'",sep="")
-          if ( verbose("INFO") ) { print(paste("INFO: ",plotQuery))}
-          if ( mode == "query" ) { return(plotQuery)}
-          dbConn=connect(base,exp,dtg=dtg)
-          plotData2 = data.frame(dbGetQuery(dbConn,plotQuery))
-          plotData=rbind(plotData,plotData2) 
-          disconnect(dbConn)
-        }
-      }
-    }
+
+    plotData=getDataTS(base,exp,dtg1,dtg2,mode,plotQuery)
 
     title = paste(exp,var,station)
+    if ( mode == "query" ) { return(plotQuery)}
     if ( mode == "data" ) { return(plotData)}
     if ( nrow(plotData) > 0 ) {
       if ( var == "APD" ) {
@@ -828,4 +811,4 @@ generate_surfdia <- function(var,station,exp,mode="plot"){
     return(NULL)
   }
 }
- 
+
