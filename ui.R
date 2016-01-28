@@ -91,8 +91,13 @@ shinyUI(navbarPage("OBSMON v2",id="tabs",
                 )
               ),
               fluidRow(
-                column(12,
+                column(9,
                   leafletOutput(outputId="Map",height="600",width="900")
+                ),
+                column(3,align="right",
+                  uiOutput("select_map"),
+                  uiOutput("select_map_acc"),
+                  uiOutput("select_level_ncfile")
                 )
               )
             ),
@@ -115,7 +120,6 @@ shinyUI(navbarPage("OBSMON v2",id="tabs",
     fluidRow(
       column(3,
         wellPanel(
-          uiOutput("select_base_SA"),
           uiOutput("select_experiment_SA"),
           hr(),
           fluidRow(
@@ -178,8 +182,12 @@ shinyUI(navbarPage("OBSMON v2",id="tabs",
                   )
                 ),
                 fluidRow(
-                  column(12,
+                  column(9,
                     leafletOutput(outputId="Map_SA",height="600",width="900")
+                  ),
+                  column(3,align="right",
+                    uiOutput("select_map_SA"),
+                    uiOutput("select_map_acc_SA")
                   )
                 )
               ),
@@ -286,7 +294,7 @@ shinyUI(navbarPage("OBSMON v2",id="tabs",
       )
     )
   ),
-  tabPanel("Dump database",
+  tabPanel("Dump database",value="dump",
     fluidRow(
       column(12,align="center",
         wellPanel(

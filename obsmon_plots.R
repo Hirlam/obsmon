@@ -89,6 +89,8 @@ generatePlot <- function(odbBase,exp,plotName,obName,varName,levels,sensor,satel
     channel_string=""
   }
 
+  scatt_extra=""
+  if ( obNumber == "9" && odbBase == "Minimization" ) { scatt_extra=" AND active == 1 " }
 
   obPlot=NULL
 
@@ -210,6 +212,7 @@ generatePlot <- function(odbBase,exp,plotName,obName,varName,levels,sensor,satel
                            " AND dtg == ",dtg,
                            " AND obname == '",obname,"'",
                            " AND varname == '",var1,"'",
+                           scatt_extra,
                            levelListQuery,sep="")
                            dbConn = connect(odbBase,exp,date2dtg(dateRange[1],cycle))
                            plotData1 = data.frame(dbGetQuery(dbConn,plotQuery))
@@ -219,6 +222,7 @@ generatePlot <- function(odbBase,exp,plotName,obName,varName,levels,sensor,satel
                            " AND dtg == ",dtg,
                            " AND obname == '",obname,"'",
                            " AND varname == '",var2,"'",
+                           scatt_extra,
                            levelListQuery,sep="")
       }else{
         plotQuery = paste("SELECT latitude,longitude,level,statid,",sql," FROM usage",
@@ -226,6 +230,7 @@ generatePlot <- function(odbBase,exp,plotName,obName,varName,levels,sensor,satel
                            " AND dtg == ",dtg,
                            " AND obname == '",obname,"'",
                            " AND varname == '",varName,"'",
+                           scatt_extra,
                            levelListQuery,sep="")
       }
       title = paste(exp,":",plotName,obName,varName,level_string,dtgstr)
@@ -250,9 +255,9 @@ generatePlot <- function(odbBase,exp,plotName,obName,varName,levels,sensor,satel
     if ( mode == "data" ) { return(plotData)}
     if ( nrow(plotData) > 0 ) {
       if ( ff != "" ){
-        obPlot = ThresholdMap(title,plotData,mode,u=plotData1$plotValues,v=plotData2$plotValues)
+        obPlot = ThresholdMap(title,plotData,mode,odbBase,exp,dtg,u=plotData1$plotValues,v=plotData2$plotValues)
       }else{
-        obPlot = ThresholdMap(title,plotData,mode)
+        obPlot = ThresholdMap(title,plotData,mode,odbBase,exp,dtg)
       }
     }else{
       obPlot = emptyPlot(title)
@@ -292,6 +297,7 @@ generatePlot <- function(odbBase,exp,plotName,obName,varName,levels,sensor,satel
                            " AND dtg == ",dtg,
                            " AND obname == '",obname,"'",
                            " AND varname == '",varName,"'",
+                          scatt_extra,
                           levelListQuery,sep="")
       if ( verbose("INFO") ) { print(paste("INFO: ",plotQuery))}
       if ( mode == "query" ) { return(plotQuery)}
@@ -366,7 +372,7 @@ generatePlot <- function(odbBase,exp,plotName,obName,varName,levels,sensor,satel
     # Non-SATEMs
     }else{
       # Surface
-      if ( obNumber == 1 || obNumber == 4 ) {
+      if ( obNumber == 1 || obNumber == 4 || obNumber == 9 ) {
         if ( verbose("DEBUG") ) { print(paste("DEBUG: ",obname))}
         plotQuery = paste("SELECT fg_bias_total,an_bias_total,fg_rms_total,an_rms_total FROM obsmon",
                              " WHERE obnumber == ",obNumber,
@@ -452,8 +458,8 @@ generatePlot <- function(odbBase,exp,plotName,obName,varName,levels,sensor,satel
   }
 
   # ThresholdMap
-  ThresholdMap <- function(title,plotData,mode,u=NULL,v=NULL){
-    if ( verbose("DEBUG") ) { print(paste("DEBUG: -> ThresholdMap",title)) }
+  ThresholdMap <- function(title,plotData,mode,base,exp,dtg,u=NULL,v=NULL){
+    if ( verbose("DEBUG") ) { print(paste("DEBUG: -> ThresholdMap",title,mode,base,exp,dtg)) }
 
     obPlot = NULL
 
@@ -470,6 +476,14 @@ generatePlot <- function(odbBase,exp,plotName,obName,varName,levels,sensor,satel
           zoomLevel=i+3
           if ( verbose("DEBUG") ) { print(paste("DEBUG: -> zoomLevel=",zoomLevel)) }
         }
+      }
+    
+      r = getRasterFromFile(base,exp,dtg)
+      if ( !is.null(r)) {
+        dmin2=min(values(r))
+        dmax2=max(values(r))
+        ulim2=max(1.0,abs(dmin2),abs(dmax2))
+        pal2 <- colorNumeric(c("#FF000F", "#FFFFFF", "#0000FF"),domain=c(-ulim2,ulim2),na.color = "transparent")
       }
       #dmin <- quantile(plotData$plotValues,c(0.01),type=3,names=F)
       #dmax <- quantile(plotData$plotValues,c(0.99),type=3,names=F)
@@ -501,13 +515,25 @@ generatePlot <- function(odbBase,exp,plotName,obName,varName,levels,sensor,satel
       }else{
         plotData$radius=5
       }
-      obMap <- leaflet(plotData) %>%
-        addProviderTiles("OpenTopoMap", options=providerTileOptions(opacity=0.5)) %>%
-          fitBounds(x1, y1, x2, y2) %>%
-            addCircleMarkers(~longitude, ~latitude, popup=~popup, radius=~radius,
+      if ( is.null(r)){
+        obMap <- leaflet(plotData) %>%
+          addProviderTiles("OpenTopoMap", options=providerTileOptions(opacity=0.5)) %>%
+            fitBounds(x1, y1, x2, y2) %>%
+              addCircleMarkers(~longitude, ~latitude, popup=~popup, radius=~radius,
                              stroke=TRUE, weight=1, opacity=1, color="black",
                              fillColor=~pal(plotValues), fillOpacity=1,clusterOptions = markerClusterOptions(disableClusteringAtZoom=zoomLevel)) %>%
                              addLegend("topright", pal=pal, values=~plotValues, opacity=1)
+      }else{
+        obMap <- leaflet(plotData) %>%
+          addProviderTiles("OpenTopoMap", options=providerTileOptions(opacity=0.5)) %>%
+            fitBounds(x1, y1, x2, y2) %>%
+              addCircleMarkers(~longitude, ~latitude, popup=~popup, radius=~radius,
+                             stroke=TRUE, weight=1, opacity=1, color="black",
+                             fillColor=~pal(plotValues), fillOpacity=1,clusterOptions = markerClusterOptions(disableClusteringAtZoom=zoomLevel)) %>%
+                             addLegend("topright", pal=pal, values=~plotValues, opacity=1) %>%
+          addRasterImage(r, colors = pal2, opacity = 0.7) %>%
+                             addLegend("bottomright",pal = pal2, values = values(r))
+      }
       return(obMap)
     } else {
 

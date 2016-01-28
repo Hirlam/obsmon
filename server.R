@@ -10,6 +10,7 @@ require(scales)
 require(mapproj)
 require(leaflet)
 require(gridExtra)
+require(raster)
 
 map.world<-map_data(map="world")
 
@@ -65,11 +66,6 @@ shinyServer(function(input,output,session) {
     selectInput("ODBbase",h5("Monitoring level:"),c("Screening","Minimization"),width="100%")
   })
 
-  # select_base_SA
-  output$select_base_SA<- renderUI({
-    selectInput("ODBbase_SA",h5("Base types:"),c("Surface"),width="100%")
-  })
-
   # select_dump_base 
   output$select_dump_base<- renderUI({
      selectInput("ODBbase_dump",h5("Monitoring level to dump:"),c("Screening","Minimization","Surface"))
@@ -116,14 +112,8 @@ shinyServer(function(input,output,session) {
   # select_cycle_SA
   output$select_cycle_SA <- renderUI({
     print("DEBUG: -> select_cycle_SA")
-    if ( is.null(input$ODBbase_SA)) {
-      selectInput("cycle_SA",h5("Cycle"),c("00","03","06","09","12","15","18","21"),selected = getLatestCycle("Surface",input$experiment_SA)
-      )
-    }else{
-      selectInput("cycle_SA",h5("Cycle"),c("00","03","06","09","12","15","18","21"),selected = getLatestCycle(input$ODBbase_SA,input$experiment_SA))
-    }
+    selectInput("cycle_SA",h5("Cycle"),c("00","03","06","09","12","15","18","21"),selected = getLatestCycle("Surface",input$experiment_SA))
   })
-
  
   # select_obtype
   output$select_obtype <- renderUI({
@@ -145,7 +135,7 @@ shinyServer(function(input,output,session) {
   # select_plottype_SA
   output$select_plottype_SA <- renderUI({
     if ( verbose("DEBUG") ) { print("DEBUG: -> select_plottype_SA") }
-    selectInput(inputId = "plottype_SA",label=h5("Select type of plot"),choices=getPlotTypes(input$obtype_SA,input$ODBbase_SA),width="100%")
+    selectInput(inputId = "plottype_SA",label=h5("Select type of plot"),choices=getPlotTypes(input$obtype_SA,"Surface"),width="100%")
   })
 
 
@@ -198,7 +188,12 @@ shinyServer(function(input,output,session) {
   # select_channel
   output$select_channel <- renderUI({
     if ( verbose("DEBUG") ) { print("DEBUG: -> select_channels") }
-    selectInput(inputId = "channel",label=h5("Select channel"),choices=getChannels(input$sensor,input$satelite),multiple=T,selectize=FALSE)
+    choices=getChannels(input$sensor,input$satelite)
+    if ( !is.null(choices)) { 
+      selectInput(inputId = "channel",label=h5("Select channel"),choices=choices,multiple=T,selectize=FALSE)
+    }else{
+      selectInput(inputId = "channel",label=h5("Select channel"),choices=NULL,selectize=FALSE)
+    }
   })
 
   # select_experiment
@@ -206,29 +201,13 @@ shinyServer(function(input,output,session) {
     if ( verbose("DEBUG") ) { print("DEBUG: -> select_experiment") }
     if ( !is.null(getExperiments(input$ODBbase,date2dtg(input$dateRange[1],input$cycle)))) {
       selectInput(inputId = "experiment",label=h5("Select pre-defined experiment"),choices=getExperiments(input$ODBbase,date2dtg(input$dateRange[1],input$cycle)),selected=input$experiment,width="100%")
-    #} else {
-    #  if ( !is.null(input$ODBbase) ) {
-    #    if ( input$ODBbase == "Screening" ) {
-    #      fileInput('ODBbase_screening', 'Choose SQLite data base from screening',accept = c('.db'))
-    #    } else if ( input$ODBbase == "Minimization" ) {
-    #      fileInput('ODBbase_minimization', 'Choose SQLite data base from minimization',accept = c('.db'))
-    #    }
-    #  }
     }
   })
   # select_experiment_SA
   output$select_experiment_SA <- renderUI({
     if ( verbose("DEBUG") ) { print("DEBUG: -> select_experiment_SA") }
-    if ( !is.null(getExperiments(input$ODBbase_SA,date2dtg(input$dateRange_SA[1],input$cycle_SA)))) {
-      selectInput(inputId = "experiment_SA",label=h5("Select pre-defined experiment"),choices=getExperiments(input$ODBbase_SA,date2dtg(input$dateRange_SA[1],input$cycle_SA)),selected=input$experiment_SA,width="100%")
-    #} else {
-    #  if ( !is.null(input$ODBbase_SA) ) {
-    #    if ( !is.null(input$tabs) ) {
-    #      if ( input$tabs == "Surface" ) {
-    #        fileInput('ODBbase_surface', 'Choose SQLite data base from surface assimilation',accept = c('.db'))
-    #      }
-    #    }
-    #  }
+    if ( !is.null(getExperiments("Surface",date2dtg(input$dateRange_SA[1],input$cycle_SA)))) {
+      selectInput(inputId = "experiment_SA",label=h5("Select pre-defined experiment"),choices=getExperiments("Surface",date2dtg(input$dateRange_SA[1],input$cycle_SA)),selected=input$experiment_SA,width="100%")
     }
   })
   # select_experiment_SD
@@ -239,8 +218,6 @@ shinyServer(function(input,output,session) {
       if ( input$variable_surfdia == "U10" || input$variable_surfdia == "V10" || input$variable_surfdia == "APD" || input$variable_surfdia == "Z" ){
         if ( !is.null(getExperiments("Minimization"))) {
           selectInput(inputId = "experiment_SD",label=h5("Select pre-defined experiment"),choices=getExperiments("Minimization"),selected=input$experiment_SD,width="100%")
-        #} else {
-        #  fileInput('ODBbase_minimization', 'Choose SQLite data base from minimization',accept = c('.db'))
         }
       }else{
         if ( !is.null(getExperiments("Surface"))) {
@@ -251,7 +228,38 @@ shinyServer(function(input,output,session) {
       }
     }
   })
-
+  # Select map variable
+  output$select_map <- renderUI({
+    if (!is.null(getRasterDir(input$ODBbase,input$experiment,date2dtg(input$dateRange[1],input$cycle)))){
+      selectInput("map_menu",h5("Variables to plot:"),c("None","surface_air_pressure","air_temperature_ml","specific_humidity_ml","x_wind_ml","y_wind_ml"))
+    }
+  })
+  # Select map variable SA
+  output$select_map_SA <- renderUI({
+    if (!is.null(getRasterDir("Surface",input$experiment_SA,date2dtg(input$dateRange_SA[1],input$cycle_SA)))){
+      selectInput("map_menu_SA",h5("Variables to plot:"),c("None","TG1","TG2","WG1","WG2","WSNOW_VEG1"))
+    }
+  })
+  # select_map_acc
+  output$select_map_acc <- renderUI({
+   if(!is.null(input$map_menu)){
+     checkboxInput("accumulated_map","Accumulated",FALSE)
+   }
+  })
+  # select_level_ncfile
+  output$select_level_ncfile <- renderUI({
+   if ( !is.null(input$map_menu)){
+     if ( grepl('_ml',input$map_menu)){
+       selectInput("level_ncfile",h5("Level"),c("1","2","3","4","5","6","7"),selected=input$level_ncfile,width="40%")
+     }
+   }
+  })
+  # select_map_acc_SA
+  output$select_map_acc_SA <- renderUI({
+   if(!is.null(input$map_menu_SA)){
+     checkboxInput("accumulated_map_SA","Accumulated",FALSE)
+   }
+  })
 
   # set_verbosity
   output$set_verbosity <- renderUI({
@@ -360,7 +368,7 @@ shinyServer(function(input,output,session) {
         return(NULL)
       }else{
         isolate({
-          obPlot = generatePlot(input$ODBbase_SA,input$experiment_SA,getPlotTypeShort(input$plottype_SA),input$obtype_SA,input$variable_SA,"Surface",NULL,NULL,NULL,input$dateRange_SA,input$cycle_SA)
+          obPlot = generatePlot("Surface",input$experiment_SA,getPlotTypeShort(input$plottype_SA),input$obtype_SA,input$variable_SA,"Surface",NULL,NULL,NULL,input$dateRange_SA,input$cycle_SA)
           return(obPlot)
         })
       }
@@ -382,7 +390,7 @@ shinyServer(function(input,output,session) {
         return(NULL)
       }else{
         isolate({
-          obMap = generatePlot(input$ODBbase_SA,input$experiment_SA,getPlotTypeShort(input$plottype_SA),input$obtype_SA,input$variable_SA,"Surface",NULL,NULL,NULL,input$dateRange_SA,input$cycle_SA,mode="map")
+          obMap = generatePlot("Surface",input$experiment_SA,getPlotTypeShort(input$plottype_SA),input$obtype_SA,input$variable_SA,"Surface",NULL,NULL,NULL,input$dateRange_SA,input$cycle_SA,mode="map")
           return(obMap)
         })
       }
@@ -458,7 +466,7 @@ shinyServer(function(input,output,session) {
         return(NULL)
       }else{
         isolate({
-          query=generatePlot(input$ODBbase_SA,input$experiment_SA,getPlotTypeShort(input$plottype_SA),input$obtype_SA,input$variable_SA,"Surface",NULL,NULL,NULL,input$dateRange_SA,input$cycle_SA,mode="query")
+          query=generatePlot("Surface",input$experiment_SA,getPlotTypeShort(input$plottype_SA),input$obtype_SA,input$variable_SA,"Surface",NULL,NULL,NULL,input$dateRange_SA,input$cycle_SA,mode="query")
           return(query)
         })
       }
@@ -531,7 +539,7 @@ shinyServer(function(input,output,session) {
       }else{
 
         isolate({
-          data = generatePlot(input$ODBbase_SA,input$experiment_SA,getPlotTypeShort(input$plottype_SA),input$obtype_SA,input$variable_SA,"Surface",NULL,NULL,NULL,input$dateRange_SA,input$cycle_SA,mode="data")
+          data = generatePlot("Surface",input$experiment_SA,getPlotTypeShort(input$plottype_SA),input$obtype_SA,input$variable_SA,"Surface",NULL,NULL,NULL,input$dateRange_SA,input$cycle_SA,mode="data")
           return(data)
         })
       }
@@ -665,7 +673,7 @@ shinyServer(function(input,output,session) {
                "png" =  png(file,width=xWidth*DPI,height=yHeight*DPI,res=DPI)
         )
 
-        obPlot <- generatePlot(input$ODBbase_SA,input$experiment_SA,getPlotTypeShort(input$plottype_SA),input$obtype_SA,input$variable_SA,"Surface",NULL,NULL,NULL,input$dateRange_SA,input$cycle_SA)
+        obPlot <- generatePlot("Surface",input$experiment_SA,getPlotTypeShort(input$plottype_SA),input$obtype_SA,input$variable_SA,"Surface",NULL,NULL,NULL,input$dateRange_SA,input$cycle_SA)
         print(obPlot)
         dev.off()
       }

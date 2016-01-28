@@ -14,7 +14,7 @@ plotTypesSatTS      <- c("Bias correction (TS)","Hovmoeller (TS)")
 
 exp1 <- Sys.getenv('OBSMON_EXP1', unset = "exp1")
 exp2 <- Sys.getenv('OBSMON_EXP2', unset = "exp2")
-default_experiments <- c(exp1,exp2,"MetCoOp","DMI","DMI","FMI","MetCoOp-backup","MetCoOp-preop","DMI-dka38h12b","AROME-Arctic")
+default_experiments <- c(exp1,exp2,"MetCoOp","DMI","DMI","FMI","MetCoOp-backup","MetCoOp-preop","DMI-dka38h12b","AROME-Arctic","IGA")
 
 # setExperiment
 setExperiment <- function(exp,base,dtg=NULL,dir=F){
@@ -51,6 +51,10 @@ setExperiment <- function(exp,base,dtg=NULL,dir=F){
       dbtry_ecma     =  "/data4/portal/dmi/dka38h12/archive/extract/ecma/"
       dbtry_ecma_sfc =  "/data4/portal/dmi/dka38h12/archive/extract/ecma_sfc/"
       dbtry_ccma     =  "/data4/portal/dmi/dka38h12/archive/extract/ccma/"
+    } else if ( exp == "IGA" ){
+      dbtry_ecma     = "/data4/portal/dmi/IGA/archive/extract/ecma/"
+      dbtry_ecma_sfc = "/data4/portal/dmi/IGA/archive/extract/ecma_sfc/"
+      dbtry_ccma     = "/data4/portal/dmi/IGA/archive/extract/ccma"
     } else if ( exp == "DMI-dka38h12b" ){
       dbtry_ecma     =  "/data4/portal/dmi/dka38h12b/archive/extract/ecma/"
       dbtry_ecma_sfc =  "/data4/portal/dmi/dka38h12b/archive/extract/ecma_sfc/"
@@ -143,7 +147,7 @@ obtypeExists<- function(obtype){
   cycle=NULL
   exp=NULL
   if ( input$tabs == "Surface" ){
-    if ( !is.null(input$ODBbase_SA)){ base=input$ODBbase_SA }
+    base="Surface"
     if ( !is.null(input$dateRange_SA)){ daterange=input$dateRange_SA }
     if ( !is.null(input$cycle_SA)){ cycle=input$cycle_SA }
     if ( !is.null(input$experiment_SA)){ exp=input$experiment_SA }
@@ -278,7 +282,7 @@ variableExists<- function(obtype,var){
   cycle=NULL
   exp=NULL
   if ( input$tabs == "Surface" ){
-    if ( !is.null(input$ODBbase_SA)){ base=input$ODBbase_SA }
+    base="Surface"
     if ( !is.null(input$dateRange_SA)){ daterange=input$dateRange_SA }
     if ( !is.null(input$cycle_SA)){ cycle=input$cycle_SA }
     if ( !is.null(input$experiment_SA)){ exp=input$experiment_SA }
@@ -462,7 +466,7 @@ sateliteExists<- function(sensor,satelite){
   daterange=NULL
   cycle=NULL
   if ( input$tabs == "Surface" ){
-    if ( !is.null(input$ODBbase_SA)){ base=input$ODBbase_SA }
+    base="Surface"
     if ( !is.null(input$dateRange_SA)){ daterange=input$dateRange_SA }
     if ( !is.null(input$cycle_SA)){ cycle=input$cycle_SA }
     if ( !is.null(input$experiment_SA)){ exp=input$experiment_SA }
@@ -543,7 +547,7 @@ dtg2utc <-function(dtg){
 }
 # date2dtg
 date2dtg<-function(date,utc){
-  if ( verbose("DEBUG")) { print(paste("DEBUG: -> date2dtg",date,utc,")")) }
+  if ( verbose("DEBUG")) { print(paste("DEBUG: -> date2dtg(",date,utc,")")) }
 
   if ( !is.null(date) && !is.null(utc) ) {
     dtg=paste(substr(date,1,4),substr(date,6,7),substr(date,9,10),substr(utc,1,2),sep="")
@@ -656,8 +660,8 @@ getUnit<-function(varName){
   }
 }
 
-#getLatestDate
-getLatestDate <- function(base,exp){
+# getLatestDate
+getLatestDate <- function(base,exp=NULL){
   if ( verbose("DEBUG")) { print(paste("DEBUG: -> getLatestDate(",base,exp,")")) }
 
   date = NULL
@@ -690,17 +694,18 @@ getLatestCycle <- function(base,exp){
     dtg=getLatestDTG(base,exp)
     if ( verbose("DEBUG")) { print(paste("DEBUG: Latest DTG=",dtg)) }
 
-    dbConn = connect(base,exp,dtg)
-    if ( !is.null(dbConn)){
-      query = paste("SELECT dtg FROM obsmon ORDER BY dtg DESC LIMIT 1")
-      if (verbose("INFO")) { print(paste("INFO: ",query)) }  
-      queryData = data.frame(dbGetQuery(dbConn,query))
-      disconnect(dbConn)
-      cycle = paste(substr(queryData$DTG,9,10),sep="")
-    }else{
-      if ( verbose("DEBUG")) { print(paste("Can not connect to ",base,exp,dtg)) }
+    if ( !is.null(dtg) ) {
+      dbConn = connect(base,exp,dtg)
+      if ( !is.null(dbConn)){
+        query = paste("SELECT dtg FROM obsmon ORDER BY dtg DESC LIMIT 1")
+        if (verbose("INFO")) { print(paste("INFO: ",query)) }  
+        queryData = data.frame(dbGetQuery(dbConn,query))
+        disconnect(dbConn)
+        cycle = paste(substr(queryData$DTG,9,10),sep="")
+      }else{
+        if ( verbose("DEBUG")) { print(paste("Can not connect to ",base,exp,dtg)) }
+      }
     }
-
   }
   return(cycle)
 }
@@ -722,12 +727,15 @@ getLatestDTG<-function(base,exp){
   getLatestDTG=NULL
   if ( !is.null(base) && !is.null(exp) ){
     dir = getFile(base,exp,dir=T)
-    x=list.dirs(path=dir)
-    y=sort(suppressWarnings(as.numeric(substr(x,nchar(x)-9,nchar(x)))))
-    if ( length(y) > 0 ) {
-      getLatestDTG=y[length(y)]
+    if ( !is.null(dir)) { 
+      x=list.dirs(path=dir)
+      y=sort(suppressWarnings(as.numeric(substr(x,nchar(x)-9,nchar(x)))))
+      if ( length(y) > 0 ) {
+        getLatestDTG=y[length(y)]
+      }
     }
   }
+  return(getLatestDTG)
 }
 
 # getStations
@@ -956,3 +964,79 @@ getDataTS<-function(base,exp,dtg1,dtg2,mode,plotQuery,utc=NULL){
   return(getDataTS)
 }
 
+getRasterFromFile<-function(base,exp,dtg){
+  if ( verbose("DEBUG") ) { print(paste("DEBUG: ->getRasterFromFile(",base,exp,dtg,")"))}
+
+  var="None"
+  acc=""
+  level=NULL
+  if ( input$tabs == "Surface" ){
+    if ( !is.null(input$accumulated_map_SA)){
+      if ( input$accumulated_map_SA ) { acc="_acc"}
+    }
+    if ( !is.null(input$map_menu_SA)) { var=input$map_menu_SA}
+  }else{
+    if ( !is.null(input$accumulated_map)){
+      if ( input$accumulated_map ) { acc="_acc"}
+    }
+    if ( !is.null(input$map_menu)) { var=input$map_menu}
+    if ( !is.null(input$level_ncfile)) { level=input$level_ncfile}
+  }
+
+  r=NULL
+  if ( var != "None" ){
+    fname=getRasterFileName(base,exp,dtg,var,acc)
+    if (!is.null(fname)){
+      if (file.exists(fname)){
+        if ( is.null(level)) {
+          r = raster(fname,varname=var)
+        }else{
+          r = raster(fname,varname=var,level=as.numeric(level))
+        }
+      }
+    }
+  }
+  return(r)
+}
+
+getRasterDir<-function(base,exp,dtg){
+  if ( verbose("DEBUG") ) { print(paste("DEBUG: ->getRasterDir(",base,exp,dtg,")"))}
+
+  getRasterDir=NULL
+  dir = getFile(base,exp,dir=T)
+  if ( !is.null(dir)) {
+    x=list.dirs(path=dir)
+    y=sort(suppressWarnings(as.numeric(substr(x,nchar(x)-9,nchar(x)))))
+    if ( length(y) >= 1 ){
+      anacc_dir=paste(dir,"../anacc/",dtg,"/",sep="")
+      if (dir.exists(anacc_dir)){
+        getRasterDir=anacc_dir
+      }
+    }
+  }
+  return(getRasterDir)
+}
+
+getRasterFileName<-function(base,exp,dtg,var,acc){
+  if ( verbose("DEBUG") ) { print(paste("DEBUG: ->getRasterFileName(",base,exp,dtg,var,acc,")"))}
+
+  fname=NULL
+  dir=getRasterDir(base,exp,dtg)
+  if (!is.null(dir)){
+    if ( var != "None" ){
+      if ( var == "TG1" || var == "TG2" || var == "WG1" || var == "WG2" || var == "WSNOW_VEG1" ){
+        prefix="ansfc_sfx"
+      }else if ( var == "air_temperature_ml" || var == "surface_air_pressure" || var == "air_temperature_ml" || var == "specific_humidity_ml" || var == "x_wind_ml" || var == "y_wind_ml") {
+        prefix="anua"
+      }else if ( var == "air_temperature_2m" || var == "relative_humidity_2m" || var == "liquid_water_content_of_surface_snow" ) {
+        prefix="ansfc"
+      }
+
+      fnam=paste(dir,prefix,"_",dtg,acc,".nc4",sep="")
+      if (file.exists(fnam)){
+        fname=fnam
+      }
+    }
+  }
+  return(fname)
+}
