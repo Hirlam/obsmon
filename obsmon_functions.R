@@ -636,6 +636,7 @@ getChannels <- function(sensor,sat){
    return(channels)
 }
 
+# getUnit
 getUnit<-function(varName){
   if ( verbose("DEBUG")) { print(paste("DEBUG: -> getUnit(",varName,")")) }
   if ( !is.null(varName)) {
@@ -721,18 +722,16 @@ getPastDate<-function(date,increment){
   return(date)
 }
 
+# getLatestDTG
 getLatestDTG<-function(base,exp){
   if ( verbose("DEBUG")) { print(paste("DEBUG: getLatestDTG(",base,exp,")")) }
 
   getLatestDTG=NULL
   if ( !is.null(base) && !is.null(exp) ){
     dir = getFile(base,exp,dir=T)
-    if ( !is.null(dir)) { 
-      x=list.dirs(path=dir)
-      y=sort(suppressWarnings(as.numeric(substr(x,nchar(x)-9,nchar(x)))))
-      if ( length(y) > 0 ) {
-        getLatestDTG=y[length(y)]
-      }
+    if ( !is.null(dir)) {
+      dtg=tail(dir(path=dir,pattern="[0-9]{10}"),1)
+      if ( length(dtg) != 0 ) { getLatestDTG=dtg}
     }
   }
   return(getLatestDTG)
@@ -938,8 +937,7 @@ getDataTS<-function(base,exp,dtg1,dtg2,mode,plotQuery,utc=NULL){
   # Loop cycles and do queries
   if ( !is.null(base) && !is.null(exp) && !is.null(dtg1) && !is.null(dtg2) ){
     dir = getFile(base,exp,dir=T)
-    x=list.dirs(path=dir)
-    y=sort(suppressWarnings(as.numeric(substr(x,nchar(x)-9,nchar(x)))))
+    y=dir(path=dir,pattern="[0-9]{10}")
     for (i in 1:length(y) ) {
       dtg=y[i]
       hh=substr(dtg,9,10)
@@ -1005,9 +1003,8 @@ getRasterDir<-function(base,exp,dtg){
   getRasterDir=NULL
   dir = getFile(base,exp,dir=T)
   if ( !is.null(dir)) {
-    x=list.dirs(path=dir)
-    y=sort(suppressWarnings(as.numeric(substr(x,nchar(x)-9,nchar(x)))))
-    if ( length(y) >= 1 ){
+    dtg=tail(dir(path=dir,pattern="[0-9]{10}"),1)
+    if ( length(dtg) != 0 ) { 
       anacc_dir=paste(dir,"../anacc/",dtg,"/",sep="")
       if (dir.exists(anacc_dir)){
         getRasterDir=anacc_dir
