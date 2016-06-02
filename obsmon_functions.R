@@ -2,6 +2,28 @@
 # Help functions and settings for shiny interface
 #
 
+# Check installation
+exp1=""
+exp2=""
+# hirlam.org
+if ( Sys.info()["nodename"] == "hirlam" ){
+  hostname="hirlam"
+  default_experiments <- c("MetCoOp","DMI","FMI","MetCoOp-backup","MetCoOp-preop","DMI-dka38h12b","AROME-Arctic","IGA")
+# MetCoOp server
+}else if (Sys.getenv('SMHI_MODE') != "" ) {
+  hostname="metcoop"
+  default_experiments <- c("MetCoOp","MetCoOp-backup","MetCoOp-preop")
+  for ( m in 0:9){
+    default_experiments <- c(default_experiments,paste("MEPS-mbr00",m))
+  }
+# Default
+}else{
+  hostname="default"
+  exp1 <- Sys.getenv('OBSMON_EXP1', unset = "exp1")
+  exp2 <- Sys.getenv('OBSMON_EXP2', unset = "exp2")
+  default_experiments <- c(exp1,exp2)
+}
+
 default_obtypes     <- c("SYNOP","SHIP","AIRCRAFT","DRIBU","TEMP","SATEM","SCATT","RADAR")
 listOfSensors       <- c("AMSUA","AMSUB","MHS","IASI")
 
@@ -11,10 +33,6 @@ plotTypesMaps       <- c("Observation usage (map)","First guess departure (map)"
 plotTypesTS         <- c("Number of observations (TS)","Obs fit (TS)")
 plotTypesSat        <- c("FG dep + Bias correction (map)","Bias correction (map)")
 plotTypesSatTS      <- c("Bias correction (TS)","Hovmoeller (TS)")
-
-exp1 <- Sys.getenv('OBSMON_EXP1', unset = "exp1")
-exp2 <- Sys.getenv('OBSMON_EXP2', unset = "exp2")
-default_experiments <- c(exp1,exp2,"MetCoOp","DMI","DMI","FMI","MetCoOp-backup","MetCoOp-preop","DMI-dka38h12b","AROME-Arctic","IGA")
 
 # setExperiment
 setExperiment <- function(exp,base,dtg=NULL,dir=F){
@@ -26,17 +44,40 @@ setExperiment <- function(exp,base,dtg=NULL,dir=F){
     dbtry_ecma_sfc <- NULL
     dbtry_ccma     <- NULL
     if ( exp == "MetCoOp" ){
-      dbtry_ecma     =  "/data4/portal/metcoop/AM25/archive/extract/ecma/"
-      dbtry_ecma_sfc =  "/data4/portal/metcoop/AM25/archive/extract/ecma_sfc/"
-      dbtry_ccma     =  "/data4/portal/metcoop/AM25/archive/extract/ccma/"
+      if ( hostname == "hirlam" ){
+        dbtry_ecma     =  "/data4/portal/metcoop/AM25/archive/extract/ecma/"
+        dbtry_ecma_sfc =  "/data4/portal/metcoop/AM25/archive/extract/ecma_sfc/"
+        dbtry_ccma     =  "/data4/portal/metcoop/AM25/archive/extract/ccma/"
+      }else if ( hostname == "metcoop" ){
+        dbtry_ecma     =  "/nobackup/opdata/obsmon_main/ecma/"
+        dbtry_ecma_sfc =  "/nobackup/opdata/obsmon_main/ecma_sfc/"
+        dbtry_ccma     =  "/nobackup/opdata/obsmon_main/ccma/"
+      }
     } else if ( exp == "MetCoOp-backup" ){
-      dbtry_ecma     =  "/data4/portal/metcoop/AM25_backup/archive/extract/ecma/"
-      dbtry_ecma_sfc =  "/data4/portal/metcoop/AM25_backup/archive/extract/ecma_sfc/"
-      dbtry_ccma     =  "/data4/portal/metcoop/AM25_backup/archive/extract/ccma/"
+      if ( hostname == "hirlam" ){
+        dbtry_ecma     =  "/data4/portal/metcoop/AM25_backup/archive/extract/ecma/"
+        dbtry_ecma_sfc =  "/data4/portal/metcoop/AM25_backup/archive/extract/ecma_sfc/"
+        dbtry_ccma     =  "/data4/portal/metcoop/AM25_backup/archive/extract/ccma/"
+      }else if ( hostname == "metcoop" ){
+        dbtry_ecma     =  "/nobackup/opdata/obsmon_backup/ecma/"
+        dbtry_ecma_sfc =  "/nobackup/opdata/obsmon_backup/ecma_sfc/"
+        dbtry_ccma     =  "/nobackup/opdata/obsmon_backup/ccma/"
+      }
     } else if ( exp == "MetCoOp-preop" ){
-      dbtry_ecma     =  "/data4/portal/metcoop/AM25_preop/archive/extract/ecma/"
-      dbtry_ecma_sfc =  "/data4/portal/metcoop/AM25_preop/archive/extract/ecma_sfc/"
-      dbtry_ccma     =  "/data4/portal/metcoop/AM25_preop/archive/extract/ccma/"
+      if ( hostname == "hirlam" ){
+        dbtry_ecma     =  "/data4/portal/metcoop/AM25_preop/archive/extract/ecma/"
+        dbtry_ecma_sfc =  "/data4/portal/metcoop/AM25_preop/archive/extract/ecma_sfc/"
+        dbtry_ccma     =  "/data4/portal/metcoop/AM25_preop/archive/extract/ccma/"
+      }else if ( hostname == "metcoop" ){
+        dbtry_ecma     =  "/nobackup/opdata/obsmon_preop/ecma/"
+        dbtry_ecma_sfc =  "/nobackup/opdata/obsmon_preop/ecma_sfc/"
+        dbtry_ccma     =  "/nobackup/opdata/obsmon_preop/ccma/"
+      }
+    # MEPS
+    } else if ( exp == "MEPS-mbr000" || exp == "MEPS-mbr001" || exp == "MEPS-mbr002" || exp == "MEPS-mbr003" || exp == "MEPS-mbr004" || exp == "MEPS-mbr005" || exp == "MEPS-mbr006" || exp == "MEPS-mbr007" || exp == "MEPS-mbr008" || exp == "MEPS-mbr009" ) {
+      dbtry_ecma     =  paste("/nobackup/opdata/meps/obsmon/",substring(exp,6,11),"/ecma/")
+      dbtry_ecma_sfc =  paste("/nobackup/opdata/meps/obsmon/",substring(exp,6,11),"/ecma_sfc/")
+      dbtry_ccma     =  paste("/nobackup/opdata/meps/obsmon/",substring(exp,6,11),"/ccma/")
     } else if ( exp == exp1 ){
       # Default paths to data bases from environment
       dbtry_ecma     =  Sys.getenv('DBDIR_ECMA')
@@ -600,7 +641,7 @@ getChannels <- function(sensor,sat){
     listOfChannelsAMSUB <- c("1","2","3","4","5")
     listOfChannelsMHS   <- c("1","2","3","4","5")
     #listOfChannelsIASI  <- c("16","38","49","51","55","57","59","61","63","66","70","72","74","79","81","83","85","87","89","92","95","97","99","101","104","106","109","111","113","116","119","122","125","128","131","133","135","138","141","144","146","148","151","154","157","159","161","163","165","167","170","173","176","178","179","180","183","185","187","189","191","193","195","197","199","201","203","205","207","210","212","214","217","219","222","224","226","228","230","232","234","236","239","241","242","243","246","249","252","254","256","258","260","262","265","267","269","271","272","273","275","278","280","282","284","286","288","290","292","294","296","299","301","303","306","308","310","312","314","316","318","320","323","325","327","329","331","333","335","337","339","341","343","345","347","350","352","354","356","358","360","362","364","366","369","371","373","375","377","379","381","383","386","389","398","401","404","407","410","414","416","426","428","432","434","439","445","457","515","546","552","559","566","571","573","646","662","668","756","867","906","921","1027","1046","1090","1121","1133","1191","1194","1271","1479","1509","1513","1521","1536","1574","1578","1579","1585","1587","1626","1639","1643","1652","1658","1671","1786","1805","1884","1946","1991","2019","2094","2119","2213","2239","2245","2271","2321","2398","2701","2741","2745","2819","2889","2907","2910","2919","2939","2944","2948","2951","2958","2977","2985","2988","2991","2993","3002","3008","3014","3027","3029","3036","3047","3049","3053","3058","3064","3069","3087","3093","3098","3105","3107","3110","3127","3136","3151","3160","3165","3168","3175","3178","3207","3228","3244","3248","3252","3256","3263","3281","3303","3309","3312","3322","3339","3375","3378","3411","3438","3440","3442","3444","3446","3448","3450","3452","3454","3458","3467","3476","3484","3491","3497","3499","3504","3506","3509","3518","3522","3527","3540","3555","3575","3577","3580","3582","3586","3589","3599","3645","3653","3658","3661","3943","4032","5130","5368","5371","5379","5381","5383","5397","5399","5401","5403","5405","5455","5480","5483","5485","5492","5502","5507","5509","5517","5558","5988","5992","5994","6003","6350","6458","6463","6601","6962","6978","6980","6982","6985","6987","6989","6991","6993","6995","6997","7001","7267","7269","7389","7424","7426","7428","7885","8007")
-    listOfChannelsIASI  <- c("38","51","63","85","104","109","167","173","180","185","193","199","205","207","212","224","230","236","239","242","243","249","252","265","275","294","296","306","333","337","345","352","386","389","432","2701","2819","2910","2919","2991","2993","3002","3008","3014","3027","3069","3087","3098","3207","3228","3281","3309","3322","3339","3438","3442","3484","3491","3499","3506","3575","3582","3658","4032")
+    listOfChannelsIASI  <- c("38","51","63","85","104","109","167","173","180","185","193","199","205","207","212","224","230","236","239","242","243","249","296","333","337","345","352","386","389","432","2701","2819","2910","2919","2991","2993","3002","3008","3014","3098","3207","3228","3281","3309","3322","3438","3442","3484","3491","3499","3506","3575","3582","3658","4032")
 
 
     # Set channels
@@ -687,7 +728,7 @@ getLatestDate <- function(base,exp=NULL){
 
 
 # getLatestCycle
-getLatestCycle <- function(base,exp){
+getLatestCycle <- function(base,exp=NULL){
   if ( verbose("DEBUG")) { print(paste("DEBUG: -> getLatestCycle(",base,exp,")")) }
 
   cycle=NULL
@@ -1003,10 +1044,12 @@ getRasterDir<-function(base,exp,dtg){
   getRasterDir=NULL
   dir = getFile(base,exp,dir=T)
   if ( !is.null(dir)) {
-    dtg=tail(dir(path=dir,pattern="[0-9]{10}"),1)
-    if ( length(dtg) != 0 ) { 
+    dtg_test=tail(dir(path=dir,pattern="[0-9]{10}"),1)
+    if ( length(dtg_test) != 0 ) { 
       anacc_dir=paste(dir,"../anacc/",dtg,"/",sep="")
-      if (dir.exists(anacc_dir)){
+      #Old anacc_dir=paste(dir,"../anacc/",sep="")
+      # Not working in R < 3.2 if (dir.exists(anacc_dir)){
+      if (file_test("-d",anacc_dir)){
         getRasterDir=anacc_dir
       }
     }
@@ -1030,6 +1073,7 @@ getRasterFileName<-function(base,exp,dtg,var,acc){
       }
 
       fnam=paste(dir,prefix,"_",dtg,acc,".nc4",sep="")
+      #Old fnam=paste(dir,prefix,"_",texp,dtg,acc,".nc4",sep="")
       if (file.exists(fnam)){
         fname=fnam
       }

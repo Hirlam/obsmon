@@ -240,7 +240,8 @@ generatePlot <- function(odbBase,exp,plotName,obName,varName,levels,sensor,satel
     dbConn = connect(odbBase,exp,date2dtg(dateRange[1],cycle))
     plotData = data.frame(dbGetQuery(dbConn,plotQuery))
     disconnect(dbConn)
-    plotData$scale = "reverse"
+    #plotData$scale = "reverse"
+    plotData$scale = "normal"
     if ( plotName == "BiasCorrectionMap") {
       plotData$scale = "normal"
     }else if ( plotName == "AnalysisIncrementMap" ){
@@ -477,26 +478,26 @@ generatePlot <- function(odbBase,exp,plotName,obName,varName,levels,sensor,satel
           if ( verbose("DEBUG") ) { print(paste("DEBUG: -> zoomLevel=",zoomLevel)) }
         }
       }
-    
+   
       r = getRasterFromFile(base,exp,dtg)
       if ( !is.null(r)) {
         dmin2=min(values(r))
         dmax2=max(values(r))
-        ulim2=max(1.0,abs(dmin2),abs(dmax2))
-        pal2 <- colorNumeric(c("#FF000F", "#FFFFFF", "#0000FF"),domain=c(-ulim2,ulim2),na.color = "transparent")
+        ulim2=max(abs(dmin2),abs(dmax2))
+        pal2 <- colorNumeric(c("#0000FF", "#FFFFFF", "#FF0000"),domain=c(-ulim2,ulim2),na.color = "transparent")
       }
       #dmin <- quantile(plotData$plotValues,c(0.01),type=3,names=F)
       #dmax <- quantile(plotData$plotValues,c(0.99),type=3,names=F)
       dmin = min(plotData$plotValues)
       dmax = max(plotData$plotValues)
-      ulim <- max(1.0,abs(dmin),abs(dmax))
+      ulim <- max(abs(dmin),abs(dmax))
       if (plotData$scale[1] == "reverse") {
         pal <- colorNumeric(palette=c("#FF0000","#FFFFFF","#0000FF"),domain=c(-ulim,ulim))
       } else if (plotData$scale[1] == "normal") {
         pal <- colorNumeric(palette=c("#0000FF","#FFFFFF","#FF0000"),domain=c(-ulim,ulim))
       } else if (plotData$scale[1] == "obs") {
         if (dmin*dmax < 0) {  # both signs, normal scale
-          pal <- colorNumeric(palette=c("#0000FF","#FFFFFF","#FF0000"),domain=c(-ulim,ulim))
+          pal <- colorNumeric(palette=c("#FF0000","#FFFFFF","#0000FF"),domain=c(-ulim,ulim))
         } else if (dmin < 0) {  # all negative, blue to white
           pal <- colorNumeric(palette=c("#0000FF","#FFFFFF"),domain=c(dmin,dmax))
         } else {  # all positive, white to red
@@ -517,7 +518,7 @@ generatePlot <- function(odbBase,exp,plotName,obName,varName,levels,sensor,satel
       }
       if ( is.null(r)){
         obMap <- leaflet(plotData) %>%
-          addProviderTiles("OpenTopoMap", options=providerTileOptions(opacity=0.5)) %>%
+          addProviderTiles("Esri.WorldStreetMap", options=providerTileOptions(opacity=0.7)) %>%
             fitBounds(x1, y1, x2, y2) %>%
               addCircleMarkers(~longitude, ~latitude, popup=~popup, radius=~radius,
                              stroke=TRUE, weight=1, opacity=1, color="black",
@@ -525,13 +526,13 @@ generatePlot <- function(odbBase,exp,plotName,obName,varName,levels,sensor,satel
                              addLegend("topright", pal=pal, values=~plotValues, opacity=1)
       }else{
         obMap <- leaflet(plotData) %>%
-          addProviderTiles("OpenTopoMap", options=providerTileOptions(opacity=0.5)) %>%
+          addProviderTiles("Esri.WorldStreetMap", options=providerTileOptions(opacity=1.0)) %>%
             fitBounds(x1, y1, x2, y2) %>%
               addCircleMarkers(~longitude, ~latitude, popup=~popup, radius=~radius,
                              stroke=TRUE, weight=1, opacity=1, color="black",
                              fillColor=~pal(plotValues), fillOpacity=1,clusterOptions = markerClusterOptions(disableClusteringAtZoom=zoomLevel)) %>%
                              addLegend("topright", pal=pal, values=~plotValues, opacity=1) %>%
-          addRasterImage(r, colors = pal2, opacity = 0.7) %>%
+          addRasterImage(r, colors = pal2, opacity = 0.6) %>%
                              addLegend("bottomright",pal = pal2, values = values(r))
       }
       return(obMap)
@@ -650,7 +651,7 @@ generatePlot <- function(odbBase,exp,plotName,obName,varName,levels,sensor,satel
                          domain=c("Active","Active(2)","Blacklisted","NA","Passive","Rejected"))
       plotData$popup = paste("Statid: ",plotData$statid,"<br>Anflag: ",plotData$anflag,"<br>Status:",plotData$status)
       obMap <- leaflet(data=plotData[rev(order(status)),]) %>%
-        addProviderTiles("OpenTopoMap", options=providerTileOptions(opacity=0.5)) %>%
+        addProviderTiles("Esri.WorldStreetMap", options=providerTileOptions(opacity=0.5)) %>%
           fitBounds(x1, y1, x2, y2 ) %>%
             addCircleMarkers(~longitude, ~latitude, popup=~popup, radius=8,
                              stroke=TRUE, weight=1, opacity=1, color="black",

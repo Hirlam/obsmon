@@ -18,8 +18,18 @@ widthOfPlot=800
 heightOfPlot=600
 
 values<-reactiveValues()
-values$productionSite=FALSE
+# Check if this is a production site
+if ( Sys.info()["nodename"] == "hirlam" || Sys.getenv('SMHI_MODE') != "" ){
+  values$productionSite=TRUE
+}else{
+  values$productionSite=FALSE
+}
 values$synops=NULL
+
+renderLeaflet = function(expr, env = parent.frame(), quoted = FALSE) {
+  if (!quoted) expr = substitute(expr)  # force quoted
+  htmlwidgets::shinyRenderWidget(expr, leafletOutput, env, quoted = TRUE)
+}
 
 shinyServer(function(input,output,session) {
 
@@ -100,19 +110,29 @@ shinyServer(function(input,output,session) {
   # select_cycle
   output$select_cycle <- renderUI({
     if ( verbose("DEBUG")) { print("DEBUG: -> select_cycle") }
+    def_cycles=c("00","03","06","09","12","15","18","21")
+    if ( !is.null(input$experiment)){
+      if ( input$experiment == "DMI" || input$experiment == "DMI-dka38h12b" || input$experiment == "IGA" ){
+        def_cycles=c("00","02","03","05","06","08","09","11","12","14","15","17","18","20","21","23")
+      }
+    }
     if ( is.null(input$ODBbase)) {
       if ( verbose("DEBUG") ) { print("DEBUG: -> select_cycle ==== NULL START ======") }
-      selectInput("cycle",h5("Cycle"),c("00","03","06","09","12","15","18","21"),selected = getLatestCycle("Screening",input$experiment)
-      )
+      selectInput("cycle",h5("Cycle"),def_cycles,selected = getLatestCycle("Screening",input$experiment))
     }else{
-      if ( verbose("DEBUG") ) { print("DEBUG: -> select_cycle ====  OK  ======") }
-      selectInput("cycle",h5("Cycle"),c("00","03","06","09","12","15","18","21"),selected = getLatestCycle(input$ODBbase,input$experiment))
+      selectInput("cycle",h5("Cycle"),def_cycles,selected = getLatestCycle(input$ODBbase,input$experiment))
     }
   })
   # select_cycle_SA
   output$select_cycle_SA <- renderUI({
     print("DEBUG: -> select_cycle_SA")
-    selectInput("cycle_SA",h5("Cycle"),c("00","03","06","09","12","15","18","21"),selected = getLatestCycle("Surface",input$experiment_SA))
+    def_cycles=c("00","03","06","09","12","15","18","21")
+    if ( !is.null(input$experiment)){ 
+      if ( input$experiment == "DMI" || input$experiment == "DMI-dka38h12b" || input$experiment == "IGA" ){ 
+        def_cycles=c("00","02","03","05","06","08","09","11","12","14","15","17","18","20","21","23")
+      }
+    }
+    selectInput("cycle_SA",h5("Cycle"),def_cycles,selected = getLatestCycle("Surface",input$experiment_SA))
   })
  
   # select_obtype
