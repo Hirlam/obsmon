@@ -19,7 +19,7 @@ heightOfPlot=600
 
 values<-reactiveValues()
 # Check if this is a production site
-if ( Sys.info()["nodename"] == "hirlam" || Sys.getenv('SMHI_MODE') != "" ){
+if ( Sys.info()["nodename"] == "hirlam" || file.exists("/etc/profile.d/smhi.sh" )){
   values$productionSite=TRUE
 }else{
   values$productionSite=FALSE

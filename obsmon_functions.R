@@ -10,7 +10,7 @@ if ( Sys.info()["nodename"] == "hirlam" ){
   hostname="hirlam"
   default_experiments <- c("MetCoOp","DMI","FMI","MetCoOp-backup","MetCoOp-preop","DMI-dka38h12b","AROME-Arctic","IGA")
 # MetCoOp server
-}else if (Sys.getenv('SMHI_MODE') != "" ) {
+}else if ( file.exists("/etc/profile.d/smhi.sh" )) {
   hostname="metcoop"
   default_experiments <- c("MetCoOp","MetCoOp-backup","MetCoOp-preop")
   for ( m in 0:9){
