@@ -10,11 +10,12 @@ if ( Sys.info()["nodename"] == "hirlam" ){
   hostname="hirlam"
   default_experiments <- c("MetCoOp","DMI","FMI","MetCoOp-backup","MetCoOp-preop","DMI-dka38h12b","AROME-Arctic","IGA")
 # MetCoOp server
+#}else if (Sys.getenv('SMHI_MODE') != "" ) {
 }else if ( file.exists("/etc/profile.d/smhi.sh" )) {
   hostname="metcoop"
   default_experiments <- c("MetCoOp","MetCoOp-backup","MetCoOp-preop")
   for ( m in 0:9){
-    default_experiments <- c(default_experiments,paste("MEPS-mbr00",m))
+    default_experiments <- c(default_experiments,paste("MEPS-mbr00",m,sep=""))
   }
 # Default
 }else{
@@ -75,9 +76,9 @@ setExperiment <- function(exp,base,dtg=NULL,dir=F){
       }
     # MEPS
     } else if ( exp == "MEPS-mbr000" || exp == "MEPS-mbr001" || exp == "MEPS-mbr002" || exp == "MEPS-mbr003" || exp == "MEPS-mbr004" || exp == "MEPS-mbr005" || exp == "MEPS-mbr006" || exp == "MEPS-mbr007" || exp == "MEPS-mbr008" || exp == "MEPS-mbr009" ) {
-      dbtry_ecma     =  paste("/nobackup/opdata/meps/obsmon/",substring(exp,6,11),"/ecma/")
-      dbtry_ecma_sfc =  paste("/nobackup/opdata/meps/obsmon/",substring(exp,6,11),"/ecma_sfc/")
-      dbtry_ccma     =  paste("/nobackup/opdata/meps/obsmon/",substring(exp,6,11),"/ccma/")
+      dbtry_ecma     =  paste("/nobackup/opdata/meps/obsmon/",substring(exp,6,11),"/ecma/",sep="")
+      dbtry_ecma_sfc =  paste("/nobackup/opdata/meps/obsmon/",substring(exp,6,11),"/ecma_sfc/",sep="")
+      dbtry_ccma     =  paste("/nobackup/opdata/meps/obsmon/",substring(exp,6,11),"/ccma/",sep="")
     } else if ( exp == exp1 ){
       # Default paths to data bases from environment
       dbtry_ecma     =  Sys.getenv('DBDIR_ECMA')
@@ -883,7 +884,7 @@ connect <- function(base,exp,dtg=NULL){
   dbConn<-NULL
   if ( !is.null(base) && !is.null(exp)) {
     fname <- getFile(base,exp,dtg)
-    if (!is.null(fname) && file.exists(fname)){
+    if (!is.null(fname) && file.exists(fname) && file.info(fname)$size > 0 ){
       if ( verbose("DEBUG")) { print(paste("DEBUG: -> dbConnect ",fname)) }
       dbConn <- dbConnect(RSQLite::SQLite(),fname)
     }
@@ -1074,7 +1075,7 @@ getRasterFileName<-function(base,exp,dtg,var,acc){
 
       fnam=paste(dir,prefix,"_",dtg,acc,".nc4",sep="")
       #Old fnam=paste(dir,prefix,"_",texp,dtg,acc,".nc4",sep="")
-      if (file.exists(fnam)){
+      if (file.exists(fnam) && file.info(fnam)$size > 0 ){
         fname=fnam
       }
     }
