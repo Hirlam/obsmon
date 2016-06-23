@@ -8,12 +8,12 @@ exp2=""
 # hirlam.org
 if ( Sys.info()["nodename"] == "hirlam" ){
   hostname="hirlam"
-  default_experiments <- c("MetCoOp","DMI","FMI","MetCoOp-backup","MetCoOp-preop","DMI-dka38h12b","AROME-Arctic","IGA")
+  default_experiments <- c("MetCoOp","DMI","FMI","MetCoOp-backup","DMI-dka38h12b","AROME-Arctic","IGA")
 # MetCoOp server
 #}else if (Sys.getenv('SMHI_MODE') != "" ) {
 }else if ( file.exists("/etc/profile.d/smhi.sh" )) {
   hostname="metcoop"
-  default_experiments <- c("MetCoOp","MetCoOp-backup","MetCoOp-preop")
+  default_experiments <- c("MetCoOp","MetCoOp-backup","MEPS-preop")
   for ( m in 0:9){
     default_experiments <- c(default_experiments,paste("MEPS-mbr00",m,sep=""))
   }
@@ -79,6 +79,10 @@ setExperiment <- function(exp,base,dtg=NULL,dir=F){
       dbtry_ecma     =  paste("/nobackup/opdata/meps/obsmon/",substring(exp,6,11),"/ecma/",sep="")
       dbtry_ecma_sfc =  paste("/nobackup/opdata/meps/obsmon/",substring(exp,6,11),"/ecma_sfc/",sep="")
       dbtry_ccma     =  paste("/nobackup/opdata/meps/obsmon/",substring(exp,6,11),"/ccma/",sep="")
+    } else if ( exp == "MEPS-preop" ) {
+      dbtry_ecma     =  paste("/nobackup/opdata/meps_preop/obsmon/mbr000/ecma/",sep="")
+      dbtry_ecma_sfc =  paste("/nobackup/opdata/meps_preop/obsmon/mbr000/ecma_sfc/",sep="")
+      dbtry_ccma     =  paste("/nobackup/opdata/meps_preop/obsmon/mbr000/ccma/",sep="")
     } else if ( exp == exp1 ){
       # Default paths to data bases from environment
       dbtry_ecma     =  Sys.getenv('DBDIR_ECMA')
