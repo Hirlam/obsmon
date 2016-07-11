@@ -823,11 +823,11 @@ generate_surfdia <- function(var,station,exp,mode="plot"){
       bw=(maxval-minval)/20
 
       bottom1 = ggplot(plotData)
-      bottom1 = bottom1 + geom_histogram(aes(x=fg_dep),colour = "black", fill = "red", binwidth = bw,xlim=c(minval,maxval))
+      bottom1 = bottom1 + geom_histogram(aes(x=fg_dep),colour = "black", fill = "red", binwidth = bw)
       bottom1 = bottom1 + geom_vline(xintercept = 0.0)
 
       bottom2 = ggplot(plotData)
-      bottom2 = bottom2 + geom_histogram(aes(x=an_dep),colour = "black", fill = "green", binwidth = bw,xlim=c(minval,maxval))
+      bottom2 = bottom2 + geom_histogram(aes(x=an_dep),colour = "black", fill = "green", binwidth = bw)
       bottom2 = bottom2 + geom_vline(xintercept = 0.0)
       bottom = grid.arrange(bottom1, bottom2, ncol=2)
 
