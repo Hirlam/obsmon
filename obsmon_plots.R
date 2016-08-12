@@ -278,7 +278,7 @@ generatePlot <- function(odbBase,exp,plotName,obName,varName,levels,sensor,satel
                         channelListQuery,sep="")
       if ( verbose("INFO") ) { paste("INFO: ",print(plotQuery))}
       if ( mode == "query" ) { return(plotQuery)}
-      plotData=getDataTS(odbBase,exp,dtgbeg,dtgend,mode,plotQuery)
+      plotData=getDataTS(odbBase,exp,dtgbeg,dtgend,mode,plotQuery,cycle)
       if ( mode == "data" ) { return(plotData)}
       title=paste(exp,":",plotName,obName,satelite,dtgstr_range)
       obPlot = LandSeaDepartures(title,plotData)
