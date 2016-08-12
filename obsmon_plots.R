@@ -263,7 +263,26 @@ generatePlot <- function(odbBase,exp,plotName,obName,varName,levels,sensor,satel
     }else{
       obPlot = emptyPlot(title)
     }
-      
+
+  } else if ( plotName == "LandSeaDepartures" ){
+    obPlot=NULL
+    if ( obNumber == "7" ){
+      qsatelite = setDBSatname(as.character(satelite))
+      channelListQuery = setChannelList(channels)
+      plotQuery = paste("SELECT DTG,fg_dep_land,fg_dep_sea,an_dep_land,an_dep_sea,fg_uncorr_land,fg_uncorr_sea,nobs_land,nobs_sea,level FROM obsmon",
+                        " WHERE obnumber = ",obNumber,
+                        " AND DTG >= ",dtgbeg,
+                        " AND DTG <= ",dtgend,
+                        " AND obname == '",tolower(sensor),"'",
+                        " AND satname == '",qsatelite,"'",
+                        channelListQuery,sep="")
+      if ( verbose("INFO") ) { paste("INFO: ",print(plotQuery))}
+      if ( mode == "query" ) { return(plotQuery)}
+      plotData=getDataTS(odbBase,exp,dtgbeg,dtgend,mode,plotQuery)
+      if ( mode == "data" ) { return(plotData)}
+      title=paste(exp,":",plotName,obName,satelite,dtgstr_range)
+      obPlot = LandSeaDepartures(title,plotData)
+    } 
 # ObservationUsage
   }else if ( plotName == "ObservationUsage" ) {
     # SATEM
@@ -763,6 +782,66 @@ generatePlot <- function(odbBase,exp,plotName,obName,varName,levels,sensor,satel
     return(obPlot)
   }
 
+  # LandSeaDepartures
+  LandSeaDepartures <- function(title,plotData){
+     if ( verbose("DEBUG") ) { print(paste("DEBUG: -> LandSeaDepartures",title)) }
+
+     localPlotData=plotData
+     localPlotData$DTG <- paste0(substr(localPlotData$DTG,1,4),"-",
+                                    substr(localPlotData$DTG,5,6),"-",
+                                    substr(localPlotData$DTG,7,8)," ",
+                                    substr(localPlotData$DTG,9,10),":00")
+     localPlotData$DTG <- as.POSIXct(localPlotData$DTG,"%Y-%m-%d %h:%m")
+
+     DTG=localPlotData$DTG
+     level=localPlotData$level
+     omf_sea=localPlotData$fg_dep_sea
+     oma_sea=localPlotData$an_dep_sea
+     omfnc_sea=localPlotData$fg_uncorr_sea
+     omf_land=localPlotData$fg_dep_land
+     oma_land=localPlotData$an_dep_land
+     omfnc_land=localPlotData$fg_uncorr_land
+     nobs_sea=localPlotData$nobs_sea
+     nobs_land=localPlotData$nobs_land
+
+     testDataTop=data.frame(DTG,level,omfnc_sea,omf_sea,oma_sea,omfnc_land,omf_land,oma_land)
+     localPlotDataTop=melt(testDataTop,id=c("DTG","level"))
+     print(localPlotDataTop)
+
+     testDataBottom=data.frame(DTG,level,nobs_sea,nobs_land)
+     localPlotDataBottom=melt(testDataBottom,id=c("DTG","level"))
+     print(localPlotDataBottom)
+
+     ylab="Brigthness temperature"
+     names=c("FG_DEP_NC (sea)", "FG_DEP (sea)","AN_DEP (sea)","FG_DEP_NC (land)", "FG_DEP (land)","AN_DEP (land)")
+     colours=c("blue", "blue", "blue", "green","green","green")
+     linetypes=c("dotted","solid","dashed","dotted","solid","dashed")
+     shapes=c(2,1,0,2,1,0)
+     obPlot = ggplot(data=localPlotDataTop,aes(x=DTG,y=value,group=variable,colour=variable,linetype=variable,shape=variable))
+     obPlot = obPlot + geom_line() + geom_point(fill = "white",size=2)
+     obPlot = obPlot + scale_colour_manual(name="",labels=names,values=colours) +
+                  scale_linetype_manual(name="",labels=names,values=linetypes) +
+                  scale_shape_manual(name="",labels=names,values=shapes)
+     obPlot = obPlot + geom_hline(yintercept = 0.2)
+     obPlot = obPlot + geom_hline(yintercept = -0.2)
+     obPlot = obPlot + xlab("DATE")+ylab(ylab)
+     obPlot = obPlot + labs(title=title,ylab=ylab)
+     obPlot = obPlot + facet_wrap(~ level)
+     top=obPlot
+
+     ylab="Number of obs."
+     title=""
+     names=c("# obs (sea)", "# obs (land)")
+     obPlot = ggplot(data=localPlotDataBottom,aes(x=DTG,y=value,group=variable,fill=variable))
+     obPlot = obPlot + geom_bar(stat="identity", position=position_dodge()) + scale_fill_manual(name="",labels=names,values=c("blue", "green"))
+     obPlot = obPlot + xlab("DATE")+ylab(ylab)
+     obPlot = obPlot + labs(title=title,ylab=ylab)
+     obPlot = obPlot + facet_wrap(~ level)
+     bottom=obPlot
+
+     obPlot = grid.arrange(top, bottom, ncol=1)
+     return(obPlot)
+   }
 
 generate_surfdia <- function(var,station,exp,mode="plot"){
   if ( verbose("DEBUG") ) { print(paste("DEBUG: -> generate_surfdia",var,station,exp,mode)) }

@@ -33,7 +33,7 @@ plotTypesStat       <- c("FG+An departure")
 plotTypesMaps       <- c("Observation usage (map)","First guess departure (map)","Analysis departure (map)","Analysis increment (map)","Observations (map)")
 plotTypesTS         <- c("Number of observations (TS)","Obs fit (TS)")
 plotTypesSat        <- c("FG dep + Bias correction (map)","Bias correction (map)")
-plotTypesSatTS      <- c("Bias correction (TS)","Hovmoeller (TS)")
+plotTypesSatTS      <- c("Bias correction (TS)","Land-sea departures (TS)","Hovmoeller (TS)")
 
 # setExperiment
 setExperiment <- function(exp,base,dtg=NULL,dir=F){
@@ -297,6 +297,7 @@ getPlotTypeShort <- function(plotType){
            "FG+An departure"                = "FGAnDeparture",
            "Observation usage (map)"        = "ObservationUsage",
            "Bias correction (TS)"           = "BiasCorrection",
+           "Land-sea departures (TS)"       = "LandSeaDepartures",
            "Hovmoeller (TS)"                = "Hovmoller",
            "First guess departure (map)"    = "FirstGuessDepartureMap",
            "FG dep + Bias correction (map)" = "FirstGuessBCDepartureMap",
