@@ -1,10 +1,11 @@
 #!/bin/bash
 
 export R_LIBS_USER=${R_LIBS_USER-"$HOME/R/library"}
-[ -d $HOME/R/library ] || mkdir -p $HOME/R/library
+[ -d $R_LIBS_USER ] || mkdir -p $R_LIBS_USER
+
+echo R_LIBS_USER="$R_LIBS_USER" >> ~/.Renviron
 
 cat >> ~/.Rprofile <<EOF
-cat(".Rprofile: Setting UK Imperial College repository")
 r = getOption("repos") # hard code the UK Imperial College repo for CRAN
 r["CRAN"] = "http://cran.ma.imperial.ac.uk/"
 options(repos = r)
