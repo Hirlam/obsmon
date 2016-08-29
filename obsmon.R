@@ -1,3 +1,4 @@
+library(methods)
 library(shiny)
 
 shinydir<-Sys.getenv('PWD')
