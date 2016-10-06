@@ -24,8 +24,8 @@ if ( Sys.info()["nodename"] == "hirlam" ){
   default_experiments <- c(exp1,exp2)
 }
 
-default_obtypes     <- c("SYNOP","SHIP","AIRCRAFT","DRIBU","TEMP","SATEM","SCATT","RADAR")
-listOfSensors       <- c("AMSUA","AMSUB","MHS","IASI")
+default_obtypes     <- c("SYNOP","SHIP","AIRCRAFT","DRIBU","TEMP","LIMB","AMV","SATEM","SCATT","RADAR")
+listOfSensors       <- c("AMSUA","AMSUB","MHS","ATMS","IASI")
 
 # Normal plots
 plotTypesStat       <- c("FG+An departure")
@@ -251,10 +251,12 @@ getObNumber <- function(obtype){
     switch(obtype,"SYNOP"    = c("1"),
                   "SHIP"     = c("1"),
                   "AIRCRAFT" = c("2"),
+                  "AMV"      = c("3"),
                   "DRIBU"    = c("4"),
                   "TEMP"     = c("5"),
                   "SATEM"    = c("7"),
                   "SCATT"    = c("9"),
+                  "LIMB"     = c("10"),
                   "RADAR"    = c("13"),
                   NULL
     )
@@ -274,6 +276,7 @@ setDBSatname<-function(sat){
            "NOAA-19" = {satname="noaa19"},
            "METOP-A" = {satname="metop2"},
            "METOP-B" = {satname="metop1"},
+           "JPSS0"   = {satname="jpss0"},
            NULL
     )
   }
@@ -373,9 +376,11 @@ getVariables <- function(obtype){
     }
     scatt_vars          <- c("u10m","v10m","ff10m")
     aircraft_vars       <- c("u","v","ff","t")
+    amv_vars            <- c("u","v","t")
     temp_vars           <- c("u","v","ff","t","q")
     radar_vars_z        <- c("dbz","radv")
     radar_vars_p        <- c("rh")
+    limb_vars           <- c("bend_angle")
 
     vars=NULL
     switch(obtype, "SYNOP"    = {vars=c(synop_vars)},
@@ -383,8 +388,10 @@ getVariables <- function(obtype){
                    "AIRCRAFT" = {vars=c(aircraft_vars)},
                    "DRIBU"    = {vars=c(dribu_vars)},
                    "TEMP"     = {vars=c(temp_vars)},
+                   "AMV"      = {vars=c(amv_vars)},
                    "SCATT"    = {vars=c(scatt_vars)},
                    "RADAR"    = {vars=c(radar_vars_z,radar_vars_p)},
+                   "LIMB"     = {vars=c(limb_vars)},
                    {vars=NULL})
 
     if ( input$showExistingDataOnly ){
@@ -415,6 +422,7 @@ getLevels <- function(obtype,var,plotType){
     getRadarLevels <- function(var){
       if ( !is.null(var)) {
         switch(var,"rh" = listOfLevels_p,listOfLevels_z)
+        switch(var,"bend_angle" = listOfLevels_p,listOfLevels_z)
       }
     }
 
@@ -426,15 +434,19 @@ getLevels <- function(obtype,var,plotType){
       switch(obtype, "SYNOP"    = c("Surface"),
                      "SHIP"     = c("Surface"),
                      "AIRCRAFT" = c("ALL",listOfLevels_p),
+                     "AMV"      = c("ALL",listOfLevels_p),
                      "DRIBU"    = c("Surface"),
                      "TEMP"     = c("ALL",listOfLevels_p),
                      "RADAR"    = c("ALL",getRadarLevels(var)),
+                     "LIMB"     = c("ALL",listOfLevels_p),
                      "SCATT"    = c("Surface"),
                      NULL)
      }else{
        switch(obtype,"SYNOP"    = c("Surface"),
                      "SHIP"     = c("Surface"),
                      "AIRCRAFT" = c("ALL"),
+                     "AMV"      = c("ALL"),
+                     "LIMB"     = c("ALL"),
                      "DRIBU"    = c("Surface"),
                      "TEMP"     = c("ALL"),
                      "RADAR"    = c("ALL"),
@@ -552,6 +564,7 @@ getSatelites <- function(sensor){
     switch(sensor, "AMSUA" = {satelites=c("NOAA-15","NOAA-16","NOAA-17","NOAA-18","NOAA-19","METOP-A","METOP-B")},
                    "AMSUB" = {satelites=c("NOAA-15","NOAA-16","NOAA-17","NOAA-18")},
                    "MHS"   = {satelites=c("NOAA-19","METOP-A","METOP-B")},
+                   "ATMS"  = {satelites=c("JPSS0")},
                    "IASI"  = {satelites=c("METOP-A","METOP-B")},
                    NULL)
 
@@ -644,6 +657,7 @@ getChannels <- function(sensor,sat){
   if ( !is.null(sensor)) {
     listOfChannelsAMSUA <- c("1","2","3","4","5","6","7","8","9","10","11","12","13","14","15")
     listOfChannelsAMSUB <- c("1","2","3","4","5")
+    listOfChannelsATMS <- c("1","2","3","4","5","6","7","8","9","10","11","12","13","14","15","16","17","18","19","20","21","22")
     listOfChannelsMHS   <- c("1","2","3","4","5")
     #listOfChannelsIASI  <- c("16","38","49","51","55","57","59","61","63","66","70","72","74","79","81","83","85","87","89","92","95","97","99","101","104","106","109","111","113","116","119","122","125","128","131","133","135","138","141","144","146","148","151","154","157","159","161","163","165","167","170","173","176","178","179","180","183","185","187","189","191","193","195","197","199","201","203","205","207","210","212","214","217","219","222","224","226","228","230","232","234","236","239","241","242","243","246","249","252","254","256","258","260","262","265","267","269","271","272","273","275","278","280","282","284","286","288","290","292","294","296","299","301","303","306","308","310","312","314","316","318","320","323","325","327","329","331","333","335","337","339","341","343","345","347","350","352","354","356","358","360","362","364","366","369","371","373","375","377","379","381","383","386","389","398","401","404","407","410","414","416","426","428","432","434","439","445","457","515","546","552","559","566","571","573","646","662","668","756","867","906","921","1027","1046","1090","1121","1133","1191","1194","1271","1479","1509","1513","1521","1536","1574","1578","1579","1585","1587","1626","1639","1643","1652","1658","1671","1786","1805","1884","1946","1991","2019","2094","2119","2213","2239","2245","2271","2321","2398","2701","2741","2745","2819","2889","2907","2910","2919","2939","2944","2948","2951","2958","2977","2985","2988","2991","2993","3002","3008","3014","3027","3029","3036","3047","3049","3053","3058","3064","3069","3087","3093","3098","3105","3107","3110","3127","3136","3151","3160","3165","3168","3175","3178","3207","3228","3244","3248","3252","3256","3263","3281","3303","3309","3312","3322","3339","3375","3378","3411","3438","3440","3442","3444","3446","3448","3450","3452","3454","3458","3467","3476","3484","3491","3497","3499","3504","3506","3509","3518","3522","3527","3540","3555","3575","3577","3580","3582","3586","3589","3599","3645","3653","3658","3661","3943","4032","5130","5368","5371","5379","5381","5383","5397","5399","5401","5403","5405","5455","5480","5483","5485","5492","5502","5507","5509","5517","5558","5988","5992","5994","6003","6350","6458","6463","6601","6962","6978","6980","6982","6985","6987","6989","6991","6993","6995","6997","7001","7267","7269","7389","7424","7426","7428","7885","8007")
     listOfChannelsIASI  <- c("38","51","63","85","104","109","167","173","180","185","193","199","205","207","212","224","230","236","239","242","243","249","296","333","337","345","352","386","389","432","2701","2819","2910","2919","2991","2993","3002","3008","3014","3098","3207","3228","3281","3309","3322","3438","3442","3484","3491","3499","3506","3575","3582","3658","4032")
@@ -653,6 +667,7 @@ getChannels <- function(sensor,sat){
     switch(sensor, "AMSUA" = {channels=c(listOfChannelsAMSUA)},
                    "AMSUB" = {channels=c(listOfChannelsAMSUB)},
                    "MHS"   = {channels=c(listOfChannelsMHS)},
+                   "ATMS"  = {channels=c(listOfChannelsATMS)},
                    "IASI"  = {channels=c(listOfChannelsIASI)}
     )
 
@@ -703,6 +718,7 @@ getUnit<-function(varName){
                     "radv" = "m/s",
                     "dbz"  = "db",
                     "rh"   = "%",
+                    "bend_angle" = "rad",
                     NULL)
   }
 }
