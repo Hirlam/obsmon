@@ -8,7 +8,7 @@ exp2=""
 # hirlam.org
 if ( Sys.info()["nodename"] == "hirlam" ){
   hostname="hirlam"
-  default_experiments <- c("MEPS-mbr000","DMI","FMI","MEPS-mbr001","MEPS-preop","DMI-dka38h12b","AROME-Arctic","IGA")
+  default_experiments <- c("MEPS-mbr000","DMI","FMI","MEPS-mbr001","MEPS-preop","DMI-dka38h12","DMI-dka38h12b","AROME-Arctic","IGA")
   for ( m in 2:9){
     default_experiments <- c(default_experiments,paste("MEPS-mbr00",m,sep=""))
   }
@@ -116,6 +116,10 @@ setExperiment <- function(exp,base,dtg=NULL,dir=F){
       dbtry_ecma     = "/data4/portal/dmi/IGA/archive/extract/ecma/"
       dbtry_ecma_sfc = "/data4/portal/dmi/IGA/archive/extract/ecma_sfc/"
       dbtry_ccma     = "/data4/portal/dmi/IGA/archive/extract/ccma"
+    } else if ( exp == "DMI-dka38h12" ){
+      dbtry_ecma     =  "/data4/portal/dmi/dka38h12/archive/extract/ecma/"
+      dbtry_ecma_sfc =  "/data4/portal/dmi/dka38h12/archive/extract/ecma_sfc/"
+      dbtry_ccma     =  "/data4/portal/dmi/dka38h12/archive/extract/ccma/"
     } else if ( exp == "DMI-dka38h12b" ){
       dbtry_ecma     =  "/data4/portal/dmi/dka38h12b/archive/extract/ecma/"
       dbtry_ecma_sfc =  "/data4/portal/dmi/dka38h12b/archive/extract/ecma_sfc/"
