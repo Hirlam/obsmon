@@ -8,14 +8,20 @@ exp2=""
 # hirlam.org
 if ( Sys.info()["nodename"] == "hirlam" ){
   hostname="hirlam"
-  default_experiments <- c("MetCoOp","DMI","FMI","MetCoOp-backup","DMI-dka38h12b","AROME-Arctic","IGA")
+  default_experiments <- c("MEPS-mbr000","DMI","FMI","MEPS-mbr001","MEPS-preop","DMI-dka38h12b","AROME-Arctic","IGA")
+  for ( m in 2:9){
+    default_experiments <- c(default_experiments,paste("MEPS-mbr00",m,sep=""))
+  }
+  default_experiments <- c(default_experiments,paste("MetCoOp (old)","MetCoOp-backup (old)","MetCoOp-preop (old)",sep=""))
 # MetCoOp server
 }else if (Sys.getenv('SMHI_DIST') == "elin3" | Sys.getenv('SMHI_DIST') == "elin4" ) {
   hostname="metcoop"
-  default_experiments <- c("MetCoOp","MetCoOp-backup","MEPS-preop")
-  for ( m in 0:9){
+  default_experiments <- c("MEPS-mbr000","MEPS-mbr001")
+  default_experiments <- c(default_experiments,paste("MEPS-preop",sep=""))
+  for ( m in 2:9){
     default_experiments <- c(default_experiments,paste("MEPS-mbr00",m,sep=""))
   }
+  default_experiments <- c(default_experiments,paste("MetCoOp (old)","MetCoOp-backup (old)","MetCoOp-preop (old)",sep=""))
 # Default
 }else{
   hostname="default"
@@ -43,7 +49,7 @@ setExperiment <- function(exp,base,dtg=NULL,dir=F){
     dbtry_ecma     <- NULL
     dbtry_ecma_sfc <- NULL
     dbtry_ccma     <- NULL
-    if ( exp == "MetCoOp" ){
+    if ( exp == "MetCoOp (old)" ){
       if ( hostname == "hirlam" ){
         dbtry_ecma     =  "/data4/portal/metcoop/AM25/archive/extract/ecma/"
         dbtry_ecma_sfc =  "/data4/portal/metcoop/AM25/archive/extract/ecma_sfc/"
@@ -53,7 +59,7 @@ setExperiment <- function(exp,base,dtg=NULL,dir=F){
         dbtry_ecma_sfc =  "/nobackup/opdata/obsmon_main/ecma_sfc/"
         dbtry_ccma     =  "/nobackup/opdata/obsmon_main/ccma/"
       }
-    } else if ( exp == "MetCoOp-backup" ){
+    } else if ( exp == "MetCoOp-backup (old)" ){
       if ( hostname == "hirlam" ){
         dbtry_ecma     =  "/data4/portal/metcoop/AM25_backup/archive/extract/ecma/"
         dbtry_ecma_sfc =  "/data4/portal/metcoop/AM25_backup/archive/extract/ecma_sfc/"
@@ -63,7 +69,7 @@ setExperiment <- function(exp,base,dtg=NULL,dir=F){
         dbtry_ecma_sfc =  "/nobackup/opdata/obsmon_backup/ecma_sfc/"
         dbtry_ccma     =  "/nobackup/opdata/obsmon_backup/ccma/"
       }
-    } else if ( exp == "MetCoOp-preop" ){
+    } else if ( exp == "MetCoOp-preop (old)" ){
       if ( hostname == "hirlam" ){
         dbtry_ecma     =  "/data4/portal/metcoop/AM25_preop/archive/extract/ecma/"
         dbtry_ecma_sfc =  "/data4/portal/metcoop/AM25_preop/archive/extract/ecma_sfc/"
@@ -75,13 +81,23 @@ setExperiment <- function(exp,base,dtg=NULL,dir=F){
       }
     # MEPS
     } else if ( exp == "MEPS-mbr000" || exp == "MEPS-mbr001" || exp == "MEPS-mbr002" || exp == "MEPS-mbr003" || exp == "MEPS-mbr004" || exp == "MEPS-mbr005" || exp == "MEPS-mbr006" || exp == "MEPS-mbr007" || exp == "MEPS-mbr008" || exp == "MEPS-mbr009" ) {
-      dbtry_ecma     =  paste("/nobackup/opdata/meps/obsmon/",substring(exp,6,11),"/ecma/",sep="")
-      dbtry_ecma_sfc =  paste("/nobackup/opdata/meps/obsmon/",substring(exp,6,11),"/ecma_sfc/",sep="")
-      dbtry_ccma     =  paste("/nobackup/opdata/meps/obsmon/",substring(exp,6,11),"/ccma/",sep="")
+      if ( hostname == "hirlam" ){
+        obsmon_root="/data4/portal/metcoop/MEPS_prod/archive/obsmon"
+      }else if ( hostname == "metcoop" ){
+        obsmon_root="/nobackup/opdata/meps/obsmon/"
+      }
+      dbtry_ecma     =  paste(obsmon_root,"/",substring(exp,6,11),"/ecma/",sep="")
+      dbtry_ecma_sfc =  paste(obsmon_root,"/",substring(exp,6,11),"/ecma_sfc/",sep="")
+      dbtry_ccma     =  paste(obsmon_root,"/",substring(exp,6,11),"/ccma/",sep="")
     } else if ( exp == "MEPS-preop" ) {
-      dbtry_ecma     =  paste("/nobackup/opdata/meps_preop/obsmon/mbr000/ecma/",sep="")
-      dbtry_ecma_sfc =  paste("/nobackup/opdata/meps_preop/obsmon/mbr000/ecma_sfc/",sep="")
-      dbtry_ccma     =  paste("/nobackup/opdata/meps_preop/obsmon/mbr000/ccma/",sep="")
+      if ( hostname == "hirlam" ){
+        obsmon_root="/data4/portal/metcoop/MEPS_preop/archive/obsmon/mbr000/"
+      }else if ( hostname == "metcoop" ){
+        obsmon_root="/nobackup/opdata/meps_preop/obsmon/mbr000/"
+      }
+      dbtry_ecma     =  paste(obsmon_root,"/ecma/",sep="")
+      dbtry_ecma_sfc =  paste(obsmon_root,"/ecma_sfc/",sep="")
+      dbtry_ccma     =  paste(obsmon_root,"/ccma/",sep="")
     } else if ( exp == exp1 ){
       # Default paths to data bases from environment
       dbtry_ecma     =  Sys.getenv('DBDIR_ECMA')
@@ -422,7 +438,6 @@ getLevels <- function(obtype,var,plotType){
     getRadarLevels <- function(var){
       if ( !is.null(var)) {
         switch(var,"rh" = listOfLevels_p,listOfLevels_z)
-        switch(var,"bend_angle" = listOfLevels_p,listOfLevels_z)
       }
     }
 
