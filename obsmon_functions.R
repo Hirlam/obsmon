@@ -12,7 +12,7 @@ if ( Sys.info()["nodename"] == "hirlam" ){
   for ( m in 2:9){
     default_experiments <- c(default_experiments,paste("MEPS-mbr00",m,sep=""))
   }
-  default_experiments <- c(default_experiments,paste("MetCoOp (old)","MetCoOp-backup (old)","MetCoOp-preop (old)",sep=""))
+  default_experiments <- c(default_experiments,"MetCoOp (old)","MetCoOp-backup (old)","MetCoOp-preop (old)")
 # MetCoOp server
 }else if (Sys.getenv('SMHI_DIST') == "elin3" | Sys.getenv('SMHI_DIST') == "elin4" || file.exists("/etc/profile.d/smhi.sh" )) {
   hostname="metcoop"
@@ -21,7 +21,7 @@ if ( Sys.info()["nodename"] == "hirlam" ){
   for ( m in 2:9){
     default_experiments <- c(default_experiments,paste("MEPS-mbr00",m,sep=""))
   }
-  default_experiments <- c(default_experiments,paste("MetCoOp (old)","MetCoOp-backup (old)","MetCoOp-preop (old)",sep=""))
+  default_experiments <- c(default_experiments,"MetCoOp (old)","MetCoOp-backup (old)","MetCoOp-preop (old)")
 # Default
 }else{
   hostname="default"
