@@ -707,7 +707,13 @@ generatePlot <- function(odbBase,exp,plotName,obName,varName,levels,sensor,satel
       #print(LXX)
       plotDataXX = plotData[LXX,]
       localPlotDataXX=plotDataXX
-      localPlotDataXX$datetime = chron(dates=dtg2date(plotDataXX$DTG),times=paste(dtg2utc(plotDataXX$DTG),":00:00",sep=""),format=c('y-m-d','h:m:s'))
+      #localPlotDataXX$datetime = chron(dates=dtg2date(plotDataXX$DTG),times=paste(dtg2utc(plotDataXX$DTG),":00:00",sep=""),format=c('y-m-d','h:m:s'))
+
+      localPlotDataXX$DTG <- paste0(substr(localPlotDataXX$DTG,1,4),"-",
+                                    substr(localPlotDataXX$DTG,5,6),"-",
+                                    substr(localPlotDataXX$DTG,7,8)," ",
+                                    substr(localPlotDataXX$DTG,9,10),":00")
+      localPlotDataXX$DTG <- as.POSIXct(localPlotDataXX$DTG,"%Y-%m-%d %h:%m")
  
       obPlot = ggplot(data=localPlotDataXX)
       obPlot = obPlot + geom_line(aes(x=DTG,y=fg_uncorr_total,colour="FGdep raw"))
