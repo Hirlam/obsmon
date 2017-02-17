@@ -639,6 +639,11 @@ date2dtg<-function(date,utc){
   }
 }
 
+# isdtg
+isdtg <- function(dtg) {
+  return(!is.null(dtg) && nchar(dtg)==10 && grepl("[0-9]{10}", dtg))
+}
+
 # channelExists
 channelExists<-  function(sensor,sat,channel){
   if ( verbose("DEBUG")) { print(paste("DEBUG: -> channelExists",sensor,sat,channel,")")) }
@@ -746,6 +751,37 @@ getUnit<-function(varName){
   }
 }
 
+# getEarliestDate
+getEarliestDate <- function(base,exp=NULL) {
+  if (verbose("DEBUG")) {
+    print(paste("DEBUG: -> getEarliestDate(", base, exp,")"))
+  }
+  date = NULL
+  if (!is.null(base) && !is.null(exp)){
+    dtg=getEarliestDTG(base, exp)
+    if (verbose("DEBUG")) {
+      print(paste("DEBUG: Earliest DTG=", dtg))
+    }
+    dbConn <- connect(base, exp, dtg)
+    if (!is.null(dbConn)) {
+      query <- paste("SELECT dtg FROM obsmon ORDER BY dtg ASC LIMIT 1")
+      if (verbose("INFO")) {
+        print(paste("INFO: ", query))
+      }
+      queryData <- data.frame(dbGetQuery(dbConn, query))
+      disconnect(dbConn)
+      date <- paste(substr(queryData$DTG, 1, 4),
+                    "-", substr(queryData$DTG, 5, 6),
+                    "-", substr(queryData$DTG, 7, 8), sep="")
+    }else{
+      if (verbose("DEBUG")) {
+        print(paste("Can not connect to ", base, exp, dtg))
+      }
+    }
+  }
+  return(date)
+}
+
 # getLatestDate
 getLatestDate <- function(base,exp=NULL){
   if ( verbose("DEBUG")) { print(paste("DEBUG: -> getLatestDate(",base,exp,")")) }
@@ -805,6 +841,24 @@ getPastDate<-function(date,increment){
   date=strftime(chron(date), "%Y-%m-%d")
 
   return(date)
+}
+
+# getEarliestDTG
+getEarliestDTG <- function(base, exp) {
+  if (verbose("DEBUG")) {
+    print(paste("DEBUG: getEarliestDTG(", base, exp, ")"))
+  }
+  getEarliestDTG=NULL
+  if (!is.null(base) && !is.null(exp)) {
+    dir = getFile(base, exp, dir=T)
+    if (!is.null(dir)) {
+      dtg = head(dir(path=dir, pattern="[0-9]{10}"), 1)
+      if (length(dtg) != 0) {
+        getEarliestDTG = dtg
+      }
+    }
+  }
+  return(getEarliestDTG)
 }
 
 # getLatestDTG

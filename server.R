@@ -83,20 +83,32 @@ shinyServer(function(input,output,session) {
 
   # select_date
   output$select_date <- renderUI({
-    if ( verbose("DEBUG") ) { print(paste("DEBUG: -> select_date",input$ODBbase,input$experiment)) }
-    if ( is.null(input$ODBbase)) {
-        dateRangeInput("dateRange",
-        label = h5("Date range"),
-        start = getLatestDate("Screening",input$experiment),
-        end   = getLatestDate("Screening",input$experiment)
-      )
-    }else{
-      dateRangeInput("dateRange",
-        label = h5("Date range"),
-        start = getLatestDate(input$ODBbase,input$experiment),
-        end   = getLatestDate(input$ODBbase,input$experiment)
-      )
+    if (is.null(input$ODBbase)
+        || is.null(input$experiment)) {
+      return(NULL)
     }
+    if (verbose("DEBUG")) {
+      print(paste("DEBUG: -> select_date", input$ODBbase, input$experiment))
+    }
+    isolate({
+      old_start <- date2dtg(input$dateRange[1], "00")
+      old_end <- date2dtg(input$dateRange[2], "00")
+    })
+    earliest_date <- date2dtg(getEarliestDate(input$ODBbase, input$experiment), "00")
+    latest_date <- date2dtg(getLatestDate(input$ODBbase, input$experiment), "00")
+    new_end <- max(earliest_date, min(latest_date, old_end))
+    if (isdtg(old_start)) {
+      new_start <- min(max(earliest_date, old_start), new_end)
+    } else {
+      new_start <- new_end
+    }
+    dateRangeInput("dateRange",
+                   label = h5("Date range"),
+                   start = dtg2date(new_start),
+                   end   = dtg2date(new_end),
+                   min   = dtg2date(earliest_date),
+                   max   = dtg2date(latest_date)
+                   )
   })
   # select_date_SA
   output$select_date_SA <- renderUI({
@@ -109,19 +121,31 @@ shinyServer(function(input,output,session) {
   })
   # select_cycle
   output$select_cycle <- renderUI({
-    if ( verbose("DEBUG")) { print("DEBUG: -> select_cycle") }
-    def_cycles=c("00","03","06","09","12","15","18","21")
-    if ( !is.null(input$experiment)){
-      if ( input$experiment == "DMI" || input$experiment == "DMI-dka38h12b" || input$experiment == "IGA" ){
-        def_cycles=c("00","02","03","05","06","08","09","11","12","14","15","17","18","20","21","23")
-      }
+    if (is.null(input$experiment)
+        || is.null(input$ODBbase)) {
+      return(NULL)
     }
-    if ( is.null(input$ODBbase)) {
-      if ( verbose("DEBUG") ) { print("DEBUG: -> select_cycle ==== NULL START ======") }
-      selectInput("cycle",h5("Cycle"),def_cycles,selected = getLatestCycle("Screening",input$experiment))
-    }else{
-      selectInput("cycle",h5("Cycle"),def_cycles,selected = getLatestCycle(input$ODBbase,input$experiment))
+    if (verbose("DEBUG")) {
+      print("DEBUG: -> select_cycle")
     }
+    if (input$experiment == "DMI"
+        || input$experiment == "DMI-dka38h12b"
+        || input$experiment == "IGA" ) {
+      def_cycles = c("00", "02", "03", "05", "06", "08", "09", "11",
+                     "12", "14", "15", "17", "18", "20", "21", "23")
+    } else {
+      def_cycles = c("00", "03", "06", "09", "12", "15", "18", "21")
+    }
+    old_cycle <- isolate({input$cycle})
+    latest_cycle <- getLatestCycle(input$ODBbase, input$experiment)
+    if (!is.null(old_cycle)
+        && old_cycle %in% def_cycles
+        && old_cycle <= latest_cycle) {
+      new_cycle <- old_cycle
+    } else {
+      new_cycle <- getLatestCycle(input$ODBbase, input$experiment)
+    }
+    selectInput("cycle", h5("Cycle"), def_cycles, selected=new_cycle)
   })
   # select_cycle_SA
   output$select_cycle_SA <- renderUI({
@@ -137,8 +161,22 @@ shinyServer(function(input,output,session) {
  
   # select_obtype
   output$select_obtype <- renderUI({
-     if ( verbose("DEBUG") ) {print("DEBUG: -> select_obtype") }
-     selectInput(inputId = "obtype",label=h5("Select observation type"),choices=getObtypes(),width="100%") 
+    if (verbose("DEBUG")) {
+      print("DEBUG: -> select_obtype")
+    }
+    obtypes <- getObtypes()
+    if (is.null(obtypes)) {
+      return(NULL)
+    }
+    old_obtype <- input$obtype
+    if (!is.null(old_obtype)
+        && old_obtype %in% obtypes) {
+      selected_obtype <- old_obtype
+    } else {
+      selected_obtype <- obtypes[1]
+    }
+    selectInput(inputId="obtype", label=h5("Select observation type"),
+                choices=obtypes, selected=selected_obtype, width="100%")
   })
   # select_obtype_SA
   output$select_obtype_SA <- renderUI({
@@ -149,8 +187,22 @@ shinyServer(function(input,output,session) {
 
   # select_plottype
   output$select_plottype <- renderUI({
-    if ( verbose("DEBUG") ) { print("DEBUG: -> select_plottype") }
-    selectInput(inputId = "plottype",label=h5("Select type of plot"),choices=getPlotTypes(input$obtype,input$ODBbase),width="100%")
+    if (verbose("DEBUG")) {
+      print("DEBUG: -> select_plottype")
+    }
+    plottypes <- getPlotTypes(input$obtype, input$ODBbase)
+    if (is.null(plottypes)) {
+      return(NULL)
+    }
+    old_plottype <- input$plottype
+    if (!is.null(old_plottype)
+        && old_plottype %in% plottypes) {
+      selected_plottype <- old_plottype
+    } else {
+      selected_plottype <- plottypes[1]
+    }
+    selectInput(inputId="plottype", label=h5("Select type of plot"),
+                choices=plottypes, selected=selected_plottype, width="100%")
   })
   # select_plottype_SA
   output$select_plottype_SA <- renderUI({
@@ -173,8 +225,22 @@ shinyServer(function(input,output,session) {
 
   # select_variable
   output$select_variable <- renderUI({
-    if ( verbose("DEBUG") ) { print("DEBUG: -> select_variable") }
-    selectInput(inputId = "variable",label=h5("Select variable"),choices=getVariables(input$obtype))
+    if (verbose("DEBUG")) {
+      print("DEBUG: -> select_variable")
+    }
+    choices <- getVariables(input$obtype)
+    old_selection <- input$variable
+    if (is.null(choices)) {
+      return(NULL)
+    }
+    if(!is.null(old_selection)
+       && old_selection %in% choices) {
+      selection <- old_selection
+    } else {
+      selection <- choices[1]
+    }
+    selectInput(inputId="variable", label=h5("Select variable"),
+                choices=choices, selected=selection)
   })
   # select_variable_SA
   output$select_variable_SA <- renderUI({
@@ -184,44 +250,106 @@ shinyServer(function(input,output,session) {
 
   # select_level
   output$select_level <- renderUI({
-    if ( verbose("DEBUG") ) { print("DEBUG: -> select_level") }
-    choices=getLevels(input$obtype,input$variable,getPlotTypeShort(input$plottype))
-    if ( !is.null(choices)) { 
-      selectInput(inputId = "level",label=h5("Select levels"),choices=choices,multiple=T,selectize=FALSE)
-    }else{
-      selectInput(inputId = "level",label=h5("Select levels"),choices=NULL)
+    if (verbose("DEBUG")) {
+      print("DEBUG: -> select_level")
     }
+    choices <- getLevels(input$obtype, input$variable,
+                         getPlotTypeShort(input$plottype))
+    old_selection <- input$level
+    if (is.null(choices)) {
+      return(NULL)
+    }
+    if(!is.null(old_selection)
+       && any(old_selection %in% choices)) {
+      selection <- old_selection[old_selection %in% choices]
+    } else {
+      selection <- choices[1]
+    }
+    selectInput(inputId="level", label=h5("Select levels"),
+                choices=choices, selected=selection,
+                multiple=T, selectize=FALSE)
   })
 
   # select_sensor
   output$select_sensor <- renderUI({
-    if ( verbose("DEBUG") ) { print("DEBUG: -> select_sensor") }
-    selectInput(inputId = "sensor",label=h5("Select sensor"),choices=getSensors())
+    if (verbose("DEBUG")) {
+      print("DEBUG: -> select_sensor")
+    }
+    choices <- getSensors()
+    old_selection <- input$sensor
+    if (is.null(choices)) {
+      return(NULL)
+    }
+    if(!is.null(old_selection)
+       && old_selection %in% choices) {
+      selection <- old_selection
+    } else {
+      selection <- choices[1]
+    }
+    selectInput(inputId="sensor", label=h5("Select sensor"),
+                choices=choices, selected=selection)
   })
 
   # select_satelite
   output$select_satelite <- renderUI({
     if ( verbose("DEBUG") ) { print("DEBUG: -> select_satelite") }
-    selectInput(inputId = "satelite",label=h5("Select satelite"),choices=getSatelites(input$sensor))
+    choices <- getSatelites(input$sensor)
+    old_selection <- input$satelite
+    if (is.null(choices)) {
+      return(NULL)
+    }
+    if(!is.null(old_selection)
+       && old_selection %in% choices) {
+      selection <- old_selection
+    } else {
+      selection <- choices[1]
+    }
+    selectInput(inputId = "satelite", label=h5("Select satelite"),
+                choices=choices, selected=selection)
   })
 
   # select_channel
   output$select_channel <- renderUI({
-    if ( verbose("DEBUG") ) { print("DEBUG: -> select_channels") }
-    choices=getChannels(input$sensor,input$satelite)
-    if ( !is.null(choices)) { 
-      selectInput(inputId = "channel",label=h5("Select channel"),choices=choices,multiple=T,selectize=FALSE)
-    }else{
-      selectInput(inputId = "channel",label=h5("Select channel"),choices=NULL,selectize=FALSE)
+    if (verbose("DEBUG")) {
+      print("DEBUG: -> select_channels")
     }
+    choices <- getChannels(input$sensor,input$satelite)
+    old_selection <- input$channel
+    if (is.null(choices)) {
+      return(NULL)
+    }
+    if(!is.null(old_selection)
+       && any(old_selection %in% choices)) {
+      selection <- old_selection[old_selection %in% choices]
+    } else {
+      selection <- choices[1]
+    }
+    selectInput(inputId="channel", label=h5("Select channel"),
+                choices=choices, selected=selection,
+                multiple=T, selectize=FALSE)
   })
 
   # select_experiment
   output$select_experiment <- renderUI({
     if ( verbose("DEBUG") ) { print("DEBUG: -> select_experiment") }
-    if ( !is.null(getExperiments(input$ODBbase,date2dtg(input$dateRange[1],input$cycle)))) {
-      selectInput(inputId = "experiment",label=h5("Select pre-defined experiment"),choices=getExperiments(input$ODBbase,date2dtg(input$dateRange[1],input$cycle)),selected=input$experiment,width="100%")
+    isolate({
+      startdtg <- date2dtg(input$dateRange[1],input$cycle)
+      old_exp <- input$experiment
+    })
+    exps <- getExperiments(input$ODBbase, startdtg)
+    if (is.null(exps)) {
+      return(NULL)
     }
+    if (!is.null(old_exp) && old_exp %in% exps) {
+      selected_exp <- old_exp
+    } else {
+      selected_exp <- exps[1]
+    }
+    selectInput(inputId="experiment",
+                label=h5("Select pre-defined experiment"),
+                choices=exps,
+                selected=selected_exp,
+                width="100%")
   })
   # select_experiment_SA
   output$select_experiment_SA <- renderUI({
