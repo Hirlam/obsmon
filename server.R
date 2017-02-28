@@ -47,6 +47,18 @@ update_selection <- function(choices, old_selection,
                        multiple=multiple, selectize=FALSE))
 }
 
+get_def_cycles <- function(experiment) {
+  if (experiment == "DMI"
+      || experiment == "DMI-dka38h12b"
+      || experiment == "IGA" ) {
+    return(c("00", "02", "03", "05", "06", "08", "09", "11",
+             "12", "14", "15", "17", "18", "20", "21", "23"))
+  } else {
+    return(c("00", "03", "06", "09", "12", "15", "18", "21"))
+  }
+}
+
+
 
 shinyServer(function(input,output,session) {
 
@@ -145,16 +157,9 @@ shinyServer(function(input,output,session) {
     if (verbose("DEBUG")) {
       print("DEBUG: -> select_cycle")
     }
-    if (input$experiment == "DMI"
-        || input$experiment == "DMI-dka38h12b"
-        || input$experiment == "IGA" ) {
-      def_cycles = c("00", "02", "03", "05", "06", "08", "09", "11",
-                     "12", "14", "15", "17", "18", "20", "21", "23")
-    } else {
-      def_cycles = c("00", "03", "06", "09", "12", "15", "18", "21")
-    }
+    def_cycles <- get_def_cycles(input$experiment)
     latest_cycle <- getLatestCycle(input$ODBbase, input$experiment)
-    old_cycle <- isolate({input$cycle})
+    old_cycle <- input$cycle
     if (!is.null(old_cycle)
         && old_cycle > latest_cycle) {
       old_cycle <- latest_cycle
@@ -163,16 +168,20 @@ shinyServer(function(input,output,session) {
   })
   # select_cycle_SA
   output$select_cycle_SA <- renderUI({
-    print("DEBUG: -> select_cycle_SA")
-    def_cycles=c("00","03","06","09","12","15","18","21")
-    if ( !is.null(input$experiment)){ 
-      if ( input$experiment == "DMI" || input$experiment == "DMI-dka38h12b" || input$experiment == "IGA" ){ 
-        def_cycles=c("00","02","03","05","06","08","09","11","12","14","15","17","18","20","21","23")
-      }
+    if (is.null(input$experiment_SA)) {
+      return(NULL)
     }
-    selectInput("cycle_SA",h5("Cycle"),def_cycles,selected = getLatestCycle("Surface",input$experiment_SA))
+    print("DEBUG: -> select_cycle_SA")
+    def_cycles <- get_def_cycles(input$experiment_SA)
+    latest_cycle <- getLatestCycle("Surface", input$experiment_SA)
+    old_cycle <- input$cycle
+    if (!is.null(old_cycle)
+        && old_cycle > latest_cycle) {
+      old_cycle <- latest_cycle
+    }
+    return(update_selection(def_cycles, old_cycle, "cycle_SA", "Cycle"))
   })
- 
+
   # select_obtype
   output$select_obtype <- renderUI({
     if (verbose("DEBUG")) {
@@ -181,12 +190,15 @@ shinyServer(function(input,output,session) {
     return(update_selection(getObtypes(), input$obtype,
                             "obtype", "Select observation type"))
   })
+
   # select_obtype_SA
   output$select_obtype_SA <- renderUI({
-     if ( verbose("DEBUG")) { print("DEBUG: -> select_obtype_SA") }
-     selectInput(inputId = "obtype_SA",label=h5("Select observation type"),choices=getObtypes(),width="100%")
+    if (verbose("DEBUG")) {
+      print("DEBUG: -> select_obtype_SA")
+    }
+    return(update_selection(getObtypes(), input$obtype_SA,
+                            "obtype_SA", "Select observation type"))
   })
-
 
   # select_plottype
   output$select_plottype <- renderUI({
@@ -196,10 +208,14 @@ shinyServer(function(input,output,session) {
     return(update_selection(getPlotTypes(input$obtype, input$ODBbase),
                             input$plottype, "plottype", "Select type of plot"))
   })
+
   # select_plottype_SA
   output$select_plottype_SA <- renderUI({
-    if ( verbose("DEBUG") ) { print("DEBUG: -> select_plottype_SA") }
-    selectInput(inputId = "plottype_SA",label=h5("Select type of plot"),choices=getPlotTypes(input$obtype_SA,"Surface"),width="100%")
+    if (verbose("DEBUG")) {
+      print("DEBUG: -> select_plottype_SA")
+    }
+    return(update_selection(getPlotTypes(input$obtype_SA, "Surface"),
+                            input$plottype_SA, "plottype_SA", "Select type of plot"))
   })
 
 
@@ -226,8 +242,12 @@ shinyServer(function(input,output,session) {
   })
   # select_variable_SA
   output$select_variable_SA <- renderUI({
-    if ( verbose("DEBUG") ) { print("DEBUG: -> select_variable_SA") }
-    selectInput(inputId = "variable_SA",label=h5("Select variable"),choices=getVariables(input$obtype_SA))
+    if (verbose("DEBUG")) {
+      print("DEBUG: -> select_variable_SA")
+    }
+    return(update_selection(getVariables(input$obtype_SA),
+                            input$variable_SA,
+                            "variable_SA", "Select variable"))
   })
 
   # select_level
@@ -270,9 +290,11 @@ shinyServer(function(input,output,session) {
 
   # select_experiment
   output$select_experiment <- renderUI({
-    if ( verbose("DEBUG") ) { print("DEBUG: -> select_experiment") }
+    if (verbose("DEBUG")) {
+      print("DEBUG: -> select_experiment")
+    }
     isolate({
-      startdtg <- date2dtg(input$dateRange[1],input$cycle)
+      startdtg <- date2dtg(input$dateRange[1], input$cycle)
     })
     return(update_selection(getExperiments(input$ODBbase, startdtg),
                             input$experiment,
@@ -280,10 +302,15 @@ shinyServer(function(input,output,session) {
   })
   # select_experiment_SA
   output$select_experiment_SA <- renderUI({
-    if ( verbose("DEBUG") ) { print("DEBUG: -> select_experiment_SA") }
-    if ( !is.null(getExperiments("Surface",date2dtg(input$dateRange_SA[1],input$cycle_SA)))) {
-      selectInput(inputId = "experiment_SA",label=h5("Select pre-defined experiment"),choices=getExperiments("Surface",date2dtg(input$dateRange_SA[1],input$cycle_SA)),selected=input$experiment_SA,width="100%")
+    if (verbose("DEBUG")) {
+      print("DEBUG: -> select_experiment_SA")
     }
+    isolate({
+      startdtg <- date2dtg(input$dateRange_SA[1], input$cycle_SA)
+    })
+    return(update_selection(getExperiments("Surface", startdtg),
+                            input$experiment_SA,
+                            "experiment_SA", "Select pre-defined experiment"))
   })
   # select_experiment_SD
   output$select_experiment_SD <- renderUI({
