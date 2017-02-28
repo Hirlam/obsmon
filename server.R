@@ -251,14 +251,21 @@ shinyServer(function(input,output,session) {
 
   # select_group_predef
   output$select_group_predef <- renderUI({
-    if ( verbose("DEBUG") ) { print("DEBUG: -> select_group_predef") }
-    selectInput(inputId = "groupPreDef",label=h5("Which experiment?"),choices=getPreDefinedGroups())
+    if (verbose("DEBUG")) {
+      print("DEBUG: -> select_group_predef")
+    }
+    return(update_selection(getPreDefinedGroups(), input$select_group_predef,
+                            "groupPreDef", "Which experiment?"))
   })
 
   # select_plottype_predef
   output$select_plottype_predef <- renderUI({
-    if ( verbose("DEBUG") ) { print("DEBUG: -> select_plottype_predef") }
-    selectInput(inputId = "plottypePreDef",label=h5("Select type of plot"),choices=getPreDefinedPlots(input$groupPreDef),width="100%")
+    if (verbose("DEBUG")) {
+      print("DEBUG: -> select_plottype_predef")
+    }
+    return(update_selection(getPreDefinedPlots(input$groupPreDef),
+                            input$plottypePreDef,
+                            "plottypePreDef", "Select type of plot"))
   })
 
   # select_variable
@@ -344,21 +351,31 @@ shinyServer(function(input,output,session) {
   })
   # select_experiment_SD
   output$select_experiment_SD <- renderUI({
-    if ( verbose("DEBUG") ) { print("DEBUG: -> select_experiment_SD") }
-
-    if ( !is.null(input$variable_surfdia)) {
-      if ( input$variable_surfdia == "U10" || input$variable_surfdia == "V10" || input$variable_surfdia == "APD" || input$variable_surfdia == "Z" ){
-        if ( !is.null(getExperiments("Minimization"))) {
-          selectInput(inputId = "experiment_SD",label=h5("Select pre-defined experiment"),choices=getExperiments("Minimization"),selected=input$experiment_SD,width="100%")
-        }
-      }else{
-        if ( !is.null(getExperiments("Surface"))) {
-          selectInput(inputId = "experiment_SD",label=h5("Select pre-defined experiment"),choices=getExperiments("Surface"),width="100%")
-        } else {
-          fileInput('ODBbase_surface', 'Choose SQLite data base from surface assimilation',accept = c('.db'))
-        }
+    if (verbose("DEBUG")) {
+      print("DEBUG: -> select_experiment_SD")
+    }
+    if (is.null(input$variable_surfdia)) {
+      return(NULL)
+    }
+    if (input$variable_surfdia == "U10"
+        || input$variable_surfdia == "V10"
+        || input$variable_surfdia == "APD"
+        || input$variable_surfdia == "Z") {
+      exps <- getExperiments("Minimization")
+      if (is.null(exps)) {
+        return(NULL)
+      }
+    } else {
+      exps <- getExperiments("Surface")
+      if (is.null(exps)) {
+        return(fileInput('ODBbase_surface',
+                         'Choose SQLite data base from surface assimilation',
+                         accept = c('.db')))
       }
     }
+    return(update_selection(exps, input$experiment_SD,
+                            "experiment_SD",
+                            "Select pre-defined experiment"))
   })
   # Select map variable
   output$select_map <- renderUI({
@@ -724,17 +741,29 @@ shinyServer(function(input,output,session) {
 
   output$select_dump_experiment<-renderUI({
     if ( !is.null(getExperiments(input$ODBbase_dump))) {
-      selectInput(inputId = "dump_experiment",label=h5("Select experiment"),choices=getExperiments(input$ODBbase_dump),width="100%")
+      return(update_selection(getExperiments(input$ODBbase_dump),
+                              input$dump_experiment,
+                              "dump_experiment", "Select experiment"))
     } else {
-      if ( !is.null(input$ODBbase_dump)) {
-        if ( input$ODBbase_dump == "Screening" ) {
-          fileInput('ODBbase_screening', 'Choose SQLite data base from screening',accept = c('.db'))
-        } else if ( input$ODBbase_dump == "Minimization" ) {
-          fileInput('ODBbase_minimization', 'Choose SQLite data base from minimization',accept = c('.db'))
-        } else if ( input$ODBbase_dump == "Surface" ) {
-          fileInput('ODBbase_surface', 'Choose SQLite data base from surface assimilation',accept = c('.db'))
-        }
+      if (is.null(input$ODBbase_dump)) {
+        return(NULL)
       }
+      switch(input$ODBbase_dump,
+             "Screening"={
+               fileInput('ODBbase_screening',
+                         'Choose SQLite data base from screening',
+                         accept = c('.db'))
+             },
+             "Minimization"={
+               fileInput('ODBbase_minimization',
+                         'Choose SQLite data base from minimization',
+                         accept = c('.db'))
+             },
+             "Surface" = {
+               fileInput('ODBbase_surface',
+                         'Choose SQLite data base from surface assimilation',
+                         accept = c('.db'))
+             })
     }
   })
 
@@ -819,7 +848,12 @@ shinyServer(function(input,output,session) {
 
   # select_stations_surfdia
   output$select_stations_surfdia<-renderUI({
-    selectInput(inputId = "station",label=h5("Select station:"),choices=getStations(input$variable_surfdia),width="100%")
+    if(is.null(input$variable_surfdia)) {
+      return(NULL)
+    }
+    return(update_selection(getStations(input$variable_surfdia),
+                            input$station,
+                            "station", "Select station:"))
   })
 
   # select_days_surfdia 
