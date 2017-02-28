@@ -44,7 +44,7 @@ update_selection <- function(choices, old_selection,
     }
     return(selectInput(inputId=input_id, label=h5(label),
                        choices=choices, selected=selection,
-                       multiple=multiple, selectize=FALSE))
+                       multiple=multiple, selectize=!multiple))
 }
 
 my_isdtg <- function(dtg) {
@@ -133,7 +133,7 @@ shinyServer(function(input,output,session) {
 
   # select_base 
   output$select_base<- renderUI({
-    selectInput("ODBbase",h5("Monitoring level:"),c("Screening","Minimization"),width="100%")
+    selectInput("ODBbase",h5("Monitoring level:"),c("Screening","Minimization"))
   })
 
   # select_dump_base 
