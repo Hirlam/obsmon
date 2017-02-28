@@ -209,7 +209,7 @@ shinyUI(navbarPage("OBSMON v2",id="tabs",
   ),
   tabPanel("Pre-defined plots",
     fluidRow(
-      column(3,align="right",
+      column(3,
         uiOutput("select_group_predef")
       ),
       column(6,
@@ -254,10 +254,10 @@ shinyUI(navbarPage("OBSMON v2",id="tabs",
   ),
   tabPanel("Surface diagnostics",value="surfdia",
     fluidRow(
-      column(3,align="right",
+      column(3,
         uiOutput("select_variable_surfdia")
       ),
-      column(3,align="right",
+      column(3,
         uiOutput("select_experiment_SD"),
         uiOutput("select_days_surfdia")
       ),
@@ -303,13 +303,13 @@ shinyUI(navbarPage("OBSMON v2",id="tabs",
       )
     ),
     fluidRow(
-      column(3,align="right",
+      column(3,
              uiOutput("select_dump_base")
       ),
-      column(3,align="right",
+      column(3,
              uiOutput("select_dump_experiment")
       ),
-      column(3,align="right",
+      column(3,
              selectInput("dump_table",h5("Table to dump:"),c("obsmon","usage"))
       ),
       column(3,
