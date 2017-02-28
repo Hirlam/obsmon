@@ -47,6 +47,37 @@ update_selection <- function(choices, old_selection,
                        multiple=multiple, selectize=FALSE))
 }
 
+my_isdtg <- function(dtg) {
+  return(!is.null(dtg) && nchar(dtg)==10 && grepl("[0-9]{10}", dtg))
+}
+
+my_dtg2date <-function(dtg){
+  if ( !is.null(dtg)) {
+    date<-paste(substr(dtg,1,4),"-",substr(dtg,5,6),"-",substr(dtg,7,8),sep="")
+    return(date)
+  }else{
+    return(NULL)
+  }
+}
+
+update_date_range <- function(earliest_date, latest_date,
+                              old_start, old_end,
+                              input_id, label) {
+  new_end <- max(earliest_date, min(latest_date, old_end))
+  if (my_isdtg(old_start)) {
+    new_start <- min(max(earliest_date, old_start), new_end)
+  } else {
+    new_start <- new_end
+  }
+  return(dateRangeInput(input_id, label=h5(label),
+                        start = my_dtg2date(new_start),
+                        end   = my_dtg2date(new_end),
+                        min   = my_dtg2date(earliest_date),
+                        max   = my_dtg2date(latest_date)
+                        ))
+}
+
+
 get_def_cycles <- function(experiment) {
   if (experiment == "DMI"
       || experiment == "DMI-dka38h12b"
@@ -119,34 +150,33 @@ shinyServer(function(input,output,session) {
     if (verbose("DEBUG")) {
       print(paste("DEBUG: -> select_date", input$ODBbase, input$experiment))
     }
+    earliest_date <- date2dtg(getEarliestDate(input$ODBbase, input$experiment), "00")
+    latest_date <- date2dtg(getLatestDate(input$ODBbase, input$experiment), "00")
     isolate({
       old_start <- date2dtg(input$dateRange[1], "00")
       old_end <- date2dtg(input$dateRange[2], "00")
     })
-    earliest_date <- date2dtg(getEarliestDate(input$ODBbase, input$experiment), "00")
-    latest_date <- date2dtg(getLatestDate(input$ODBbase, input$experiment), "00")
-    new_end <- max(earliest_date, min(latest_date, old_end))
-    if (isdtg(old_start)) {
-      new_start <- min(max(earliest_date, old_start), new_end)
-    } else {
-      new_start <- new_end
-    }
-    dateRangeInput("dateRange",
-                   label = h5("Date range"),
-                   start = dtg2date(new_start),
-                   end   = dtg2date(new_end),
-                   min   = dtg2date(earliest_date),
-                   max   = dtg2date(latest_date)
-                   )
+    return(update_date_range(earliest_date, latest_date,
+                             old_start, old_end,
+                             "dateRange", "Date range"))
   })
   # select_date_SA
   output$select_date_SA <- renderUI({
-    if ( verbose("DEBUG")) { print("DEBUG: -> select_date_SA") }
-      dateRangeInput("dateRange_SA",
-        label = h5("Date range"),
-        start = getLatestDate("Surface",input$experiment_SA),
-        end   = getLatestDate("Surface",input$experiment_SA)
-    )
+    if (is.null(input$experiment_SA)) {
+      return(NULL)
+    }
+    if (verbose("DEBUG")) {
+      print("DEBUG: -> select_date_SA")
+    }
+    earliest_date <- date2dtg(getEarliestDate("Surface", input$experiment_SA), "00")
+    latest_date <- date2dtg(getLatestDate("Surface", input$experiment_SA), "00")
+    isolate({
+      old_start <- date2dtg(input$dateRange_SA[1], "00")
+      old_end <- date2dtg(input$dateRange_SA[2], "00")
+    })
+    return(update_date_range(earliest_date, latest_date,
+                             old_start, old_end,
+                             "dateRange_SA", "Date range"))
   })
   # select_cycle
   output$select_cycle <- renderUI({
