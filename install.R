@@ -1,14 +1,24 @@
 repo=c("http://cran.ma.imperial.ac.uk/")
 lib=Sys.getenv("R_LIBS_USER")
 
-install.packages("httpuv", lib=lib, repos=repo)
-install.packages("shiny", lib=lib, repos=repo)
-install.packages("RSQLite", lib=lib, repos=repo)
-install.packages("ggplot2", lib=lib, repos=repo)
-install.packages("jpeg", lib=lib, repos=repo)
-install.packages("reshape2", lib=lib, repos=repo)
-install.packages("chron", lib=lib, repos=repo)
-install.packages("scales", lib=lib, repos=repo)
-install.packages("mapproj", lib=lib, repos=repo)
-install.packages("gridExtra", lib=lib, repos=repo)
-install.packages("leaflet", lib=lib, repos=repo)
+pkgs <- c("httpuv",
+          "shiny",
+          "RSQLite",
+          "ggplot2",
+          "jpeg",
+          "reshape2",
+          "chron",
+          "scales",
+          "mapproj",
+          "gridExtra",
+          "leaflet",
+          "futile.logger")
+
+installedPkgs <- installed.packages(lib.loc=lib)
+
+newPkgs <- pkgs[!(pkgs %in% installedPkgs)]
+
+update.packages(lib.loc=lib, repos=repo, ask=FALSE)
+if(length(newPkgs)>0) {
+  install.packages(newPkgs, lib=lib, repos=repo)
+}
