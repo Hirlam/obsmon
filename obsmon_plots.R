@@ -8,47 +8,48 @@
 #
 
 generatePlot <- function(odbBase,exp,plotName,obName,varName,levels,sensor,satelite,channels,dateRange,cycle,mode="plot") {
-  if ( verbose("DEBUG") ) { print(paste("DEBUG: -> generatePlot",odbBase,exp,plotName,obName,varName,levels,sensor,satelite,channels,dateRange,cycle,mode)) }
+  flog.debug(paste("-> generatePlot", odbBase, exp, plotName, obName, varName,
+                   levels, sensor, satelite, channels, dateRange, cycle, mode))
 
   # Sanity checks on mandatory values!
   if ( is.null(odbBase) ) {
-    if ( verbose("WARNING") ) { print("WARNING: The odb base for plotting is not defined!") }
+    flog.warn("The odb base for plotting is not defined!")
     return(NULL)
   }
   if ( is.null(exp) ) {
-    if ( verbose("WARNING") ) { print("WARNING: The experiment for plotting is not defined!") }
+    flog.warn("The experiment for plotting is not defined!")
     return(NULL)
   }
   if ( is.null(plotName) ) {
-    if ( verbose("WARNING") ) { print("WARNING: plotName you wanted to plot is not defined!") }
+    flog.warn("plotName you wanted to plot is not defined!")
     return(NULL)
   }
   if ( is.null(obName) ) {
-    if ( verbose("WARNING") ) { print("WARNING: The observation type for plotting is not defined!") }
+    flog.warn("The observation type for plotting is not defined!")
     return(NULL)
   }
   if ( is.null(varName) ) {
-    if ( verbose("WARNING") ) { print("WARNING: The variable name for plotting is not defined!") }
+    flog.warn("The variable name for plotting is not defined!")
     return(NULL)
   }
   if ( is.null(dateRange) ) {
-    if ( verbose("WARNING") ) { print("WARNING: The date range for plotting is not defined!") }
+    flog.warn("The date range for plotting is not defined!")
     return(NULL)
   }
   if ( is.null(cycle) ) {
-    if ( verbose("WARNING") ) { print("WARNING: The cycle for plotting is not defined!") }
+    flog.warn("The cycle for plotting is not defined!")
     return(NULL)
   }
 
   # Set needed values from mandatory
   obNumber=getObNumber(obName)
   if ( is.null(obNumber) ) {
-    if ( verbose("WARNING") ) { print("WARNING: The obNumber for plotting is not defined!") }
+    flog.warn("The obNumber for plotting is not defined!")
     return(NULL)
   }
   unit=getUnit(varName)
   if ( is.null(unit) ) {
-    if ( verbose("WARNING") ) { print("WARNING: The unit for plotting is not defined!") }
+    flog.warn("The unit for plotting is not defined!")
     return(NULL)
   }
 
@@ -120,7 +121,7 @@ generatePlot <- function(odbBase,exp,plotName,obName,varName,levels,sensor,satel
       ylab="Level"
       title = paste(exp,":",plotName,obName,varName,level_string,dtgstr_range)
     }
-    if ( verbose("INFO") ) { paste("INFO: ",print(plotQuery))}
+    flog.info(plotQuery)
     if ( mode == "query" ) { return(plotQuery)}
     plotData=getDataTS(odbBase,exp,dtgbeg,dtgend,mode,plotQuery)
     if ( mode == "data" ) { return(plotData)}
@@ -156,7 +157,7 @@ generatePlot <- function(odbBase,exp,plotName,obName,varName,levels,sensor,satel
 
       }
 
-      if ( verbose("INFO") ) { paste("INFO: ",print(plotQuery))}
+      flog.info(plotQuery)
       if ( mode == "query" ) { return(plotQuery)}
       plotData=getDataTS(odbBase,exp,dtgbeg,dtgend,mode,plotQuery)
       if ( mode == "data" ) { return(plotData)}
@@ -235,7 +236,7 @@ generatePlot <- function(odbBase,exp,plotName,obName,varName,levels,sensor,satel
       }
       title = paste(exp,":",plotName,obName,varName,level_string,dtgstr)
     }
-    if ( verbose("INFO") ) { paste("INFO: ",print(plotQuery))}
+    flog.info(plotQuery)
     if ( mode == "query" ) { return(plotQuery)}
     dbConn = connect(odbBase,exp,date2dtg(dateRange[1],cycle))
     plotData = data.frame(dbGetQuery(dbConn,plotQuery))
@@ -276,7 +277,7 @@ generatePlot <- function(odbBase,exp,plotName,obName,varName,levels,sensor,satel
                         " AND obname == '",tolower(sensor),"'",
                         " AND satname == '",qsatelite,"'",
                         channelListQuery,sep="")
-      if ( verbose("INFO") ) { paste("INFO: ",print(plotQuery))}
+      flog.info(plotQuery)
       if ( mode == "query" ) { return(plotQuery)}
       plotData=getDataTS(odbBase,exp,dtgbeg,dtgend,mode,plotQuery,cycle)
       if ( mode == "data" ) { return(plotData)}
@@ -296,7 +297,7 @@ generatePlot <- function(odbBase,exp,plotName,obName,varName,levels,sensor,satel
                            " AND obname == '",tolower(sensor),"'",
                            " AND satname == '",qsatelite,"'",
                            channelListQuery,sep="")
-      if ( verbose("INFO") ) { print(paste("INFO: ",plotQuery))}
+      flog.info(plotQuery)
       if ( mode == "query" ) { return(plotQuery)}
       title = paste(exp,":",plotName,sensor,satelite,channel_string,dtgstr)
       dbConn = connect(odbBase,exp,date2dtg(dateRange[1],cycle))
@@ -319,7 +320,7 @@ generatePlot <- function(odbBase,exp,plotName,obName,varName,levels,sensor,satel
                            " AND varname == '",varName,"'",
                           scatt_extra,
                           levelListQuery,sep="")
-      if ( verbose("INFO") ) { print(paste("INFO: ",plotQuery))}
+      flog.info(plotQuery)
       if ( mode == "query" ) { return(plotQuery)}
       title = paste(exp,":",plotName,obName,varName,level_string,dtgstr)
       dbConn = connect(odbBase,exp,date2dtg(dateRange[1],cycle))
@@ -345,7 +346,7 @@ generatePlot <- function(odbBase,exp,plotName,obName,varName,levels,sensor,satel
                              " AND DTG >= ",dtgbeg,
                              " AND DTG <= ",dtgend,
                              channelListQuery,sep="")
-      if ( verbose("INFO") ) { print(paste("INFO: ",plotQuery))}
+      flog.info(plotQuery)
       if ( mode == "query" ) { return(plotQuery)}
       if ( plotName == "BiasCorrection" ){
         plotData=getDataTS(odbBase,exp,dtgbeg,dtgend,mode,plotQuery,cycle)
@@ -375,7 +376,7 @@ generatePlot <- function(odbBase,exp,plotName,obName,varName,levels,sensor,satel
                              " AND DTG == ",dtg,
                              " AND level>=1 AND level<=10000",
                              " ORDER BY level",sep="")
-      if ( verbose("INFO") ) { print(paste("INFO: ",plotQuery))}
+      flog.info(plotQuery)
       if ( mode == "query" ) { return(plotQuery)}
       dbConn = connect(odbBase,exp,date2dtg(dateRange[1],cycle))
       title = paste(exp,":",plotName,sensor,satelite,dtgstr)
@@ -393,13 +394,13 @@ generatePlot <- function(odbBase,exp,plotName,obName,varName,levels,sensor,satel
     }else{
       # Surface
       if ( obNumber == 1 || obNumber == 4 || obNumber == 9 ) {
-        if ( verbose("DEBUG") ) { print(paste("DEBUG: ",obname))}
+        flog.debug(obname)
         plotQuery = paste("SELECT fg_bias_total,an_bias_total,fg_rms_total,an_rms_total FROM obsmon",
                              " WHERE obnumber == ",obNumber,
                              " AND dtg == ",dtg,
                              " AND obname == '",obname,"'",
                              " AND varname == '",varName,"'",sep="")
-        if ( verbose("INFO") ) { print(paste("INFO: ",plotQuery)) }
+        flog.info(plotQuery)
         if ( mode == "query" ) { return(plotQuery)}
         dbConn = connect(odbBase,exp,date2dtg(dateRange[1],cycle))
         title = paste(exp,":",plotName,obName,varName,dtgstr)
@@ -422,7 +423,7 @@ generatePlot <- function(odbBase,exp,plotName,obName,varName,levels,sensor,satel
                            " AND obname == '",obname,"'",
                            " AND varname == '",varName,"'",
                            " ORDER BY level",sep="")
-        if ( verbose("INFO") ) { print(paste("INFO: ",plotQuery))}
+        flog.info(plotQuery)
         if ( mode == "query" ) { return(plotQuery)}
         dbConn = connect(odbBase,exp,date2dtg(dateRange[1],cycle))
         title = paste(exp,":",plotName,obName,varName,dtgstr)
@@ -439,7 +440,7 @@ generatePlot <- function(odbBase,exp,plotName,obName,varName,levels,sensor,satel
       }
     }
   }else{
-    if ( verbose("WARNING")) { print(paste("WARNING: ",plotName,"not found!")) }
+    flog.warn(paste(plotName, "not found!"))
     obPlot = emptyPlot(paste(exp,":",plotName,"not found!"))
   }
   return(obPlot)
@@ -479,7 +480,7 @@ generatePlot <- function(odbBase,exp,plotName,obName,varName,levels,sensor,satel
 
   # ThresholdMap
   ThresholdMap <- function(title,plotData,mode,base,exp,dtg,u=NULL,v=NULL){
-    if ( verbose("DEBUG") ) { print(paste("DEBUG: -> ThresholdMap",title,mode,base,exp,dtg)) }
+    flog.debug(paste("-> ThresholdMap", title, mode, base, exp, dtg))
 
     obPlot = NULL
 
@@ -494,7 +495,7 @@ generatePlot <- function(odbBase,exp,plotName,obName,varName,levels,sensor,satel
       for ( i in 2:length(zoomLevels)){
         if ((length(plotData$plotValues) > zoomLevels[i-1]) && (length(plotData$plotValues) <= zoomLevels[i])){
           zoomLevel=i+3
-          if ( verbose("DEBUG") ) { print(paste("DEBUG: -> zoomLevel=",zoomLevel)) }
+          flog.debug(paste("-> zoomLevel=", zoomLevel))
         }
       }
    
@@ -578,7 +579,7 @@ generatePlot <- function(odbBase,exp,plotName,obName,varName,levels,sensor,satel
 
   # FGAnDeparture
   FGAnDeparture <- function(title,xlab,ylab,plotData){
-    if ( verbose("DEBUG") ) { print(paste("DEBUG: -> FGAnDeparture",title,xlab,ylab)) }
+    flog.debug(paste("-> FGAnDeparture", title, xlab, ylab))
 
     df = data.frame(params = factor(c("FGBias", "AnBias", "FGRMS",  "AnRMS"), c("FGBias", "AnBias", "FGRMS",  "AnRMS")), biasRMSvalues = c(plotData$fg_bias_total, plotData$an_bias_total, plotData$fg_rms_total, plotData$an_rms_total))
     obPlot = ggplot(data=df, aes(x=params, y=biasRMSvalues, fill=c("red","darkblue","red","darkblue"))) + geom_bar(stat="identity") + guides(fill=FALSE) + ylab(ylab) + xlab(xlab)
@@ -589,11 +590,11 @@ generatePlot <- function(odbBase,exp,plotName,obName,varName,levels,sensor,satel
 
   # FGAnDepartureVert
   FGAnDepartureVert <- function(title,xlab,ylab,plotData){
-     if ( verbose("DEBUG") ) { print(paste("DEBUG: -> FGAnDepartureVert",title,xlab,ylab)) }
+     flog.debug(paste("-> FGAnDepartureVert", title, xlab, ylab))
      obPlot = NULL
      lastLevel = plotData$level[length(plotData$level)]
-     if ( verbose("DEBUG") ) { print(paste("DEBUG: ",plotData$level))}
-     if ( verbose("DEBUG") ) { print(paste("DEBUG: ",lastLevel))}
+     flog.debug(plotData$level)
+     flog.debug(lastLevel)
      if ( lastLevel > 90000 ) {
 
          DTG=plotData$DTG
@@ -663,7 +664,7 @@ generatePlot <- function(odbBase,exp,plotName,obName,varName,levels,sensor,satel
       for ( i in 2:length(zoomLevels)){
         if ((length(plotData$status) > zoomLevels[i-1]) && (length(plotData$status) <= zoomLevels[i])){
           zoomLevel=i+3
-          if ( verbose("DEBUG") ) { print(paste("DEBUG: -> zoomLevel=",zoomLevel)) }
+          flog.debug(paste("-> zoomLevel=", zoomLevel))
         }
       }
       pal <- colorFactor(c("green","blue","black","grey","yellow","red"),
@@ -692,7 +693,7 @@ generatePlot <- function(odbBase,exp,plotName,obName,varName,levels,sensor,satel
 
   # SatBcorrCycle
   SatBcorrCycle <- function(title,cycle,plotName,plotData){
-    if ( verbose("DEBUG") ) { print(paste("DEBUG: -> SatBcorrCycle",title,cycle,plotName)) }
+    flog.debug(paste("-> SatBcorrCycle", title, cycle, plotName))
 
     if ( plotName == "Hovmoller" ){
       localPlotData=plotData
@@ -728,7 +729,7 @@ generatePlot <- function(odbBase,exp,plotName,obName,varName,levels,sensor,satel
 
   # NumberOfObservations
   NumberOfObservations <- function(title,ylab,plotData){
-    if ( verbose("DEBUG") ) { print(paste("DEBUG: -> NumberOfObservations",title)) }
+    flog.debug(paste("-> NumberOfObservations", title))
 
     localPlotData=plotData
     if ( nrow(localPlotData) > 0 ) {
@@ -752,7 +753,7 @@ generatePlot <- function(odbBase,exp,plotName,obName,varName,levels,sensor,satel
 
   # ObsFitTs
   ObsFitTs <- function(title,ylab,plotData){
-    if ( verbose("DEBUG") ) { print(paste("DEBUG: -> ObsFitTs",title)) }
+    flog.debug(paste("-> ObsFitTs", title))
 
     localPlotData=plotData
 
@@ -790,7 +791,7 @@ generatePlot <- function(odbBase,exp,plotName,obName,varName,levels,sensor,satel
 
   # LandSeaDepartures
   LandSeaDepartures <- function(title,plotData){
-     if ( verbose("DEBUG") ) { print(paste("DEBUG: -> LandSeaDepartures",title)) }
+     flog.debug(paste("-> LandSeaDepartures", title))
 
      localPlotData=plotData
      localPlotData$DTG <- paste0(substr(localPlotData$DTG,1,4),"-",
@@ -850,7 +851,7 @@ generatePlot <- function(odbBase,exp,plotName,obName,varName,levels,sensor,satel
    }
 
 generate_surfdia <- function(var,station,exp,mode="plot"){
-  if ( verbose("DEBUG") ) { print(paste("DEBUG: -> generate_surfdia",var,station,exp,mode)) }
+  flog.debug(paste("-> generate_surfdia", var, station, exp, mode))
 
   if ( !is.null(var) && !is.null(station)){
 

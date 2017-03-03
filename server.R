@@ -11,6 +11,7 @@ require(mapproj)
 require(leaflet)
 require(gridExtra)
 require(raster)
+require(futile.logger)
 
 map.world<-map_data(map="world")
 
@@ -111,13 +112,13 @@ shinyServer(function(input,output,session) {
   # getData (Checks for file uploading/selection)
   getData <- reactive({
     if(!is.null(input$ODBbase_screening)){
-      print("DEBUG: -> getData ODBbase_screening")
+      flog.debug("-> getData ODBbase_screening")
     }
     if(!is.null(input$ODBbase_minimization)){
-      print("DEBUG: -> getData ODBbase_minimization")
+      flog.debug("-> getData ODBbase_minimization")
     }
     if(!is.null(input$ODBbase_surface)){
-      print("DEBUG: -> getData ODBbase_surface")
+      flog.debug("-> getData ODBbase_surface")
     } 
   })
   output$fileUploaded <- reactive({
@@ -147,9 +148,7 @@ shinyServer(function(input,output,session) {
         || is.null(input$experiment)) {
       return(NULL)
     }
-    if (verbose("DEBUG")) {
-      print(paste("DEBUG: -> select_date", input$ODBbase, input$experiment))
-    }
+    flog.debug(paste("-> select_date", input$ODBbase, input$experiment))
     earliest_date <- date2dtg(getEarliestDate(input$ODBbase, input$experiment), "00")
     latest_date <- date2dtg(getLatestDate(input$ODBbase, input$experiment), "00")
     isolate({
@@ -165,9 +164,7 @@ shinyServer(function(input,output,session) {
     if (is.null(input$experiment_SA)) {
       return(NULL)
     }
-    if (verbose("DEBUG")) {
-      print("DEBUG: -> select_date_SA")
-    }
+    flog.debug("-> select_date_SA")
     earliest_date <- date2dtg(getEarliestDate("Surface", input$experiment_SA), "00")
     latest_date <- date2dtg(getLatestDate("Surface", input$experiment_SA), "00")
     isolate({
@@ -184,9 +181,7 @@ shinyServer(function(input,output,session) {
         || is.null(input$ODBbase)) {
       return(NULL)
     }
-    if (verbose("DEBUG")) {
-      print("DEBUG: -> select_cycle")
-    }
+    flog.debug("-> select_cycle")
     def_cycles <- get_def_cycles(input$experiment)
     latest_cycle <- getLatestCycle(input$ODBbase, input$experiment)
     old_cycle <- input$cycle
@@ -201,7 +196,7 @@ shinyServer(function(input,output,session) {
     if (is.null(input$experiment_SA)) {
       return(NULL)
     }
-    print("DEBUG: -> select_cycle_SA")
+    flog.debug("-> select_cycle_SA")
     def_cycles <- get_def_cycles(input$experiment_SA)
     latest_cycle <- getLatestCycle("Surface", input$experiment_SA)
     old_cycle <- input$cycle
@@ -214,36 +209,28 @@ shinyServer(function(input,output,session) {
 
   # select_obtype
   output$select_obtype <- renderUI({
-    if (verbose("DEBUG")) {
-      print("DEBUG: -> select_obtype")
-    }
+    flog.debug("-> select_obtype")
     return(update_selection(getObtypes(), input$obtype,
                             "obtype", "Select observation type"))
   })
 
   # select_obtype_SA
   output$select_obtype_SA <- renderUI({
-    if (verbose("DEBUG")) {
-      print("DEBUG: -> select_obtype_SA")
-    }
+    flog.debug("-> select_obtype_SA")
     return(update_selection(getObtypes(), input$obtype_SA,
                             "obtype_SA", "Select observation type"))
   })
 
   # select_plottype
   output$select_plottype <- renderUI({
-    if (verbose("DEBUG")) {
-      print("DEBUG: -> select_plottype")
-    }
+    flog.debug("-> select_plottype")
     return(update_selection(getPlotTypes(input$obtype, input$ODBbase),
                             input$plottype, "plottype", "Select type of plot"))
   })
 
   # select_plottype_SA
   output$select_plottype_SA <- renderUI({
-    if (verbose("DEBUG")) {
-      print("DEBUG: -> select_plottype_SA")
-    }
+    flog.debug("-> select_plottype_SA")
     return(update_selection(getPlotTypes(input$obtype_SA, "Surface"),
                             input$plottype_SA, "plottype_SA", "Select type of plot"))
   })
@@ -251,18 +238,14 @@ shinyServer(function(input,output,session) {
 
   # select_group_predef
   output$select_group_predef <- renderUI({
-    if (verbose("DEBUG")) {
-      print("DEBUG: -> select_group_predef")
-    }
+    flog.debug("-> select_group_predef")
     return(update_selection(getPreDefinedGroups(), input$select_group_predef,
                             "groupPreDef", "Which experiment?"))
   })
 
   # select_plottype_predef
   output$select_plottype_predef <- renderUI({
-    if (verbose("DEBUG")) {
-      print("DEBUG: -> select_plottype_predef")
-    }
+    flog.debug("-> select_plottype_predef")
     return(update_selection(getPreDefinedPlots(input$groupPreDef),
                             input$plottypePreDef,
                             "plottypePreDef", "Select type of plot"))
@@ -270,18 +253,14 @@ shinyServer(function(input,output,session) {
 
   # select_variable
   output$select_variable <- renderUI({
-    if (verbose("DEBUG")) {
-      print("DEBUG: -> select_variable")
-    }
+    flog.debug("-> select_variable")
     return(update_selection(getVariables(input$obtype),
                             input$variable,
                             "variable", "Select variable"))
   })
   # select_variable_SA
   output$select_variable_SA <- renderUI({
-    if (verbose("DEBUG")) {
-      print("DEBUG: -> select_variable_SA")
-    }
+    flog.debug("-> select_variable_SA")
     return(update_selection(getVariables(input$obtype_SA),
                             input$variable_SA,
                             "variable_SA", "Select variable"))
@@ -289,9 +268,7 @@ shinyServer(function(input,output,session) {
 
   # select_level
   output$select_level <- renderUI({
-    if (verbose("DEBUG")) {
-      print("DEBUG: -> select_level")
-    }
+    flog.debug("-> select_level")
     return(update_selection(getLevels(input$obtype, input$variable,
                                       getPlotTypeShort(input$plottype)),
                             input$level,
@@ -300,16 +277,14 @@ shinyServer(function(input,output,session) {
 
   # select_sensor
   output$select_sensor <- renderUI({
-    if (verbose("DEBUG")) {
-      print("DEBUG: -> select_sensor")
-    }
+    flog.debug("-> select_sensor")
     return(update_selection(getSensors(), input$sensor,
                             "sensor", "Select sensor"))
   })
 
   # select_satelite
   output$select_satelite <- renderUI({
-    if ( verbose("DEBUG") ) { print("DEBUG: -> select_satelite") }
+    flog.debug("-> select_satelite")
     return(update_selection(getSatelites(input$sensor),
                             input$satelite,
                             "satelite", "Select satelite"))
@@ -317,9 +292,7 @@ shinyServer(function(input,output,session) {
 
   # select_channel
   output$select_channel <- renderUI({
-    if (verbose("DEBUG")) {
-      print("DEBUG: -> select_channels")
-    }
+    flog.debug("-> select_channels")
     return(update_selection(getChannels(input$sensor,input$satelite),
                             input$channel,
                             "channel", "Select channel", TRUE))
@@ -327,9 +300,7 @@ shinyServer(function(input,output,session) {
 
   # select_experiment
   output$select_experiment <- renderUI({
-    if (verbose("DEBUG")) {
-      print("DEBUG: -> select_experiment")
-    }
+    flog.debug("-> select_experiment")
     isolate({
       startdtg <- date2dtg(input$dateRange[1], input$cycle)
     })
@@ -339,9 +310,7 @@ shinyServer(function(input,output,session) {
   })
   # select_experiment_SA
   output$select_experiment_SA <- renderUI({
-    if (verbose("DEBUG")) {
-      print("DEBUG: -> select_experiment_SA")
-    }
+    flog.debug("-> select_experiment_SA")
     isolate({
       startdtg <- date2dtg(input$dateRange_SA[1], input$cycle_SA)
     })
@@ -351,9 +320,7 @@ shinyServer(function(input,output,session) {
   })
   # select_experiment_SD
   output$select_experiment_SD <- renderUI({
-    if (verbose("DEBUG")) {
-      print("DEBUG: -> select_experiment_SD")
-    }
+    flog.debug("-> select_experiment_SD")
     if (is.null(input$variable_surfdia)) {
       return(NULL)
     }
@@ -410,23 +377,37 @@ shinyServer(function(input,output,session) {
    }
   })
 
-  # set_verbosity
-  output$set_verbosity <- renderUI({
-    if ( values$productionSite ) {
-      selectInput(inputId="verbosity_chosen",label=h4("Verbosity"),choices=c("NONE"),selected=c("NONE"))
-    }else{
-      selectInput(inputId="verbosity_chosen",label=h4("Verbosity"),choices=c("NONE","WARNING","INFO","DEBUG"),selected=c("DEBUG"))
+  level2flog <- function(level) {
+    return(switch(level,
+                  "NONE"    = {FATAL},
+                  "WARNING" = {WARN},
+                  "INFO"    = {INFO},
+                  "DEBUG"   = {DEBUG}
+                  ))
+  }
+
+  observe({
+    flog.threshold(level2flog(req(input$verbosity_chosen)))
+  })
+
+  observe({
+    if (values$productionSite) {
+      choices <- c("NONE")
+      selected <- "NONE"
+    } else {
+      choices <- c("NONE", "WARNING", "INFO", "DEBUG")
+      selected <- "DEBUG"
     }
+    updateSelectInput(session, inputId="verbosity_chosen",
+                      choices=choices, selected=selected)
   })
 
   # ObsmonPlot
   output$ObsmonPlot <- renderPlot({
     input$doPlot
-    if ( verbose("DEBUG") ) {
-      print("======================")
-      print("> DEBUG: -> ObsmonPlot")
-      print("======================")
-    }
+    flog.debug("======================")
+    flog.debug("-> ObsmonPlot")
+    flog.debug("======================")
     if ( is.null(input$doPlot)) {
       return(NULL)
     }else{
@@ -446,11 +427,9 @@ shinyServer(function(input,output,session) {
   # Map
   output$Map <- renderLeaflet({
     input$doPlot
-    if ( verbose("DEBUG") ) {
-      print("======================")
-      print("> DEBUG: -> Map       ")
-      print("======================")
-    }
+    flog.debug("======================")
+    flog.debug("-> Map")
+    flog.debug("======================")
     if ( is.null(input$doPlot)) {
       return(NULL)
     }else{
@@ -504,11 +483,9 @@ shinyServer(function(input,output,session) {
   # ObsmonPlot_SA
   output$ObsmonPlot_SA <- renderPlot({
     input$doPlot_SA
-    if ( verbose("DEBUG") ) {
-      print("=========================")
-      print("> DEBUG: -> ObsmonPlot_SA")
-      print("=========================")
-    }
+    flog.debug("=========================")
+    flog.debug("-> ObsmonPlot_SA")
+    flog.debug("=========================")
 
     if ( is.null(input$doPlot_SA)) {
       return(NULL)
@@ -527,11 +504,9 @@ shinyServer(function(input,output,session) {
   # Map
   output$Map_SA <- renderLeaflet({
     input$doPlot_SA
-    if ( verbose("DEBUG") ) {
-      print("======================")
-      print("> DEBUG: -> Map       ")
-      print("======================")
-    }
+    flog.debug("======================")
+    flog.debug("-> Map")
+    flog.debug("======================")
     if ( is.null(input$doPlot_SA)) {
       return(NULL)
     }else{
@@ -564,11 +539,9 @@ shinyServer(function(input,output,session) {
   # ObsmonPlotPreDef
   output$ObsmonPlotPreDef <- renderPlot({
     input$doPlotPreDef
-    if ( verbose("DEBUG") ) {
-      print("============================")
-      print("> DEBUG: -> ObsmonPlotPreDef")
-      print("============================")
-    }
+    flog.debug("============================")
+    flog.debug("-> ObsmonPlotPreDef")
+    flog.debug("============================")
     if ( is.null(input$doPlotPreDef)) {
       return(NULL)
     }else{
@@ -659,7 +632,7 @@ shinyServer(function(input,output,session) {
 
   # data_plotted                 
   output$data_plotted<-renderTable({
-    if ( verbose("DEBUG") ) { print("DEBUG: data_plotted")}
+    flog.debug("data_plotted")
     input$doPlot
     if ( is.null(input$doPlot)) {
       return(NULL)
@@ -678,7 +651,7 @@ shinyServer(function(input,output,session) {
   })
   # data_plotted_SA              
   output$data_plotted_SA<-renderTable({
-    if ( verbose("DEBUG") ) { print("DEBUG: data_plotted_SA")}
+    flog.debug("data_plotted_SA")
     input$doPlot_SA
     if ( is.null(input$doPlot_SA)) {
       return(NULL)
@@ -696,7 +669,7 @@ shinyServer(function(input,output,session) {
   })
   # data_plottedPreDefined          
   output$data_plottedPreDefined<-renderTable({
-    if ( verbose("DEBUG") ) { print("DEBUG: data_plottePreDefined")}
+    flog.debug("data_plottePreDefined")
     input$doPlotPreDef
     if ( is.null(input$doPlotPreDef)) {
       return(NULL)
@@ -714,7 +687,7 @@ shinyServer(function(input,output,session) {
   })
   # data_plotted_SD              
   output$data_plotted_SD<-renderTable({
-    if ( verbose("DEBUG") ) { print("DEBUG: data_plotted_SD")}
+    flog.debug("data_plotted_SD")
     input$doPlotSurfdia
     if ( is.null(input$doPlotSurfdia)) {
       return(NULL)
@@ -769,7 +742,7 @@ shinyServer(function(input,output,session) {
 
   # dumpDB
   output$dumpDB <- renderTable({
-    if ( verbose("DEBUG") ) { print("DEBUG: dumpDB")}
+    flog.debug("dumpDB")
     input$doDump
 
     isolate(
@@ -865,11 +838,9 @@ shinyServer(function(input,output,session) {
   # ObsmonPlotPreDef
   output$surfdiaPlot <- renderPlot({
     input$doPlotSurfdia
-    if ( verbose("DEBUG") ) {
-      print("============================")
-      print("> DEBUG: -> surfdiaPlot     ")
-      print("============================")
-    }
+    flog.debug("============================")
+    flog.debug("-> surfdiaPlot")
+    flog.debug("============================")
     if ( is.null(input$doPlotSurfdia)) {
       return(NULL)
     }else{
@@ -903,7 +874,7 @@ shinyServer(function(input,output,session) {
 
   # Dummy debug plot
   #generatePlot <- function(odbBase,plotName,obNumber,varName,unit,obName,sensor,satelite,channel,dateRange,cycle){
-  #  if ( verbose("DEBUG") ) { print(paste("DEBUG: -> generatePlot",odbBase,plotName,obNumber,varName,unit,obName,sensor,satelite,channel,dateRange,cycle)) }
+  #  flog.debug(paste("-> generatePlot", odbBase, plotName, obNumber, varName, unit, obName, sensor, satelite, channel, dateRange, cycle))
   #  p <- NULL
   #  title <- paste(odbBase,plotName,obNumber,varName,unit,obName,sensor,satelite,channel,dateRange,cycle)
   #  #print(title)

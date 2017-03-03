@@ -42,7 +42,7 @@ plotTypesSatTS      <- c("Bias correction (TS)","Land-sea departures (TS)","Hovm
 
 # setExperiment
 setExperiment <- function(exp,base,dtg=NULL,dir=F){
-  if ( verbose("DEBUG")) { print(paste("DEBUG: -> setExperiment(",exp,base,dtg,dir,")"))}
+  flog.debug(paste("-> setExperiment(", exp, base, dtg, dir, ")"))
   setExperiment=NULL
 
   if ( !is.null(exp)) {
@@ -140,17 +140,15 @@ setExperiment <- function(exp,base,dtg=NULL,dir=F){
 
     # Keep directories if no DTG is set
     if ( !dir ) {
-      if ( is.null(dtg)) { print(paste("WARNING: dtg is not set and should be set")) }
+      if ( is.null(dtg)) { flog.warn("dtg is not set and should be set") }
       dbtry_ecma     = paste(dbtry_ecma,"/",dtg,"/ecma.db",sep="")
       dbtry_ecma_sfc = paste(dbtry_ecma_sfc,"/",dtg,"/ecma.db",sep="")
       dbtry_ccma     = paste(dbtry_ccma,"/",dtg,"/ccma.db",sep="")
     }
-    if ( verbose("DEBUG")) {
-      print(paste("DEBUG:     ",exp))
-      print(paste("DEBUG:     ",dbtry_ecma))
-      print(paste("DEBUG:     ",dbtry_ecma_sfc))
-      print(paste("DEBUG:     ",dbtry_ccma))
-    }
+    flog.debug(exp)
+    flog.debug(dbtry_ecma)
+    flog.debug(dbtry_ecma_sfc)
+    flog.debug(dbtry_ccma)
 
     if ( base == "Screening" ){
       if ( dir ) { 
@@ -183,9 +181,9 @@ setExperiment <- function(exp,base,dtg=NULL,dir=F){
 
     # Debug
     if (!is.null(setExperiment)){
-      if ( verbose("DEBUG")) { print(paste("DEBUG: setExperiment=",setExperiment," base=",base,sep=""))}
+      flog.debug(paste("setExperiment=", setExperiment, " base=", base, sep=""))
     }else{
-      if ( verbose("DEBUG")) { print("DEBUG: setExperiment=NULL") }
+      flog.debug("setExperiment=NULL")
     }
   }
   return (setExperiment)
@@ -193,7 +191,7 @@ setExperiment <- function(exp,base,dtg=NULL,dir=F){
 
 # getExperiments
 getExperiments <- function(base,dtg=NULL){
-  if ( verbose("DEBUG")) { print(paste("DEBUG: -> getExperiments(",base,dtg,")")) }
+  flog.debug(paste("-> getExperiments(", base, dtg, ")"))
   experiments=NULL
 
   if ( !is.null(base)){
@@ -208,7 +206,7 @@ getExperiments <- function(base,dtg=NULL){
 
 # obtypeExists
 obtypeExists<- function(obtype){
-  if ( verbose("DEBUG")) { print(paste("DEBUG: -> obtypeExists(",obtype,")")) }
+  flog.debug(paste("-> obtypeExists(", obtype, ")"))
   exists=FALSE
 
   base=NULL
@@ -232,10 +230,10 @@ obtypeExists<- function(obtype){
     if ( !is.null(dbConn)) {
      
       query<-paste("SELECT nobs_total FROM obsmon WHERE obnumber == ",getObNumber(obtype)," AND DTG >= ",date2dtg(daterange[1],cycle)," AND DTG <= ",date2dtg(daterange[2],cycle)," ORDER BY nobs_total DESC LIMIT 1",sep="")
-      if ( verbose("INFO") ) { print(paste("INFO: ",query))}
+      flog.info(query)
       if ( nrow(dbGetQuery(dbConn,query)) > 0 ) {
         checkData=dbGetQuery(dbConn,query)
-        if ( verbose("INFO") ) { print(paste("INFO: nobs_total=",as.character(checkData$nobs_total)))}
+        flog.info(paste("nobs_total=", as.character(checkData$nobs_total)))
         if ( checkData$nobs_total > 0 ) {
           exists=TRUE
         }
@@ -248,7 +246,7 @@ obtypeExists<- function(obtype){
 
 # getObtypes
 getObtypes <- function(){
-  if ( verbose("DEBUG")) { print(paste("DEBUG: -> getObtypes")) }
+  flog.debug("-> getObtypes")
 
   obtypes=NULL
   if ( input$tabs == "Surface" ){
@@ -270,7 +268,7 @@ getObtypes <- function(){
 
 # getObNumber
 getObNumber <- function(obtype){
-  if ( verbose("DEBUG")) { print(paste("DEBUG: -> getObNumber(",obtype,")")) }
+  flog.debug(paste("-> getObNumber(", obtype, ")"))
   if ( !is.null(obtype)) {
     switch(obtype,"SYNOP"    = c("1"),
                   "SHIP"     = c("1"),
@@ -289,7 +287,7 @@ getObNumber <- function(obtype){
 
 # setDBSatname
 setDBSatname<-function(sat){
-  if ( verbose("DEBUG")) { print(paste("DEBUG: -> setDBSatname(",sat,")")) }
+  flog.debug(paste("-> setDBSatname(", sat, ")"))
   satname=NULL
   if ( !is.null(sat)) {
     switch(sat,
@@ -309,7 +307,7 @@ setDBSatname<-function(sat){
 
 # getPlotTypes
 getPlotTypes <- function(obtype,base){
-  if ( verbose("DEBUG")) { print(paste("DEBUG: -> getPlotTypes(",obtype,base,")")) }
+  flog.debug(paste("-> getPlotTypes(", obtype, base, ")"))
   if ( !is.null(obtype) && !is.null(base) ) {
     switch(obtype,"SATEM" = c(plotTypesStat,plotTypesMaps,plotTypesSat,plotTypesTS,plotTypesSatTS),c(plotTypesStat,plotTypesMaps,plotTypesTS))
   }
@@ -317,7 +315,7 @@ getPlotTypes <- function(obtype,base){
 
 # getPlotTypeShort
 getPlotTypeShort <- function(plotType){
-  if ( verbose("DEBUG")) { print(paste("DEBUG: -> getPlotTypeShort(",plotType,")",sep="")) }
+  flog.debug(paste("-> getPlotTypeShort(", plotType, ")", sep=""))
   if ( !is.null(plotType)) {
     switch(plotType,
            "FG+An departure"                = "FGAnDeparture",
@@ -339,7 +337,7 @@ getPlotTypeShort <- function(plotType){
 
 # variableExists
 variableExists<- function(obtype,var){
-  if ( verbose("DEBUG")) { print(paste("DEBUG: -> variableExists(",obtype,var,")")) }
+  flog.debug(paste("-> variableExists(", obtype, var, ")"))
   exists=FALSE
 
   if ( !is.null(var)){
@@ -371,10 +369,10 @@ variableExists<- function(obtype,var){
     if ( !is.null(dbConn)) {
        
       query<-paste("SELECT nobs_total FROM obsmon WHERE obnumber == ",getObNumber(obtype)," AND varname == '",var,"' AND DTG >= ",date2dtg(daterange[1],cycle)," AND DTG <= ",date2dtg(daterange[2],cycle)," ORDER BY nobs_total DESC LIMIT 1",sep="")
-      if ( verbose("INFO") ) { print(paste("INFO: ",query))}
+      flog.info(query)
       if ( nrow(dbGetQuery(dbConn,query)) > 0 ) { 
         checkData=dbGetQuery(dbConn,query)
-        if ( verbose("INFO") ) { print(paste("INFO: nobs_total=",as.character(checkData$nobs_total)))}
+        flog.info(paste("nobs_total=", as.character(checkData$nobs_total)))
         if ( checkData$nobs_total > 0 ) {
           exists=TRUE
         }
@@ -387,7 +385,7 @@ variableExists<- function(obtype,var){
 
 # getVariables
 getVariables <- function(obtype){
-  if ( verbose("DEBUG")) { print(paste("DEBUG: -> getVariables(",obtype,")")) } 
+  flog.debug(paste("-> getVariables(", obtype, ")"))
   if ( !is.null(obtype)) {
     if ( input$tabs == "Surface" ) {
       synop_vars          <- c("t2m","rh2m","snow")
@@ -435,7 +433,7 @@ getVariables <- function(obtype){
 
 # getLevels
 getLevels <- function(obtype,var,plotType){
-  if ( verbose("DEBUG")) { print(paste("DEBUG: -> getLevels(",obtype,var,plotType,")")) }
+  flog.debug(paste("-> getLevels(", obtype, var, plotType, ")"))
   if ( !is.null(obtype) && !is.null(var) && !is.null(plotType)) {
     #listOfLevels_p      <- c("100000","92500","85000","70000","50000","40000","30000","25000","20000","15000","10000","8500","6500","4000","2500","1500")
     # 1500,2500,4000,6500,8500,12500,17500,22500,27500,35000,45000,60000,80000,92500,100000
@@ -477,7 +475,7 @@ getLevels <- function(obtype,var,plotType){
                      NULL)
      }
   }else{
-    if ( verbose("DEBUG")) { print("DEBUG: -> getLevels: Not all needed arguments set") }
+    flog.debug("-> getLevels: Not all needed arguments set")
     return(NULL)
   }
 }
@@ -485,7 +483,7 @@ getLevels <- function(obtype,var,plotType){
 
 # sensorExists
 sensorExists<- function(sensor){
-  if ( verbose("DEBUG")) { print(paste("DEBUG: -> sensorExists(",sensor,")")) }
+  flog.debug(paste("-> sensorExists(", sensor, ")"))
   exists=FALSE
 
   base=NULL
@@ -502,10 +500,10 @@ sensorExists<- function(sensor){
     if ( !is.null(dbConn)) {
 
       query<-paste("SELECT nobs_total FROM obsmon WHERE obname == '",tolower(sensor),"' AND DTG >= ",date2dtg(daterange[1],cycle)," AND DTG <= ",date2dtg(daterange[2],cycle)," ORDER BY nobs_total DESC LIMIT 1",sep="")
-      if ( verbose("INFO") ) { print(paste("INFO: ",query))}
+      flog.info(query)
       if ( nrow(dbGetQuery(dbConn,query)) > 0 ) {
         checkData=dbGetQuery(dbConn,query)
-        if ( verbose("INFO") ) { print(paste("INFO: nobs_total=",as.character(checkData$nobs_total)))}
+        flog.info(paste("nobs_total=", as.character(checkData$nobs_total)))
         if ( checkData$nobs_total > 0 ) {
           exists=TRUE
         }
@@ -520,7 +518,7 @@ sensorExists<- function(sensor){
 
 # getSensors
 getSensors <- function(){
-  if ( verbose("DEBUG")) { print(paste("DEBUG: -> getSensors")) }
+  flog.debug("-> getSensors")
   sensors=listOfSensors
   
   if ( input$showExistingDataOnly ){
@@ -539,7 +537,7 @@ getSensors <- function(){
 
 # sateliteExists
 sateliteExists<- function(sensor,satelite){
-  if ( verbose("DEBUG")) { print(paste("DEBUG: -> sateliteExists(",sensor,satelite,")")) }
+  flog.debug(paste("-> sateliteExists(", sensor, satelite, ")"))
 
   exists=FALSE
   base=NULL
@@ -563,10 +561,10 @@ sateliteExists<- function(sensor,satelite){
     if ( !is.null(dbConn)) {
 
       query<-paste("SELECT nobs_total FROM obsmon WHERE obname == '",tolower(sensor),"' AND satname == '",setDBSatname(satelite),"' AND DTG >= ",date2dtg(daterange[1],cycle)," AND DTG <= ",date2dtg(daterange[2],cycle)," ORDER BY nobs_total DESC LIMIT 1",sep="")
-      if ( verbose("INFO") ) { print(paste("INFO: ",query))}
+      flog.info(query)
       if ( nrow(dbGetQuery(dbConn,query)) > 0 ) {
         checkData=dbGetQuery(dbConn,query)
-        if ( verbose("INFO") ) { print(paste("INFO: nobs_total=",as.character(checkData$nobs_total)))}
+        flog.info(paste("nobs_total=", as.character(checkData$nobs_total)))
         if ( checkData$nobs_total > 0 ) {
           exists=TRUE
         }
@@ -579,7 +577,7 @@ sateliteExists<- function(sensor,satelite){
 
 # getSatelites
 getSatelites <- function(sensor){
-  if ( verbose("DEBUG")) { print(paste("DEBUG: -> getSatelites(",sensor,")")) }
+  flog.debug(paste("-> getSatelites(", sensor, ")"))
 
   satelites=NULL
   if ( !is.null(sensor)) {
@@ -608,7 +606,7 @@ getSatelites <- function(sensor){
 
 # dtg2date
 dtg2date <-function(dtg){
-  if ( verbose("DEBUG")) { print(paste("DEBUG: -> dtg2date",dtg,")")) }
+  flog.debug(paste("-> dtg2date", dtg, ")"))
 
   if ( !is.null(dtg)) {
     date<-paste(substr(dtg,1,4),"-",substr(dtg,5,6),"-",substr(dtg,7,8),sep="")
@@ -619,7 +617,7 @@ dtg2date <-function(dtg){
 }
 # dtg2utc
 dtg2utc <-function(dtg){
-  if ( verbose("DEBUG")) { print(paste("DEBUG: -> dtg2utc",dtg,")")) }
+  flog.debug(paste("-> dtg2utc", dtg, ")"))
   if ( !is.null(dtg)) {
     utc<-paste(substr(dtg,9,10),sep="")
     return(utc)
@@ -629,7 +627,7 @@ dtg2utc <-function(dtg){
 }
 # date2dtg
 date2dtg<-function(date,utc){
-  if ( verbose("DEBUG")) { print(paste("DEBUG: -> date2dtg(",date,utc,")")) }
+  flog.debug(paste("-> date2dtg(", date, utc, ")"))
 
   if ( !is.null(date) && !is.null(utc) ) {
     dtg=paste(substr(date,1,4),substr(date,6,7),substr(date,9,10),substr(utc,1,2),sep="")
@@ -646,7 +644,7 @@ isdtg <- function(dtg) {
 
 # channelExists
 channelExists<-  function(sensor,sat,channel){
-  if ( verbose("DEBUG")) { print(paste("DEBUG: -> channelExists",sensor,sat,channel,")")) }
+  flog.debug(paste("-> channelExists", sensor, sat, channel, ")"))
 
   exists=FALSE
   base=NULL
@@ -663,10 +661,10 @@ channelExists<-  function(sensor,sat,channel){
     if ( !is.null(dbConn)) {
 
       query<-paste("SELECT nobs_total FROM obsmon WHERE obname == '",tolower(sensor),"' AND satname == '",setDBSatname(sat),"' AND level == ",channel," AND DTG >= ",date2dtg(daterange[1],cycle)," AND DTG <= ",date2dtg(daterange[2],cycle)," ORDER BY nobs_total DESC LIMIT 1",sep="")
-      if ( verbose("INFO") ) { print(paste("INFO: ",query))}
+      flog.info(query)
       if ( nrow(dbGetQuery(dbConn,query)) > 0 ) {
         checkData=dbGetQuery(dbConn,query)
-        if ( verbose("INFO") ) { print(paste("INFO: nobs_total=",as.character(checkData$nobs_total)))}
+        flog.info(paste("nobs_total=", as.character(checkData$nobs_total)))
         if ( checkData$nobs_total > 0 ) {
           exists=TRUE
         }
@@ -679,7 +677,7 @@ channelExists<-  function(sensor,sat,channel){
 
 # getChannels
 getChannels <- function(sensor,sat){
-  if ( verbose("DEBUG")) { print(paste("DEBUG: -> getChannels",sensor,sat,")")) }
+  flog.debug(paste("-> getChannels", sensor, sat, ")"))
 
   channels=NULL
   if ( !is.null(sensor)) {
@@ -727,7 +725,7 @@ getChannels <- function(sensor,sat){
 
 # getUnit
 getUnit<-function(varName){
-  if ( verbose("DEBUG")) { print(paste("DEBUG: -> getUnit(",varName,")")) }
+  flog.debug(paste("-> getUnit(", varName, ")"))
   if ( !is.null(varName)) {
     switch(varName, "u"    = "m/s",
                     "ff"   = "m/s",
@@ -753,30 +751,22 @@ getUnit<-function(varName){
 
 # getEarliestDate
 getEarliestDate <- function(base,exp=NULL) {
-  if (verbose("DEBUG")) {
-    print(paste("DEBUG: -> getEarliestDate(", base, exp,")"))
-  }
+  flog.debug(paste("-> getEarliestDate(", base, exp, ")"))
   date = NULL
   if (!is.null(base) && !is.null(exp)){
     dtg=getEarliestDTG(base, exp)
-    if (verbose("DEBUG")) {
-      print(paste("DEBUG: Earliest DTG=", dtg))
-    }
+    flog.debug(paste("Earliest DTG=", dtg))
     dbConn <- connect(base, exp, dtg)
     if (!is.null(dbConn)) {
       query <- paste("SELECT dtg FROM obsmon ORDER BY dtg ASC LIMIT 1")
-      if (verbose("INFO")) {
-        print(paste("INFO: ", query))
-      }
+      flog.info(query)
       queryData <- data.frame(dbGetQuery(dbConn, query))
       disconnect(dbConn)
       date <- paste(substr(queryData$DTG, 1, 4),
                     "-", substr(queryData$DTG, 5, 6),
                     "-", substr(queryData$DTG, 7, 8), sep="")
     }else{
-      if (verbose("DEBUG")) {
-        print(paste("Can not connect to ", base, exp, dtg))
-      }
+      flog.debug(paste("Can not connect to ", base, exp, dtg))
     }
   }
   return(date)
@@ -784,22 +774,22 @@ getEarliestDate <- function(base,exp=NULL) {
 
 # getLatestDate
 getLatestDate <- function(base,exp=NULL){
-  if ( verbose("DEBUG")) { print(paste("DEBUG: -> getLatestDate(",base,exp,")")) }
+  flog.debug(paste("-> getLatestDate(", base, exp, ")"))
 
   date = NULL
   if ( !is.null(base) && !is.null(exp)){
     dtg=getLatestDTG(base,exp)
-    if ( verbose("DEBUG")) { print(paste("DEBUG: Latest DTG=",dtg)) }
+    flog.debug(paste("Latest DTG=", dtg))
     
     dbConn <- connect(base,exp,dtg)
     if ( !is.null(dbConn)){
       query<-paste("SELECT dtg FROM obsmon ORDER BY dtg DESC LIMIT 1")
-      if ( verbose("INFO")) { print(paste("INFO: ",query)) } 
+      flog.info(query) 
       queryData <- data.frame(dbGetQuery(dbConn,query))
       disconnect(dbConn)
       date<-paste(substr(queryData$DTG,1,4),"-",substr(queryData$DTG,5,6),"-",substr(queryData$DTG,7,8),sep="")
     }else{
-      if ( verbose("DEBUG")) { print(paste("Can not connect to ",base,exp,dtg)) }
+      flog.debug(paste("Can not connect to ", base, exp, dtg))
     }
  
   }
@@ -809,23 +799,23 @@ getLatestDate <- function(base,exp=NULL){
 
 # getLatestCycle
 getLatestCycle <- function(base,exp=NULL){
-  if ( verbose("DEBUG")) { print(paste("DEBUG: -> getLatestCycle(",base,exp,")")) }
+  flog.debug(paste("-> getLatestCycle(", base, exp, ")"))
 
   cycle=NULL
   if ( !is.null(base) && !is.null(exp)){
     dtg=getLatestDTG(base,exp)
-    if ( verbose("DEBUG")) { print(paste("DEBUG: Latest DTG=",dtg)) }
+    flog.debug(paste("Latest DTG=", dtg))
 
     if ( !is.null(dtg) ) {
       dbConn = connect(base,exp,dtg)
       if ( !is.null(dbConn)){
         query = paste("SELECT dtg FROM obsmon ORDER BY dtg DESC LIMIT 1")
-        if (verbose("INFO")) { print(paste("INFO: ",query)) }  
+        flog.info(query)  
         queryData = data.frame(dbGetQuery(dbConn,query))
         disconnect(dbConn)
         cycle = paste(substr(queryData$DTG,9,10),sep="")
       }else{
-        if ( verbose("DEBUG")) { print(paste("Can not connect to ",base,exp,dtg)) }
+        flog.debug(paste("Can not connect to ", base, exp, dtg))
       }
     }
   }
@@ -834,7 +824,7 @@ getLatestCycle <- function(base,exp=NULL){
 
 # getPastDate
 getPastDate<-function(date,increment){
-  if ( verbose("DEBUG")) { print(paste("DEBUG: -> getPastDate(",date,increment,")")) }
+  flog.debug(paste("-> getPastDate(", date, increment, ")"))
 
   date = chron(dates=date,times=c(00:00:00),format=c('Y-m-d','h:m:s'))
   date=date-increment
@@ -845,9 +835,7 @@ getPastDate<-function(date,increment){
 
 # getEarliestDTG
 getEarliestDTG <- function(base, exp) {
-  if (verbose("DEBUG")) {
-    print(paste("DEBUG: getEarliestDTG(", base, exp, ")"))
-  }
+  flog.debug(paste("getEarliestDTG(", base, exp, ")"))
   getEarliestDTG=NULL
   if (!is.null(base) && !is.null(exp)) {
     dir = getFile(base, exp, dir=T)
@@ -863,7 +851,7 @@ getEarliestDTG <- function(base, exp) {
 
 # getLatestDTG
 getLatestDTG<-function(base,exp){
-  if ( verbose("DEBUG")) { print(paste("DEBUG: getLatestDTG(",base,exp,")")) }
+  flog.debug(paste("getLatestDTG(", base, exp, ")"))
 
   getLatestDTG=NULL
   if ( !is.null(base) && !is.null(exp) ){
@@ -878,7 +866,7 @@ getLatestDTG<-function(base,exp){
 
 # getStations
 getStations<-function(variable){
-  if ( verbose("DEBUG")) { print(paste("DEBUG: -> getStations(",variable,")")) }
+  flog.debug(paste("-> getStations(", variable, ")"))
 
   stations=NULL
   if ( !is.null(variable)) {
@@ -896,7 +884,7 @@ getStations<-function(variable){
     dbConn=connect(base,input$experiment_SD,dtg=dtg2)
     if ( !is.null(dbConn)){
       query<-paste("SELECT DISTINCT statid FROM usage WHERE DTG >=",dtg1," AND DTG <= ",dtg2," AND varname == '",tolower(variable),"' AND ( active == 1 OR anflag != 0 ) ORDER BY statid",sep="")
-      if (verbose("INFO")) { print(paste("INFO: ",query)) }
+      flog.info(query)
       data <- data.frame(dbGetQuery(dbConn,query))
       stations=data$statid
       stations=gsub("'","",stations)
@@ -909,39 +897,16 @@ getStations<-function(variable){
   return(stations)
 }
 
-
-# verbose
-verbose <- function(level){
-  verb=FALSE
-  if ( !is.null(level)) {
-    # Default if level is misspelled is DEBUG
-    switch(level,"DEBUG" = {verbositylevel=3}, "INFO" = {verbositylevel=2},"WARNING" = {verbositylevel=1}, "NONE" = {verbositylevel=0}, {verbositylevel=2})
-    if ( !is.null(input$verbosity_chosen)) {
-      if ( input$verbosity_chosen == "DEBUG" && verbositylevel <= 3) {
-        verb=TRUE
-      } else if ( input$verbosity_chosen == "INFO" && verbositylevel <= 2 ){
-        verb=TRUE
-      } else if ( input$verbosity_chosen == "WARNING" && verbositylevel <= 1 ){
-        verb=TRUE
-      }
-    } else {
-      # Default is verbose as long as input$verbosity is not initialized
-      verb=TRUE
-    }
-  }
-  return(verb)
-}
-
 # getDumpData
 getDumpData<-function(base,table,exp){
-  if ( verbose("DEBUG") ) { print(paste("DEBUG: getDumpData(",base,")"))}
+  flog.debug(paste("getDumpData(", base, ")"))
   dumpData=NULL
 
   if ( !is.null(base) && !is.null(exp) && !is.null(table)){
     dbConn=connect(base,exp)
     if (!is.null(dbConn)){
       query<-paste("SELECT * from ",table,sep="")
-      if ( verbose("INFO") ) { print(paste("INFO: ",query))}
+      flog.info(query)
       dumpData <- data.frame(dbGetQuery(dbConn,query))
       disconnect(dbConn)
     }
@@ -955,7 +920,7 @@ getDumpData<-function(base,table,exp){
 
 # getFile
 getFile <- function(base,experiment,dtg=NULL,dir=F){
-  if ( verbose("DEBUG")) { print(paste("DEBUG: -> getFile(",base,experiment,dtg,dir,")")) }
+  flog.debug(paste("-> getFile(", base, experiment, dtg, dir, ")"))
   fname=NULL
   if ( !is.null(base)) {
     # Set file name either from experiment description or from uploaded file
@@ -977,12 +942,12 @@ getFile <- function(base,experiment,dtg=NULL,dir=F){
 
 # connect
 connect <- function(base,exp,dtg=NULL){
-  if ( verbose("DEBUG")) { print(paste("DEBUG: -> connect(",base,exp,dtg,")")) }
+  flog.debug(paste("-> connect(", base, exp, dtg, ")"))
   dbConn<-NULL
   if ( !is.null(base) && !is.null(exp)) {
     fname <- getFile(base,exp,dtg)
     if (!is.null(fname) && file.exists(fname) && file.info(fname)$size > 0 ){
-      if ( verbose("DEBUG")) { print(paste("DEBUG: -> dbConnect ",fname)) }
+      flog.debug(paste("-> dbConnect ", fname))
       dbConn <- dbConnect(RSQLite::SQLite(),fname)
     }
   }
@@ -991,7 +956,7 @@ connect <- function(base,exp,dtg=NULL){
 
 # disconnect
 disconnect <- function(dbConn){
-  if ( verbose("DEBUG")) { print("DEBUG: -> disconnect") }
+  flog.debug("-> disconnect")
   if ( !is.null(dbConn)) {
     dbDisconnect(dbConn)
   }
@@ -1000,7 +965,7 @@ disconnect <- function(dbConn){
 # Help functions for SQL extraction
 # setLevelList
 setLevelList<-function(selected_levels){
-  if ( verbose("DEBUG") ) { print(paste("DEBUG: -> setLevelList",selected_levels)) }
+  flog.debug(paste("-> setLevelList", selected_levels))
 
   if ( is.null(selected_levels) ){
     return("")
@@ -1032,7 +997,7 @@ setLevelList<-function(selected_levels){
 
 # setChannelList
 setChannelList<-function(selected_channels){
-  if ( verbose("DEBUG") ) { print(paste("DEBUG: -> setChannelList(",selected_channels,")")) }
+  flog.debug(paste("-> setChannelList(", selected_channels, ")"))
 
   if ( is.null(selected_channels) ){
     return("")
@@ -1054,12 +1019,12 @@ setChannelList<-function(selected_channels){
 
 # getSynopName
 getSynopName<-function(number){
-  #if ( verbose("DEBUG") ) { print(paste("DEBUG: -> getSynopName(",number,")")) }
+  #flog.debug(paste("-> getSynopName(", number, ")"))
  
   name=NA
   # Read synops first time
   if ( is.null(values$synops)) {
-    if ( verbose("DEBUG") ) { print(paste("DEBUG: Reading file")) }
+    flog.debug("Reading file")
     stations=read.csv("allsynop.list.csv",sep=";",header=FALSE)
     values$synops = as.character(stations$V2)
     names(values$synops) = as.character(stations$V1)
@@ -1070,7 +1035,7 @@ getSynopName<-function(number){
 }
 
 getDataTS<-function(base,exp,dtg1,dtg2,mode,plotQuery,utc=NULL){
-  if ( verbose("DEBUG") ) { print(paste("DEBUG: -> getDataTS(",base,exp,dtg1,dtg2,mode,plotQuery,")")) }
+  flog.debug(paste("-> getDataTS(", base, exp, dtg1, dtg2, mode, plotQuery, ")"))
 
   getDataTS=data.frame()
   # Loop cycles and do queries
@@ -1082,7 +1047,7 @@ getDataTS<-function(base,exp,dtg1,dtg2,mode,plotQuery,utc=NULL){
       hh=substr(dtg,9,10)
       if ( is.null(utc) || hh == utc ){
         if ( dtg >= dtg1 && dtg <= dtg2 ) {
-          if ( verbose("INFO") ) {print(paste("INFO: ",plotQuery))}
+          flog.info(plotQuery)
           if ( mode == "query" ) {return(plotQuery)}
           dbConn=connect(base,exp,dtg=dtg)
           if ( !is.null(dbConn)){
@@ -1090,7 +1055,7 @@ getDataTS<-function(base,exp,dtg1,dtg2,mode,plotQuery,utc=NULL){
             if ( is.data.frame(getDataTS_tmp) && nrow(getDataTS_tmp)!=0 ){
               getDataTS=rbind(getDataTS,getDataTS_tmp)
             }else{
-              if ( verbose("DEBUG") ) { print(paste("No data found for dtg=",dtg,sep=""))}
+              flog.debug(paste("No data found for dtg=", dtg, sep=""))
             }
             disconnect(dbConn)
           }
@@ -1102,7 +1067,7 @@ getDataTS<-function(base,exp,dtg1,dtg2,mode,plotQuery,utc=NULL){
 }
 
 getRasterFromFile<-function(base,exp,dtg){
-  if ( verbose("DEBUG") ) { print(paste("DEBUG: ->getRasterFromFile(",base,exp,dtg,")"))}
+  flog.debug(paste("->getRasterFromFile(", base, exp, dtg, ")"))
 
   var="None"
   acc=""
@@ -1137,7 +1102,7 @@ getRasterFromFile<-function(base,exp,dtg){
 }
 
 getRasterDir<-function(base,exp,dtg){
-  if ( verbose("DEBUG") ) { print(paste("DEBUG: ->getRasterDir(",base,exp,dtg,")"))}
+  flog.debug(paste("->getRasterDir(", base, exp, dtg, ")"))
 
   getRasterDir=NULL
   dir = getFile(base,exp,dir=T)
@@ -1156,7 +1121,7 @@ getRasterDir<-function(base,exp,dtg){
 }
 
 getRasterFileName<-function(base,exp,dtg,var,acc){
-  if ( verbose("DEBUG") ) { print(paste("DEBUG: ->getRasterFileName(",base,exp,dtg,var,acc,")"))}
+  flog.debug(paste("->getRasterFileName(", base, exp, dtg, var, acc, ")"))
 
   fname=NULL
   dir=getRasterDir(base,exp,dtg)
