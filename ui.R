@@ -328,7 +328,8 @@ shinyUI(navbarPage("OBSMON v2",id="tabs",
     fluidRow(
       column(12,
         wellPanel(h2("Settings"),
-          uiOutput("set_verbosity"),
+          selectInput(inputId="verbosity_chosen", label=h4("Verbosity"),
+                      choices=c("DEBUG"), selected="DEBUG"),
           checkboxInput(inputId="showExistingDataOnly",label=h5("Show existing data only"),value=TRUE),
           hr(),
           numericInput(inputId="maxUpload",label=h5("Max file size for SQLite data bases (MB)"),value=30,min = 0)

@@ -2,7 +2,7 @@
 
 # getGroups
 getPreDefinedGroups<- function(){
-  if ( verbose("DEBUG") ) { print(paste("DEBUG: -> getGroups")) }
+  flog.debug("-> getGroups")
 
   # Predefined groups
   preDefinedGroups=default_experiments
@@ -29,7 +29,7 @@ getPreDefinedGroups<- function(){
 
 # getPreDefinedPlots
 getPreDefinedPlots<- function(group){
-  if ( verbose("DEBUG") ) { print(paste("DEBUG: -> getPreDefinedPlots(",group,")")) }
+  flog.debug(paste("-> getPreDefinedPlots(", group, ")"))
   
   if (!is.null(group)) {
     switch(group,
@@ -43,7 +43,7 @@ getPreDefinedPlots<- function(group){
 
 # generatePreDefinedPlot
 generatePreDefinedPlot<- function(plot,exp,mode="plot"){
-  if ( verbose("DEBUG") ) { print(paste("DEBUG: -> generatePreDefinedPlot(",plot,exp,")")) }
+  flog.debug(paste("-> generatePreDefinedPlot(", plot, exp, ")"))
 
   obPlot=NULL
   if ( !is.null(plot) && !is.null(exp)) {
