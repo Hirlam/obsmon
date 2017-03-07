@@ -12,7 +12,9 @@ pkgs <- c("httpuv",
           "mapproj",
           "gridExtra",
           "leaflet",
-          "futile.logger")
+          "futile.logger",
+          "shinyjs",
+          "yaml")
 
 installedPkgs <- installed.packages(lib.loc=lib)
 

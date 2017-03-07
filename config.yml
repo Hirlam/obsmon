@@ -1,0 +1,17 @@
+exp1:
+  displayName: First experiment
+  production: FALSE
+  baseDir: /nobackup/smhid13/sm_ridal/hm_home
+  experiment: cy40_mc_oper
+  ecmaDir: archive/extract/mbr000/ecma
+  ecmaSfcDir: archive/extract/mbr000/ecma_sfc
+  ccmaDir: archive/extract/mbr000/ccma
+
+exp2:
+  displayName: Klaus experiment
+  production: FALSE
+  baseDir: /nobackup/smhid13/sm_klazi/hm_home
+  experiment: first_exp
+  ecmaDir: archive/extract/ecma
+  ecmaSfcDir: archive/extract/ecma_sfc
+  ccmaDir: archive/extract/ccma
