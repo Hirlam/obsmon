@@ -81,6 +81,17 @@ shinyUI(
                 actionButton("doPlot", "Plot", width="100%")
             ),
             mainPanel(
+                tabsetPanel(
+                    tabPanel(
+                        "Plot",
+                        fluidRow(
+                            column(10,
+                                   plotOutput(outputId="plot", height="auto", width="auto"),
+                                   tags$style(type="text/css", "body { overflow-y: scroll; }")
+                                   )
+                             )
+                    )
+                )
             )
         )
     )

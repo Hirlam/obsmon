@@ -2,9 +2,13 @@ dtg2date <- function(dtg) {
   paste(substr(dtg, 1, 4), substr(dtg, 5, 6), substr(dtg, 7, 8), sep="-")
 }
 
-date2dtg <- function(date) {
+date2dtg <- function(date, cycle) {
   as.integer(paste0(substr(date, 1, 4),
                     substr(date, 6, 7),
                     substr(date, 9, 10),
-                    "00"))
+                    cycle))
+}
+
+dtg2POSIXct <- function(dtg) {
+  as.POSIXct(as.character(dtg), format="%Y%m%d%H")
 }

@@ -14,7 +14,8 @@ pkgs <- c("httpuv",
           "leaflet",
           "futile.logger",
           "shinyjs",
-          "yaml")
+          "yaml",
+          "pryr")
 
 installedPkgs <- installed.packages(lib.loc=lib)
 

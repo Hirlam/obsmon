@@ -2,22 +2,7 @@ library(yaml)
 
 source("utils.R")
 source("experiments.R")
-
-initExperiments <- function() {
-  configs <- yaml.load_file("config.yml")
-  experiments <- list()
-  experimentChoices <- list()
-  for(config in configs) {
-    name <- config$displayName
-    experiments[[name]] <-
-      expCreateSqliteShardedDtg(name, config$productionSite,
-                                config$baseDir, config$experiment,
-                                config$ecmaDir, config$ecmaSfcDir,
-                                config$ccmaDir)
-    experimentChoices <- append(experimentChoices, name)
-  }
-  experiments
-}
+source("plots.R")
 
 updateSelection <- function(session, inputId,
                             choices, oldSelection) {
@@ -28,16 +13,17 @@ updateSelection <- function(session, inputId,
        && any(oldSelection %in% choices)) {
       selection <- oldSelection[oldSelection %in% choices]
     } else {
-      selection <- choices[1]
+      selection <- NULL
     }
     updateSelectInput(session, inputId,
                        choices=choices, selected=selection)
 }
 
-experiments <- initExperiments()
-
 shinyServer(function(input, output, session) {
   updateSelectInput(session, "experiment", choices=names(experiments))
+  updateSelectInput(session, "plottype", choices=names(plotTypes))
+  levelChoices <- list()
+  channelChoices <- list()
 
   observeEvent(input$experiment, {
     exp <- experiments[[req(input$experiment)]]
@@ -104,9 +90,8 @@ shinyServer(function(input, output, session) {
     obtype <- req(input$obtype)
     sens <- req(input$sensor)
     sat <- req(input$satellite)
-    updateSelection(session, "channels",
-                    names(exp$obtypes[[db]][[obtype]][[sens]][[sat]]),
-                    input$channels)
+    channelChoices <<- names(exp$obtypes[[db]][[obtype]][[sens]][[sat]])
+    updateSelection(session, "channels", channelChoices, input$channels)
   })
 
   observeEvent(input$variable, {
@@ -114,8 +99,44 @@ shinyServer(function(input, output, session) {
     db <- req(input$odbBase)
     obtype <- req(input$obtype)
     var <- req(input$variable)
-    updateSelection(session, "levels",
-                    names(exp$obtypes[[db]][[obtype]][[var]]), input$levels)
+    levelChoices <<- names(exp$obtypes[[db]][[obtype]][[var]])
+    updateSelection(session, "levels", levelChoices, input$levels)
+  })
+
+  observeEvent(input$doPlot, {
+    plotRequest <- list()
+    exp <- experiments[[req(input$experiment)]]
+    plotRequest$exp <- exp
+    db <- req(input$odbBase)
+    plotRequest$db <- db
+    dateRange <- req(input$dateRange)
+    cycle <-  req(input$cycle)
+    plotRequest$criteria$dtgMin <- date2dtg(dateRange[1], cycle)
+    plotRequest$criteria$dtgMax <- date2dtg(dateRange[2], cycle)
+    obtype <- req(input$obtype)
+    if (obtype == 'satem') {
+      sensor <- req(input$sensor)
+      plotRequest$criteria$obnumber <- exp$obnumbers[[db]][[sensor]]
+      plotRequest$criteria$obname <- sensor
+      plotRequest$criteria$satname <- req(input$satellite)
+      if (!is.null(input$channels)) {
+        plotRequest$criteria$levels <- input$channels
+      } else {
+        plotRequest$criteria$levels <- channelChoices
+      }
+    } else {
+      plotRequest$criteria$obnumber <- exp$obnumbers[[db]][[obtype]]
+      plotRequest$criteria$obname <- obtype
+      plotRequest$criteria$varname <- req(input$variable)
+      if (!is.null(input$levels)) {
+        plotRequest$criteria$levels <- input$levels
+      } else {
+        plotRequest$criteria$levels <- levelChoices
+      }
+    }
+    plotter <- plotTypes[[req(input$plottype)]]
+    obplot <- plotter(plotRequest)
+    output$plot <- renderPlot({obplot}, height=600, width=800)
   })
 
 })
