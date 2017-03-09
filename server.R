@@ -21,7 +21,7 @@ updateSelection <- function(session, inputId,
 
 shinyServer(function(input, output, session) {
   updateSelectInput(session, "experiment", choices=names(experiments))
-  updateSelectInput(session, "plottype", choices=names(plotTypes))
+  updateSelectInput(session, "plottype", choices=plotTypesHierarchical)
   levelChoices <- list()
   channelChoices <- list()
 
@@ -134,7 +134,7 @@ shinyServer(function(input, output, session) {
         plotRequest$criteria$levels <- levelChoices
       }
     }
-    plotter <- plotTypes[[req(input$plottype)]]
+    plotter <- plotTypesFlat[[req(input$plottype)]]
     obplot <- plotter(plotRequest)
     output$plot <- renderPlot({obplot}, height=600, width=800)
   })

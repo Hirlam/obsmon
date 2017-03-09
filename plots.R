@@ -2,6 +2,26 @@ library(ggplot2)
 
 source("sql.R")
 
+plotTypesHierarchical <- list("Timeseries"=list())
+plotTypesFlat <- list()
+
+registerPlotType <- function(category, name, plotType) {
+  id <- deparse(substitute(plotType))
+  if (id %in% names(plotTypesFlat)) {
+    flog.error("Plottype %s('%s') is already registered. Discarding.", id, name)
+    return(NULL)
+  }
+  categoryList <- plotTypesHierarchical[[category]]
+  if (is.null(categoryList)) {
+    flog.error("Unknown plottype category %s, discarding plottype %s('%s').",
+               category, id, name)
+    return(NULL)
+  }
+  plotTypesFlat[[id]] <<- plotType
+  categoryList[[name]] <- id
+  plotTypesHierarchical[[category]] <<- categoryList
+}
+
 numberOfObservations <- function(plotRequest) {
   query <- paste("SELECT DTG, nobs_total, level FROM obsmon WHERE",
                  buildWhereClause(plotRequest$criteria))
@@ -15,10 +35,4 @@ numberOfObservations <- function(plotRequest) {
   obplot
 }
 
-initPlotTypes <- function() {
-  plotTypes <- list()
-  plotTypes[["Number of Observations"]] = numberOfObservations
-  plotTypes
-}
-
-plotTypes <- initPlotTypes()
+registerPlotType("Timeseries", "Number of Observations", numberOfObservations)
