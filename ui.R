@@ -4,6 +4,11 @@ library(leaflet)
 
 shinyUI(
     fluidPage(
+        tags$head(tags$script(HTML("
+          (function() {
+            $.fn.bsDatepicker.defaults.autoclose = true;
+          })();
+        "))),
         useShinyjs(),
         titlePanel("OBSMON v2"),
         sidebarLayout(
