@@ -27,18 +27,16 @@ shinyServer(function(input, output, session) {
 
   observeEvent(input$experiment, {
     exp <- experiments[[req(input$experiment)]]
-    maxRange <- exp$maxDateRange
-    dateRange <- exp$dateRange
     updateDateRangeInput(session, "dateRange",
-                         start = dateRange[1], end = dateRange[2],
-                         min = maxRange[1], max = maxRange[2])
+                         start = exp$dateRange[1], end = exp$dateRange[2],
+                         min = exp$maxDateRange[1], max = exp$maxDateRange[2])
     updateSelection(session, "cycle", exp$cycles, input$cycle)
   })
 
   observeEvent(input$dateRange, {
     dateRange <- req(input$dateRange)
     expName <- req(input$experiment)
-    experiments[[expName]] <- expSetDateRange(experiments[[expName]], dateRange)
+    experiments[[expName]]$dateRange <<- dateRange
   })
 
   observeEvent(input$category, {

@@ -3,10 +3,13 @@ dtg2date <- function(dtg) {
 }
 
 date2dtg <- function(date, cycle) {
-  as.integer(paste0(substr(date, 1, 4),
-                    substr(date, 6, 7),
-                    substr(date, 9, 10),
-                    cycle))
+  year <- substr(date, 1, 4)
+  month <- substr(date, 6, 7)
+  day <- substr(date, 9, 10)
+  if(typeof(cycle) == "integer") {
+    cycle <- sprintf("%02d", cycle)
+  }
+  as.integer(paste0(year, month, day, cycle))
 }
 
 dtg2POSIXct <- function(dtg) {

@@ -2,6 +2,7 @@
 
 library(DBI)
 library(futile.logger)
+library(pryr)
 
 source("utils.R")
 
@@ -9,27 +10,9 @@ source("utils.R")
 expConnect <- function(x) UseMethod("expConnect")
 expDisconnect <- function(x) UseMethod("expDisconnect")
 expQuery <- function(x, db, query,
-                     onlySelected=TRUE, convertDTG=TRUE) UseMethod("expQuery")
-expSetDateRange <- function(x, dateRange) {
-  UseMethod("expSetDateRange")
-}
+                     dtgs=NULL, convertDTG=TRUE) UseMethod("expQuery")
 
 # Provide defaults
-expSetDateRange.default <- function(x, dateRange) {
-  if (dateRange[1] < x$maxDateRange[1]) {
-    dateRange[1] <- x$maxDateRange[1]
-    flog.warn("Date range exceeds available data. Restricting.")
-  }
-  if (dateRange[2] > x$maxDateRange[2]) {
-    dateRange[2] <- x$maxDateRange[2]
-    flog.warn("Date range exceeds available data. Restricting.")
-  }
-  x$dateRange <- dateRange
-  x$selectedDtgs <- x$dtgs[x$dtgs >= date2dtg(dateRange[1], "00")
-                           & x$dtgs < date2dtg(dateRange[2], "00")+100]
-  x
-}
-
 expConnect.sqliteShardedDtg <- function(x) {
   drv <- RSQLite::SQLite()
   connect <- function(dtgs, dir, db) {
@@ -44,15 +27,18 @@ expConnect.sqliteShardedDtg <- function(x) {
 }
 
 expQuery.sqliteShardedDtg <- function(x, db, query,
-                                      onlySelected=TRUE, convertDTG=TRUE) {
-  if (onlySelected) {
-    conns <- x$conns[[db]][x$selectedDtgs]
-  } else {
+                                      dtgs=NULL, convertDTG=TRUE) {
+  if (is.null(dtgs)) {
     conns <- x$conns[[db]]
+  } else {
+    switch(length(dtgs),
+           conns <- list(x$conns[[db]][[as.character(dtgs)]]),
+           conns <- x$conns[[db]][dtgs[1] <= x$dtgs & x$dtgs <= dtgs[2]]
+           )
   }
   res <- lapply(conns, function(conn) dbGetQuery(conn, query))
   res <- do.call(rbind, res)
-  if(convertDTG) {
+  if(convertDTG & "DTG" %in% names(res)) {
     res$DTG <- as.POSIXct(as.character(res$DTG), format="%Y%m%d%H")
   }
   res
@@ -61,13 +47,12 @@ expQuery.sqliteShardedDtg <- function(x, db, query,
 sqliteShardedDtgInitDates <- function(x) {
   earliestDtg <- head(x$dtgs, 1)
   latestDtg <- tail(x$dtgs, 1)
-  x$maxDtgRange <- c(as.integer(earliestDtg),
-                     as.integer(latestDtg))
+  x$maxDtgRange <- c(earliestDtg, latestDtg)
   maxDateRange <- c(dtg2date(earliestDtg),
                     dtg2date(latestDtg))
   x$maxDateRange <- maxDateRange
-  x <- expSetDateRange(x, maxDateRange)
-  x$cycles <- sort(unique(substr(x$dtgs, 9, 10)))
+  x$dateRange <- maxDateRange
+  x$cycles <- lapply(sort(unique(x$dtgs %% 100)), partial(sprintf, "%02d"))
   x
 }
 
@@ -142,7 +127,7 @@ expCreateSqliteShardedDtg <- function(name, isProduction,
   x$dbs$ecmaSfc <- "ecma.db"
   x$dirs$ccma <- file.path(baseDir, experiment, ccmaDir)
   x$dbs$ccma <- "ccma.db"
-  x$dtgs <- dir(path=x$dirs$ecma, pattern="[0-9]{10}")
+  x$dtgs <- as.integer(dir(path=x$dirs$ecma, pattern="[0-9]{10}"))
   x <- sqliteShardedDtgInitDates(x)
   x <- expConnect(x)
   x <- sqliteShardedDtgInitObtypes(x)

@@ -6,6 +6,7 @@ criterion2clause <- function(name, criteria) {
       name,
       "dtgMin"=sprintf("(%d <= DTG)", val),
       "dtgMax"=sprintf("(DTG < %d)", val),
+      "dtgExact"=sprintf("(DTG = %d)", val),
       "levels"=sprintf("(level in (%s))",
                        do.call(partial(paste, sep=", "), as.list(val))),
       switch(
