@@ -33,3 +33,4 @@ registerPlotType <- function(category, name, plotType) {
 source("plots_statistical.R")
 source("plots_timeseries.R")
 source("plots_maps.R")
+source("plots_diagnostic.R")
