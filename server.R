@@ -125,6 +125,41 @@ shinyServer(function(input, output, session) {
            })
   })
 
+  buildCriteria <- function() {
+    exp <- experiments[[req(input$experiment)]]
+    db <- req(input$odbBase)
+    res <- list()
+    obtype <- req(input$obtype)
+    if (obtype == 'satem') {
+      sensor <- req(input$sensor)
+      res$obnumber <- exp$obnumbers[[db]][[sensor]]
+      res$obname <- sensor
+      res$satname <- req(input$satellite)
+      if (!is.null(input$channels)) {
+        res$levels <- input$channels
+      } else {
+        res$levels <- channelChoices
+      }
+    } else {
+      res$obnumber <- exp$obnumbers[[db]][[obtype]]
+      res$obname <- obtype
+      res$varname <- req(input$variable)
+      if (!is.null(input$levels)) {
+        res$levels <- input$levels
+      } else {
+        res$levels <- levelChoices
+      }
+    }
+    res
+  }
+
+  criteria <- reactive({
+    buildCriteria()
+  })
+
+  observeEvent((criteria %>% debounce(100))(), {
+  })
+
   observeEvent(input$doPlot, {
     plotRequest <- list()
     plotter <- plotTypesFlat[[req(input$plottype)]]
@@ -132,7 +167,8 @@ shinyServer(function(input, output, session) {
     plotRequest$exp <- exp
     db <- req(input$odbBase)
     plotRequest$db <- db
-    cycle <-  req(input$cycle)
+    plotRequest$criteria <- buildCriteria()
+    cycle <- req(input$cycle)
     plotRequest$criteria$dtg <-
       switch(plotter$dateType,
              "single"=date2dtg(req(input$date), cycle),
@@ -141,27 +177,6 @@ shinyServer(function(input, output, session) {
                    list(date2dtg(dateRange[1], cycle),
                         date2dtg(dateRange[2], cycle))
              })
-    obtype <- req(input$obtype)
-    if (obtype == 'satem') {
-      sensor <- req(input$sensor)
-      plotRequest$criteria$obnumber <- exp$obnumbers[[db]][[sensor]]
-      plotRequest$criteria$obname <- sensor
-      plotRequest$criteria$satname <- req(input$satellite)
-      if (!is.null(input$channels)) {
-        plotRequest$criteria$levels <- input$channels
-      } else {
-        plotRequest$criteria$levels <- channelChoices
-      }
-    } else {
-      plotRequest$criteria$obnumber <- exp$obnumbers[[db]][[obtype]]
-      plotRequest$criteria$obname <- obtype
-      plotRequest$criteria$varname <- req(input$variable)
-      if (!is.null(input$levels)) {
-        plotRequest$criteria$levels <- input$levels
-      } else {
-        plotRequest$criteria$levels <- levelChoices
-      }
-    }
     obplot <- plotGenerate(plotter, plotRequest)
     output$plot <- renderPlot({grid.arrange(obplot)}, res=96, pointsize=18)
   })
