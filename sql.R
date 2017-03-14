@@ -1,12 +1,16 @@
 library(pryr)
 
+dtgClause <- function(val) {
+  switch(length(val),
+         sprintf("(DTG = %d)", val),
+         sprintf("(%d <= DTG) AND (DTG < %d)", val[[1]], val[[2]]))
+}
+
 criterion2clause <- function(name, criteria) {
   val <- criteria[[name]]
   switch(
       name,
-      "dtgMin"=sprintf("(%d <= DTG)", val),
-      "dtgMax"=sprintf("(DTG < %d)", val),
-      "dtgExact"=sprintf("(DTG = %d)", val),
+      "dtg"=dtgClause(val),
       "levels"=sprintf("(level in (%s))",
                        do.call(partial(paste, sep=", "), as.list(val))),
       switch(

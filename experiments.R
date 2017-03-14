@@ -52,6 +52,7 @@ sqliteShardedDtgInitDates <- function(x) {
                     dtg2date(latestDtg))
   x$maxDateRange <- maxDateRange
   x$dateRange <- maxDateRange
+  x$date <- maxDateRange[[2]]
   x$cycles <- lapply(sort(unique(x$dtgs %% 100)), partial(sprintf, "%02d"))
   x
 }

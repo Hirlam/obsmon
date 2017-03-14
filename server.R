@@ -22,6 +22,7 @@ updateSelection <- function(session, inputId,
 shinyServer(function(input, output, session) {
   updateSelectInput(session, "experiment", choices=names(experiments))
   updateSelectInput(session, "plottype", choices=plotTypesHierarchical)
+
   levelChoices <- list()
   channelChoices <- list()
 
@@ -30,6 +31,8 @@ shinyServer(function(input, output, session) {
     updateDateRangeInput(session, "dateRange",
                          start = exp$dateRange[1], end = exp$dateRange[2],
                          min = exp$maxDateRange[1], max = exp$maxDateRange[2])
+    updateDateInput(session, "date", value=exp$date,
+                    min = exp$maxDateRange[1], max = exp$maxDateRange[2])
     updateSelection(session, "cycle", exp$cycles, input$cycle)
   })
 
@@ -37,6 +40,12 @@ shinyServer(function(input, output, session) {
     dateRange <- req(input$dateRange)
     expName <- req(input$experiment)
     experiments[[expName]]$dateRange <<- dateRange
+  })
+
+  observeEvent(input$date, {
+    dateRange <- req(input$date)
+    expName <- req(input$experiment)
+    experiments[[expName]]$date <<- date
   })
 
   observeEvent(input$category, {
@@ -101,16 +110,35 @@ shinyServer(function(input, output, session) {
     updateSelection(session, "levels", levelChoices, input$levels)
   })
 
+  observeEvent(input$plottype, {
+    plotType <- plotTypesFlat[[req(input$plottype)]]
+    switch(plotType$dateType,
+           "range"={
+             shinyjs::hide("date")
+             shinyjs::show("dateRange")
+           },
+           "single"={
+             shinyjs::hide("dateRange")
+             shinyjs::show("date")
+           })
+  })
+
   observeEvent(input$doPlot, {
     plotRequest <- list()
+    plotter <- plotTypesFlat[[req(input$plottype)]]
     exp <- experiments[[req(input$experiment)]]
     plotRequest$exp <- exp
     db <- req(input$odbBase)
     plotRequest$db <- db
-    dateRange <- req(input$dateRange)
     cycle <-  req(input$cycle)
-    plotRequest$criteria$dtgMin <- date2dtg(dateRange[1], cycle)
-    plotRequest$criteria$dtgMax <- date2dtg(dateRange[2], cycle)
+    plotRequest$criteria$dtg <-
+      switch(plotter$dateType,
+             "single"=date2dtg(req(input$date), cycle),
+             "range"={
+                   dateRange <- req(input$dateRange)
+                   list(date2dtg(dateRange[1], cycle),
+                        date2dtg(dateRange[2], cycle))
+             })
     obtype <- req(input$obtype)
     if (obtype == 'satem') {
       sensor <- req(input$sensor)
@@ -132,8 +160,7 @@ shinyServer(function(input, output, session) {
         plotRequest$criteria$levels <- levelChoices
       }
     }
-    plotter <- plotTypesFlat[[req(input$plottype)]]
-    obplot <- plotter(plotRequest)
+    obplot <- plotGenerate(plotter, plotRequest)
     output$plot <- renderPlot({obplot}, height=600, width=800)
   })
 

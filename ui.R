@@ -17,15 +17,6 @@ shinyUI(
                 selectInput("experiment",
                             label="Experiment",
                             choices=c()),
-                fluidRow(
-                    column(8,
-                           dateRangeInput("dateRange",
-                                          label="Date Range")),
-                    column(4,
-                           selectInput("cycle",
-                                       label="Cycle",
-                                       choices=c()))
-                ),
                 selectInput("category",
                             label=NULL,
                             choices=list("Upper Air (3D-VAR/4D-VAR)"="upperAir",
@@ -69,7 +60,19 @@ shinyUI(
                     ),
                     selectInput("plottype",
                                 "Type of Plot",
-                                choices=c())
+                                choices=c()),
+                    fluidRow(
+                        column(8,
+                               dateRangeInput("dateRange",
+                                              label="Date Range"),
+                               shinyjs::hidden(
+                                            dateInput("date", "Date")
+                                        )),
+                        column(4,
+                               selectInput("cycle",
+                                           label="Cycle",
+                                           choices=c()))
+                    )
                 ),
                 conditionalPanel(
                     condition="input.category == 'surfaceDiagnostics'",
