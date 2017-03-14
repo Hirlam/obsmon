@@ -1,14 +1,6 @@
 registerPlotCategory("Statistical")
 
-plotCreateStatistical <- function(name, queryStub,
-                                  additionalPlotting=NULL) {
-  p <- structure(list(), class = "plotStatistical")
-  p$name <- name
-  p$queryStub <- queryStub
-  p$dateType <- "single"
-  p$additionalPlotting <- additionalPlotting
-  p
-}
+plotCreateStatistical <- plotCreateConstructor("plotStatistical", "single")
 
 doPlot.plotStatistical <- function(p, plotRequest, plotData) {
   title <- paste(plotRequest$exp$name, ":", p$name,

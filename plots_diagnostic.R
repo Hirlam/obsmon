@@ -2,15 +2,7 @@ library(gridExtra)
 
 registerPlotCategory("Diagnostic")
 
-plotCreateDiagnostic <- function(name, queryStub,
-                                 additionalPlotting=NULL) {
-  p <- structure(list(), class = "plotDiagnostic")
-  p$name <- name
-  p$queryStub <- queryStub
-  p$dateType <- "range"
-  p$additionalPlotting <- additionalPlotting
-  p
-}
+plotCreateDiagnostic <- plotCreateConstructor("plotDiagnostic", "range")
 
 doPlot.plotDiagnostic <- function(p, plotRequest, plotData) {
   title <- "test"

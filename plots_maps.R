@@ -34,15 +34,7 @@ usageMap <- function(title, plotData) {
   return(obPlot)
 }
 
-plotCreateMap <- function(name, queryStub,
-                          additionalPlotting=NULL) {
-  p <- structure(list(), class = "plotMap")
-  p$name <- name
-  p$queryStub <- queryStub
-  p$dateType <- "single"
-  p$additionalPlotting <- additionalPlotting
-  p
-}
+plotCreateMap <- plotCreateConstructor("plotMap", "single")
 
 doPlot.plotMap <- function(p, plotRequest, plotData) {
   title <- paste(plotRequest$exp$displayName,

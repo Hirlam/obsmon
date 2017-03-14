@@ -1,14 +1,5 @@
 registerPlotCategory("Timeseries")
-
-plotCreateTimeseries <- function(name, queryStub,
-                                 additionalPlotting) {
-  p <- structure(list(), class = "plotTimeseries")
-  p$name <- name
-  p$queryStub <- queryStub
-  p$dateType <- "range"
-  p$additionalPlotting <- additionalPlotting
-  p
-}
+plotCreateTimeseries <- plotCreateConstructor("plotTimeseries", "range")
 
 doPlot.plotTimeseries <- function(p, plotRequest, plotData) {
   title <- paste(plotRequest$exp$name, ":", p$name,

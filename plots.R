@@ -42,6 +42,17 @@ plotGenerate.default <- function(p, plotRequest) {
   obplot
 }
 
+plotCreateConstructor <- function(class, dateType) {
+  function(name, queryStub, additionalPlotting=NULL) {
+    p <- structure(list(), class = class)
+    p$name <- name
+    p$queryStub <- queryStub
+    p$dateType <- dateType
+    p$additionalPlotting <- additionalPlotting
+    p
+  }
+}
+
 source("plots_statistical.R")
 source("plots_timeseries.R")
 source("plots_maps.R")
