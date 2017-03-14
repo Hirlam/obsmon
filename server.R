@@ -47,7 +47,7 @@ shinyServer(function(input, output, session) {
   observeEvent(input$date, {
     dateRange <- req(input$date)
     expName <- req(input$experiment)
-    experiments[[expName]]$date <<- date
+    experiments[[expName]]$date <<- input$date
   })
 
   observeEvent(input$category, {
