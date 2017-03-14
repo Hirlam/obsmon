@@ -1,14 +1,20 @@
+library(gridExtra)
+
 registerPlotCategory("Diagnostic")
 
-surfaceDiagnostics <- function(plotRequest) {
+plotCreateDiagnostic <- function(name, queryStub,
+                                 additionalPlotting=NULL) {
+  p <- structure(list(), class = "plotDiagnostic")
+  p$name <- name
+  p$queryStub <- queryStub
+  p$dateType <- "range"
+  p$additionalPlotting <- additionalPlotting
+  p
+}
+
+doPlot.plotDiagnostic <- function(p, plotRequest, plotData) {
   title <- "test"
-  query <- paste("SELECT",
-                 "dtg, obsvalue, fg_dep, an_dep, biascrl, statid",
-                 "FROM usage WHERE",
-                 buildWhereClause(plotRequest$criteria))
-  range <- list(plotRequest$criteria$dtgMin, plotRequest$criteria$dtgMax)
-  plotData <- expQuery(plotRequest$exp, plotRequest$db, query, dtgs=range)
-  obPlot <- ggplot(plotData, aes(x=dtg, y=obsvalue), group="") +
+  obPlot <- ggplot(plotData, aes(x=DTG, y=obsvalue), group="") +
     geom_line(aes(y=obsvalue, colour="Obs", group="")) +
     geom_line(aes(y=obsvalue-fg_dep, colour="FG", group="")) +
     geom_line(aes(y=obsvalue-an_dep, colour="AN", group="")) +
@@ -24,7 +30,15 @@ surfaceDiagnostics <- function(plotRequest) {
   bottom2 <- ggplot(plotData) +
     geom_histogram(aes(x=an_dep), colour="black", fill="green", binwidth=bw) +
     geom_vline(xintercept = 0.0)
-  bottom <- grid.arrange(bottom1,  bottom2, ncol=2)
+  bottom <- arrangeGrob(bottom1,  bottom2, ncol=2)
   obPlot <- grid.arrange(obPlot, bottom1, bottom2,  ncol=1)
+  obPlot
 }
-registerPlotType("Diagnostic", "Surface Diagnostics", surfaceDiagnostics)
+
+registerPlotType(
+    "Diagnostic",
+    plotCreateDiagnostic("Surface Diagnostic",
+                         paste("SELECT",
+                               "DTG, obsvalue, fg_dep, an_dep, biascrl, statid",
+                               "FROM usage WHERE (statid like '%%02705%%') AND %s"))
+)

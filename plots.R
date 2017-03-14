@@ -13,21 +13,33 @@ registerPlotCategory <- function(category) {
   plotTypesHierarchical[[category]] <<- list()
 }
 
-registerPlotType <- function(category, name, plotType) {
-  id <- deparse(substitute(plotType))
-  if (id %in% names(plotTypesFlat)) {
-    flog.error("Plottype %s('%s') is already registered. Discarding.", id, name)
+registerPlotType <- function(category, plotType) {
+  if (plotType$name %in% names(plotTypesFlat)) {
+    flog.error("Plottype '%s' is already registered. Discarding.", plotType$name)
     return(NULL)
   }
   categoryList <- plotTypesHierarchical[[category]]
   if (is.null(categoryList)) {
-    flog.error("Unknown plottype category %s, discarding plottype %s('%s').",
-               category, id, name)
+    flog.error("Unknown plottype category %s, discarding plottype '%s'.",
+               category, plotType$name)
     return(NULL)
   }
-  plotTypesFlat[[id]] <<- plotType
-  categoryList[[name]] <- id
+  plotTypesFlat[[plotType$name]] <<- plotType
+  categoryList[[plotType$name]] <- plotType$name
   plotTypesHierarchical[[category]] <<- categoryList
+}
+
+# Define generics
+plotGenerate <- function(p, plotRequest) UseMethod("plotGenerate")
+doPlot <- function(p, plotRequest, plotData) UseMethod("doPlot")
+
+# Provide defaults
+plotGenerate.default <- function(p, plotRequest) {
+  query <- sprintf(p$queryStub, buildWhereClause(plotRequest$criteria))
+  plotData <- expQuery(plotRequest$exp, plotRequest$db,
+                       query, dtgs=plotRequest$dtg)
+  obplot <- doPlot(p, plotRequest, plotData)
+  obplot
 }
 
 source("plots_statistical.R")

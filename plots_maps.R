@@ -2,7 +2,7 @@ registerPlotCategory("Maps")
 
 world<-map_data(map="world")
 
-usageMap <- function(title, plotData, mode) {
+usageMap <- function(title, plotData) {
   status <- rep("NA", length(plotData$longitude))
   status <- ifelse(plotData$anflag == 0, "Rejected", status)
   status <- ifelse(plotData$active  > 0, "Active", status)
@@ -34,19 +34,27 @@ usageMap <- function(title, plotData, mode) {
   return(obPlot)
 }
 
-observationUsage <- function(plotRequest) {
-  dtg <- plotRequest$criteria$dtgMax
-  plotRequest$criteria$dtgExact <- dtg
-  plotRequest$criteria$dtgMin <- NULL
-  plotRequest$criteria$dtgMax <- NULL
-  query <- paste("SELECT",
-                 "latitude, longitude,",
-                 "active, rejected, passive, blacklisted, anflag",
-                 "FROM usage WHERE",
-                 buildWhereClause(plotRequest$criteria))
-  plotData <- expQuery(plotRequest$exp, plotRequest$db, query, dtgs=dtg)
+plotCreateMap <- function(name, queryStub,
+                          additionalPlotting=NULL) {
+  p <- structure(list(), class = "plotMap")
+  p$name <- name
+  p$queryStub <- queryStub
+  p$dateType <- "single"
+  p$additionalPlotting <- additionalPlotting
+  p
+}
+
+doPlot.plotMap <- function(p, plotRequest, plotData) {
   title <- paste(plotRequest$exp$displayName,
                  ": Observation Usage")
-  obplot <- usageMap(title, plotData, "plot")
+  obplot <- usageMap(title, plotData)
 }
-registerPlotType("Maps", "Observation Usage", observationUsage)
+
+registerPlotType(
+    "Maps",
+    plotCreateMap("Observation Usage",
+                  paste("SELECT",
+                        "latitude, longitude,",
+                        "active, rejected, passive, blacklisted, anflag",
+                        "FROM usage WHERE %s"))
+)

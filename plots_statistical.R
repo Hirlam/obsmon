@@ -1,18 +1,20 @@
 registerPlotCategory("Statistical")
 
-fgAnDeparture <- function(plotRequest) {
-  dtg <- plotRequest$criteria$dtgMax
-  plotRequest$criteria$dtgExact <- dtg
-  plotRequest$criteria$dtgMin <- NULL
-  plotRequest$criteria$dtgMax <- NULL
-  query <- paste("SELECT",
-                 "fg_bias_total, an_bias_total,",
-                 "fg_rms_total, an_rms_total, nobs_total, level",
-                 "FROM obsmon WHERE",
-                 buildWhereClause(plotRequest$criteria),
-                 "ORDER BY level")
-  plotData <- expQuery(plotRequest$exp, plotRequest$db, query, dtgs=dtg)
-  obPlot <- ggplot(plotData, aes(level)) +
+plotCreateStatistical <- function(name, queryStub,
+                                  additionalPlotting=NULL) {
+  p <- structure(list(), class = "plotStatistical")
+  p$name <- name
+  p$queryStub <- queryStub
+  p$dateType <- "single"
+  p$additionalPlotting <- additionalPlotting
+  p
+}
+
+doPlot.plotStatistical <- function(p, plotRequest, plotData) {
+  title <- paste(plotRequest$exp$name, ":", p$name,
+                 plotRequest$varname)
+  obplot <- ggplot(data=plotData) +
+    aes(level) +
     geom_line(aes(y=fg_bias_total,colour="fg_bias_total")) +
     geom_point(aes(y=fg_bias_total,colour="fg_bias_total"),size=4) +
     geom_line(aes(y=an_bias_total,colour="an_bias_total"))+
@@ -23,5 +25,16 @@ fgAnDeparture <- function(plotRequest) {
     geom_point(aes(y=an_rms_total,colour="an_rms_total"),size=4) +
     coord_flip()+
     scale_x_continuous(breaks=plotData$level)
+  obplot
 }
-registerPlotType("Statistical", "FG+An", fgAnDeparture)
+
+registerPlotType(
+    "Statistical",
+    plotCreateStatistical("FG+An",
+                          paste("SELECT",
+                                "fg_bias_total, an_bias_total,",
+                                "fg_rms_total, an_rms_total, nobs_total, level",
+                                "FROM obsmon WHERE %s",
+                                "ORDER BY level")
+                          )
+)
