@@ -10,7 +10,11 @@ shinyUI(
           })();
         "))),
         useShinyjs(),
-        titlePanel("OBSMON v2"),
+        tagList(
+            tags$head(tags$title("Obsmon v2")),
+            h3("Obsmon v2", style="text-align: center;"),
+            hr()
+        ),
         sidebarLayout(
             sidebarPanel(
                 width=3,
@@ -89,11 +93,13 @@ shinyUI(
                 actionButton("doPlot", "Plot", width="100%")
             ),
             mainPanel(
+                width=9,
                 tabsetPanel(
                     tabPanel(
                         "Plot",
                         fluidRow(
-                            column(10,
+                            column(12, align="center",
+                                   tags$head(tags$style("#plot{height:80vh !important;}")),
                                    plotOutput(outputId="plot", height="auto", width="auto"),
                                    tags$style(type="text/css", "body { overflow-y: scroll; }")
                                    )

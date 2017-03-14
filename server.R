@@ -1,3 +1,5 @@
+library(Cairo)
+options(shiny.usecairo=TRUE)
 library(yaml)
 
 source("utils.R")
@@ -161,7 +163,7 @@ shinyServer(function(input, output, session) {
       }
     }
     obplot <- plotGenerate(plotter, plotRequest)
-    output$plot <- renderPlot({obplot}, height=600, width=800)
+    output$plot <- renderPlot({obplot}, res=96, pointsize=18)
   })
 
 })

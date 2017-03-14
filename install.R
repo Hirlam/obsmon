@@ -1,21 +1,24 @@
 repo=c("http://cran.ma.imperial.ac.uk/")
 lib=Sys.getenv("R_LIBS_USER")
 
-pkgs <- c("httpuv",
-          "shiny",
-          "RSQLite",
-          "ggplot2",
-          "jpeg",
-          "reshape2",
-          "chron",
-          "scales",
-          "mapproj",
-          "gridExtra",
-          "leaflet",
-          "futile.logger",
-          "shinyjs",
-          "yaml",
-          "pryr")
+pkgs <- c(
+    "Cairo",
+    "chron",
+    "futile.logger",
+    "ggplot2",
+    "gridExtra",
+    "httpuv",
+    "jpeg",
+    "leaflet",
+    "mapproj",
+    "pryr",
+    "RSQLite",
+    "reshape2",
+    "scales",
+    "shiny",
+    "shinyjs",
+    "yaml"
+)
 
 installedPkgs <- installed.packages(lib.loc=lib)
 
