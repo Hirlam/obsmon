@@ -22,11 +22,11 @@ doPlot.plotStatistical <- function(p, plotRequest, plotData) {
 
 registerPlotType(
     "Statistical",
-    plotCreateStatistical("FG+An",
+    plotCreateStatistical("First Guess and Analysis Departure",
                           paste("SELECT",
                                 "fg_bias_total, an_bias_total,",
                                 "fg_rms_total, an_rms_total, nobs_total, level",
                                 "FROM obsmon WHERE %s",
-                                "ORDER BY level")
-                          )
+                                "ORDER BY level"),
+                          list("obnumber", "obname", "levels"))
 )

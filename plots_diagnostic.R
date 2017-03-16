@@ -32,5 +32,6 @@ registerPlotType(
     plotCreateDiagnostic("Surface Diagnostic",
                          paste("SELECT",
                                "DTG, obsvalue, fg_dep, an_dep, biascrl, statid",
-                               "FROM usage WHERE (statid like '%%02705%%') AND %s"))
+                               "FROM usage WHERE (statid like '%%02705%%') AND %s"),
+                         list(obname="synop", "varname"))
 )

@@ -48,5 +48,6 @@ registerPlotType(
                   paste("SELECT",
                         "latitude, longitude,",
                         "active, rejected, passive, blacklisted, anflag",
-                        "FROM usage WHERE %s"))
+                        "FROM usage WHERE %s"),
+                  list("obnumber", "obname", "levels"))
 )

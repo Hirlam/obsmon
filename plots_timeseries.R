@@ -16,6 +16,7 @@ registerPlotType(
     "Timeseries",
     plotCreateTimeseries("Number of Observations",
                          "SELECT DTG, nobs_total, level FROM obsmon WHERE %s",
+                         list("obnumber", "obname", "levels"),
                          function(obplot) {
                            obplot +
                              geom_line(aes(y=nobs_total)) +

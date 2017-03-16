@@ -25,7 +25,6 @@ updateSelection <- function(session, inputId,
 
 shinyServer(function(input, output, session) {
   updateSelectInput(session, "experiment", choices=names(experiments))
-  updateSelectInput(session, "plottype", choices=plotTypesHierarchical)
 
   levelChoices <- list()
   channelChoices <- list()
@@ -158,8 +157,20 @@ shinyServer(function(input, output, session) {
     buildCriteria()
   })
 
-  observeEvent((criteria %>% debounce(100))(), {
+  criteriaDebounced <- criteria %>% debounce(200)
+
+  updatePlotTypes <- function() {
+    criteria <- buildCriteria()
+    choices <- applicablePlots(criteria)
+    updateSelection(session, "plottype", choices, input$plottype)
+  }
+
+  observeEvent(criteriaDebounced(), {
+    updatePlotTypes()
   })
+  observeEvent(criteria(), {
+    updatePlotTypes()
+  }, once=TRUE)
 
   observeEvent(input$doPlot, {
     plotRequest <- list()
