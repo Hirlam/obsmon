@@ -11,9 +11,11 @@ updateSelection <- function(session, inputId,
     if (is.null(choices)) {
       return(NULL)
     }
+    validChoices <- unlist(choices, use.names=FALSE)
+    validSelections <- oldSelection %in% validChoices
     if(!is.null(oldSelection)
-       && any(oldSelection %in% choices)) {
-      selection <- oldSelection[oldSelection %in% choices]
+       && any(validSelections)) {
+      selection <- oldSelection[validSelections]
     } else {
       selection <- NULL
     }
