@@ -6,6 +6,10 @@ source("utils.R")
 source("experiments.R")
 source("plots.R")
 
+# Updates choices for selection
+#
+# Updates a selectInput, preserving the selected
+# option(s) if available
 updateSelection <- function(session, inputId,
                             choices, oldSelection) {
     if (is.null(choices)) {
@@ -24,11 +28,13 @@ updateSelection <- function(session, inputId,
 }
 
 shinyServer(function(input, output, session) {
+  # Initial population of experiments; triggers cascade for other form fields
   updateSelectInput(session, "experiment", choices=names(experiments))
 
   levelChoices <- list()
   channelChoices <- list()
 
+  # Update date related fields dateRange, date, and cycle with new experiment
   observeEvent(input$experiment, {
     exp <- experiments[[req(input$experiment)]]
     updateDateRangeInput(session, "dateRange",
@@ -39,17 +45,20 @@ shinyServer(function(input, output, session) {
     updateSelection(session, "cycle", exp$cycles, input$cycle)
   })
 
+  # Update dateRange in experiment to persist across experiment changes
   observeEvent(input$dateRange, {
     dateRange <- req(input$dateRange)
     expName <- req(input$experiment)
     experiments[[expName]]$dateRange <<- dateRange
   })
 
+  # Update date in experiment to persist across experiment changes
   observeEvent(input$date, {
     expName <- req(input$experiment)
     experiments[[expName]]$date <<- req(input$date)
   })
 
+  # Update database options according to chosen category
   observeEvent(input$category, {
     category <- req(input$category)
     if (category == "upperAir") {
@@ -64,6 +73,7 @@ shinyServer(function(input, output, session) {
     }
   })
 
+  # Update obtype with choices for given experiment and database
   observeEvent(input$odbBase, {
     exp <- experiments[[req(input$experiment)]]
     db <- req(input$odbBase)
@@ -71,6 +81,7 @@ shinyServer(function(input, output, session) {
                     names(exp$obtypes[[db]]), input$obtype)
   })
 
+  # Update sensor for satem obtype, variable else
   observeEvent(input$obtype, {
     exp <- experiments[[req(input$experiment)]]
     db <- req(input$odbBase)
@@ -84,6 +95,7 @@ shinyServer(function(input, output, session) {
     }
   })
 
+  # Update satellite choices for given sensor
   observeEvent(input$sensor, {
     exp <- experiments[[req(input$experiment)]]
     db <- req(input$odbBase)
@@ -93,6 +105,7 @@ shinyServer(function(input, output, session) {
                     names(exp$obtypes[[db]][[obtype]][[sens]]), input$satellite)
   })
 
+  # Update channel choice for given satellite
   observeEvent(input$satellite, {
     exp <- experiments[[req(input$experiment)]]
     db <- req(input$odbBase)
@@ -103,6 +116,7 @@ shinyServer(function(input, output, session) {
     updateSelection(session, "channels", channelChoices, input$channels)
   })
 
+  # Update level choice for given variable
   observeEvent(input$variable, {
     exp <- experiments[[req(input$experiment)]]
     db <- req(input$odbBase)
@@ -112,6 +126,7 @@ shinyServer(function(input, output, session) {
     updateSelection(session, "levels", levelChoices, input$levels)
   })
 
+  # Offer single date or dateRange input according to selected plottype
   observeEvent(input$plottype, {
     plotType <- plotTypesFlat[[req(input$plottype)]]
     switch(plotType$dateType,
@@ -125,6 +140,7 @@ shinyServer(function(input, output, session) {
            })
   })
 
+  # Build named list of criteria
   buildCriteria <- function() {
     exp <- experiments[[req(input$experiment)]]
     db <- req(input$odbBase)
@@ -153,18 +169,21 @@ shinyServer(function(input, output, session) {
     res
   }
 
+  # Turn criteria into reactive expression so they can trigger plottype update
   criteria <- reactive({
     buildCriteria()
   })
 
   criteriaDebounced <- criteria %>% debounce(200)
 
+  # Update plottype choices with available plottypes according to criteria
   updatePlotTypes <- function() {
     criteria <- buildCriteria()
     choices <- applicablePlots(criteria)
     updateSelection(session, "plottype", choices, input$plottype)
   }
 
+  # Trigger plottype update on criteria change
   observeEvent(criteriaDebounced(), {
     updatePlotTypes()
   })
@@ -172,6 +191,7 @@ shinyServer(function(input, output, session) {
     updatePlotTypes()
   }, once=TRUE)
 
+  # Perform plotting
   observeEvent(input$doPlot, {
     plotRequest <- list()
     plotter <- plotTypesFlat[[req(input$plottype)]]
@@ -192,5 +212,4 @@ shinyServer(function(input, output, session) {
     obplot <- plotGenerate(plotter, plotRequest)
     output$plot <- renderPlot({grid.arrange(obplot)}, res=96, pointsize=18)
   })
-
 })
