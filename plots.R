@@ -69,7 +69,7 @@ plotIsApplicable.default <- function(p, criteria) {
   } else {
     res <- mapply(function(n, v) ifelse(n == "",
                                         v %in% names(criteria),
-                                        criteria[[n]] == v),
+                                        criteria[[n]] %in% v),
                   requiredNames, p$requiredFields)
     all(res)
   }
