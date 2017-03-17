@@ -29,7 +29,7 @@ doPlot.plotDiagnostic <- function(p, plotRequest, plotData) {
 
 registerPlotType(
     "Diagnostic",
-    plotCreateDiagnostic("Surface Diagnostic",
+    plotCreateDiagnostic("Station Diagnostics",
                          paste("SELECT",
                                "DTG, obsvalue, fg_dep, an_dep, biascrl, statid",
                                "FROM usage WHERE (statid like '%%02705%%') AND %s"),
