@@ -1,4 +1,6 @@
 library(ggplot2)
+library(png)
+library(grid)
 
 source("sql.R")
 
@@ -51,7 +53,12 @@ plotGenerate.default <- function(p, plotRequest) {
   query <- sprintf(p$queryStub, buildWhereClause(plotRequest$criteria))
   plotData <- expQuery(plotRequest$exp, plotRequest$db,
                        query, dtgs=plotRequest$dtg)
-  obplot <- doPlot(p, plotRequest, plotData)
+  if (nrow(plotData)==0) {
+    image <- readPNG("./nodata.png")
+    obplot <- rasterGrob(image)
+  } else {
+    obplot <- doPlot(p, plotRequest, plotData)
+  }
   obplot
 }
 
