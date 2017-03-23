@@ -1,5 +1,6 @@
 library(ggplot2)
 library(png)
+library(plyr)
 library(grid)
 
 source("sql.R")
@@ -57,6 +58,9 @@ plotGenerate.default <- function(p, plotRequest) {
     image <- readPNG("./nodata.png")
     obplot <- rasterGrob(image)
   } else {
+    if(plotRequest$criteria$obnumber == 7) {
+      plotData <- rename(plotData, c("level"="channel"))
+    }
     obplot <- doPlot(p, plotRequest, plotData)
   }
   obplot

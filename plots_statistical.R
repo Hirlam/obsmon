@@ -35,9 +35,9 @@ doPlot.plotStatistical <- function(p, plotRequest, plotData) {
         ylab <- "Channels"
         xlab <- "Brightness temperature [K]"
         title <- sprintf(titleStub,
-                         paste(plotRequest$criteria$sensor,
-                               plotRequest$criteria$satellite))
-        obplot <- ggplot(plotData, aes(level)) +
+                         paste(plotRequest$criteria$obname,
+                               plotRequest$criteria$satname))
+        obplot <- ggplot(plotData, aes(channel)) +
           geom_line(aes(y=fg_bias_total,colour="fg_bias_total")) +
           geom_point(aes(y=fg_bias_total,colour="fg_bias_total"),size=4) +
           geom_line(aes(y=an_bias_total,colour="an_bias_total"))+
@@ -47,7 +47,7 @@ doPlot.plotStatistical <- function(p, plotRequest, plotData) {
           geom_line(aes(y=an_rms_total,colour="an_rms_total")) +
           geom_point(aes(y=an_rms_total,colour="an_rms_total"),size=4) +
           coord_flip() +
-          scale_x_continuous(breaks=plotData$level) +
+          scale_x_continuous(breaks=plotData$channel) +
           ylab(xlab) +
           xlab(ylab) +
           labs(title=title)
