@@ -2,8 +2,6 @@ library(reshape2)
 
 registerPlotCategory("Statistical")
 
-plotCreateStatistical <- plotCreateConstructor("plotStatistical", "single")
-
 doPlot.plotStatistical <- function(p, plotRequest, plotData) {
   dtg <- formatDtg(plotRequest$criteria$dtg)
   titleStub <- sprintf("%s : %s %%s %s", plotRequest$exp$name, p$name, dtg)
@@ -78,11 +76,12 @@ doPlot.plotStatistical <- function(p, plotRequest, plotData) {
 
 registerPlotType(
     "Statistical",
-    plotCreateStatistical("First Guess and Analysis Departure",
-                          paste("SELECT",
-                                "fg_bias_total, an_bias_total,",
-                                "fg_rms_total, an_rms_total, level",
-                                "FROM obsmon WHERE %s",
-                                "ORDER BY level"),
-                          list("obnumber", "obname", "levels"))
+    plotCreate("plotStatistical",
+               "First Guess and Analysis Departure", "single",
+               paste("SELECT",
+                     "fg_bias_total, an_bias_total,",
+                     "fg_rms_total, an_rms_total, level",
+                     "FROM obsmon WHERE %s",
+                     "ORDER BY level"),
+               list("obnumber", "obname", "levels"))
 )

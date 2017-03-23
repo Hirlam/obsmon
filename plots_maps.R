@@ -34,8 +34,6 @@ usageMap <- function(title, plotData) {
   return(obPlot)
 }
 
-plotCreateMap <- plotCreateConstructor("plotMap", "single")
-
 doPlot.plotMap <- function(p, plotRequest, plotData) {
   title <- paste(plotRequest$exp$displayName,
                  ": Observation Usage")
@@ -44,10 +42,10 @@ doPlot.plotMap <- function(p, plotRequest, plotData) {
 
 registerPlotType(
     "Maps",
-    plotCreateMap("Observation Usage",
-                  paste("SELECT",
-                        "latitude, longitude,",
-                        "active, rejected, passive, blacklisted, anflag",
-                        "FROM usage WHERE %s"),
-                  list("obnumber", "obname", "levels"))
+    plotCreate("plotMap", "Observation Usage", "single",
+               paste("SELECT",
+                     "latitude, longitude,",
+                     "active, rejected, passive, blacklisted, anflag",
+                     "FROM usage WHERE %s"),
+               list("obnumber", "obname", "levels"))
 )

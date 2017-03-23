@@ -79,16 +79,13 @@ plotIsApplicable.default <- function(p, criteria) {
   }
 }
 
-plotCreateConstructor <- function(class, dateType) {
-  function(name, queryStub, requiredFields, additionalPlotting=NULL) {
-    p <- structure(list(), class = class)
-    p$dateType <- dateType
-    p$name <- name
-    p$queryStub <- queryStub
-    p$requiredFields <- requiredFields
-    p$additionalPlotting <- additionalPlotting
-    p
-  }
+plotCreate <- function(class, name, dateType, queryStub, requiredFields) {
+  p <- structure(list(), class = class)
+  p$dateType <- dateType
+  p$name <- name
+  p$queryStub <- queryStub
+  p$requiredFields <- requiredFields
+  p
 }
 
 source("plots_statistical.R")

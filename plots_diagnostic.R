@@ -2,8 +2,6 @@ library(gridExtra)
 
 registerPlotCategory("Diagnostic")
 
-plotCreateDiagnostic <- plotCreateConstructor("plotDiagnostic", "range")
-
 doPlot.plotDiagnostic <- function(p, plotRequest, plotData) {
   title <- "test"
   obPlot <- ggplot(plotData, aes(x=DTG, y=obsvalue), group="") +
@@ -29,9 +27,9 @@ doPlot.plotDiagnostic <- function(p, plotRequest, plotData) {
 
 registerPlotType(
     "Diagnostic",
-    plotCreateDiagnostic("Station Diagnostics",
-                         paste("SELECT",
-                               "DTG, obsvalue, fg_dep, an_dep, biascrl, statid",
-                               "FROM usage WHERE (statid like '%%02705%%') AND %s"),
-                         list(obname="synop", "varname"))
+    plotCreate("plotDiagnostic", "Station Diagnostics", "range",
+               paste("SELECT",
+                     "DTG, obsvalue, fg_dep, an_dep, biascrl, statid",
+                     "FROM usage WHERE (statid like '%%02705%%') AND %s"),
+               list(obname="synop", "varname"))
 )
