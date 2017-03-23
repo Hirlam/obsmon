@@ -24,8 +24,7 @@ shinyUI(
                 selectInput("category",
                             label=NULL,
                             choices=list("Upper Air (3D-VAR/4D-VAR)"="upperAir",
-                                         "Surface (CANARI)"="surface",
-                                         "Surface Diagnostics"="surfaceDiagnostics")),
+                                         "Surface (CANARI)"="surface")),
                 hr(),
                 conditionalPanel(
                     condition=paste("input.category == 'upperAir'",
@@ -77,18 +76,6 @@ shinyUI(
                                            label="Cycle",
                                            choices=c()))
                     )
-                ),
-                conditionalPanel(
-                    condition="input.category == 'surfaceDiagnostics'",
-                    selectInput("variable_sd",
-                                "Variable",
-                                choices=c("T2M",
-                                          "RH2M",
-                                          "Snow",
-                                          "U10M",
-                                          "V10M",
-                                          "APD",
-                                          "Z"))
                 ),
                 actionButton("doPlot", "Plot", width="100%")
             ),
