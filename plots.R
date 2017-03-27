@@ -58,7 +58,8 @@ plotGenerate.default <- function(p, plotRequest) {
     image <- readPNG("./nodata.png")
     obplot <- rasterGrob(image)
   } else {
-    if(plotRequest$criteria$obnumber == 7) {
+    if (plotRequest$criteria$obnumber == 7
+        & "level" %in% colnames(plotData)) {
       plotData <- rename(plotData, c("level"="channel"))
     }
     obplot <- doPlot(p, plotRequest, plotData)

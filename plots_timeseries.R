@@ -4,7 +4,7 @@ doPlot.plotTimeseries <- function(p, plotRequest, plotData,
                                   maskColumns=character(0),
                                   colours=NULL, shapes=NULL) {
   dtg <- formatDtg(plotRequest$criteria$dtg)
-  titleStub <- sprintf("%s : %s %%s %s", plotRequest$exp$name, p$name, dtg)
+  titleStub <- sprintf("%s: %s %%s %s", plotRequest$exp$name, p$name, dtg)
   switch(
       as.character(plotRequest$criteria$obnumber),
       "7"={
@@ -23,8 +23,11 @@ doPlot.plotTimeseries <- function(p, plotRequest, plotData,
   localPlotData <- melt(plotData[!(colnames(plotData) %in% maskColumns)],
                         id=c("DTG", wrapVariable))
   obplot <- ggplot() +
+    geom_line(data=localPlotData,
+              aes(x=DTG, y=value, group=variable),
+              na.rm=TRUE, alpha=.1) +
     geom_point(data=localPlotData,
-               aes(x=DTG, y=value, shape=variable, colour=variable),
+               aes(x=DTG, y=value, shape=variable, colour=variable, fill=variable),
                na.rm=TRUE) +
     labs(title=title, x="DATE") +
     facet_wrap(wrapVariable, labeller=label_both)
@@ -34,7 +37,8 @@ doPlot.plotTimeseries <- function(p, plotRequest, plotData,
   }
   if (!is.null(colours)) {
     obplot <- obplot +
-      scale_colour_manual(values=colours)
+      scale_colour_manual(values=colours) +
+      scale_fill_manual(values=colours)
   } else {
     obplot <- obplot +
       scale_colour_brewer(palette="Spectral")
@@ -52,15 +56,17 @@ registerPlotType(
 doPlot.obsFit <- function(p, plotRequest, plotData) {
   fgColor <- "blue"
   anColor <- "red"
-  rmsShape <- 0
-  biasShape <- 1
+  fgRmsShape <- 22
+  anRmsShape <- 0
+  fgBiasShape <- 21
+  anBiasShape <- 1
   ind <- plotData$nobs_total==0
   cols <- c("fg_rms_total", "an_rms_total", "fg_bias_total", "an_bias_total")
   plotData[ind, cols] <- NA
   varname <- unique(plotData$varname)
   NextMethod(.Generic, maskColumns=c("nobs_total", "varname"),
              colours=c(fgColor, anColor, fgColor, anColor),
-             shapes=c(rmsShape, biasShape, rmsShape, biasShape)) +
+             shapes=c(fgRmsShape, anRmsShape, fgBiasShape, anBiasShape)) +
     ylab(units[[varname]])
 }
 
@@ -135,7 +141,7 @@ registerPlotType(
 
 doPlot.hovmoller <- function(p, plotRequest, plotData) {
   dtg <- formatDtg(plotRequest$criteria$dtg)
-  titleStub <- sprintf("%s : %s %%s %s", plotRequest$exp$name, p$name, dtg)
+  titleStub <- sprintf("%s: %s %%s %s", plotRequest$exp$name, p$name, dtg)
   title <- sprintf(titleStub,
                    paste(plotRequest$criteria$obname,
                          plotRequest$criteria$satname))
