@@ -114,9 +114,17 @@ sqliteShardedDtgGetObtypes <- function(conns) {
 sqliteShardedDtgInitObtypes <- function(x) {
   x$obtypes <- list()
   for (db in c("ecma", "ecmaSfc", "ccma")) {
-    res <- sqliteShardedDtgGetObtypes(x$conns[[db]])
-    x$obnumbers[[db]] <- res[[1]]
-    x$obtypes[[db]] <- res[[2]]
+    cacheKey <- list(x$cacheHash, db, "obtypes")
+    x$stations[[db]] <- loadCache(cacheKey)
+    if (!is.null(x$stations[[db]])) {
+      flog.info("......cache found for %s......", db)
+    } else {
+      flog.info("......no cache found for %s......", db)
+      res <- sqliteShardedDtgGetObtypes(x$conns[[db]])
+      x$obnumbers[[db]] <- res[[1]]
+      x$obtypes[[db]] <- res[[2]]
+      saveCache(x$stations[[db]], cacheKey)
+    }
   }
   x
 }
@@ -130,8 +138,8 @@ readSynopStations <- function() {
   names(synopStations) <- raw$statids
   synopStations
 }
-
 synopStations <- readSynopStations()
+
 
 sqliteShardedDtgInitStations <- function(x) {
   query <- "SELECT DISTINCT obname, statid FROM usage"
@@ -139,7 +147,10 @@ sqliteShardedDtgInitStations <- function(x) {
   for (db in c("ecma", "ecmaSfc", "ccma")) {
     cacheKey <- list(x$cacheHash, db, "stations")
     x$stations[[db]] <- loadCache(cacheKey)
-    if (is.null(x$stations[[db]])) {
+    if (!is.null(x$stations[[db]])) {
+      flog.info("......cache found for %s......", db)
+    } else {
+      flog.info("......no cache found for %s......", db)
       x$stations[[db]] <- list()
       flog.info("......querying......")
       raw <- expQuery(x, db, query)
