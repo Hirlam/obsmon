@@ -2,20 +2,5 @@
 
 export R_LIBS_USER=${R_LIBS_USER-"$HOME/R/library"}
 
-# Set path to SQLITE data bases
-export DBDIR_ECMA=${DBDIR_ECMA-$PWD/dbfiles/ecma/}
-export DBDIR_ECMA_SFC=${DBDIR_ECMA_SFC-$PWD/dbfiles/ecma_sfc/}
-export DBDIR_CCMA=${DBDIR_CCMA-$PWD/dbfiles/ccma/}
-export DBDIR_ECMA2=${DBDIR_ECMA2-$PWD/dbfiles2/ecma/}
-export DBDIR_ECMA_SFC2=${DBDIR_ECMA_SFC2-$PWD/dbfiles2/ecma_sfc/}
-export DBDIR_CCMA2=${DBDIR_CCMA2-$PWD/dbfiles2/ccma/}
-
-echo "     DBDIR_ECMA: $DBDIR_ECMA"
-echo " DBDIR_ECMA_SFC: $DBDIR_ECMA_SFC"
-echo "     DBDIR_CCMA: $DBDIR_CCMA"
-echo "    DBDIR_ECMA2: $DBDIR_ECMA2"
-echo "DBDIR_ECMA_SFC2: $DBDIR_ECMA_SFC2"
-echo "    DBDIR_CCMA2: $DBDIR_CCMA2"
-
 # Call R-script (or alternatively CMD BATCH)
 Rscript obsmon.R || R CMD BATCH obsmon.R || exit 1
