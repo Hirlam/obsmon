@@ -149,9 +149,12 @@ sqliteShardedDtgInitStations <- function(x) {
   query <- "SELECT DISTINCT obname, statid FROM usage"
   x$stations <- list()
   for (db in c("ecma", "ecmaSfc", "ccma")) {
-    cacheKey <- list(x$cacheHash, db, "stations")
-    x$stations[[db]] <- loadCache(cacheKey)
-    if (!is.null(x$stations[[db]])) {
+    cacheKeyStations <- list(x$cacheHash, db, "stations")
+    cacheKeyStationLabels <- list(x$cacheHash, db, "stationLabels")
+    x$stations[[db]] <- loadCache(cacheKeyStations)
+    x$stationLabels[[db]] <- loadCache(cacheKeyStationLabels)
+    if (!is.null(x$stations[[db]])
+        && !is.null(x$stationLabels[[db]])) {
       flog.info("......cache found for %s......", db)
     } else {
       flog.info("......no cache found for %s......", db)
@@ -171,13 +174,16 @@ sqliteShardedDtgInitStations <- function(x) {
                                  synopStations[statids],
                                  "Unknown")
           names(statids) <- sprintf("%s (%s)", designations, statids)
-          statids <- c(list("Any"="Any"), statids)
         } else {
-          statids <- c(list("Any"), statids)
+          names(statids) <- statids
         }
+        statids <- c(list("Any"="Any"), statids)
         x$stations[[db]][[obtype]] <- statids
+        x$stationLabels[[db]][[obtype]] <- names(statids)
+        names(x$stationLabels[[db]][[obtype]]) <- statids
       }
-      saveCache(x$stations[[db]], cacheKey)
+      saveCache(x$stations[[db]], cacheKeyStations)
+      saveCache(x$stationLabels[[db]], cacheKeyStationLabels)
     }
   }
   x

@@ -54,11 +54,11 @@ shinyUI(
                                 "Levels",
                                 choices=c(),
                                 multiple=TRUE,
-                                selectize=FALSE)
+                                selectize=FALSE),
+                    selectInput("station",
+                                "Station",
+                                choices=c())
                 ),
-                selectInput("station",
-                            "Station",
-                            choices=c()),
                 selectInput("plottype",
                             "Type of Plot",
                             choices=c()),
