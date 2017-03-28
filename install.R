@@ -13,6 +13,7 @@ pkgs <- c(
     "mapproj",
     "pbapply",
     "pryr",
+    "R.cache",
     "RSQLite",
     "reshape2",
     "scales",

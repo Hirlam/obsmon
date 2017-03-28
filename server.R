@@ -93,6 +93,8 @@ shinyServer(function(input, output, session) {
       updateSelection(session, "variable",
                       names(exp$obtypes[[db]][[obtype]]), input$variable)
     }
+    updateSelection(session, "station",
+                    exp$stations[[db]][[obtype]], input$station)
   })
 
   # Update satellite choices for given sensor
@@ -165,6 +167,9 @@ shinyServer(function(input, output, session) {
       } else {
         res$levels <- levelChoices
       }
+    }
+    if (req(input$station) != "Any") {
+      res$station <- input$station
     }
     res
   }

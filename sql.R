@@ -13,6 +13,7 @@ criterion2clause <- function(name, criteria) {
       "dtg"=dtgClause(val),
       "levels"=sprintf("(level in (%s))",
                        do.call(partial(paste, sep=", "), as.list(val))),
+      "station"=sprintf("(statid like '%%%s%%')", val),
       switch(
           typeof(val),
           "integer"=sprintf("(%s = %d)", name, val),

@@ -4,6 +4,7 @@ library(DBI)
 library(futile.logger)
 library(pbapply)
 library(pryr)
+library(R.cache)
 
 pboptions(type="timer")
 
@@ -21,7 +22,7 @@ expQuery <- function(x, db, query,
 expConnect.sqliteShardedDtg <- function(x) {
   drv <- RSQLite::SQLite()
   connect <- function(dtgs, dir, db) {
-    conns <- lapply(dtgs, function(dtg) dbConnect(drv, file.path(dir, dtg, db)))
+    conns <- pblapply(dtgs, function(dtg) dbConnect(drv, file.path(dir, dtg, db)))
     names(conns) <- dtgs
     conns
   }
@@ -41,7 +42,7 @@ expQuery.sqliteShardedDtg <- function(x, db, query,
            conns <- x$conns[[db]][dtgs[1] <= x$dtgs & x$dtgs <= dtgs[2]]
            )
   }
-  res <- lapply(conns, function(conn) dbGetQuery(conn, query))
+  res <- pblapply(conns, function(conn) dbGetQuery(conn, query))
   res <- do.call(rbind, res)
   if(convertDTG & "DTG" %in% names(res)) {
     res$DTG <- as.POSIXct(as.character(res$DTG), format="%Y%m%d%H")
@@ -120,9 +121,57 @@ sqliteShardedDtgInitObtypes <- function(x) {
   x
 }
 
+readSynopStations <- function() {
+  raw <- read.table("allsynop.list.csv",
+                    sep=";", quote="",
+                    col.names=c("statids", "designation"),
+                    colClasses="character", encoding="UTF-8")
+  synopStations <- raw$designation
+  names(synopStations) <- raw$statids
+  synopStations
+}
+
+synopStations <- readSynopStations()
+
+sqliteShardedDtgInitStations <- function(x) {
+  query <- "SELECT DISTINCT obname, statid FROM usage"
+  x$stations <- list()
+  for (db in c("ecma", "ecmaSfc", "ccma")) {
+    cacheKey <- list(x$cacheHash, db, "stations")
+    x$stations[[db]] <- loadCache(cacheKey)
+    if (is.null(x$stations[[db]])) {
+      x$stations[[db]] <- list()
+      flog.info("......querying......")
+      raw <- expQuery(x, db, query)
+      flog.info("......finished......")
+      for (obtype in names(x$obtypes[[db]])) {
+        statids <- trimws(sort(unique(raw[raw$obname==obtype,]$statid)))
+        ends <- nchar(statids)
+        statids <- ifelse(substr(statids, 1, 1)=="'"
+                          & substr(statids, ends, ends)=="'",
+                          trimws(substr(statids, 2, ends-1)),
+                          statids)
+        if (obtype == 'synop') {
+          designations <- ifelse(statids %in% names(synopStations),
+                                 synopStations[statids],
+                                 "Unknown")
+          names(statids) <- sprintf("%s (%s)", designations, statids)
+          statids <- c(list("Any"="Any"), statids)
+        } else {
+          statids <- c(list("Any"), statids)
+        }
+        x$stations[[db]][[obtype]] <- statids
+      }
+      saveCache(x$stations[[db]], cacheKey)
+    }
+  }
+  x
+}
+
 expCreateSqliteShardedDtg <- function(name, isProduction,
                                       baseDir, experiment,
                                       ecmaDir, ecmaSfcDir, ccmaDir) {
+  flog.info("Initialization of experiment %s...", name)
   x <- structure(list(), class = "sqliteShardedDtg")
   x$name <- name
   x$isProduction <- isProduction
@@ -134,9 +183,17 @@ expCreateSqliteShardedDtg <- function(name, isProduction,
   x$dirs$ccma <- file.path(baseDir, experiment, ccmaDir)
   x$dbs$ccma <- "ccma.db"
   x$dtgs <- as.integer(dir(path=x$dirs$ecma, pattern="[0-9]{10}"))
+  flog.info("...finding dates...")
   x <- sqliteShardedDtgInitDates(x)
+  x$cacheHash <- getChecksum(x)
+  flog.info("...opening connections...")
   x <- expConnect(x)
+  flog.info("...initializing obtypes...")
   x <- sqliteShardedDtgInitObtypes(x)
+  flog.info("...initializing stations...")
+  x <- sqliteShardedDtgInitStations(x)
+  flog.info("...complete.")
+  x
 }
 
 initExperiments <- function() {
