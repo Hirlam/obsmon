@@ -114,16 +114,20 @@ sqliteShardedDtgGetObtypes <- function(conns) {
 sqliteShardedDtgInitObtypes <- function(x) {
   x$obtypes <- list()
   for (db in c("ecma", "ecmaSfc", "ccma")) {
-    cacheKey <- list(x$cacheHash, db, "obtypes")
-    x$stations[[db]] <- loadCache(cacheKey)
-    if (!is.null(x$stations[[db]])) {
+    cacheKeyObnumbers <- list(x$cacheHash, db, "obnumbers")
+    cacheKeyObtypes <- list(x$cacheHash, db, "obtypes")
+    x$obnumbers[[db]] <- loadCache(cacheKeyObnumbers)
+    x$obtypes[[db]] <- loadCache(cacheKeyObtypes)
+    if (!is.null(x$obnumbers[[db]])
+        && !is.null(x$obtypes[[db]])) {
       flog.info("......cache found for %s......", db)
     } else {
       flog.info("......no cache found for %s......", db)
       res <- sqliteShardedDtgGetObtypes(x$conns[[db]])
       x$obnumbers[[db]] <- res[[1]]
       x$obtypes[[db]] <- res[[2]]
-      saveCache(x$stations[[db]], cacheKey)
+      saveCache(x$obnumbers[[db]], cacheKeyObnumbers)
+      saveCache(x$obtypes[[db]], cacheKeyObtypes)
     }
   }
   x
