@@ -7,6 +7,7 @@
 
 # Untracked helper files
 bak
+.Rcache
 .Rhistory
 Rplots.pdf
 rtags
