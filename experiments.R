@@ -2,9 +2,14 @@
 
 library(DBI)
 library(futile.logger)
+library(pbapply)
 library(pryr)
 
+pboptions(type="timer")
+
 source("utils.R")
+
+setCacheRootPath(path="./.Rcache")
 
 # Define generics
 expConnect <- function(x) UseMethod("expConnect")

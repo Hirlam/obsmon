@@ -11,6 +11,7 @@ pkgs <- c(
     "jpeg",
     "leaflet",
     "mapproj",
+    "pbapply",
     "pryr",
     "RSQLite",
     "reshape2",
