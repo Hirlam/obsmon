@@ -2,6 +2,25 @@ library(gridExtra)
 
 registerPlotCategory("Diagnostic")
 
+statisticsPanel <- function(data, column, bw, fill) {
+  columnName <- substitute(column)
+  eval(substitute({
+    hist <- ggplot(data) +
+      geom_histogram(aes(x=column), colour="black", fill=fill, binwidth=bw) +
+      geom_vline(xintercept = 0.0)
+    ecdf <- ggplot(data) +
+      aes(x=column) +
+      stat_ecdf() +
+      aes(y=pnorm(column, sd=sd(column))) +
+      geom_line(alpha=.4) +
+      ylab("ECDF")
+    qq <- ggplot(data) +
+      aes(sample=column) +
+      stat_qq()
+    grid.arrange(hist, ecdf, qq, ncol=3)
+  }, list(column=columnName)))
+}
+
 doPlot.plotDiagnostic <- function(p, plotRequest, plotData) {
   dtg <- formatDtg(plotRequest$criteria$dtg)
   exp <- plotRequest$exp
@@ -11,32 +30,64 @@ doPlot.plotDiagnostic <- function(p, plotRequest, plotData) {
   stationLabel <- exp$stationLabels[[db]][[obtype]][[station]]
   title <- sprintf("%s: %s %s %s",
                    exp$name, p$name, stationLabel, dtg)
-  colors <- "black"
-  obplot <- ggplot(plotData, aes(DTG), group="") +
-    geom_line(aes(y=obsvalue, colour="Obs", group=""))
-  if (plotRequest$criteria$varname=="apd") {
-    obplot <- obplot +
-      geom_line(aes(y=obsvalue+biascrl, colour="Obs raw", group=""))
-    colors <- c(colors, "blue")
+  info <- list()
+  info$labels <- c("obs"="Observation",
+                   "fg"="First Guess",
+                   "an"="Analysis",
+                   "biascrl"="Bias correction",
+                   "rawobs"="Raw observation")
+  info$colors <- c("obs"="black",
+                   "fg"="red",
+                   "an"="green",
+                   "biascrl"="blue",
+                   "rawobs"="brown")
+  dtg <- plotData[["DTG"]]
+  obs <- plotData[["obsvalue"]]
+  fgDep <- plotData[["fg_dep"]]
+  anDep <- plotData[["an_dep"]]
+  compDf <- data.frame("Date"=dtg,
+                       "obs"=obs,
+                       "fg"=obs-fgDep)
+  hasMinimization <- plotRequest$db %in% c("ecmaSfc", "ccma")
+  if (hasMinimization) {
+    compDf["an"] <- obs-anDep
   }
-  colors <- c(colors, "green", "red")
-  obplot <- obplot +
-    geom_line(aes(y=obsvalue-fg_dep, colour="FG", group="")) +
-    geom_line(aes(y=obsvalue-an_dep, colour="AN", group="")) +
-    xlab("DATE") +
-    scale_colour_manual(values=colors) +
-    labs(title=title, ylab=ylab)
+  compDf$panel <- "comparison"
+  if (plotRequest$criteria$varname=="apd") {
+    bias <- plotData[["biascrl"]]
+    compDf["rawobs"] <- obs+bias
+    biasDf <- data.frame("Date"=dtg,
+                         "biascrl"=bias)
+    biasDf$panel <- "bias"
+    dfs <- list(compDf, biasDf)
+  } else {
+      dfs <- list(compDf)
+  }
+  varname <- unique(plotData$varname)
+  data <- do.call(rbind, lapply(dfs, partial(melt, id=c("Date", "panel"))))
+  data$panel <- factor(data$panel, levels=c("comparison", "bias"))
+  comparison <- ggplot(data, aes(Date, value, group=variable, colour=variable)) +
+    geom_line() +
+    facet_grid(panel~., scales="free_y") +
+    scale_color_manual(labels=info$labels, values=info$colors) +
+    labs(title=title, y=sprintf("%s [%s]", varname, units[[varname]]))
   maxval <- max(plotData$fg_dep, plotData$an_dep)
   minval <- min(plotData$fg_dep, plotData$an_dep)
   bw <- (maxval-minval)/20.
-  bottom1 <- ggplot(plotData) +
-    geom_histogram(aes(x=fg_dep), colour="black", fill="red", binwidth=bw) +
-    geom_vline(xintercept = 0.0)
-  bottom2 <- ggplot(plotData) +
-    geom_histogram(aes(x=an_dep), colour="black", fill="green", binwidth=bw) +
-    geom_vline(xintercept = 0.0)
-  bottom <- arrangeGrob(bottom1,  bottom2, ncol=2)
-  obplot <- grid.arrange(obplot, bottom1, bottom2,  ncol=1)
+  panels <- list(comparison,
+                 statisticsPanel(plotData, fg_dep, bw, info$colors[["fg"]]))
+  if (hasMinimization) {
+    lay <- rbind(c(1),
+                 c(1),
+                 c(2),
+                 c(3))
+    panels <- c(panels,
+                list(statisticsPanel(plotData, an_dep, bw, info$colors[["an"]])))
+  } else {
+    lay <- rbind(c(1),
+                 c(2))
+  }
+  obplot <- grid.arrange(grobs=panels, layout_matrix=lay)
   obplot
 }
 
@@ -44,7 +95,7 @@ registerPlotType(
     "Diagnostic",
     plotCreate("plotDiagnostic", "Station Diagnostics", "range",
                paste("SELECT",
-                     "DTG, obsvalue, fg_dep, an_dep, biascrl, statid",
+                     "DTG, varname, obsvalue, fg_dep, an_dep, biascrl, statid",
                      "FROM usage WHERE %s"),
                list("station"))
 )
