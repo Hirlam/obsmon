@@ -45,15 +45,19 @@ applicablePlots <- function(criteria) {
 }
 
 # Define generics
-plotGenerate <- function(p, plotRequest) UseMethod("plotGenerate")
+plotGenerate <- function(p, plotRequest, progressTracker) UseMethod("plotGenerate")
 plotIsApplicable <- function(p, criteria) UseMethod("plotIsApplicable")
 doPlot <- function(p, plotRequest, plotData) UseMethod("doPlot")
 
 # Provide defaults
-plotGenerate.default <- function(p, plotRequest) {
+plotGenerate.default <- function(p, plotRequest, progressTracker) {
+  progressTracker <- addTask(progressTracker, "Querying database")
+  progressTracker <- addTask(progressTracker, "Preparing plot")
+  progressTracker <- updateTask(progressTracker, "Querying database", 0.)
   query <- sprintf(p$queryStub, buildWhereClause(plotRequest$criteria))
   plotData <- expQuery(plotRequest$exp, plotRequest$db,
-                       query, dtgs=plotRequest$dtg)
+                       query, dtgs=plotRequest$criteria$dtg,
+                       progressTracker=progressTracker)
   if (nrow(plotData)==0) {
     image <- readPNG("./nodata.png")
     obplot <- rasterGrob(image)
@@ -64,7 +68,8 @@ plotGenerate.default <- function(p, plotRequest) {
     }
     obplot <- doPlot(p, plotRequest, plotData)
   }
-  obplot
+  progressTracker <- updateTask(progressTracker, "Preparing plot", 1.)
+  list(obplot, progressTracker)
 }
 
 plotIsApplicable.default <- function(p, criteria) {

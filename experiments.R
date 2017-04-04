@@ -16,7 +16,8 @@ setCacheRootPath(path="./.Rcache")
 expConnect <- function(x) UseMethod("expConnect")
 expDisconnect <- function(x) UseMethod("expDisconnect")
 expQuery <- function(x, db, query,
-                     dtgs=NULL, convertDTG=TRUE) UseMethod("expQuery")
+                     dtgs=NULL, convertDTG=TRUE,
+                     progressTracker=NULL) UseMethod("expQuery")
 
 # Provide defaults
 expConnect.sqliteShardedDtg <- function(x) {
@@ -33,7 +34,8 @@ expConnect.sqliteShardedDtg <- function(x) {
 }
 
 expQuery.sqliteShardedDtg <- function(x, db, query,
-                                      dtgs=NULL, convertDTG=TRUE) {
+                                      dtgs=NULL, convertDTG=TRUE,
+                                      progressTracker=NULL) {
   if (is.null(dtgs)) {
     conns <- x$conns[[db]]
   } else {
@@ -42,7 +44,19 @@ expQuery.sqliteShardedDtg <- function(x, db, query,
            conns <- x$conns[[db]][dtgs[1] <= x$dtgs & x$dtgs <= dtgs[2]]
            )
   }
-  res <- pblapply(conns, function(conn) dbGetQuery(conn, query))
+  if (is.null(progressTracker)) {
+    res <- pblapply(conns, function(conn) dbGetQuery(conn, query))
+  } else {
+    nout <- 100
+    split <- splitpb(length(conns), 1L, nout)
+    b <- length(split)
+    res <- vector("list", b)
+    for (i in seq_len(b)) {
+      res[i] <- list(lapply(conns[split[[i]]], function(conn) dbGetQuery(conn, query)))
+      updateTask(progressTracker, "Querying database", i/b)
+    }
+    res <- do.call(c, res, quote=TRUE)
+  }
   res <- do.call(rbind, res)
   if(convertDTG & "DTG" %in% names(res)) {
     res$DTG <- as.POSIXct(as.character(res$DTG), format="%Y%m%d%H")

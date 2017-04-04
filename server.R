@@ -5,6 +5,7 @@ library(yaml)
 source("utils.R")
 source("experiments.R")
 source("plots.R")
+source("progress.R")
 
 # Updates choices for selection
 #
@@ -198,6 +199,9 @@ shinyServer(function(input, output, session) {
 
   # Perform plotting
   observeEvent(input$doPlot, {
+    t <- createShinyProgressTracker()
+    t <- addTask(t, "Building query")
+    t <- updateTask(t, "Building query", 0.)
     plotRequest <- list()
     plotter <- plotTypesFlat[[req(input$plottype)]]
     exp <- experiments[[req(input$experiment)]]
@@ -214,7 +218,11 @@ shinyServer(function(input, output, session) {
                    list(date2dtg(dateRange[1], cycle),
                         date2dtg(dateRange[2], cycle))
              })
-    obplot <- plotGenerate(plotter, plotRequest)
-    output$plot <- renderPlot({grid.arrange(obplot)}, res=96, pointsize=18)
+    t <- updateTask(t, "Building query", 1.)
+    res <- plotGenerate(plotter, plotRequest, t)
+    obplot <- res[[1]]
+    t <- res[[2]]
+    output$plot <- renderPlot({print(obplot)}, res=96, pointsize=18)
+    closeTracker(t)
   })
 })
