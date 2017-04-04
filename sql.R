@@ -3,7 +3,7 @@ library(pryr)
 dtgClause <- function(val) {
   switch(length(val),
          sprintf("(DTG = %d)", val),
-         sprintf("(%d <= DTG) AND (DTG < %d)", val[[1]], val[[2]]))
+         sprintf("(%d <= DTG) AND (DTG <= %d)", val[[1]], val[[2]]))
 }
 
 criterion2clause <- function(name, criteria) {
