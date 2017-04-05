@@ -65,12 +65,23 @@ registerPlotType(
 doPlot.mapThreshold <- function(p, plotRequest, plotData) {
   minval <- min(plotData$plotValues)
   maxval <- max(plotData$plotValues)
-  if (minval*maxval > 0) {
+  if (minval*maxval >= 0) {
     type <- "seq"
-    palette <- "YlOrBr"
-    direction <- 1
-    mincol <- minval
-    maxcol <- maxval
+    spread <- maxval - minval
+    dataSign <- sign(maxval + minval)
+    if (dataSign < 0) {
+      palette <- "Blues"
+      direction <- -1
+      mincol <- minval
+      snapToZero <- maxval < spread/maxval
+      maxcol <- ifelse(snapToZero, 0., maxval)
+    } else {
+      palette <- "Reds"
+      direction <- 1
+      maxcol <- maxval
+      snapToZero <- minval < spread/minval
+      mincol <- ifelse(snapToZero, 0., minval)
+    }
   } else {
     type <- "div"
     palette <- "RdBu"
