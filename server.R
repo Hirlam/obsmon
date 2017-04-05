@@ -222,7 +222,7 @@ shinyServer(function(input, output, session) {
     res <- plotGenerate(plotter, plotRequest, t)
     obplot <- res[[1]]
     t <- res[[2]]
-    output$plot <- renderPlot({print(obplot)}, res=96, pointsize=18)
+    output$plot <- renderPlot(grid.arrange(obplot), res=96, pointsize=18)
     closeTracker(t)
   })
 })
