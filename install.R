@@ -19,6 +19,7 @@ pkgs <- c(
     "scales",
     "shiny",
     "shinyjs",
+    "V8",
     "yaml"
 )
 

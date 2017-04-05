@@ -1,3 +1,28 @@
+jscode <- "
+shinyjs.disableTab = function(name) {
+  var tab = $('.nav li a[data-value=' + name + ']');
+  tab.bind('click.tab', function(e) {
+    e.preventDefault();
+    return false;
+  });
+  tab.addClass('disabled');
+}
+
+shinyjs.enableTab = function(name) {
+  var tab = $('.nav li a[data-value=' + name + ']');
+  tab.unbind('click.tab');
+  tab.removeClass('disabled');
+}
+"
+
+css <- "
+.nav li a.disabled {
+  background-color: #aaa !important;
+  color: #333 !important;
+  cursor: not-allowed !important;
+  border-color: #aaa !important;
+}"
+
 library(shiny)
 library(shinyjs)
 library(leaflet)
@@ -10,6 +35,8 @@ shinyUI(
           })();
         "))),
         useShinyjs(),
+        extendShinyjs(text=jscode),
+        inlineCSS(css),
         tagList(
             tags$head(tags$title("Obsmon v2")),
             h3("Obsmon v2", style="text-align: center;"),
@@ -79,15 +106,34 @@ shinyUI(
             mainPanel(
                 width=9,
                 tabsetPanel(
+                    id="mainArea",
                     tabPanel(
                         "Plot",
+                        value="plotTab",
                         fluidRow(
                             column(12, align="center",
                                    tags$head(tags$style("#plot{height:80vh !important;}")),
                                    plotOutput(outputId="plot", height="auto", width="auto"),
                                    tags$style(type="text/css", "body { overflow-y: scroll; }")
                                    )
-                             )
+                        )
+                    ),
+                    tabPanel(
+                        "Map",
+                        value="mapTab",
+                        fluidRow(
+                            column(12,
+                                   textOutput("mapTitle"),
+                                   tags$style(type="text/css", ".shiny-text-output { text-align: center; }")
+                                   )
+                        ),
+                        fluidRow(
+                            column(12, align="center",
+                                   tags$head(tags$style("#map{height:80vh !important;}")),
+                                   leafletOutput(outputId="map", height="auto", width="auto"),
+                                   tags$style(type="text/css", "body { overflow-y: scroll; }")
+                                   )
+                        )
                     )
                 )
             )
