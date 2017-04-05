@@ -73,13 +73,13 @@ doPlot.mapThreshold <- function(p, plotRequest, plotData) {
       palette <- "Blues"
       direction <- -1
       mincol <- minval
-      snapToZero <- maxval < spread/maxval
+      snapToZero <- maxval^2 < spread
       maxcol <- ifelse(snapToZero, 0., maxval)
     } else {
       palette <- "Reds"
       direction <- 1
       maxcol <- maxval
-      snapToZero <- minval < spread/minval
+      snapToZero <- minval^2 < spread
       mincol <- ifelse(snapToZero, 0., minval)
     }
   } else {
