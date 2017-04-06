@@ -219,11 +219,14 @@ shinyServer(function(input, output, session) {
                         date2dtg(dateRange[2], cycle))
              })
     query <- plotBuildQuery(plotter, plotRequest)
+    output$queryUsed <- renderText(query)
     t <- updateTask(t, "Building query", 1.)
     t <- addTask(t, "Querying database")
     plotData <- expQuery(exp, db, query,
                          dtgs=plotRequest$criteria$dtg,
                          progressTracker=t)
+    output$dataTable <- renderDataTable(plotData,
+                                        options=list(pageLength=100))
     res <- plotGenerate(plotter, plotRequest, plotData, t)
     output$plot <- renderPlot(grid.arrange(res$obplot,
                                            top=textGrob(res$title)),

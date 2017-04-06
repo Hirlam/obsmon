@@ -134,6 +134,15 @@ shinyUI(
                                    tags$style(type="text/css", "body { overflow-y: scroll; }")
                                    )
                         )
+                    ),
+                    tabPanel(
+                        value="dataTab",
+                        "Query and data",
+                        wellPanel(h5("Query used:"),
+                                  textOutput("queryUsed")
+                                  ),
+                        h5("Data:"),
+                        dataTableOutput("dataTable")
                     )
                 )
             )
