@@ -218,11 +218,23 @@ shinyServer(function(input, output, session) {
                    list(date2dtg(dateRange[1], cycle),
                         date2dtg(dateRange[2], cycle))
              })
+    query <- plotBuildQuery(plotter, plotRequest)
     t <- updateTask(t, "Building query", 1.)
-    res <- plotGenerate(plotter, plotRequest, t)
-    obplot <- res[[1]]
-    t <- res[[2]]
-    output$plot <- renderPlot(grid.arrange(obplot), res=96, pointsize=18)
+    t <- addTask(t, "Querying database")
+    plotData <- expQuery(exp, db, query,
+                         dtgs=plotRequest$criteria$dtg,
+                         progressTracker=t)
+    res <- plotGenerate(plotter, plotRequest, plotData, t)
+    output$plot <- renderPlot(grid.arrange(res$obplot,
+                                           top=textGrob(res$title)),
+                              res=96, pointsize=18)
+    if (is.null(res$obmap)) {
+      js$disableTab("mapTab")
+    } else {
+      output$map <- renderLeaflet(res$obmap)
+      output$mapTitle <- renderText(res$title)
+      js$enableTab("mapTab")
+    }
     closeTracker(t)
   })
 })

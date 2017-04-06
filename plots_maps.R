@@ -1,6 +1,8 @@
+source("colors.R")
+
 registerPlotCategory("Maps")
 
-doPlot.plotMap <- function(p, plotRequest, plotData) {
+plotTitle.plotMap <- function(p, plotRequest, plotData) {
   dtg <- formatDtg(plotRequest$criteria$dtg)
   titleStub <- sprintf("%s: %s %%s %s\n%%s", plotRequest$exp$name, p$name, dtg)
   levels <- paste(plotRequest$criteria$levels, collapse=", ")
@@ -18,6 +20,11 @@ doPlot.plotMap <- function(p, plotRequest, plotData) {
   title <- sprintf(titleStub,
                    paste(plotRequest$criteria$obname, varLabel),
                    sprintf("%s: %s", levelLabel, levels))
+  title
+}
+
+
+doPlot.plotMap <- function(p, plotRequest, plotData) {
   x1 <- min(plotData$longitude)-2
   x2 <- max(plotData$longitude)+2
   y1 <- min(plotData$latitude)-2
@@ -27,7 +34,113 @@ doPlot.plotMap <- function(p, plotRequest, plotData) {
               aes(long, lat, group=group),
               colour="gray50") +
     coord_map("stereographic", xlim=c(x1, x2), ylim=c(y1, y2)) +
-    labs(title=title, x="lat", y="lon")
+    labs(x="lat", y="lon")
+}
+
+doMap.plotMap <- function(p, plotRequest, plotData) {
+  x1 <- min(plotData$longitude)-2
+  x2 <- max(plotData$longitude)+2
+  y1 <- min(plotData$latitude)-2
+  y2 <- max(plotData$latitude)+2
+  zoomLevel <- 4
+  zoomLevels <- c(2000, 4000, 6000, 10000, 15000, 45000, 70000, 90000)
+  for ( i in 2:length(zoomLevels)){
+    if ((length(plotData$plotValues) > zoomLevels[i-1])
+        & (length(plotData$plotValues) <= zoomLevels[i])){
+      zoomLevel <- i+3
+    }
+  }
+}
+
+doMap.mapThreshold <- function(p, plotRequest, plotData) {
+  x1 <- min(plotData$longitude)-2
+  x2 <- max(plotData$longitude)+2
+  y1 <- min(plotData$latitude)-2
+  y2 <- max(plotData$latitude)+2
+  zoomLevel <- 4
+  zoomLevels <- c(2000, 4000, 6000, 10000, 15000, 45000, 70000, 90000)
+  for ( i in 2:length(zoomLevels)){
+    if ((length(plotData$plotValues) > zoomLevels[i-1])
+        & (length(plotData$plotValues) <= zoomLevels[i])){
+      zoomLevel <- i+3
+    }
+  }
+  dmin <- min(plotData$plotValues)
+  dmax <- max(plotData$plotValues)
+  ## ulim <- max(abs(dmin),abs(dmax))
+  ## pal <- colorNumeric(palette=c("#0000FF","#FFFFFF","#FF0000"),domain=c(-ulim,ulim))
+  cm <- colormapContinuous(dmin, dmax)
+  if (cm$direction > 0) {
+    domain <- c(cm$mincol, cm$maxcol)
+  } else {
+    domain <- c(cm$maxcol, cm$mincol)
+  }
+  pal <- colorNumeric(palette=cm$palette, domain=domain)
+  plotData$popup <- paste("Statid: ", plotData$statid, "<br>Value: ",
+                          signif(plotData$plotValues, digits=5),
+                          "<br>Level: ", plotData$level)
+  if ( max(plotData$plotValues) > 0 ) {
+    plotData$radius <- (abs(plotData$plotValues)/max(abs(plotData$plotValues)))*10
+    if ( length(plotData$radius) > 0 ) {
+      for (i in 1:length(plotData$radius)) {
+        if ( plotData$radius[i] < 3 ){ plotData$radius[i]=3}
+      }
+    }
+  }else{
+    plotData$radius=5
+  }
+  clusterOptions <- markerClusterOptions(disableClusteringAtZoom=zoomLevel)
+  obMap <- leaflet(plotData) %>%
+    addProviderTiles("Esri.WorldStreetMap",
+                     options=providerTileOptions(opacity=0.7)) %>%
+    fitBounds(x1, y1, x2, y2) %>%
+    addCircleMarkers(~longitude, ~latitude, popup=~popup, radius=~radius,
+                     stroke=TRUE, weight=1, opacity=1, color="black",
+                     fillColor=~pal(plotValues), fillOpacity=1,
+                     clusterOptions = clusterOptions) %>%
+    addLegend("topright", pal=pal, values=domain, opacity=1)
+  obMap
+}
+
+doMap.mapUsage <- function(p, plotRequest, plotData) {
+  status <- rep("NA", nrow(plotData))
+  status <- ifelse(plotData$anflag == 0, "Rejected", status)
+  status <- ifelse(plotData$active  > 0, "Active", status)
+  status <- ifelse(plotData$rejected > 0, "Rejected", status)
+  status <- ifelse(plotData$passive > 0, "Passive", status)
+  status <- ifelse(plotData$blacklisted > 0, "Blacklisted", status)
+  status <- ifelse(plotData$anflag  > 0, "Active(2)", status)
+  status <- ifelse(plotData$anflag == 4, "Rejected", status)
+  status <- ifelse(plotData$anflag == 8, "Blacklisted", status)
+  plotData$status <- status
+  x1 <- min(plotData$longitude)-2
+  x2 <- max(plotData$longitude)+2
+  y1 <- min(plotData$latitude)-2
+  y2 <- max(plotData$latitude)+2
+  zoomLevel <- 4
+  zoomLevels <- c(2000, 4000, 6000, 10000, 15000, 45000, 70000, 90000)
+  for ( i in 2:length(zoomLevels)){
+    if ((length(plotData$plotValues) > zoomLevels[i-1])
+        & (length(plotData$plotValues) <= zoomLevels[i])){
+      zoomLevel <- i+3
+    }
+  }
+  pal <- colorFactor(c("green", "blue", "black", "grey", "yellow", "red"),
+                     domain=c("Active", "Active(2)",
+                              "Blacklisted", "NA", "Passive", "Rejected"))
+  plotData$popup <- paste("Statid: ", plotData$statid, "<br>Anflag: ",
+                          plotData$anflag, "<br>Status:", plotData$status)
+  clusterOptions <- markerClusterOptions(disableClusteringAtZoom=zoomLevel)
+  obMap <- leaflet(data=plotData[rev(order(status)),]) %>%
+    addProviderTiles("Esri.WorldStreetMap",
+                     options=providerTileOptions(opacity=0.5)) %>%
+    fitBounds(x1, y1, x2, y2 ) %>%
+    addCircleMarkers(~longitude, ~latitude, popup=~popup, radius=8,
+                     stroke=TRUE, weight=1, opacity=1, color="black",
+                     fillColor=~pal(status), fillOpacity=1,
+                     clusterOptions = clusterOptions) %>%
+    addLegend("topright", pal=pal, values=~status, opacity=1)
+  obMap
 }
 
 doPlot.mapUsage <- function(p, plotRequest, plotData) {
@@ -65,37 +178,13 @@ registerPlotType(
 doPlot.mapThreshold <- function(p, plotRequest, plotData) {
   minval <- min(plotData$plotValues)
   maxval <- max(plotData$plotValues)
-  if (minval*maxval >= 0) {
-    type <- "seq"
-    spread <- maxval - minval
-    dataSign <- sign(maxval + minval)
-    if (dataSign < 0) {
-      palette <- "Blues"
-      direction <- -1
-      mincol <- minval
-      snapToZero <- maxval^2 < spread
-      maxcol <- ifelse(snapToZero, 0., maxval)
-    } else {
-      palette <- "Reds"
-      direction <- 1
-      maxcol <- maxval
-      snapToZero <- minval^2 < spread
-      mincol <- ifelse(snapToZero, 0., minval)
-    }
-  } else {
-    type <- "div"
-    palette <- "RdBu"
-    direction <- -1
-    col <- max(abs(minval), abs(maxval))
-    mincol <- -col
-    maxcol <- col
-  }
+  cm <- colormapContinuous(minval, maxval)
   NextMethod() +
     geom_point(data=plotData,
                aes(x=longitude, y=latitude, fill=plotValues),
                size=3, shape=21, colour="gray50") +
-    scale_fill_distiller(type=type, palette=palette,
-                         direction=direction, limits=c(mincol, maxcol))
+    scale_fill_distiller(type=cm$type, palette=cm$palette,
+                         direction=cm$direction, limits=c(cm$mincol, cm$maxcol))
 }
 
 registerPlotType(
@@ -146,7 +235,7 @@ registerPlotType(
                      "latitude, longitude, level, statid,",
                      "(biascrl) as plotValues",
                      "FROM usage WHERE %s"),
-               list("obnumber"=7, "obname", "levels"))
+               list("obnumber", "obname", "levels"))
 )
 registerPlotType(
     "Maps",

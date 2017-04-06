@@ -21,7 +21,7 @@ statisticsPanel <- function(data, column, bw, fill) {
   }, list(column=columnName)))
 }
 
-doPlot.plotDiagnostic <- function(p, plotRequest, plotData) {
+plotTitle.plotDiagnostic <- function(p, plotRequest, plotData) {
   dtg <- formatDtg(plotRequest$criteria$dtg)
   exp <- plotRequest$exp
   db <- plotRequest$db
@@ -30,6 +30,9 @@ doPlot.plotDiagnostic <- function(p, plotRequest, plotData) {
   stationLabel <- exp$stationLabels[[db]][[obtype]][[station]]
   title <- sprintf("%s: %s %s %s",
                    exp$name, p$name, stationLabel, dtg)
+}
+
+doPlot.plotDiagnostic <- function(p, plotRequest, plotData) {
   info <- list()
   info$labels <- c("obs"="Observation",
                    "fg"="First Guess",
@@ -70,7 +73,7 @@ doPlot.plotDiagnostic <- function(p, plotRequest, plotData) {
     geom_line() +
     facet_grid(panel~., scales="free_y") +
     scale_color_manual(labels=info$labels, values=info$colors) +
-    labs(title=title, y=sprintf("%s [%s]", varname, units[[varname]]))
+    labs(y=sprintf("%s [%s]", varname, units[[varname]]))
   maxval <- max(plotData$fg_dep, plotData$an_dep)
   minval <- min(plotData$fg_dep, plotData$an_dep)
   bw <- (maxval-minval)/20.

@@ -2,7 +2,7 @@ library(reshape2)
 
 registerPlotCategory("Statistical")
 
-doPlot.plotStatistical <- function(p, plotRequest, plotData) {
+plotTitle.plotStatistical <- function(p, plotRequest, plotData) {
   dtg <- formatDtg(plotRequest$criteria$dtg)
   titleStub <- sprintf("%s: %s %%s %s", plotRequest$exp$name, p$name, dtg)
   switch(
@@ -10,8 +10,28 @@ doPlot.plotStatistical <- function(p, plotRequest, plotData) {
       "1"=,
       "4"=,
       "9"={
+        detail <- plotRequest$criteria$varname
+      },
+      "7"={
+        detail <- paste(plotRequest$criteria$obname,
+                        plotRequest$criteria$satname)
+      },
+      {
+        detail <- paste(plotRequest$criteria$obname,
+                        plotRequest$criteria$varname)
+      }
+  )
+  title <- sprintf(titleStub, detail)
+  title
+}
+
+doPlot.plotStatistical <- function(p, plotRequest, plotData) {
+  switch(
+      as.character(plotRequest$criteria$obnumber),
+      "1"=,
+      "4"=,
+      "9"={
         varname <- plotRequest$criteria$varname
-        title <- sprintf(titleStub, varname)
         xlab <- varname
         ylab <- sprintf("Bias/RMS (%s)", units[[varname]])
         df <- data.frame(
@@ -25,16 +45,11 @@ doPlot.plotStatistical <- function(p, plotRequest, plotData) {
               fill=c("red", "darkblue", "red", "darkblue")) +
           geom_bar(stat="identity") +
           guides(fill=FALSE) +
-          ylab(ylab) +
-          xlab(xlab) +
-          labs(title=title)
+          labs(x=xlab, y=ylab)
       },
       "7"={
         ylab <- "Channels"
         xlab <- "Brightness temperature [K]"
-        title <- sprintf(titleStub,
-                         paste(plotRequest$criteria$obname,
-                               plotRequest$criteria$satname))
         obplot <- ggplot(plotData, aes(channel)) +
           geom_line(aes(y=fg_bias_total,colour="fg_bias_total")) +
           geom_point(aes(y=fg_bias_total,colour="fg_bias_total"),size=4) +
@@ -46,16 +61,12 @@ doPlot.plotStatistical <- function(p, plotRequest, plotData) {
           geom_point(aes(y=an_rms_total,colour="an_rms_total"),size=4) +
           coord_flip() +
           scale_x_continuous(breaks=plotData$channel) +
-          ylab(xlab) +
-          xlab(ylab) +
-          labs(title=title)
+          labs(x=xlab, y=ylab)
       },
       {
         varname <- plotRequest$criteria$varname
         xlab <- sprintf("(%s)", units[[varname]])
         ylab <- "Pressure"
-        title <- sprintf(titleStub,
-                         paste(plotRequest$criteria$obname, varname))
         localPlotData <- melt(plotData, id=c("level"))
         obplot <- ggplot(data=localPlotData) +
           aes(x=level, y=value,
@@ -64,11 +75,9 @@ doPlot.plotStatistical <- function(p, plotRequest, plotData) {
           geom_point(size=4) +
           scale_shape_manual(values=c(16,16,32,32)) +
           scale_colour_manual(values=c("blue", "red", "blue", "red")) +
-          coord_flip()+
-          ylab(xlab) +
-          xlab(ylab) +
-          xlim(100000,0) +
-          labs(title=title)
+          coord_flip() +
+          labs(x=xlab, y=ylab) +
+          xlim(100000,0)
       }
   )
   obplot

@@ -45,31 +45,36 @@ applicablePlots <- function(criteria) {
 }
 
 # Define generics
-plotGenerate <- function(p, plotRequest, progressTracker) UseMethod("plotGenerate")
+plotBuildQuery <- function(p, plotRequest) UseMethod ("plotBuildQuery")
+plotGenerate <- function(p, plotRequest,
+                         plotData, progressTracker) UseMethod("plotGenerate")
 plotIsApplicable <- function(p, criteria) UseMethod("plotIsApplicable")
+plotTitle <- function(p, plotRequest, plotData) UseMethod("plotTitle")
+doMap <- function(p, plotRequest, plotData) UseMethod("doMap")
 doPlot <- function(p, plotRequest, plotData) UseMethod("doPlot")
 
 # Provide defaults
-plotGenerate.default <- function(p, plotRequest, progressTracker) {
-  progressTracker <- addTask(progressTracker, "Querying database")
-  progressTracker <- addTask(progressTracker, "Preparing plot")
-  progressTracker <- updateTask(progressTracker, "Querying database", 0.)
-  query <- sprintf(p$queryStub, buildWhereClause(plotRequest$criteria))
-  plotData <- expQuery(plotRequest$exp, plotRequest$db,
-                       query, dtgs=plotRequest$criteria$dtg,
-                       progressTracker=progressTracker)
+plotBuildQuery.default <- function(p, plotRequest) {
+  sprintf(p$queryStub, buildWhereClause(plotRequest$criteria))
+}
+
+plotGenerate.default <- function(p, plotRequest, plotData, progressTracker) {
+  result <- list()
   if (nrow(plotData)==0) {
     image <- readPNG("./nodata.png")
-    obplot <- rasterGrob(image)
+    result$obplot <- rasterGrob(image)
+    result$obmap <- NULL
+    result$title <- NULL
   } else {
     if (plotRequest$criteria$obnumber == 7
         & "level" %in% colnames(plotData)) {
       plotData <- rename(plotData, c("level"="channel"))
     }
-    obplot <- doPlot(p, plotRequest, plotData)
+    result$title <- plotTitle(p, plotRequest, plotData)
+    result$obplot <- doPlot(p, plotRequest, plotData)
+    result$obmap <- doMap(p, plotRequest, plotData)
   }
-  progressTracker <- updateTask(progressTracker, "Preparing plot", 1.)
-  list(obplot, progressTracker)
+  result
 }
 
 plotIsApplicable.default <- function(p, criteria) {
@@ -83,6 +88,29 @@ plotIsApplicable.default <- function(p, criteria) {
                   requiredNames, p$requiredFields)
     all(res)
   }
+}
+
+plotTitle.default <- function(p, plotRequest, plotData) {
+  dtg <- formatDtg(plotRequest$criteria$dtg)
+  titleStub <- sprintf("%s: %s %%s %s", plotRequest$exp$name, p$name, dtg)
+  switch(
+      as.character(plotRequest$criteria$obnumber),
+      "7"={
+        title <- sprintf(titleStub,
+                         paste(plotRequest$criteria$obname,
+                               plotRequest$criteria$satname))
+      },
+      {
+        title <- sprintf(titleStub,
+                         paste(plotRequest$criteria$obname,
+                               plotRequest$criteria$varname))
+      }
+  )
+  title
+}
+
+doMap.default <- function(p, plotRequest, plotData) {
+  NULL
 }
 
 plotCreate <- function(class, name, dateType, queryStub, requiredFields) {

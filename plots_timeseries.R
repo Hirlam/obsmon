@@ -1,22 +1,31 @@
 registerPlotCategory("Timeseries")
 
-doPlot.plotTimeseries <- function(p, plotRequest, plotData,
-                                  maskColumns=character(0),
-                                  colours=NULL, shapes=NULL) {
+plotTitle.plotTimeseries <- function(p, plotRequest, plotData) {
   dtg <- formatDtg(plotRequest$criteria$dtg)
   titleStub <- sprintf("%s: %s %%s %s", plotRequest$exp$name, p$name, dtg)
   switch(
       as.character(plotRequest$criteria$obnumber),
       "7"={
-        title <- sprintf(titleStub,
-                         paste(plotRequest$criteria$obname,
-                               plotRequest$criteria$satname))
+        detail <- paste(plotRequest$criteria$obname,
+                        plotRequest$criteria$satname)
+      },
+      {
+        detail <- paste(plotRequest$criteria$obname,
+                        plotRequest$criteria$varname)
+      }
+  )
+  title <- sprintf(titleStub, detail)
+}
+
+doPlot.plotTimeseries <- function(p, plotRequest, plotData,
+                                  maskColumns=character(0),
+                                  colours=NULL, shapes=NULL) {
+  switch(
+      as.character(plotRequest$criteria$obnumber),
+      "7"={
         wrapVariable <- "channel"
       },
       {
-        title <- sprintf(titleStub,
-                         paste(plotRequest$criteria$obname,
-                               plotRequest$criteria$varname))
         wrapVariable <- "level"
       }
   )
@@ -29,7 +38,7 @@ doPlot.plotTimeseries <- function(p, plotRequest, plotData,
     geom_point(data=localPlotData,
                aes(x=DTG, y=value, shape=variable, colour=variable, fill=variable),
                na.rm=TRUE) +
-    labs(title=title, x="DATE") +
+    labs(x="DATE") +
     facet_wrap(wrapVariable, labeller=label_both)
   if (!is.null(shapes)) {
     obplot <- obplot +
@@ -97,7 +106,7 @@ registerPlotType(
                paste("SELECT DTG, level, varname, nobs_total,",
                      "fg_bias_total, fg_uncorr_total",
                      "FROM obsmon WHERE %s"),
-               list("obnumber"=7, "obname", "levels"))
+               list("obnumber", "obname", "levels"))
 )
 
 doPlot.landSeaDepartures <- function(p, plotRequest, plotData) {
@@ -140,15 +149,10 @@ registerPlotType(
 )
 
 doPlot.hovmoller <- function(p, plotRequest, plotData) {
-  dtg <- formatDtg(plotRequest$criteria$dtg)
-  titleStub <- sprintf("%s: %s %%s %s", plotRequest$exp$name, p$name, dtg)
-  title <- sprintf(titleStub,
-                   paste(plotRequest$criteria$obname,
-                         plotRequest$criteria$satname))
   obplot <- ggplot(plotData) +
     aes(DTG, channel, fill=fg_bias_total) +
     geom_raster() +
-    labs(title=title, x="DATE", y="Channels")
+    labs(x="DATE", y="Channels")
 }
 
 registerPlotType(
