@@ -52,6 +52,57 @@ doMap.plotMap <- function(p, plotRequest, plotData) {
   }
 }
 
+myLabelFormat <- function(
+  prefix = '', suffix = '', between = ' &ndash; ', digits = 3, big.mark = ',',
+  transform = identity, reverseOrder = FALSE
+) {
+
+  formatNum <- function(x) {
+    format(
+      round(transform(x), digits), trim = TRUE, scientific = FALSE,
+      big.mark = big.mark
+    )
+  }
+
+  function(type, ...) {
+    switch(
+      type,
+      numeric = (function(cuts) {
+        if (reverseOrder) {
+          cuts <- sort(cuts, decreasing=T)
+        }
+        paste0(prefix, formatNum(cuts), suffix)
+      })(...),
+      bin = (function(cuts) {
+        if (reverseOrder) {
+          cuts <- sort(cuts, decreasing=T)
+        }
+        n = length(cuts)
+        paste0(prefix, formatNum(cuts[-n]), between, formatNum(cuts[-1]), suffix)
+      })(...),
+      quantile = (function(cuts, p) {
+        if (reverseOrder) {
+          cuts <- sort(cuts, decreasing=T)
+        }
+        n = length(cuts)
+        p = paste0(round(p * 100), '%')
+        cuts = paste0(formatNum(cuts[-n]), between, formatNum(cuts[-1]))
+        # mouse over the legend labels to see the values (quantiles)
+        paste0(
+          '<span title="', cuts, '">', prefix, p[-n], between, p[-1], suffix,
+          '</span>'
+        )
+      })(...),
+      factor = (function(cuts) {
+        if (reverseOrder) {
+          cuts <- sort(cuts, decreasing=T)
+        }
+        paste0(prefix, as.character(transform(cuts)), suffix)
+      })(...)
+    )
+  }
+}
+
 doMap.mapThreshold <- function(p, plotRequest, plotData) {
   x1 <- min(plotData$longitude)-2
   x2 <- max(plotData$longitude)+2
@@ -65,17 +116,6 @@ doMap.mapThreshold <- function(p, plotRequest, plotData) {
       zoomLevel <- i+3
     }
   }
-  dmin <- min(plotData$plotValues)
-  dmax <- max(plotData$plotValues)
-  ## ulim <- max(abs(dmin),abs(dmax))
-  ## pal <- colorNumeric(palette=c("#0000FF","#FFFFFF","#FF0000"),domain=c(-ulim,ulim))
-  cm <- colormapContinuous(dmin, dmax)
-  if (cm$direction > 0) {
-    domain <- c(cm$mincol, cm$maxcol)
-  } else {
-    domain <- c(cm$maxcol, cm$mincol)
-  }
-  pal <- colorNumeric(palette=cm$palette, domain=domain)
   plotData$popup <- paste("Statid: ", plotData$statid, "<br>Value: ",
                           signif(plotData$plotValues, digits=5),
                           "<br>Level: ", plotData$level)
@@ -89,6 +129,10 @@ doMap.mapThreshold <- function(p, plotRequest, plotData) {
   }else{
     plotData$radius=5
   }
+  cm <- colormapContinuous(min(plotData$plotValues),
+                           max(plotData$plotValues))
+  dataPal <- colorNumeric(palette=cm$palette, domain=cm$domain, reverse=cm$reverse)
+  legendPal <- colorNumeric(palette=cm$palette, domain=cm$domain, reverse=!cm$reverse)
   clusterOptions <- markerClusterOptions(disableClusteringAtZoom=zoomLevel)
   obMap <- leaflet(plotData) %>%
     addProviderTiles("Esri.WorldStreetMap",
@@ -96,9 +140,10 @@ doMap.mapThreshold <- function(p, plotRequest, plotData) {
     fitBounds(x1, y1, x2, y2) %>%
     addCircleMarkers(~longitude, ~latitude, popup=~popup, radius=~radius,
                      stroke=TRUE, weight=1, opacity=1, color="black",
-                     fillColor=~pal(plotValues), fillOpacity=1,
+                     fillColor=~dataPal(plotValues), fillOpacity=1,
                      clusterOptions = clusterOptions) %>%
-    addLegend("topright", pal=pal, values=domain, opacity=1)
+    addLegend("topright", pal=legendPal, values=cm$domain, opacity=1,
+              labFormat=myLabelFormat(reverseOrder=T))
   obMap
 }
 
@@ -184,7 +229,7 @@ doPlot.mapThreshold <- function(p, plotRequest, plotData) {
                aes(x=longitude, y=latitude, fill=plotValues),
                size=3, shape=21, colour="gray50") +
     scale_fill_distiller(type=cm$type, palette=cm$palette,
-                         direction=cm$direction, limits=c(cm$mincol, cm$maxcol))
+                         direction=cm$direction, limits=cm$domain)
 }
 
 registerPlotType(

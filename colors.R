@@ -6,24 +6,27 @@ colormapContinuous <- function(minval, maxval) {
     dataSign <- sign(maxval + minval)
     if (dataSign < 0) {
       cm$palette <- "Blues"
-      cm$direction <- -1
-      cm$mincol <- minval
+      direction <- -1
+      mincol <- minval
       snapToZero <- maxval^2 < spread
-      cm$maxcol <- ifelse(snapToZero, 0., maxval)
+      maxcol <- ifelse(snapToZero, 0., maxval)
     } else {
       cm$palette <- "Reds"
-      cm$direction <- 1
-      cm$maxcol <- maxval
+      direction <- 1
+      maxcol <- maxval
       snapToZero <- minval^2 < spread
-      cm$mincol <- ifelse(snapToZero, 0., minval)
+      mincol <- ifelse(snapToZero, 0., minval)
     }
   } else {
     cm$type <- "div"
     cm$palette <- "RdBu"
-    cm$direction <- -1
+    direction <- -1
     col <- max(abs(minval), abs(maxval))
-    cm$mincol <- -col
-    cm$maxcol <- col
+    mincol <- -col
+    maxcol <- col
   }
+  cm$direction <- direction
+  cm$reverse <- direction < 0
+  cm$domain <- c(mincol, maxcol)
   cm
 }
