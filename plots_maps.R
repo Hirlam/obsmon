@@ -220,6 +220,10 @@ registerPlotType(
                list("obnumber", "obname", "levels"))
 )
 
+plotBuildQuery.mapThreshold <- function(p, plotRequest) {
+  sprintf(p$queryStub, p$dataColumn, buildWhereClause(plotRequest$criteria))
+}
+
 doPlot.mapThreshold <- function(p, plotRequest, plotData) {
   minval <- min(plotData$plotValues)
   maxval <- max(plotData$plotValues)
@@ -237,10 +241,11 @@ registerPlotType(
     plotCreate(c("mapThreshold", "plotMap"),
                "First Guess Departure Map", "single",
                paste("SELECT",
-                     "latitude, longitude, level, statid,",
-                     "(fg_dep) as plotValues",
+                     "latitude, longitude, level, statid, obsvalue,",
+                     "(%s) as plotValues",
                      "FROM usage WHERE %s"),
-               list("obnumber", "obname", "levels"))
+               list("obnumber", "obname", "levels"),
+               dataColumn="fg_dep")
 )
 registerPlotType(
     "Maps",
@@ -248,19 +253,21 @@ registerPlotType(
                "First Guess Departure + Bias Correction Map", "single",
                paste("SELECT",
                      "latitude, longitude, level, statid,",
-                     "(fg_dep+biascrl) as plotValues",
+                     "(%s) as plotValues",
                      "FROM usage WHERE %s"),
-               list("obnumber"=7, "obname", "levels"))
+               list("obnumber"=7, "obname", "levels"),
+               dataColumn="fg_dep+biascrl")
 )
 registerPlotType(
     "Maps",
     plotCreate(c("mapThreshold", "plotMap"),
                "Analysis Departure Map", "single",
                paste("SELECT",
-                     "latitude, longitude, level, statid,",
-                     "(an_dep) as plotValues",
+                     "latitude, longitude, level, statid, obsvalue,",
+                     "(%s) as plotValues",
                      "FROM usage WHERE %s"),
-               list("obnumber", "obname", "levels"))
+               list("obnumber", "obname", "levels"),
+               dataColumn="an_dep")
 )
 registerPlotType(
     "Maps",
@@ -268,9 +275,11 @@ registerPlotType(
                "Analysis Increment Map", "single",
                paste("SELECT",
                      "latitude, longitude, level, statid,",
-                     "(fg_dep-an_dep) as plotValues",
+                     "obsvalue, fg_dep, an_dep,",
+                     "(%s) as plotValues",
                      "FROM usage WHERE %s"),
-               list("obnumber", "obname", "levels"))
+               list("obnumber", "obname", "levels"),
+               dataColumn="fg_dep-an_dep")
 )
 registerPlotType(
     "Maps",
@@ -278,9 +287,10 @@ registerPlotType(
                "Bias Correction Map", "single",
                paste("SELECT",
                      "latitude, longitude, level, statid,",
-                     "(biascrl) as plotValues",
+                     "(%s) as plotValues",
                      "FROM usage WHERE %s"),
-               list("obnumber", "obname", "levels"))
+               list("obnumber"=7, "obname", "levels"),
+               dataColumn="biascrl")
 )
 registerPlotType(
     "Maps",
@@ -288,7 +298,8 @@ registerPlotType(
                "Observations Map", "single",
                paste("SELECT",
                      "latitude, longitude, level, statid,",
-                     "(obsvalue) as plotValues",
+                     "(%s) as plotValues",
                      "FROM usage WHERE %s"),
-               list("obnumber", "obname", "levels"))
+               list("obnumber", "obname", "levels"),
+               dataColumn="obsvalue")
 )

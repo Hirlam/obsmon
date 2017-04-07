@@ -60,7 +60,7 @@ plotBuildQuery.default <- function(p, plotRequest) {
 
 plotGenerate.default <- function(p, plotRequest, plotData, progressTracker) {
   result <- list()
-  if (nrow(plotData)==0) {
+  if (is.null(plotData) || nrow(plotData)==0) {
     image <- readPNG("./nodata.png")
     result$obplot <- rasterGrob(image)
     result$obmap <- NULL
@@ -113,12 +113,14 @@ doMap.default <- function(p, plotRequest, plotData) {
   NULL
 }
 
-plotCreate <- function(class, name, dateType, queryStub, requiredFields) {
-  p <- structure(list(), class = class)
+plotCreate <- function(clazz, name, dateType, queryStub, requiredFields, ...) {
+  p <- list()
   p$dateType <- dateType
   p$name <- name
   p$queryStub <- queryStub
   p$requiredFields <- requiredFields
+  p <- c(p, list(...))
+  class(p) <- clazz
   p
 }
 

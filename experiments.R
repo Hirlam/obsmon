@@ -104,6 +104,15 @@ sqliteShardedDtgGetObtypes <- function(conns) {
         obtypes[[obn]][[var]][[as.character(lvl)]] <- entry
       }
     }
+    uNames <- c("u", "u10m")
+    ffNames <- c("ff", "ff10m")
+    varNames <- names(obtypes[[obn]])
+    uPresent <- uNames %in% varNames
+    for (i in seq_len(length(uPresent))) {
+      if (uPresent[i]) {
+        obtypes[[obn]][[ffNames[i]]] <- obtypes[[obn]][[uNames[i]]]
+      }
+    }
   }
   obtypes$satem <- list()
   for (sens in sort(unique(satObs$obname))) {

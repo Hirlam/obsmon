@@ -6,6 +6,7 @@ source("utils.R")
 source("experiments.R")
 source("plots.R")
 source("progress.R")
+source("windspeed.R")
 
 # Updates choices for selection
 #
@@ -218,13 +219,17 @@ shinyServer(function(input, output, session) {
                    list(date2dtg(dateRange[1], cycle),
                         date2dtg(dateRange[2], cycle))
              })
-    query <- plotBuildQuery(plotter, plotRequest)
-    output$queryUsed <- renderText(query)
-    t <- updateTask(t, "Building query", 1.)
-    t <- addTask(t, "Querying database")
-    plotData <- expQuery(exp, db, query,
-                         dtgs=plotRequest$criteria$dtg,
-                         progressTracker=t)
+    if (plotRequest$criteria$varname %in% c("ff", "ff10m")) {
+      plotData <- buildFfData(plotter, plotRequest)
+    } else {
+      query <- plotBuildQuery(plotter, plotRequest)
+      output$queryUsed <- renderText(query)
+      t <- updateTask(t, "Building query", 1.)
+      t <- addTask(t, "Querying database")
+      plotData <- expQuery(exp, db, query,
+                           dtgs=plotRequest$criteria$dtg,
+                           progressTracker=t)
+    }
     output$dataTable <- renderDataTable(plotData,
                                         options=list(pageLength=100))
     res <- plotGenerate(plotter, plotRequest, plotData, t)
