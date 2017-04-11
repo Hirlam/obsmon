@@ -19,11 +19,31 @@ expQuery <- function(x, db, query,
                      dtgs=NULL, convertDTG=TRUE,
                      progressTracker=NULL) UseMethod("expQuery")
 
+sqliteConnect <- function(dir, db, dtg) {
+  dbpath <- file.path(dir, dtg, db)
+  flog.debug("Connecting to path %s", dbpath)
+  if (!file.exists(dbpath)) {
+    flog.debug("Missing file %s", dbpath)
+    NULL
+  } else if(file.info(dbpath)[[1,"size"]] == 0.) {
+    flog.debug("Empty file %s", dbpath)
+    NULL
+  } else {
+    con <- dbConnect(RSQLite::SQLite(), dbpath,
+                     flags=RSQLite::SQLITE_RO, synchronous=NULL)
+    tryCatch(dbGetQuery(con, "PRAGMA synchronous=off"),
+             error=function(e) {
+               flog.error("Error accessing %s: %s", dbpath, e)
+               con <- NULL
+             })
+    con
+  }
+}
+
 # Provide defaults
 expConnect.sqliteShardedDtg <- function(x) {
-  drv <- RSQLite::SQLite()
   connect <- function(dtgs, dir, db) {
-    conns <- pblapply(dtgs, function(dtg) dbConnect(drv, file.path(dir, dtg, db)))
+    conns <- pblapply(dtgs, partial(sqliteConnect, dir, db))
     names(conns) <- dtgs
     conns
   }
@@ -31,6 +51,16 @@ expConnect.sqliteShardedDtg <- function(x) {
   x$conns$ecmaSfc <- connect(x$dtgs, x$dirs$ecmaSfc, "ecma.db")
   x$conns$ccma <- connect(x$dtgs, x$dirs$ccma, "ccma.db")
   x
+}
+
+makeSingleQuery <- function(query) {
+  function(conn) {
+    if (is.null(conn)) {
+      NULL
+    } else {
+      dbGetQuery(conn, query)
+    }
+  }
 }
 
 expQuery.sqliteShardedDtg <- function(x, db, query,
@@ -44,15 +74,16 @@ expQuery.sqliteShardedDtg <- function(x, db, query,
            conns <- x$conns[[db]][dtgs[1] <= x$dtgs & x$dtgs <= dtgs[2]]
            )
   }
+  singleQuery <- makeSingleQuery(query)
   if (is.null(progressTracker)) {
-    res <- pblapply(conns, function(conn) dbGetQuery(conn, query))
+    res <- pblapply(conns, singleQuery)
   } else {
     nout <- 100
     split <- splitpb(length(conns), 1L, nout)
     b <- length(split)
     res <- vector("list", b)
     for (i in seq_len(b)) {
-      res[i] <- list(lapply(conns[split[[i]]], function(conn) dbGetQuery(conn, query)))
+      res[i] <- list(lapply(conns[split[[i]]], singleQuery))
       updateTask(progressTracker, "Querying database", i/b)
     }
     res <- do.call(c, res, quote=TRUE)
@@ -81,7 +112,7 @@ sqliteShardedDtgGetObtypes <- function(conns) {
   query <- paste("SELECT DISTINCT",
                  "obnumber, obname, satname, varname, level",
                  "FROM obsmon WHERE nobs_total>0")
-  res <- lapply(conns, function(conn) dbGetQuery(conn, query))
+  res <- pblapply(conns, makeSingleQuery(query))
   allObs <- do.call(rbind, res)
   rownames(allObs) <- NULL
   allObs <- unique(allObs)
