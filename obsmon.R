@@ -1,7 +1,5 @@
 library(methods)
 library(shiny)
 
-shinydir<-Sys.getenv('PWD')
-shinydir
-launch.browser=TRUE
-runApp(shinydir,launch.browser=TRUE)
+shinydir <- Sys.getenv('PWD')
+runApp(shinydir, launch.browser=FALSE, port=5391)
