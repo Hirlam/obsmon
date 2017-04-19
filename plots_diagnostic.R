@@ -70,7 +70,7 @@ doPlot.plotDiagnostic <- function(p, plotRequest, plotData) {
   data <- do.call(rbind, lapply(dfs, partial(melt, id=c("Date", "panel"))))
   data$panel <- factor(data$panel, levels=c("comparison", "bias"))
   comparison <- ggplot(data, aes(Date, value, group=variable, colour=variable)) +
-    geom_line() +
+    geom_point() +
     facet_grid(panel~., scales="free_y") +
     scale_color_manual(labels=info$labels, values=info$colors) +
     labs(y=sprintf("%s [%s]", varname, units[[varname]]))
