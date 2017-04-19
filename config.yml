@@ -1,17 +1,26 @@
-exp1:
+exp0:
   displayName: First experiment
   production: FALSE
-  baseDir: /nobackup/smhid13/sm_ridal/hm_home
-  experiment: cy40_mc_oper
-  ecmaDir: archive/extract/mbr000/ecma
-  ecmaSfcDir: archive/extract/mbr000/ecma_sfc
-  ccmaDir: archive/extract/mbr000/ccma
+  baseDir: /home/a002160/Projects/Obsmon
+  experiment: mbr000
+  ecmaDir: ecma
+  ecmaSfcDir: ecma_sfc
+  ccmaDir: ccma
+
+exp1:
+  displayName: MEPS_prod
+  production: FALSE
+  baseDir: /data/24_nb/metcoop/opdata/elin4/meps/obsmon
+  experiment: mbr000
+  ecmaDir: ecma
+  ecmaSfcDir: ecma_sfc
+  ccmaDir: ccma
 
 exp2:
-  displayName: Klaus experiment
+  displayName: MEPS_preop
   production: FALSE
-  baseDir: /nobackup/smhid13/sm_klazi/hm_home
-  experiment: first_exp
-  ecmaDir: archive/extract/ecma
-  ecmaSfcDir: archive/extract/ecma_sfc
-  ccmaDir: archive/extract/ccma
+  baseDir: /data/24_nb/metcoop/opdata/elin4/meps/obsmon
+  experiment: mbr001
+  ecmaDir: ecma
+  ecmaSfcDir: ecma_sfc
+  ccmaDir: ccma
