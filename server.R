@@ -153,6 +153,7 @@ shinyServer(function(input, output, session) {
     db <- req(input$odbBase)
     adb <- activeDb()
     res <- list()
+    res$info <- list()
     obtype <- req(input$obtype)
     if (obtype == 'satem') {
       sensor <- req(input$sensor)
@@ -175,7 +176,10 @@ shinyServer(function(input, output, session) {
       }
     }
     if (req(input$station) != "Any") {
-      res$station <- input$station
+      station <- input$station
+      res$station <- station
+      label <- exp$stationLabels[[adb$name]][[obtype]][[station]]
+      res$info$stationLabel <- ifelse(is.null(label), as.character(station), label)
     }
     res
   }
@@ -219,10 +223,9 @@ shinyServer(function(input, output, session) {
     t <- updateTask(t, "Building query", 0.)
     plotRequest <- list()
     plotter <- plotTypesFlat[[req(input$plottype)]]
-    exp <- experiments[[req(input$experiment)]]
-    plotRequest$exp <- exp
-    db <- req(input$odbBase)
-    plotRequest$db <- db
+    plotRequest$expName <- req(input$experiment)
+    db <- activeDb()
+    plotRequest$dbName <- db$name
     plotRequest$criteria <- buildCriteria()
     cycle <- req(input$cycle)
     plotRequest$criteria$dtg <-
@@ -240,7 +243,7 @@ shinyServer(function(input, output, session) {
       output$queryUsed <- renderText(query)
       t <- updateTask(t, "Building query", 1.)
       t <- addTask(t, "Querying database")
-      plotData <- performQuery(activeDb(), query, plotRequest$criteria$dtg,
+      plotData <- performQuery(db, query, plotRequest$criteria$dtg,
                                progressTracker=t)
     }
     output$dataTable <- renderDataTable(plotData,

@@ -23,13 +23,13 @@ statisticsPanel <- function(data, column, bw, fill) {
 
 plotTitle.plotDiagnostic <- function(p, plotRequest, plotData) {
   dtg <- formatDtg(plotRequest$criteria$dtg)
-  exp <- plotRequest$exp
-  db <- plotRequest$db
+  expName <- plotRequest$expName
   obtype <- plotRequest$criteria$obname
   station <- plotRequest$criteria$station
-  stationLabel <- exp$stationLabels[[db]][[obtype]][[station]]
+  stationLabel <- plotRequest$criteria$info$stationLabel
   title <- sprintf("%s: %s %s %s",
-                   exp$name, p$name, stationLabel, dtg)
+                   expName, p$name, stationLabel, dtg)
+  title
 }
 
 doPlot.plotDiagnostic <- function(p, plotRequest, plotData) {
@@ -51,7 +51,7 @@ doPlot.plotDiagnostic <- function(p, plotRequest, plotData) {
   compDf <- data.frame("Date"=dtg,
                        "obs"=obs,
                        "fg"=obs-fgDep)
-  hasMinimization <- plotRequest$db %in% c("ecmaSfc", "ccma")
+  hasMinimization <- plotRequest$dbName %in% c("ecmaSfc", "ccma")
   if (hasMinimization) {
     compDf["an"] <- obs-anDep
   }

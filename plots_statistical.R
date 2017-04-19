@@ -4,7 +4,7 @@ registerPlotCategory("Statistical")
 
 plotTitle.plotStatistical <- function(p, plotRequest, plotData) {
   dtg <- formatDtg(plotRequest$criteria$dtg)
-  titleStub <- sprintf("%s: %s %%s %s", plotRequest$exp$name, p$name, dtg)
+  titleStub <- sprintf("%s: %s %%s %s", plotRequest$expName, p$name, dtg)
   switch(
       as.character(plotRequest$criteria$obnumber),
       "1"=,

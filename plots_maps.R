@@ -4,7 +4,7 @@ registerPlotCategory("Maps")
 
 plotTitle.plotMap <- function(p, plotRequest, plotData) {
   dtg <- formatDtg(plotRequest$criteria$dtg)
-  titleStub <- sprintf("%s: %s %%s %s\n%%s", plotRequest$exp$name, p$name, dtg)
+  titleStub <- sprintf("%s: %s %%s %s\n%%s", plotRequest$expName, p$name, dtg)
   levels <- paste(plotRequest$criteria$levels, collapse=", ")
   switch(
       as.character(plotRequest$criteria$obnumber),

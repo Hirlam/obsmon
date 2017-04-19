@@ -24,6 +24,8 @@ criterion2clause <- function(name, criteria) {
 
 buildWhereClause <- function(criteria) {
   subclauses <- list()
-  crits <- lapply(names(criteria), partial(criterion2clause, criteria=criteria))
+  criteriaNames <- names(criteria)
+  crits <- lapply(criteriaNames[criteriaNames!="info"],
+                  partial(criterion2clause, criteria=criteria))
   do.call(partial(paste, sep=" AND "), crits)
 }
