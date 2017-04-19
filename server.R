@@ -36,32 +36,17 @@ shinyServer(function(input, output, session) {
   levelChoices <- list()
   channelChoices <- list()
 
-  # Update date related fields dateRange, date, and cycle with new experiment
-  observeEvent(input$experiment, {
-    exp <- experiments[[req(input$experiment)]]
-    updateDateRangeInput(session, "dateRange",
-                         start = exp$dateRange[1], end = exp$dateRange[2],
-                         min = exp$maxDateRange[1], max = exp$maxDateRange[2])
-    updateDateInput(session, "date", value=exp$date,
-                    min = exp$maxDateRange[1], max = exp$maxDateRange[2])
-    updateSelection(session, "cycle", exp$cycles, input$cycle)
-  })
-
-  # Update dateRange in experiment to persist across experiment changes
-  observeEvent(input$dateRange, {
-    dateRange <- req(input$dateRange)
+  activeDb <- reactive({
     expName <- req(input$experiment)
-    experiments[[expName]]$dateRange <<- dateRange
-  })
-
-  # Update date in experiment to persist across experiment changes
-  observeEvent(input$date, {
-    expName <- req(input$experiment)
-    experiments[[expName]]$date <<- req(input$date)
+    dbName <- req(input$odbBase)
+    experiments[[expName]]$dbs[[dbName]]
   })
 
   # Update database options according to chosen category
-  observeEvent(input$category, {
+  observeEvent({
+    input$experiment
+    input$category
+  }, {
     category <- req(input$category)
     if (category == "upperAir") {
       choices <- list("Screening"="ecma", "Minimization"="ccma")
@@ -75,58 +60,76 @@ shinyServer(function(input, output, session) {
     }
   })
 
+  # Update date related fields dateRange, date, and cycle with new experiment
+  observeEvent(activeDb(), {
+    db <- activeDb()
+    updateDateRangeInput(session, "dateRange",
+                         start = db$dateRange[1], end = db$dateRange[2],
+                         min = db$maxDateRange[1], max = db$maxDateRange[2])
+    updateDateInput(session, "date", value=db$date,
+                    min = db$maxDateRange[1], max = db$maxDateRange[2])
+    updateSelection(session, "cycle", db$cycles, input$cycle)
+  })
+
+  # Update dateRange in experiment to persist across experiment changes
+  ## observeEvent(input$dateRange, {
+  ##   db <- req(activeDb())
+  ##   db$dateRange <<- input$dateRange
+  ## })
+
+  ## # Update date in experiment to persist across experiment changes
+  ## observeEvent(input$date, {
+  ##   db <- req(activeDb())
+  ##   db$date <<- input$date
+  ## })
+
   # Update obtype with choices for given experiment and database
-  observeEvent(input$odbBase, {
-    exp <- experiments[[req(input$experiment)]]
-    db <- req(input$odbBase)
+  observeEvent(activeDb(), {
+    db <- activeDb()
     updateSelection(session, "obtype",
-                    names(exp$obtypes[[db]]), input$obtype)
+                    names(db$obtypes), input$obtype)
   })
 
   # Update sensor for satem obtype, variable else
   observeEvent(input$obtype, {
-    exp <- experiments[[req(input$experiment)]]
-    db <- req(input$odbBase)
     obtype <- req(input$obtype)
+    db <- activeDb()
     if (obtype=="satem") {
       updateSelection(session, "sensor",
-                      names(exp$obtypes[[db]][[obtype]]), input$sensor)
+                      names(db$obtypes[[obtype]]), input$sensor)
     } else {
       updateSelection(session, "variable",
-                      names(exp$obtypes[[db]][[obtype]]), input$variable)
+                      names(db$obtypes[[obtype]]), input$variable)
     }
     updateSelection(session, "station",
-                    exp$stations[[db]][[obtype]], input$station)
+                    db$stations[[obtype]], input$station)
   })
 
   # Update satellite choices for given sensor
   observeEvent(input$sensor, {
-    exp <- experiments[[req(input$experiment)]]
-    db <- req(input$odbBase)
+    db <- activeDb()
     obtype <- req(input$obtype)
     sens <- req(input$sensor)
     updateSelection(session, "satellite",
-                    names(exp$obtypes[[db]][[obtype]][[sens]]), input$satellite)
+                    names(db$obtypes[[obtype]][[sens]]), input$satellite)
   })
 
   # Update channel choice for given satellite
   observeEvent(input$satellite, {
-    exp <- experiments[[req(input$experiment)]]
-    db <- req(input$odbBase)
+    db <- activeDb()
     obtype <- req(input$obtype)
     sens <- req(input$sensor)
     sat <- req(input$satellite)
-    channelChoices <<- names(exp$obtypes[[db]][[obtype]][[sens]][[sat]])
+    channelChoices <<- names(db$obtypes[[obtype]][[sens]][[sat]])
     updateSelection(session, "channels", channelChoices, input$channels)
   })
 
   # Update level choice for given variable
   observeEvent(input$variable, {
-    exp <- experiments[[req(input$experiment)]]
-    db <- req(input$odbBase)
+    db <- activeDb()
     obtype <- req(input$obtype)
     var <- req(input$variable)
-    levelChoices <<- names(exp$obtypes[[db]][[obtype]][[var]])
+    levelChoices <<- names(db$obtypes[[obtype]][[var]])
     updateSelection(session, "levels", levelChoices, input$levels)
   })
 
@@ -148,11 +151,12 @@ shinyServer(function(input, output, session) {
   buildCriteria <- function() {
     exp <- experiments[[req(input$experiment)]]
     db <- req(input$odbBase)
+    adb <- activeDb()
     res <- list()
     obtype <- req(input$obtype)
     if (obtype == 'satem') {
       sensor <- req(input$sensor)
-      res$obnumber <- exp$obnumbers[[db]][[sensor]]
+      res$obnumber <- adb$obnumbers[[sensor]]
       res$obname <- sensor
       res$satname <- req(input$satellite)
       if (!is.null(input$channels)) {
@@ -161,7 +165,7 @@ shinyServer(function(input, output, session) {
         res$levels <- channelChoices
       }
     } else {
-      res$obnumber <- exp$obnumbers[[db]][[obtype]]
+      res$obnumber <- adb$obnumbers[[obtype]]
       res$obname <- obtype
       res$varname <- req(input$variable)
       if (!is.null(input$levels)) {
@@ -177,7 +181,17 @@ shinyServer(function(input, output, session) {
   }
 
   # Turn criteria into reactive expression so they can trigger plottype update
-  criteria <- reactive({
+  criteria <- eventReactive(
+  {
+    input$obtype
+    input$sensor
+    input$satellite
+    input$channels
+    input$variable
+    input$levels
+    input$station
+  },
+  {
     buildCriteria()
   })
 
@@ -226,9 +240,8 @@ shinyServer(function(input, output, session) {
       output$queryUsed <- renderText(query)
       t <- updateTask(t, "Building query", 1.)
       t <- addTask(t, "Querying database")
-      plotData <- expQuery(exp, db, query,
-                           dtgs=plotRequest$criteria$dtg,
-                           progressTracker=t)
+      plotData <- performQuery(activeDb(), query, plotRequest$criteria$dtg,
+                               progressTracker=t)
     }
     output$dataTable <- renderDataTable(plotData,
                                         options=list(pageLength=100))

@@ -4,6 +4,7 @@ lib=Sys.getenv("R_LIBS_USER")
 pkgs <- c(
     "Cairo",
     "chron",
+    "dplyr",
     "futile.logger",
     "ggplot2",
     "gridExtra",
