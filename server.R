@@ -236,8 +236,10 @@ shinyServer(function(input, output, session) {
                    list(date2dtg(dateRange[1], cycle),
                         date2dtg(dateRange[2], cycle))
              })
-    if (plotRequest$criteria$varname %in% c("ff", "ff10m")) {
-      plotData <- buildFfData(plotter, plotRequest)
+    isWindspeed <- "varname" %in% names(plotRequest$criteria) &&
+      plotRequest$criteria$varname %in% c("ff", "ff10m")
+    if (isWindspeed) {
+      plotData <- buildFfData(db, plotter, plotRequest)
     } else {
       query <- plotBuildQuery(plotter, plotRequest)
       output$queryUsed <- renderText(query)

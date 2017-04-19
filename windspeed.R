@@ -1,4 +1,4 @@
-buildFfData <- function(plotter, plotRequest) {
+buildFfData <- function(db, plotter, plotRequest) {
   varname <- plotRequest$criteria$varname
   suffix <- substr(varname, 3, nchar(varname))
   uName <- paste0("u", suffix)
@@ -6,12 +6,13 @@ buildFfData <- function(plotter, plotRequest) {
   ffName <- paste0("ff", suffix)
   plotRequest$criteria$varname <- uName
   uQuery <- plotBuildQuery(plotter, plotRequest)
-  uData <- expQuery(plotRequest$exp, plotRequest$db, uQuery,
-                    dtgs=plotRequest$criteria$dtg)
+  uData <- performQuery(db, uQuery, plotRequest$criteria$dtg)
+  if (is.null(uData) || length(uData)==0) {
+    return(NULL)
+  }
   plotRequest$criteria$varname <- vName
   vQuery <- plotBuildQuery(plotter, plotRequest)
-  vData <- expQuery(plotRequest$exp, plotRequest$db, vQuery,
-                    dtgs=plotRequest$criteria$dtg)
+  vData <- performQuery(db, vQuery, plotRequest$criteria$dtg)
   tableString <- regmatches(uQuery, regexpr("FROM \\w* WHERE",
                                             uQuery, ignore.case=TRUE))
   table <- substr(tableString, 6, nchar(tableString)-6)
