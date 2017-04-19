@@ -232,7 +232,7 @@ doPlot.mapThreshold <- function(p, plotRequest, plotData) {
     geom_point(data=plotData,
                aes(x=longitude, y=latitude, fill=plotValues),
                size=3, shape=21, colour="gray50") +
-    scale_fill_distiller(type=cm$type, palette=cm$palette,
+    scale_fill_distiller(p$dataColumn, type=cm$type, palette=cm$palette,
                          direction=cm$direction, limits=cm$domain)
 }
 
