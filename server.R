@@ -261,6 +261,9 @@ shinyServer(function(input, output, session) {
                               res=96, pointsize=18)
     if (is.null(res$obmap)) {
       js$disableTab("mapTab")
+      if (input$mainArea == "mapTab") {
+        updateTabsetPanel(session, "mainArea", "plotTab")
+      }
     } else {
       output$map <- renderLeaflet(res$obmap)
       output$mapTitle <- renderText(res$title)
