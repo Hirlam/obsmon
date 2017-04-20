@@ -8,6 +8,18 @@ source("plots.R")
 source("progress.R")
 source("windspeed.R")
 
+clamp <- function(value, min, max, default=max) {
+  if (is.null(value)) {
+    default
+  } else if (value < min) {
+    min
+  } else if (value > max) {
+    max
+  } else {
+    value
+  }
+}
+
 # Updates choices for selection
 #
 # Updates a selectInput, preserving the selected
@@ -63,25 +75,18 @@ shinyServer(function(input, output, session) {
   # Update date related fields dateRange, date, and cycle with new experiment
   observeEvent(activeDb(), {
     db <- activeDb()
+    min <- db$maxDateRange[1]
+    max <- db$maxDateRange[2]
+    start <- clamp(input$dateRange[1], min, max, min)
+    end <- clamp(input$dateRange[2], min, max)
+    single <- clamp(input$date, min, max)
     updateDateRangeInput(session, "dateRange",
-                         start = db$dateRange[1], end = db$dateRange[2],
+                         start = start, end = end,
                          min = db$maxDateRange[1], max = db$maxDateRange[2])
-    updateDateInput(session, "date", value=db$date,
+    updateDateInput(session, "date", value = single,
                     min = db$maxDateRange[1], max = db$maxDateRange[2])
     updateSelection(session, "cycle", db$cycles, input$cycle)
   })
-
-  # Update dateRange in experiment to persist across experiment changes
-  ## observeEvent(input$dateRange, {
-  ##   db <- req(activeDb())
-  ##   db$dateRange <<- input$dateRange
-  ## })
-
-  ## # Update date in experiment to persist across experiment changes
-  ## observeEvent(input$date, {
-  ##   db <- req(activeDb())
-  ##   db$date <<- input$date
-  ## })
 
   # Update obtype with choices for given experiment and database
   observeEvent(activeDb(), {
