@@ -1,0 +1,15 @@
+# Pattern based ignores
+\#*\#
+*~
+*.Rout
+.nfs*
+*.org
+
+# Untracked helper files
+bak
+.Rcache
+.Rhistory
+Rplots.pdf
+rtags
+rtags.R
+TAGS
