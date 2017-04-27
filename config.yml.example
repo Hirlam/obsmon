@@ -15,12 +15,3 @@ exp1:
   ecmaDir: ecma
   ecmaSfcDir: ecma_sfc
   ccmaDir: ccma
-
-exp2:
-  displayName: MEPS_preop
-  production: FALSE
-  baseDir: /data/24_nb/metcoop/opdata/elin4/meps/obsmon
-  experiment: mbr001
-  ecmaDir: ecma
-  ecmaSfcDir: ecma_sfc
-  ccmaDir: ccma
