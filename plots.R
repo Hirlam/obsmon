@@ -3,6 +3,8 @@ library(png)
 library(plyr)
 library(grid)
 
+pdf(NULL)
+
 source("sql.R")
 
 plotTypesHierarchical <- list()
