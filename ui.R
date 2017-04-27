@@ -23,6 +23,13 @@ css <- "
   border-color: #aaa !important;
 }"
 
+obsmonVersion <- if (file.exists("VERSION")) {
+                   versionFile <- file("VERSION", "r")
+                   readLines(versionFile, 1)
+                 } else {
+                   "unknown"
+                 }
+
 library(shiny)
 library(shinyjs)
 library(leaflet)
@@ -39,7 +46,8 @@ shinyUI(
         inlineCSS(css),
         tagList(
             tags$head(tags$title("Obsmon v2")),
-            h3("Obsmon v2", style="text-align: center;"),
+            h3(sprintf("Obsmon (%s)", obsmonVersion),
+               style="text-align: center;"),
             hr()
         ),
         sidebarLayout(
