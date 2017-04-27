@@ -48,8 +48,8 @@ doPlot.plotStatistical <- function(p, plotRequest, plotData) {
           labs(x=xlab, y=ylab)
       },
       "7"={
-        ylab <- "Channels"
-        xlab <- "Brightness temperature [K]"
+        xlab <- "Channels"
+        ylab <- "Brightness temperature [K]"
         obplot <- ggplot(plotData, aes(channel)) +
           geom_line(aes(y=fg_bias_total,colour="fg_bias_total")) +
           geom_point(aes(y=fg_bias_total,colour="fg_bias_total"),size=4) +
@@ -65,8 +65,8 @@ doPlot.plotStatistical <- function(p, plotRequest, plotData) {
       },
       {
         varname <- plotRequest$criteria$varname
-        xlab <- sprintf("(%s)", units[[varname]])
-        ylab <- "Pressure"
+        ylab <- sprintf("%s [%s]", varname, units[[varname]])
+        xlab <- "Pressure"
         localPlotData <- melt(plotData, id=c("level"))
         obplot <- ggplot(data=localPlotData) +
           aes(x=level, y=value,
