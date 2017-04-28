@@ -25,8 +25,9 @@ css <- "
 
 obsmonVersion <- if (file.exists("VERSION")) {
                    versionFile <- file("VERSION", "r")
-                   readLines(versionFile, 1)
+                   version <- readLines(versionFile, 1)
                    close(versionFile)
+                   version
                  } else {
                    "unknown"
                  }
