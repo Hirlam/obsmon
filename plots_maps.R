@@ -139,8 +139,8 @@ doMap.mapThreshold <- function(p, plotRequest, plotData) {
                      options=providerTileOptions(opacity=0.7)) %>%
     fitBounds(x1, y1, x2, y2) %>%
     addCircleMarkers(~longitude, ~latitude, popup=~popup, radius=~radius,
-                     stroke=TRUE, weight=1, opacity=1, color="black",
-                     fillColor=~dataPal(plotValues), fillOpacity=1,
+                     stroke=FALSE, weight=1, opacity=1, color="black",
+                     fillColor=~dataPal(plotValues), fillOpacity=.7,
                      clusterOptions = clusterOptions) %>%
     addLegend("topright", pal=legendPal, values=cm$domain, opacity=1,
               labFormat=myLabelFormat(reverseOrder=T))
@@ -181,9 +181,9 @@ doMap.mapUsage <- function(p, plotRequest, plotData) {
                      options=providerTileOptions(opacity=0.5)) %>%
     fitBounds(x1, y1, x2, y2 ) %>%
     addCircleMarkers(~longitude, ~latitude, popup=~popup, radius=8,
-                     stroke=TRUE, weight=1, opacity=1, color="black",
-                     fillColor=~pal(status), fillOpacity=1,
-                     clusterOptions = clusterOptions) %>%
+                     stroke=FALSE, weight=1, opacity=1, color="black",
+                     fillColor=~pal(status), fillOpacity=.5,
+                     clusterOptions=clusterOptions) %>%
     addLegend("topright", pal=pal, values=~status, opacity=1)
   obMap
 }
@@ -200,9 +200,9 @@ doPlot.mapUsage <- function(p, plotRequest, plotData) {
   status <- ifelse(plotData$anflag == 8, "Blacklisted", status)
   plotData$status <- status
   NextMethod() +
-    geom_point(data=plotData[order(status),],
+    geom_point(data=plotData[rev(order(status)),],
                aes(x=longitude, y=latitude, colour=status),
-               size=2, alpha=.5) +
+               size=2, alpha=.5, stroke=0.) +
     scale_colour_manual(name="Legend",
                         values=c("Active"="green", "Active(2)"="blue",
                                  "Rejected"="red", "Passive"="yellow",
@@ -231,7 +231,7 @@ doPlot.mapThreshold <- function(p, plotRequest, plotData) {
   NextMethod() +
     geom_point(data=plotData,
                aes(x=longitude, y=latitude, fill=plotValues),
-               size=3, shape=21, colour="gray50") +
+               size=3, shape=21, colour="gray50", alpha=.5, stroke=0.) +
     scale_fill_distiller(p$dataColumn, type=cm$type, palette=cm$palette,
                          direction=cm$direction, limits=cm$domain)
 }
