@@ -24,11 +24,11 @@ clamp <- function(value, min, max, default=max) {
 #
 # Updates a selectInput, preserving the selected
 # option(s) if available
-updateSelection <- function(session, inputId,
-                            choices, oldSelection) {
+updateSelection <- function(session, inputId, choices) {
     if (is.null(choices)) {
       return(NULL)
     }
+    oldSelection <- isolate(session$input[[inputId]])
     validChoices <- unlist(choices, use.names=FALSE)
     validSelections <- oldSelection %in% validChoices
     if(!is.null(oldSelection)
@@ -55,14 +55,11 @@ shinyServer(function(input, output, session) {
   })
 
   # Update database options according to chosen category
-  observeEvent({
-    input$experiment
-    input$category
-  }, {
+  observe({
     category <- req(input$category)
     if (category == "upperAir") {
       choices <- list("Screening"="ecma", "Minimization"="ccma")
-      updateSelection(session, "odbBase", choices, input$odbBase)
+      updateSelection(session, "odbBase", choices)
       shinyjs::enable("odbBase")
       shinyjs::enable("levels")
     } else {
@@ -85,61 +82,62 @@ shinyServer(function(input, output, session) {
                          min = db$maxDateRange[1], max = db$maxDateRange[2])
     updateDateInput(session, "date", value = single,
                     min = db$maxDateRange[1], max = db$maxDateRange[2])
-    updateSelection(session, "cycle", db$cycles, input$cycle)
+    updateSelection(session, "cycle", db$cycles)
   })
 
   # Update obtype with choices for given experiment and database
-  observeEvent(activeDb(), {
+  observe({
     db <- activeDb()
-    updateSelection(session, "obtype",
-                    names(db$obtypes), input$obtype)
+    updateSelection(session, "obtype", names(db$obtypes))
   })
 
   # Update sensor for satem obtype, variable else
-  observeEvent(input$obtype, {
-    obtype <- req(input$obtype)
+  observe({
     db <- activeDb()
-    if (obtype=="satem") {
-      updateSelection(session, "sensor",
-                      names(db$obtypes[[obtype]]), input$sensor)
+    obtype <- req(input$obtype)
+    if (obtype == "satem") {
+      updateSelection(session, "sensor", names(db$obtypes[[obtype]]))
     } else {
-      updateSelection(session, "variable",
-                      names(db$obtypes[[obtype]]), input$variable)
+      updateSelection(session, "variable", names(db$obtypes[[obtype]]))
     }
-    updateSelection(session, "station",
-                    db$stations[[obtype]], input$station)
+    updateSelection(session, "station", db$stations[[obtype]])
   })
 
   # Update satellite choices for given sensor
-  observeEvent(input$sensor, {
-    db <- activeDb()
+  observe({
     obtype <- req(input$obtype)
-    sens <- req(input$sensor)
-    updateSelection(session, "satellite",
-                    names(db$obtypes[[obtype]][[sens]]), input$satellite)
+    if (obtype == "satem") {
+      db <- activeDb()
+      sens <- req(input$sensor)
+      updateSelection(session, "satellite", names(db$obtypes[[obtype]][[sens]]))
+    }
   })
 
   # Update channel choice for given satellite
-  observeEvent(input$satellite, {
-    db <- activeDb()
+  observe({
     obtype <- req(input$obtype)
-    sens <- req(input$sensor)
-    sat <- req(input$satellite)
-    channelChoices <<- names(db$obtypes[[obtype]][[sens]][[sat]])
-    updateSelection(session, "channels", channelChoices, input$channels)
+    if (obtype == "satem") {
+      db <- activeDb()
+      sens <- req(input$sensor)
+      sat <- req(input$satellite)
+      channelChoices <<- names(db$obtypes[[obtype]][[sens]][[sat]])
+      updateSelection(session, "channels", channelChoices)
+    }
   })
 
   # Update level choice for given variable
-  observeEvent(input$variable, {
-    db <- activeDb()
+  observe({
     obtype <- req(input$obtype)
-    var <- req(input$variable)
-    levelChoices <<- names(db$obtypes[[obtype]][[var]])
-    updateSelection(session, "levels", levelChoices, input$levels)
+    if (obtype != "satem") {
+      db <- activeDb()
+      var <- req(input$variable)
+      levelChoices <<- names(db$obtypes[[obtype]][[var]])
+      updateSelection(session, "levels", levelChoices)
+    }
   })
 
   # Offer single date or dateRange input according to selected plottype
-  observeEvent(input$plottype, {
+  observe({
     plotType <- plotTypesFlat[[req(input$plottype)]]
     switch(plotType$dateType,
            "range"={
@@ -210,7 +208,7 @@ shinyServer(function(input, output, session) {
   updatePlotTypes <- function() {
     criteria <- buildCriteria()
     choices <- applicablePlots(criteria)
-    updateSelection(session, "plottype", choices, input$plottype)
+    updateSelection(session, "plottype", choices)
   }
 
   # Trigger plottype update on criteria change
