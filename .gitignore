@@ -4,9 +4,12 @@
 *.Rout
 .nfs*
 *.org
+*.tar.gz
 
 # Untracked helper files
 bak
+config.yml
+.markdown-preview.html
 .Rcache
 .Rhistory
 Rplots.pdf
