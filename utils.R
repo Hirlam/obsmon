@@ -16,9 +16,30 @@ dtg2POSIXct <- function(dtg) {
   as.POSIXct(as.character(dtg), format="%Y%m%d%H")
 }
 
+expandDateRange <- function(dateRange) {
+  startDate <- dateRange[[1]]
+  endDate <- dateRange[[2]]
+  cycles <- as.integer(dateRange[[3]])
+  minCycle <- min(cycles)
+  maxCycle <- max(cycles)
+  startDtg <- date2dtg(startDate, minCycle)
+  endDtg <- date2dtg(endDate, maxCycle)
+  list(startDtg, endDtg, cycles)
+}
+
 formatDtg <- function(dtg) {
-  dtgStrings <- as.list(strftime(dtg2POSIXct(dtg), format="%Y-%m-%d %HZ"))
-  paste0('[', do.call(partial(paste, sep=" - "), dtgStrings), ']')
+  n = length(dtg)
+  if (n==1) {
+    strftime(dtg2POSIXct(dtg), format="%Y-%m-%d %HZ")
+  } else if (n==3) {
+    if (dtg[[1]] == dtg[[2]]) {
+      sprintf("[%s, (%s)]", dtg[[1]], paste(dtg[[3]], collapse=", "))
+    } else {
+      sprintf("[%s\u2013%s, (%s)]", dtg[[1]], dtg[[2]], paste(dtg[[3]], collapse=", "))
+    }
+  } else {
+    flog.error("Invalid dtg selection")
+  }
 }
 
 units <- list(

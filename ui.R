@@ -95,7 +95,12 @@ shinyUI(
                                 "Satellite",
                                 choices=c()),
                     selectInput("channels",
-                                "Channels",
+                                tags$div("Channels",
+                                         "(Select",
+                                         actionLink("channelsSelectAll", "all"),
+                                         actionLink("channelsSelectNone", "none"),
+                                         ")"
+                                         ),
                                 choices=c(),
                                 multiple=TRUE,
                                 selectize=FALSE)
@@ -106,7 +111,12 @@ shinyUI(
                                 "Variable",
                                 choices=c()),
                     selectInput("levels",
-                                "Levels",
+                                tags$div("Levels",
+                                         "(Select",
+                                         actionLink("levelsSelectAll", "all"),
+                                         actionLink("levelsSelectNone", "none"),
+                                         ")"
+                                         ),
                                 choices=c(),
                                 multiple=TRUE,
                                 selectize=FALSE),
@@ -117,17 +127,31 @@ shinyUI(
                 selectInput("plottype",
                             "Type of Plot",
                             choices=c()),
-                fluidRow(
-                    column(8,
-                           dateRangeInput("dateRange",
-                                          label="Date Range"),
-                           shinyjs::hidden(
-                                        dateInput("date", "Date")
-                                    )),
-                    column(4,
-                           selectInput("cycle",
-                                       label="Cycle",
-                                       choices=c()))
+                conditionalPanel(
+                    condition = "output.dateType == 'single'",
+                    fluidRow(
+                        column(8,
+                               dateInput("date", "Date")
+                               ),
+                        column(4,
+                               selectInput("cycle",
+                                           label="Cycle",
+                                           choices=c()))
+                    )
+                ),
+                conditionalPanel(
+                    condition = "output.dateType == 'range'",
+                    dateRangeInput("dateRange",
+                                   label="Date Range"),
+                    checkboxGroupInput("cycles",
+                                       label=tags$div("Cycles",
+                                                      "(Select",
+                                                      actionLink("cyclesSelectAll", "all"),
+                                                      actionLink("cyclesSelectNone", "none"),
+                                                      ")"
+                                                      ),
+                                       inline=TRUE,
+                                       choices=c())
                 ),
                 actionButton("doPlot", "Plot", width="100%")
             ),

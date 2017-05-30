@@ -20,25 +20,57 @@ clamp <- function(value, min, max, default=max) {
   }
 }
 
+signalError <- function(message, title="Error") {
+  showModal(modalDialog(
+      title=title,
+      message,
+      easyClose=TRUE
+  ))
+}
+
+getSelection <- function(session, inputId, choices, select=c("NORMAL", "ALL", "NONE")) {
+  select <- match.arg(select)
+  switch(select,
+         "NORMAL"={
+           oldSelection <- isolate(session$input[[inputId]])
+           validChoices <- unlist(choices, use.names=FALSE)
+           validSelections <- oldSelection %in% validChoices
+           if (is.null(oldSelection)) {
+             choices
+           } else if (any(validSelections)) {
+             oldSelection[validSelections]
+           } else {
+             NULL
+           }
+         },
+         "ALL"={
+           choices
+         },
+         "NONE"={
+           c()
+         })
+}
+
 # Updates choices for selection
 #
 # Updates a selectInput, preserving the selected
 # option(s) if available
-updateSelection <- function(session, inputId, choices) {
+updateSelection <- function(session, inputId, choices, select="NORMAL") {
     if (is.null(choices)) {
       return(NULL)
     }
-    oldSelection <- isolate(session$input[[inputId]])
-    validChoices <- unlist(choices, use.names=FALSE)
-    validSelections <- oldSelection %in% validChoices
-    if(!is.null(oldSelection)
-       && any(validSelections)) {
-      selection <- oldSelection[validSelections]
-    } else {
-      selection <- NULL
-    }
+    selection <- getSelection(session, inputId, choices, select)
     updateSelectInput(session, inputId,
-                       choices=choices, selected=selection)
+                      choices=choices, selected=selection)
+}
+
+updateCheckboxGroup <- function(session, inputId, choices, select="NORMAL") {
+    if (is.null(choices)) {
+      return(NULL)
+    }
+    selection <- getSelection(session, inputId, choices, select)
+    updateCheckboxGroupInput(session, inputId,
+                             choices=choices, selected=selection, inline=TRUE)
 }
 
 shinyServer(function(input, output, session) {
@@ -85,6 +117,17 @@ shinyServer(function(input, output, session) {
     updateDateInput(session, "date", value = single,
                     min = db$maxDateRange[1], max = db$maxDateRange[2])
     updateSelection(session, "cycle", db$cycles)
+    updateCheckboxGroup(session, "cycles", db$cycles)
+  })
+
+  observeEvent(input$cyclesSelectAll, {
+    db <- activeDb()
+    updateCheckboxGroup(session, "cycles", db$cycles, "ALL")
+  })
+
+  observeEvent(input$cyclesSelectNone, {
+    db <- activeDb()
+    updateCheckboxGroup(session, "cycles", db$cycles, "NONE")
   })
 
   # Update obtype with choices for given experiment and database
@@ -127,6 +170,14 @@ shinyServer(function(input, output, session) {
     }
   })
 
+  observeEvent(input$channelsSelectAll, {
+    updateSelection(session, "channels", channelChoices, "ALL")
+  })
+
+  observeEvent(input$channelsSelectNone, {
+    updateSelection(session, "channels", channelChoices, "NONE")
+  })
+
   # Update level choice for given variable
   observe({
     obtype <- req(input$obtype)
@@ -138,19 +189,20 @@ shinyServer(function(input, output, session) {
     }
   })
 
-  # Offer single date or dateRange input according to selected plottype
-  observe({
-    plotType <- plotTypesFlat[[req(input$plottype)]]
-    switch(plotType$dateType,
-           "range"={
-             shinyjs::hide("date")
-             shinyjs::show("dateRange")
-           },
-           "single"={
-             shinyjs::hide("dateRange")
-             shinyjs::show("date")
-           })
+  observeEvent(input$levelsSelectAll, {
+    updateSelection(session, "levels", levelChoices, "ALL")
   })
+
+  observeEvent(input$levelsSelectNone, {
+    updateSelection(session, "levels", levelChoices, "NONE")
+  })
+
+  # Offer single date or dateRange input according to selected plottype
+  output$dateType <- reactive({
+    plotType <- plotTypesFlat[[req(input$plottype)]]
+    plotType$dateType
+  })
+  outputOptions(output, 'dateType', suspendWhenHidden=FALSE)
 
   # Build named list of criteria
   buildCriteria <- function() {
@@ -224,22 +276,26 @@ shinyServer(function(input, output, session) {
   # Perform plotting
   observeEvent(input$doPlot, {
     t <- createShinyProgressTracker()
-    t <- addTask(t, "Building query")
-    t <- updateTask(t, "Building query", 0.)
     plotRequest <- list()
     plotter <- plotTypesFlat[[req(input$plottype)]]
     plotRequest$expName <- req(input$experiment)
     db <- activeDb()
     plotRequest$dbName <- db$name
     plotRequest$criteria <- buildCriteria()
-    cycle <- req(input$cycle)
     plotRequest$criteria$dtg <-
       switch(plotter$dateType,
-             "single"=date2dtg(req(input$date), cycle),
+             "single"={
+               cycle <- req(input$cycle)
+               date2dtg(req(input$date), cycle)
+             },
              "range"={
                    dateRange <- req(input$dateRange)
-                   list(date2dtg(dateRange[1], cycle),
-                        date2dtg(dateRange[2], cycle))
+                   cycles <- input$cycles
+                   if (is.null(cycles)) {
+                     signalError("Please select at least one cycle.")
+                     return(NULL)
+                   }
+                   list(dateRange[1], dateRange[2], cycles)
              })
     isWindspeed <- "varname" %in% names(plotRequest$criteria) &&
       plotRequest$criteria$varname %in% c("ff", "ff10m")
@@ -248,7 +304,6 @@ shinyServer(function(input, output, session) {
     } else {
       query <- plotBuildQuery(plotter, plotRequest)
       output$queryUsed <- renderText(query)
-      t <- updateTask(t, "Building query", 1.)
       t <- addTask(t, "Querying database")
       plotData <- performQuery(db, query, plotRequest$criteria$dtg,
                                progressTracker=t)
