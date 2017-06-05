@@ -1,16 +1,17 @@
 # Pattern based ignores
 \#*\#
 *~
-*.Rout
+*.db
 .nfs*
 *.org
+*.Rout
 *.tar.gz
 
 # Untracked helper files
 bak
 config.yml
 .markdown-preview.html
-.Rcache
+.Rcache*
 .Rhistory
 Rplots.pdf
 rtags
