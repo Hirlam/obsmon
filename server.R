@@ -44,6 +44,8 @@ updateSelection <- function(session, inputId, choices) {
 shinyServer(function(input, output, session) {
   # Initial population of experiments; triggers cascade for other form fields
   updateSelectInput(session, "experiment", choices=names(experiments))
+  shinyjs::hide(id="loading-content", anim=TRUE, animType="fade")
+  shinyjs::show("app-content")
 
   levelChoices <- list()
   channelChoices <- list()

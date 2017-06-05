@@ -21,7 +21,20 @@ css <- "
   color: #333 !important;
   cursor: not-allowed !important;
   border-color: #aaa !important;
-}"
+}
+
+#loading-content {
+  position: absolute;
+  background: #000000;
+  opacity: 0.9;
+  z-index: 100;
+  left: 0;
+  right: 0;
+  height: 100%;
+  text-align: center;
+  color: #FFFFFF;
+}
+"
 
 obsmonVersion <- if (file.exists("VERSION")) {
                    versionFile <- file("VERSION", "r")
@@ -46,6 +59,11 @@ shinyUI(
         useShinyjs(),
         extendShinyjs(text=jscode),
         inlineCSS(css),
+        div(
+            id="loading-content",
+            h2("Loading...")
+        ),
+        hidden(div(id="app-content",
         tagList(
             tags$head(tags$title("Obsmon v2")),
             h3(sprintf("Obsmon (%s)", obsmonVersion),
@@ -156,6 +174,6 @@ shinyUI(
                     )
                 )
             )
-        )
+        )))
     )
 )
