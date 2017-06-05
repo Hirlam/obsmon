@@ -157,13 +157,16 @@ updateObtypes <- function(db, cachedDtgs, newDtgs) {
   flog.info("...updating obtypes for %s...", db$name)
   flog.info("......loading obtypes cache......")
   obnumbersKey <- list(db$masterKey, cachedDtgs, "obnumbers")
+  oldObnumbersFile <- findCache(obnumbersKey)
   obtypesKey <- list(db$masterKey, cachedDtgs, "obtypes")
+  oldObtypesFile <- findCache(obtypesKey)
   db$obnumbers <- loadCache(obnumbersKey)
   db$obtypes <- loadCache(obtypesKey)
   flog.info("......done loading obtypes cache......")
   if (length(newDtgs)>0) {
     flog.info("......database has changed, updating......")
     rawObtypesKey <- list(db$masterKey, cachedDtgs, "rawobtypes")
+    oldRawObtypesFile <- findCache(rawObtypesKey)
     cachedRawObtypes <- loadCache(rawObtypesKey)
     flog.info("......scrubbing new db files......")
     newRawObtypes <- getRawObtypes(db, newDtgs)
@@ -172,13 +175,22 @@ updateObtypes <- function(db, cachedDtgs, newDtgs) {
     rownames(rawObtypes) <- NULL
     rawObtypesKey <- list(db$masterKey, db$dtgs, "rawobtypes")
     saveCache(rawObtypes, rawObtypesKey)
+    if (!is.null(oldRawObtypesFile)) {
+      file.remove(oldRawObtypesFile)
+    }
     res <- formatRawObtypes(rawObtypes)
     db$obnumbers <- res[[1]]
     db$obtypes <- res[[2]]
     obnumbersKey <- list(db$masterKey, db$dtgs, "obnumbers")
     obtypesKey <- list(db$masterKey, db$dtgs, "obtypes")
     saveCache(db$obnumbers, obnumbersKey)
+    if (!is.null(oldObnumbersFile)) {
+      file.remove(oldObnumbersFile)
+    }
     saveCache(db$obtypes, obtypesKey)
+    if (!is.null(oldObtypesFile)) {
+      file.remove(oldObtypesFile)
+    }
   }
   flog.info("...done updating obtypes for %s...", db$name)
   db
@@ -234,13 +246,16 @@ updateStations <- function(db, cachedDtgs, newDtgs) {
   flog.info("...updating stations for %s...", db$name)
   flog.info("......loading stations cache......")
   stationsKey <- list(db$masterKey, cachedDtgs, "stations")
+  oldStationsFile <- findCache(stationsKey)
   stationLabelsKey <- list(db$masterKey, cachedDtgs, "stationLabels")
+  oldStationLabelsFile <- findCache(stationLabelsKey)
   db$stations <- loadCache(stationsKey)
   db$stationLabels <- loadCache(stationLabelsKey)
   flog.info("......done loading stations cache......")
   if (length(newDtgs)>0) {
     flog.info("......database has changed, updating......")
     rawStationsKey <- list(db$masterKey, cachedDtgs, "rawstations")
+    oldRawStationsFile <- findCache(rawStationsKey)
     cachedRawStations <- loadCache(rawStationsKey)
     flog.info("......scrubbing new db files......")
     newRawStations <- getRawStations(db, newDtgs)
@@ -249,13 +264,22 @@ updateStations <- function(db, cachedDtgs, newDtgs) {
     rownames(rawStations) <- NULL
     rawStationsKey <- list(db$masterKey, db$dtgs, "rawstations")
     saveCache(rawStations, rawStationsKey)
+    if (!is.null(oldRawStationsFile)) {
+      file.remove(oldRawStationsFile)
+    }
     res <- formatRawStations(db, rawStations)
     db$stations <- res[[1]]
     db$stationLabels <- res[[2]]
     stationsKey <- list(db$masterKey, db$dtgs, "stations")
     stationLabelsKey <- list(db$masterKey, db$dtgs, "stationLabels")
     saveCache(db$stations, stationsKey)
+    if (!is.null(oldStationsFile)) {
+      file.remove(oldStationsFile)
+    }
     saveCache(db$stationLabels, stationLabelsKey)
+    if (!is.null(oldStationLabelsFile)) {
+      file.remove(oldStationLabelsFile)
+    }
   }
   flog.info("...done updating stations for %s...", db$name)
   db
