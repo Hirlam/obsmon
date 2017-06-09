@@ -13,6 +13,7 @@ source("database.R")
 
 setCacheRootPath(path="./.Rcache")
 
+flog.appender(appender.file(stderr()), 'ROOT')
 # flog.threshold(TRACE)
 
 
