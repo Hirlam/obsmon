@@ -15,13 +15,13 @@ pkgs <- c(
     "pbapply",
     "pryr",
     "R.cache",
+    "RcppTOML",
     "RSQLite",
     "reshape2",
     "scales",
     "shiny",
     "shinyjs",
     "V8",
-    "yaml"
 )
 
 installedPkgs <- installed.packages(lib.loc=lib)

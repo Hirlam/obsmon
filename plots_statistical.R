@@ -1,5 +1,3 @@
-library(reshape2)
-
 registerPlotCategory("Statistical")
 
 plotTitle.plotStatistical <- function(p, plotRequest, plotData) {

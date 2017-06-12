@@ -1,5 +1,3 @@
-library(pryr)
-
 dtgClause <- function(val) {
   n = length(val)
   if (n==1) {

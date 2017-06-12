@@ -1,12 +1,4 @@
-library(Cairo)
-options(shiny.usecairo=TRUE)
-library(yaml)
-
-source("utils.R")
-source("experiments.R")
-source("plots.R")
-source("progress.R")
-source("windspeed.R")
+source("init.R")
 
 clamp <- function(value, min, max, default=max) {
   if (is.null(value)) {

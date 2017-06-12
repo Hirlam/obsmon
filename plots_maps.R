@@ -1,5 +1,3 @@
-source("colors.R")
-
 registerPlotCategory("Maps")
 
 plotTitle.plotMap <- function(p, plotRequest, plotData) {

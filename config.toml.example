@@ -1,0 +1,13 @@
+[general]
+cacheDir = ".Rcache"
+logLevel = "INFO"
+
+[[experiments]]
+displayName = "First Experiment"
+baseDir = "/home/a002160/Projects/Obsmon"
+experiment = "mbr000"
+
+# [[experiments]]
+# displayName = "MEPS_prod"
+# baseDir = "/data/24_nb/metcoop/opdata/elin4/meps/obsmon"
+# experiment = "mbr000"

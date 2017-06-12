@@ -1,5 +1,3 @@
-library(gridExtra)
-
 registerPlotCategory("Diagnostic")
 
 statisticsPanel <- function(data, column, bw, fill) {

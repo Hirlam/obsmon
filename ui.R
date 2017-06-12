@@ -1,3 +1,5 @@
+source("init.R")
+
 jscode <- "
 shinyjs.disableTab = function(name) {
   var tab = $('.nav li a[data-value=' + name + ']');
@@ -44,10 +46,6 @@ obsmonVersion <- if (file.exists("VERSION")) {
                  } else {
                    "unknown"
                  }
-
-library(shiny)
-library(shinyjs)
-library(leaflet)
 
 shinyUI(
     fluidPage(

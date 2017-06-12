@@ -9,7 +9,7 @@
 
 # Untracked helper files
 bak
-config.yml
+config.toml
 .markdown-preview.html
 .Rcache*
 .Rhistory

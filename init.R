@@ -1,0 +1,85 @@
+if (!exists("obsmonConfig")) {
+  loadPackages <- function() {
+    library(Cairo)
+    library(DBI)
+    library(futile.logger)
+    library(ggplot2)
+    library(grid)
+    library(gridExtra)
+    library(leaflet)
+    library(methods)
+    library(pbapply)
+    library(plyr)
+    library(png)
+    library(pryr)
+    library(R.cache)
+    library(RcppTOML)
+    library(reshape2)
+    library(shiny)
+    library(shinyjs)
+  }
+
+  setPackageOptions <- function(config) {
+    options(shiny.usecairo=TRUE)
+    pboptions(type="timer")
+    pdf(NULL)
+    setCacheRootPath(path=config$general$cacheDir)
+    flog.appender(appender.file(stderr()), 'ROOT')
+    flog.threshold(parse(text=config$general$logLevel)[[1]])
+  }
+
+  sourceObsmonFiles <- function() {
+    source("colors.R")
+    source("utils.R")
+    source("sql.R")
+    source("database.R")
+    source("experiments.R")
+    source("plots.R")
+    source("plots_statistical.R")
+    source("plots_timeseries.R")
+    source("plots_maps.R")
+    source("plots_diagnostic.R")
+    source("progress.R")
+    source("windspeed.R")
+  }
+
+  fillInDefault <- function(config, key, default) {
+    if (is.null(config$general[[key]])) {
+      config$general[[key]] <- default
+    }
+    config
+  }
+
+  fillInDefaults <- function(config) {
+    config <- fillInDefault(config, "cacheDir",
+                            file.path("", "var", "cache", "obsmon"))
+    config <- fillInDefault(config, "logLevel", "WARN")
+    config
+  }
+
+  readConfig <- function() {
+    configFile <- "config.toml"
+    obsmonDir <- normalizePath(dirname(sys.frame(1)$ofile))
+    localConfigPath <- file.path(obsmonDir, configFile)
+    if (file.exists(localConfigPath)) {
+      config <- parseTOML(localConfigPath)
+    } else {
+      systemConfigDir <- file.path("", "etc", "obsmon")
+      systemConfigPath <- file.path(systemConfigDir, configFile)
+      config <- parseTOML(systemConfigPath)
+    }
+    config$obsmonDir <- obsmonDir
+    config <- fillInDefaults(config)
+    config
+  }
+
+  configure <- function() {
+    loadPackages()
+    config <- readConfig()
+    setPackageOptions(config)
+    obsmonConfig <<- config
+    sourceObsmonFiles()
+  }
+
+  configure()
+}
