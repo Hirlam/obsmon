@@ -7,6 +7,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 ## [Unreleased]
 ### Added
 - Date selection for single times
+- Cycle selection for date ranges
 - Plottype filtering offers only plots valid for selected criteria
 - Auto-discovery of obtypes and stations (cached)
 - Progress bar for long operations
