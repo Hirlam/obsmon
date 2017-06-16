@@ -21,7 +21,7 @@ pkgs <- c(
     "scales",
     "shiny",
     "shinyjs",
-    "V8",
+    "V8"
 )
 
 installedPkgs <- installed.packages(lib.loc=lib)
