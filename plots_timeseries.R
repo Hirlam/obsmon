@@ -90,9 +90,6 @@ registerPlotType(
 )
 
 doPlot.biasCorrection <- function(p, plotRequest, plotData) {
-  cycle <- plotRequest$criteria$dtg[[1]] %% 100
-  ind <- as.POSIXlt(plotData$DTG)$hour==cycle
-  plotData <- plotData[ind,]
   varname <- unique(plotData$varname)
   NextMethod(.Generic, maskColumns=c("nobs_total", "varname")) +
     geom_text(data=plotData, aes(x=DTG, y=fg_uncorr_total, label=nobs_total)) +
