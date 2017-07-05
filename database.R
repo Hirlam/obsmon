@@ -305,6 +305,12 @@ updateDb <- function(db) {
   db
 }
 
+slugify <- function(string) {
+  normalized <- stri_trans_general(string, "nfkd; Latin-ASCII; lower")
+  slugified <- stri_replace_all_charclass(normalized, "\\p{WHITE SPACE}", "_")
+  slugified
+}
+
 createDb <- function(dir, name, file) {
   flog.info("...creating %s db...", name)
   db <- structure(list(), class="sqliteShardedDtgDb")

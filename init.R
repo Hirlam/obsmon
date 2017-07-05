@@ -15,6 +15,7 @@ library(RcppTOML)
 library(reshape2)
 library(shiny)
 library(shinyjs)
+library(stringi)
 
 setPackageOptions <- function(config) {
   options(shiny.usecairo=TRUE)
