@@ -86,15 +86,12 @@ performQuery <- function(db, query, dtgs=NULL, expandRange=TRUE,
   res
 }
 
-updateDates <- function(db, cachedDtgs, newDtgs) {
+updateDates <- function(db) {
   earliestDtg <- head(db$dtgs, 1)
   latestDtg <- tail(db$dtgs, 1)
-  db$maxDtgRange <- c(earliestDtg, latestDtg)
   maxDateRange <- c(dtg2date(earliestDtg),
                     dtg2date(latestDtg))
   db$maxDateRange <- maxDateRange
-  db$dateRange <- maxDateRange
-  db$date <- maxDateRange[[2]]
   db$cycles <- lapply(sort(unique(db$dtgs %% 100)), partial(sprintf, "%02d"))
   db
 }
@@ -291,30 +288,193 @@ updateStations <- function(db, cachedDtgs, newDtgs) {
   db
 }
 
-updateDb <- function(db) {
-  cachedDtgs <- loadCache(list(db$masterKey))
-  oldDtgs <- db$dtgs[db$dtgs %in% cachedDtgs]
-  if (!setequal(oldDtgs, cachedDtgs)) {
-    flog.warn(paste("Some old dtgs are no longer available.",
-                    "If desired, purge cache manually."))
-  }
-  newDtgs <- db$dtgs[!db$dtgs %in% cachedDtgs]
-  db <- updateDates(db, cachedDtgs, newDtgs)
-  db <- updateObtypes(db, cachedDtgs, newDtgs)
-  db <- updateStations(db, cachedDtgs, newDtgs)
-  db
-}
-
 slugify <- function(string) {
   normalized <- stri_trans_general(string, "nfkd; Latin-ASCII; lower")
   slugified <- stri_replace_all_charclass(normalized, "\\p{WHITE SPACE}", "_")
   slugified
 }
 
-createDb <- function(dir, name, file) {
+setPragmas <- function(connection) {
+  dbExecute(connection, "PRAGMA journal_mode=OFF")
+  dbExecute(connection, "PRAGMA synchronous=OFF")
+  dbExecute(connection, "PRAGMA foreign_keys=ON")
+}
+
+initCache <- function(cachePath) {
+  dbLock <- lock(cachePath)
+  cache <- dbConnect(RSQLite::SQLite(), cachePath)
+  if (!dbExistsTable(cache, "dtg")) {
+    setPragmas(cache)
+    dbExecute(cache, paste("CREATE TABLE obtype (",
+                           "  obtype_id INTEGER PRIMARY KEY,",
+                           "  obnumber INTEGER NOT NULL,",
+                           "  obtype VARCHAR(20) NOT NULL,",
+                           "  variable VARCHAR(20),",
+                           "  sensor VARCHAR(20),",
+                           "  satellite VARCHAR(20),",
+                           "  division INTEGER NOT NULL,",
+                           "  UNIQUE(obnumber, obtype, variable, division),",
+                           "  UNIQUE(obnumber, obtype, sensor, satellite, division)",
+                           ")", sep=""))
+    dbExecute(cache, paste("CREATE TABLE dtg (",
+                           "  dtg INTEGER PRIMARY KEY",
+                           ")", sep=""))
+    dbExecute(cache, paste("CREATE TABLE dtg_obtype (",
+                           "  dtg INTEGER NOT NULL REFERENCES dtg(dtg),",
+                           "  obtype_id INTEGER NOT NULL REFERENCES obtype(obtype_id)",
+                           ")", sep=""))
+    dbExecute(cache, "CREATE INDEX dtg_obtype_dtg_idx ON dtg_obtype(dtg)")
+    dbExecute(cache, paste("CREATE TABLE station (",
+                           "  station_id INTEGER PRIMARY KEY,",
+                           "  obname VARCHAR(20) NOT NULL,",
+                           "  statid VARCHAR(20) NOT NULL,",
+                           "  label VARCHAR(20),",
+                           "  UNIQUE(obname, statid)",
+                           ")", sep=""))
+  }
+  unlock(dbLock)
+  cache
+}
+
+openCache <- function(db) {
+  cacheFile <- slugify(paste(db$basename, db$name, "db", sep="."))
+  cachePath <- file.path(obsmonConfig$general$cacheDir, cacheFile)
+  flog.info("Cache path: %s", cachePath)
+  if (file.exists(cachePath)) {
+    cache <- dbConnect(RSQLite::SQLite(), cachePath)
+    setPragmas(cache)
+  } else {
+    cache <- initCache(cachePath)
+  }
+  cache
+}
+
+
+updateDb <- function(db) {
+  cache <- openCache(db)
+  cachedDtgs <- dbGetQuery(cache, "SELECT dtg FROM dtg")[["dtg"]]
+  oldDtgIdx <- db$dtgs %in% cachedDtgs
+  if (!setequal(db$dtgs[oldDtgIdx], cachedDtgs)) {
+    flog.warn(paste("Some old dtgs are no longer available.",
+                    "If desired, purge cache manually."))
+  }
+  newDtgs <- db$dtgs[!oldDtgIdx]
+  ingestShard <- function(dtg) {
+    dbExecute(cache, sprintf("ATTACH '%s' AS 'shard'", db$paths[dtg]))
+    tables <- dbGetQuery(cache, "SELECT name FROM shard.sqlite_master WHERE type='table'")
+    if (all(c("obsmon", "usage") %in% tables$name)) {
+      dbWithTransaction(
+          cache,
+          {
+            dbExecute(cache, sprintf("INSERT INTO dtg VALUES(%s)", dtg))
+            dbExecute(cache, paste("CREATE TEMP TABLE temp.obtype (",
+                                   "  obnumber INTEGER NOT NULL,",
+                                   "  obtype VARCHAR(20) NOT NULL,",
+                                   "  variable VARCHAR(20),",
+                                   "  sensor VARCHAR(20),",
+                                   "  satellite VARCHAR(20),",
+                                   "  division INTEGER NOT NULL,",
+                                   "  UNIQUE(obnumber, obtype, variable, division),",
+                                   "  UNIQUE(obnumber, obtype, sensor, satellite, division)",
+                                   ")", sep=""))
+            dbExecute(cache, paste("INSERT INTO temp.obtype (",
+                                   "  obnumber, obtype, variable, division",
+                                   ") SELECT DISTINCT obnumber, obname, varname, level ",
+                                   "FROM shard.obsmon WHERE obnumber!=7", sep=""))
+            dbExecute(cache, paste("INSERT INTO temp.obtype (",
+                                   "  obnumber, obtype, sensor, satellite, division",
+                                   ") SELECT DISTINCT obnumber, 'satem', obname, satname, level ",
+                                   "FROM shard.obsmon WHERE obnumber==7", sep=""))
+            dbExecute(cache, paste("INSERT OR IGNORE INTO main.obtype (",
+                                   "  obnumber, obtype, variable, sensor, satellite, division",
+                                   ") SELECT * FROM temp.obtype"))
+            dbExecute(cache, paste(sprintf("INSERT INTO main.dtg_obtype SELECT %s, ", dtg),
+                                   "m.obtype_id FROM main.obtype m ",
+                                   "JOIN temp.obtype t ",
+                                   "USING (obnumber, obtype, variable, division) ",
+                                   "WHERE t.variable IS NOT NULL",
+                                   sep=""))
+            dbExecute(cache, paste(sprintf("INSERT INTO main.dtg_obtype SELECT %s, ", dtg),
+                                   "m.obtype_id FROM main.obtype m ",
+                                   "JOIN temp.obtype t ",
+                                   "USING (obnumber, obtype, sensor, satellite, division) ",
+                                   "WHERE t.variable IS NULL",
+                                   sep=""))
+            dbExecute(cache, "DROP TABLE temp.obtype")
+            dbExecute(cache, paste("INSERT OR IGNORE INTO station (obname, statid)",
+                                   " SELECT DISTINCT obname, trim(statid, \"' \") statid",
+                                   " FROM shard.usage WHERE obnumber!=7", sep=""))
+          }
+      )
+    }
+    dbExecute(cache, "DETACH 'shard'")
+  }
+  if(length(newDtgs)>0) {
+    pblapply(as.character(newDtgs), ingestShard)
+  }
+  obtypes <- collect(tbl(cache, "obtype"))
+  res <- obtypes %>%
+    filter(!is.na(variable)) %>%
+    select(obtype, variable, division) %>%
+    group_by(obtype, variable) %>%
+    summarize(levelChoices=list(sort(as.integer(division)))) %>%
+    group_by(obtype) %>%
+    summarize(variable={
+      lc <- levelChoices
+      names(lc) <- variable
+      list(lc)
+    }) %>%
+    summarize(obtype={
+      v <- variable
+      names(v) <- obtype
+      list(v)
+    })
+  db$obtypes <- res[[1,1]]
+  res <- dbGetQuery(cache, paste("SELECT station_id, statid ",
+                                 "FROM station ",
+                                 "WHERE obname='synop' AND label IS NULL",
+                                 sep=""))
+  statids <- res$statid
+  labels <- synopStations[statids]
+  res$label <- ifelse(!is.na(labels), labels, statids)
+  dbExecute(cache, "UPDATE station SET label = :label WHERE station_id = :station_id", params=res)
+  stations <- within(collect(tbl(cache, "station")), {
+    label <- ifelse(!is.na(label), label, statid)
+  })
+  res <- stations %>%
+    select(obname, statid, label) %>%
+    group_by(obname) %>%
+    summarize(statid=list(statid), label=list(label)) %>%
+    summarize(obname={
+      l <- mapply(list, statid=statid, label=label, SIMPLIFY=F)
+      names(l) <- obname
+      list(l)
+    })
+  stations <- res[[1,1]]
+  lapply(names(stations), function(obname) {
+    s <- stations[[obname]]
+    names(s$statid) <- s$label
+    names(s$label) <- s$statid
+    stations[[obname]] <<- c("Any"="Any", s)
+  })
+  db$stations <- stations
+  res <- dbGetQuery(cache, paste("SELECT DISTINCT obnumber, ",
+                                 "CASE obtype ",
+                                 "WHEN 'satem' THEN sensor ",
+                                 "ELSE obtype ",
+                                 "END obtype FROM main.obtype"))
+  db$obnumbers <- res$obnumber
+  names(db$obnumbers) <- res$obtype
+  dbDisconnect(cache)
+  db <- updateDates(db)
+  db
+}
+
+createDb <- function(dir, basename, name, file) {
   flog.info("...creating %s db...", name)
   db <- structure(list(), class="sqliteShardedDtgDb")
   db$dir <- dir
+  db$basename <- basename
   db$name <- name
   db$file <- file
   db$masterKey <- getChecksum(list(dir, file))

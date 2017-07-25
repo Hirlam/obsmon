@@ -177,7 +177,7 @@ shinyServer(function(input, output, session) {
     if (obtype != "satem") {
       db <- activeDb()
       var <- req(input$variable)
-      levelChoices <<- names(db$obtypes[[obtype]][[var]])
+      levelChoices <<- db$obtypes[[obtype]][[var]]
       updateSelection(session, "levels", levelChoices)
     }
   })
