@@ -2,7 +2,7 @@ sqliteConnect <- function(dbpath) {
   flog.debug("Connecting to path %s", dbpath)
   con <- dbConnect(RSQLite::SQLite(), dbpath,
                    flags=RSQLite::SQLITE_RO, synchronous=NULL)
-  tryCatch(dbGetQuery(con, "PRAGMA synchronous=off"),
+  tryCatch(dbExecute(con, "PRAGMA synchronous=off"),
            error=function(e) {
              flog.error("Error accessing %s: %s", dbpath, e)
              con <- NULL
