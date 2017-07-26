@@ -248,7 +248,32 @@ updateDb <- function(db) {
       names(v) <- obtype
       list(v)
     })
-  db$obtypes <- res[[1,1]]
+  nonSatObs <- res[[1,1]]
+  res <- obtypes %>%
+    filter(is.na(variable)) %>%
+    select(obtype, sensor, satellite, division) %>%
+    group_by(obtype, sensor, satellite) %>%
+    summarize(channelChoices=list(sort(as.integer(division)))) %>%
+    group_by(obtype, sensor) %>%
+    summarize(satellite={
+      cc <- channelChoices
+      names(cc) <- satellite
+      list(cc)
+    }) %>%
+    group_by(obtype) %>%
+    summarize(sensor={
+      sat <- satellite
+      names(sat) <- sensor
+      list(sat)
+    }) %>%
+    summarize(obtype={
+      s <- sensor
+      names(s) <- obtype
+      list(s)
+    })
+  satObs <- res[[1,1]]
+  obs <- c(satObs, nonSatObs)
+  db$obtypes <- obs[sort(names(obs))]
   res <- dbGetQuery(cache, paste("SELECT station_id, statid ",
                                  "FROM station ",
                                  "WHERE obname='synop' AND label IS NULL",
