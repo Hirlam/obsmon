@@ -324,7 +324,6 @@ createDb <- function(dir, basename, name, file) {
   db$basename <- basename
   db$name <- name
   db$file <- file
-  db$masterKey <- getChecksum(list(dir, file))
   flog.info("......finding dtgs......")
   db$dtgs <- as.integer(dir(path=dir, pattern="[0-9]{10}"))
   if (length(db$dtgs)==0) {
@@ -339,7 +338,6 @@ createDb <- function(dir, basename, name, file) {
     flog.info("......updating db info......")
     db <- updateDb(db)
     flog.info("......done updating db info......")
-    saveCache(db$dtgs, list(db$masterKey))
     flog.info("...finished %s db...", name)
     db
   }

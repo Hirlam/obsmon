@@ -14,7 +14,6 @@ pkgs <- c(
     "mapproj",
     "pbapply",
     "pryr",
-    "R.cache",
     "RcppTOML",
     "RSQLite",
     "reshape2",
