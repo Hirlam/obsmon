@@ -302,9 +302,9 @@ updateDb <- function(db) {
     s <- stations[[obname]]
     names(s$statid) <- s$label
     names(s$label) <- s$statid
-    stations[[obname]] <<- c("Any"="Any", s)
+    db$stations[[obname]] <<- c("Any"="Any", s$statid)
+    db$stationLabels[[obname]] <<- c("Any"="Any", s$label)
   })
-  db$stations <- stations
   res <- dbGetQuery(cache, paste("SELECT DISTINCT obnumber, ",
                                  "CASE obtype ",
                                  "WHEN 'satem' THEN sensor ",
