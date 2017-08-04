@@ -4,6 +4,7 @@ library(dplyr)
 library(dbplyr)
 library(flock)
 library(futile.logger)
+library(future)
 library(ggplot2)
 library(grid)
 library(gridExtra)
@@ -24,6 +25,7 @@ setPackageOptions <- function(config) {
   pdf(NULL)
   flog.appender(appender.file(stderr()), 'ROOT')
   flog.threshold(parse(text=config$general$logLevel)[[1]])
+  plan(multiprocess)
 }
 
 sourceObsmonFiles <- function() {

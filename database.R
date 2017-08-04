@@ -23,7 +23,7 @@ prepareConnections <- function(db) {
       dbpath
     }
   }
-  db$paths <- lapply(db$dtgs, makePath)
+  db$paths <- future_lapply(db$dtgs, makePath)
   names(db$paths) <- db$dtgs
   db
 }

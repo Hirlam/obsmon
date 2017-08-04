@@ -6,6 +6,7 @@ pkgs <- c(
     "chron",
     "dplyr",
     "futile.logger",
+    "future",
     "ggplot2",
     "gridExtra",
     "httpuv",
