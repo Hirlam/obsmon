@@ -169,9 +169,8 @@ openCache <- function(db) {
 }
 
 
-updateDb <- function(db) {
-  cache <- openCache(db)
-  cachedDtgs <- dbGetQuery(cache, "SELECT dtg FROM dtg")[["dtg"]]
+updateCache <- function(db) {
+  cachedDtgs <- dbGetQuery(db$cache, "SELECT dtg FROM dtg")[["dtg"]]
   oldDtgIdx <- db$dtgs %in% cachedDtgs
   if (!setequal(db$dtgs[oldDtgIdx], cachedDtgs)) {
     flog.warn(paste("Some old dtgs are no longer available.",
@@ -181,60 +180,64 @@ updateDb <- function(db) {
   ingestShard <- function(dtg) {
     path <- db$paths[[dtg]]
     if (!is.null(path) && file.exists(path)) {
-      dbExecute(cache, sprintf("ATTACH '%s' AS 'shard'", path))
-      tables <- dbGetQuery(cache, "SELECT name FROM shard.sqlite_master WHERE type='table'")
+      dbExecute(db$cache, sprintf("ATTACH '%s' AS 'shard'", path))
+      tables <- dbGetQuery(db$cache, "SELECT name FROM shard.sqlite_master WHERE type='table'")
       if (all(c("obsmon", "usage") %in% tables$name)) {
         dbWithTransaction(
-            cache,
+            db$cache,
             {
-              dbExecute(cache, sprintf("INSERT INTO dtg VALUES(%s)", dtg))
-              dbExecute(cache, paste("CREATE TEMP TABLE temp.obtype (",
-                                     "  obnumber INTEGER NOT NULL,",
-                                     "  obtype VARCHAR(20) NOT NULL,",
-                                     "  variable VARCHAR(20),",
-                                     "  sensor VARCHAR(20),",
-                                     "  satellite VARCHAR(20),",
-                                     "  division INTEGER NOT NULL,",
-                                     "  UNIQUE(obnumber, obtype, variable, division),",
-                                     "  UNIQUE(obnumber, obtype, sensor, satellite, division)",
-                                     ")", sep=""))
-              dbExecute(cache, paste("INSERT INTO temp.obtype (",
-                                     "  obnumber, obtype, variable, division",
-                                     ") SELECT DISTINCT obnumber, obname, varname, level ",
-                                     "FROM shard.obsmon WHERE obnumber!=7", sep=""))
-              dbExecute(cache, paste("INSERT INTO temp.obtype (",
-                                     "  obnumber, obtype, sensor, satellite, division",
-                                     ") SELECT DISTINCT obnumber, 'satem', obname, satname, level ",
-                                     "FROM shard.obsmon WHERE obnumber==7", sep=""))
-              dbExecute(cache, paste("INSERT OR IGNORE INTO main.obtype (",
-                                     "  obnumber, obtype, variable, sensor, satellite, division",
-                                     ") SELECT * FROM temp.obtype"))
-              dbExecute(cache, paste(sprintf("INSERT INTO main.dtg_obtype SELECT %s, ", dtg),
-                                     "m.obtype_id FROM main.obtype m ",
-                                     "JOIN temp.obtype t ",
-                                     "USING (obnumber, obtype, variable, division) ",
-                                     "WHERE t.variable IS NOT NULL",
-                                     sep=""))
-              dbExecute(cache, paste(sprintf("INSERT INTO main.dtg_obtype SELECT %s, ", dtg),
-                                     "m.obtype_id FROM main.obtype m ",
-                                     "JOIN temp.obtype t ",
-                                     "USING (obnumber, obtype, sensor, satellite, division) ",
-                                     "WHERE t.variable IS NULL",
-                                     sep=""))
-              dbExecute(cache, "DROP TABLE temp.obtype")
-              dbExecute(cache, paste("INSERT OR IGNORE INTO station (obname, statid)",
-                                     " SELECT DISTINCT obname, trim(statid, \"' \") statid",
-                                     " FROM shard.usage WHERE obnumber!=7", sep=""))
+              dbExecute(db$cache, sprintf("INSERT INTO dtg VALUES(%s)", dtg))
+              dbExecute(db$cache, paste("CREATE TEMP TABLE temp.obtype (",
+                                        "  obnumber INTEGER NOT NULL,",
+                                        "  obtype VARCHAR(20) NOT NULL,",
+                                        "  variable VARCHAR(20),",
+                                        "  sensor VARCHAR(20),",
+                                        "  satellite VARCHAR(20),",
+                                        "  division INTEGER NOT NULL,",
+                                        "  UNIQUE(obnumber, obtype, variable, division),",
+                                        "  UNIQUE(obnumber, obtype, sensor, satellite, division)",
+                                        ")", sep=""))
+              dbExecute(db$cache, paste("INSERT INTO temp.obtype (",
+                                        "  obnumber, obtype, variable, division",
+                                        ") SELECT DISTINCT obnumber, obname, varname, level ",
+                                        "FROM shard.obsmon WHERE obnumber!=7", sep=""))
+              dbExecute(db$cache, paste("INSERT INTO temp.obtype (",
+                                        "  obnumber, obtype, sensor, satellite, division",
+                                        ") SELECT DISTINCT obnumber, 'satem', obname, satname, level ",
+                                        "FROM shard.obsmon WHERE obnumber==7", sep=""))
+              dbExecute(db$cache, paste("INSERT OR IGNORE INTO main.obtype (",
+                                        "  obnumber, obtype, variable, sensor, satellite, division",
+                                        ") SELECT * FROM temp.obtype"))
+              dbExecute(db$cache, paste(sprintf("INSERT INTO main.dtg_obtype SELECT %s, ", dtg),
+                                        "m.obtype_id FROM main.obtype m ",
+                                        "JOIN temp.obtype t ",
+                                        "USING (obnumber, obtype, variable, division) ",
+                                        "WHERE t.variable IS NOT NULL",
+                                        sep=""))
+              dbExecute(db$cache, paste(sprintf("INSERT INTO main.dtg_obtype SELECT %s, ", dtg),
+                                        "m.obtype_id FROM main.obtype m ",
+                                        "JOIN temp.obtype t ",
+                                        "USING (obnumber, obtype, sensor, satellite, division) ",
+                                        "WHERE t.variable IS NULL",
+                                        sep=""))
+              dbExecute(db$cache, "DROP TABLE temp.obtype")
+              dbExecute(db$cache, paste("INSERT OR IGNORE INTO station (obname, statid)",
+                                        " SELECT DISTINCT obname, trim(statid, \"' \") statid",
+                                        " FROM shard.usage WHERE obnumber!=7", sep=""))
             }
         )
       }
-      dbExecute(cache, "DETACH 'shard'")
+      dbExecute(db$cache, "DETACH 'shard'")
     }
   }
   if(length(newDtgs)>0) {
     pblapply(as.character(newDtgs), ingestShard)
   }
-  obtypes <- collect(tbl(cache, "obtype"))
+  db
+}
+
+initObtypes <- function(db) {
+  obtypes <- collect(tbl(db$cache, "obtype"))
   res <- obtypes %>%
     filter(!is.na(variable)) %>%
     select(obtype, variable, division) %>%
@@ -277,15 +280,26 @@ updateDb <- function(db) {
   satObs <- res[[1,1]]
   obs <- c(satObs, nonSatObs)
   db$obtypes <- obs[sort(names(obs))]
-  res <- dbGetQuery(cache, paste("SELECT station_id, statid ",
+  res <- dbGetQuery(db$cache, paste("SELECT DISTINCT obnumber, ",
+                                    "CASE obtype ",
+                                    "WHEN 'satem' THEN sensor ",
+                                    "ELSE obtype ",
+                                    "END obtype FROM main.obtype"))
+  db$obnumbers <- res$obnumber
+  names(db$obnumbers) <- res$obtype
+  db
+}
+
+initStations <- function(db) {
+  res <- dbGetQuery(db$cache, paste("SELECT station_id, statid ",
                                  "FROM station ",
                                  "WHERE obname='synop' AND label IS NULL",
                                  sep=""))
   statids <- res$statid
   labels <- synopStations[statids]
   res$label <- ifelse(!is.na(labels), labels, statids)
-  dbExecute(cache, "UPDATE station SET label = :label WHERE station_id = :station_id", params=res)
-  stations <- within(collect(tbl(cache, "station")), {
+  dbExecute(db$cache, "UPDATE station SET label = :label WHERE station_id = :station_id", params=res)
+  stations <- within(collect(tbl(db$cache, "station")), {
     label <- ifelse(!is.na(label), label, statid)
   })
   res <- stations %>%
@@ -305,15 +319,6 @@ updateDb <- function(db) {
     db$stations[[obname]] <<- c("Any"="Any", s$statid)
     db$stationLabels[[obname]] <<- c("Any"="Any", s$label)
   })
-  res <- dbGetQuery(cache, paste("SELECT DISTINCT obnumber, ",
-                                 "CASE obtype ",
-                                 "WHEN 'satem' THEN sensor ",
-                                 "ELSE obtype ",
-                                 "END obtype FROM main.obtype"))
-  db$obnumbers <- res$obnumber
-  names(db$obnumbers) <- res$obtype
-  dbDisconnect(cache)
-  db <- updateDates(db)
   db
 }
 
@@ -336,7 +341,11 @@ createDb <- function(dir, basename, name, file) {
     db <- prepareConnections(db)
     flog.info("......done checking dtgs......")
     flog.info("......updating db info......")
-    db <- updateDb(db)
+    db$cache <- openCache(db)
+    db <- updateCache(db)
+    db <- initObtypes(db)
+    db <- initStations(db)
+    db <- updateDates(db)
     flog.info("......done updating db info......")
     flog.info("...finished %s db...", name)
     db
