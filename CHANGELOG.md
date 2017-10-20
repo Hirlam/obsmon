@@ -5,6 +5,8 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
+
+## [2.1.0] - 2017-10-20
 ### Added
 - Date selection for single times
 - Cycle selection for date ranges
@@ -22,7 +24,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - Data table interface improved
 - Color handling improved
 - Cairo based plotting improves plot quality
-- YAML based config.yml replaces hardcoded and environment configuration
+- TOML based config.toml replaces hardcoded and environment configuration
 - Only install missing packages in install.R
 - Logging via futile.logger replaces print statements
 - Database handling now via object oriented interface
@@ -34,4 +36,5 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - Settings tab
 - Environment variables for configuration
 
-[Unreleased]: https://git.smhi.se/a002160/obsmon/compare/obsmon-2.0.0...obsmon-2.1.x
+[Unreleased]: https://git.smhi.se/a002160/obsmon/compare/obsmon-2.1.0...obsmon-2.2.x
+[2.1.0]: https://git.smhi.se/a002160/obsmon/compare/obsmon-2.0.0...obsmon-2.1.0
