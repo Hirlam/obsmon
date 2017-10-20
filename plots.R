@@ -60,8 +60,8 @@ plotGenerate.default <- function(p, plotRequest, plotData, progressTracker) {
     result$title <- NULL
   } else {
     if (plotRequest$criteria$obnumber == 7
-        & "level" %in% colnames(plotData)) {
-      plotData <- rename(plotData, c("level"="channel"))
+        && "level" %in% colnames(plotData)) {
+      plotData <- rename(plotData, channel=level)
     }
     result$title <- plotTitle(p, plotRequest, plotData)
     result$obplot <- doPlot(p, plotRequest, plotData)

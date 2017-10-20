@@ -4,11 +4,11 @@ expCreateSqliteShardedDtg <- function(name,
   x <- structure(list(), class = "sqliteShardedDtg")
   x$name <- name
   x$dbs$ecma <- createDb(file.path(baseDir, experiment, "ecma"),
-                         "ecma", "ecma.db")
+                         name, "ecma", "ecma.db")
   x$dbs$ecmaSfc <- createDb(file.path(baseDir, experiment, "ecma_sfc"),
-                            "ecmaSfc", "ecma.db")
+                            name, "ecmaSfc", "ecma.db")
   x$dbs$ccma <- createDb(file.path(baseDir, experiment, "ccma"),
-                         "ccma", "ccma.db")
+                         name, "ccma", "ccma.db")
   flog.info("Finished initialization of experiment %s.", name)
   x
 }

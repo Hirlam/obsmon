@@ -158,7 +158,7 @@ shinyServer(function(input, output, session) {
       db <- activeDb()
       sens <- req(input$sensor)
       sat <- req(input$satellite)
-      channelChoices <<- names(db$obtypes[[obtype]][[sens]][[sat]])
+      channelChoices <<- db$obtypes[[obtype]][[sens]][[sat]]
       updateSelection(session, "channels", channelChoices)
     }
   })
@@ -177,7 +177,7 @@ shinyServer(function(input, output, session) {
     if (obtype != "satem") {
       db <- activeDb()
       var <- req(input$variable)
-      levelChoices <<- names(db$obtypes[[obtype]][[var]])
+      levelChoices <<- db$obtypes[[obtype]][[var]]
       updateSelection(session, "levels", levelChoices)
     }
   })
