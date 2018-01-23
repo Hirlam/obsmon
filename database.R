@@ -121,6 +121,11 @@ setPragmas <- function(connection) {
 
 initCache <- function(cachePath) {
   dbLock <- lock(cachePath)
+  # dbConnect will create the DB file if it doesn't yet exist, but the
+  # directory must exist
+  if(!dir.exists(dirname(cachePath))) {
+    dir.create(dirname(cachePath), recursive = TRUE)
+  }
   cache <- dbConnect(RSQLite::SQLite(), cachePath)
   if (!dbExistsTable(cache, "dtg")) {
     setPragmas(cache)
