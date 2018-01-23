@@ -2,5 +2,8 @@
 
 export R_LIBS_USER=${R_LIBS_USER-"$HOME/R/library"}
 
+export OBSMON_SRC_DIR="$(dirname "$(readlink -f "$0")")"
+export OBSMON_R_SCRIPT="${OBSMON_SRC_DIR}/obsmon.R"
 # Call R-script (or alternatively CMD BATCH)
-Rscript obsmon.R || R CMD BATCH obsmon.R || exit 1
+Rscript ${OBSMON_R_SCRIPT} "$@" || R CMD BATCH ${OBSMON_R_SCRIPT} "$@" || exit 1
+~
