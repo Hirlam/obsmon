@@ -6,6 +6,7 @@
 *.org
 *.Rout
 *.tar.gz
+*.swp
 
 # Untracked helper files
 bak
