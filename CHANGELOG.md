@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 ## [Unreleased]
 ### Changed
 - Auto-discovery cache is now sqlite-based (Fixes: #148)
+### Added
+- Average Analysis Increment Map
+- Possibility to start obsmon from any directory (obsmon must be in the PATH)
 
 ## [2.1.0] - 2017-10-20
 ### Added
@@ -38,5 +41,5 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - Settings tab
 - Environment variables for configuration
 
-[Unreleased]: https://git.smhi.se/a002160/obsmon/compare/obsmon-2.1.0...obsmon-2.2.x
+[Unreleased]: https://git.smhi.se/paulo/obsmon/compare/obsmon-2.1.0...obsmon-2.2.x
 [2.1.0]: https://git.smhi.se/a002160/obsmon/compare/obsmon-2.0.0...obsmon-2.1.0
