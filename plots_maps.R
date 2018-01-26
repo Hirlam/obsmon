@@ -306,21 +306,23 @@ registerPlotType(
 # that it takes in a date range and supports the selection of multiple cycles.
 # The plotData will represent an average of the selected dataColumn over the
 # selectes dates and cycles.
-postProcessQueriedPlotData.mapThresholdWithRangeAvgs <- function(plotter, plotData) {
-  # Grouping data corresponding to the same spacial coordinates and statid and
-  # performing averages
-  plotData <- aggregate(plotData, 
-                by=list(plotData$latitude,plotData$longitude,plotData$statid),
-                FUN='mean'
+postProcessQueriedPlotData.mapThresholdWithRangeAvgs <-
+  function(plotter, plotData) {
+  # Grouping data by spacial coordinates, level and statid, and then averaging
+  aggregateByList <- list(plotData$latitude, plotData$longitude, 
+                       plotData$level, plotData$statid
+                     )
+  columnsToBeAveraged <- c("obsvalue", "fg_dep", "an_dep", "plotValues")
+  plotData <- aggregate(plotData[, columnsToBeAveraged], 
+                by=aggregateByList,
+                FUN='mean',
+                na.rm=TRUE
               )
-
-  # Needs to clean up after call to aggragate: 
-  # (i) Removing duplicate columns (Group.#) & NAs (statid)
-  plotData$Group.1 <- NULL
-  plotData$Group.2 <- NULL
-  plotData$statid <- NULL
-  # (ii) Recovering statid information (lost during calc of averages)
-  names(plotData)[names(plotData)=="Group.3"] <- "statid"
+  # Recovering column names lost by calling aggregate 
+  names(plotData)[names(plotData)=="Group.1"] <- "latitude"
+  names(plotData)[names(plotData)=="Group.2"] <- "longitude"
+  names(plotData)[names(plotData)=="Group.3"] <- "level"
+  names(plotData)[names(plotData)=="Group.4"] <- "statid"
 
   # Returning
   plotData
