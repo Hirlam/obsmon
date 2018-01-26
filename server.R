@@ -300,6 +300,10 @@ shinyServer(function(input, output, session) {
       t <- addTask(t, "Querying database")
       plotData <- performQuery(db, query, plotRequest$criteria$dtg,
                                progressTracker=t)
+      # Postprocessing plotData returned by performQuery.
+      # This may be useful, e.g., if performing averages over a
+      # picked date range.
+      plotData <- postProcessQueriedPlotData(plotter, plotData)
     }
     output$dataTable <- renderDataTable(plotData,
                                         options=list(pageLength=100))

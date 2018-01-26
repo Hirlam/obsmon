@@ -301,3 +301,42 @@ registerPlotType(
                list("obnumber", "obname", "levels"),
                dataColumn="obsvalue")
 )
+
+# The "mapThresholdWithRangeAvgs" class is similar to mapThreshold, except
+# that it takes in a date range and supports the selection of multiple cycles.
+# The plotData will represent an average of the selected dataColumn over the
+# selectes dates and cycles.
+postProcessQueriedPlotData.mapThresholdWithRangeAvgs <-
+  function(plotter, plotData) {
+  # Grouping data by spacial coordinates, level and statid, and then averaging
+  aggregateByList <- list(plotData$latitude, plotData$longitude, 
+                       plotData$level, plotData$statid
+                     )
+  columnsToBeAveraged <- c("obsvalue", "fg_dep", "an_dep", "plotValues")
+  plotData <- aggregate(plotData[, columnsToBeAveraged], 
+                by=aggregateByList,
+                FUN='mean',
+                na.rm=TRUE
+              )
+  # Recovering column names lost by calling aggregate 
+  names(plotData)[names(plotData)=="Group.1"] <- "latitude"
+  names(plotData)[names(plotData)=="Group.2"] <- "longitude"
+  names(plotData)[names(plotData)=="Group.3"] <- "level"
+  names(plotData)[names(plotData)=="Group.4"] <- "statid"
+
+  # Returning
+  plotData
+}
+
+registerPlotType(
+    "Maps",
+    plotCreate(c("mapThresholdWithRangeAvgs", "mapThreshold", "plotMap"),
+               "Average Analysis Increment Map", "range",
+               paste("SELECT",
+                     "DTG, latitude, longitude, level, statid,",
+                     "obsvalue, fg_dep, an_dep,",
+                     "(%s) as plotValues",
+                     "FROM usage WHERE %s"),
+               list("obnumber", "obname", "levels"),
+               dataColumn="fg_dep-an_dep")
+)
