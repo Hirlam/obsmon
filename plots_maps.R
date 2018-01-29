@@ -304,23 +304,23 @@ registerPlotType(
 
 # The "mapThresholdWithRangeAvgs" class is similar to mapThreshold, except
 # that it takes in a date range and supports the selection of multiple cycles.
-# The plotData will represent an average of the selected dataColumn over the
+# The plotValues will represent an average of the selected dataColumn over the
 # selectes dates and cycles.
 postProcessQueriedPlotData.mapThresholdWithRangeAvgs <-
-  function(plotter, plotData) {
+  function(plotter, plotData, FUN='mean', aggregateBy=c("statid", "level")) {
+  # Grouping data by the colnames specified in aggregateBy, 
+  # then applying function FUN within each group
   if(nrow(plotData) > 0) {
-    # Grouping data by statid and level, and then averaging
-    aggregateByList <- list(plotData$statid, plotData$level)
-    columnsToBeAveraged <- c("latitude", "longitude", "obsvalue", 
-                             "fg_dep", "an_dep", "plotValues")
-    plotData <- aggregate(plotData[, columnsToBeAveraged], 
+    #aggregateByList = setNames(plotData[, aggregateBy], aggregateBy)
+    aggregateByList = plotData[, aggregateBy]
+    columnsNotToBeAveraged <- which(colnames(plotData) %in% 
+                                c("DTG", aggregateBy)
+                              )
+    plotData <- aggregate(plotData[, -columnsNotToBeAveraged], 
                   by=aggregateByList,
-                  FUN='mean',
+                  FUN=FUN,
                   na.rm=TRUE
                 )
-    # Recovering column names lost by calling aggregate 
-    names(plotData)[names(plotData)=="Group.1"] <- "statid"
-    names(plotData)[names(plotData)=="Group.2"] <- "level"
   }
   # Returning
   plotData
