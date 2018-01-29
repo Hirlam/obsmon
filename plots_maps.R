@@ -308,19 +308,20 @@ registerPlotType(
 # selectes dates and cycles.
 postProcessQueriedPlotData.mapThresholdWithRangeAvgs <-
   function(plotter, plotData) {
-  # Grouping data by spacial coordinates, level and statid, and then averaging
-  aggregateByList <- list(plotData$statid, plotData$level)
-  columnsToBeAveraged <- c("latitude", "longitude", "obsvalue", 
-                           "fg_dep", "an_dep", "plotValues")
-  plotData <- aggregate(plotData[, columnsToBeAveraged], 
-                by=aggregateByList,
-                FUN='mean',
-                na.rm=TRUE
-              )
-  # Recovering column names lost by calling aggregate 
-  names(plotData)[names(plotData)=="Group.1"] <- "statid"
-  names(plotData)[names(plotData)=="Group.2"] <- "level"
-
+  if(nrow(plotData) > 0) {
+    # Grouping data by statid and level, and then averaging
+    aggregateByList <- list(plotData$statid, plotData$level)
+    columnsToBeAveraged <- c("latitude", "longitude", "obsvalue", 
+                             "fg_dep", "an_dep", "plotValues")
+    plotData <- aggregate(plotData[, columnsToBeAveraged], 
+                  by=aggregateByList,
+                  FUN='mean',
+                  na.rm=TRUE
+                )
+    # Recovering column names lost by calling aggregate 
+    names(plotData)[names(plotData)=="Group.1"] <- "statid"
+    names(plotData)[names(plotData)=="Group.2"] <- "level"
+  }
   # Returning
   plotData
 }
