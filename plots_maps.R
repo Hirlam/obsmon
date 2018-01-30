@@ -306,6 +306,8 @@ registerPlotType(
 # that it takes in a date range and supports the selection of multiple cycles.
 # The plotValues will represent an average of the selected dataColumn over the
 # selectes dates and cycles.
+registerPlotCategory("AverageMaps")
+
 mapThresholdWithRangeAggregateAndApplyFunction <-
   function(plotter, plotData, FUN='mean', aggregateBy=c("statid", "level")) {
   # Grouping data by the colnames specified in aggregateBy, 
@@ -333,7 +335,7 @@ postProcessQueriedPlotData.mapThresholdWithRangeAvgs <-
 }
 
 registerPlotType(
-    "Maps",
+    "AverageMaps",
     plotCreate(c("mapThresholdWithRangeAvgs", "mapThreshold", "plotMap"),
                "Average Analysis Increment Map", "range",
                paste("SELECT",
