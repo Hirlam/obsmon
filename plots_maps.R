@@ -306,17 +306,16 @@ registerPlotType(
 # that it takes in a date range and supports the selection of multiple cycles.
 # The plotValues will represent an average of the selected dataColumn over the
 # selectes dates and cycles.
-postProcessQueriedPlotData.mapThresholdWithRangeAvgs <-
+mapThresholdWithRangeAggregateAndApplyFunction <-
   function(plotter, plotData, FUN='mean', aggregateBy=c("statid", "level")) {
   # Grouping data by the colnames specified in aggregateBy, 
   # then applying function FUN within each group
   if(nrow(plotData) > 0) {
-    #aggregateByList = setNames(plotData[, aggregateBy], aggregateBy)
     aggregateByList = plotData[, aggregateBy]
-    columnsNotToBeAveraged <- which(colnames(plotData) %in% 
+    columnsNotToBeAggreg <- which(colnames(plotData) %in% 
                                 c("DTG", aggregateBy)
                               )
-    plotData <- aggregate(plotData[, -columnsNotToBeAveraged], 
+    plotData <- aggregate(plotData[, -columnsNotToBeAggreg], 
                   by=aggregateByList,
                   FUN=FUN,
                   na.rm=TRUE
@@ -324,6 +323,13 @@ postProcessQueriedPlotData.mapThresholdWithRangeAvgs <-
   }
   # Returning
   plotData
+}
+
+postProcessQueriedPlotData.mapThresholdWithRangeAvgs <-
+  function(plotter, plotData) {
+    mapThresholdWithRangeAggregateAndApplyFunction(
+      plotter, plotData, FUN="mean", aggregateBy=c("statid", "level")
+  )
 }
 
 registerPlotType(

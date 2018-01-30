@@ -118,7 +118,8 @@ plotCreate <- function(clazz, name, dateType, queryStub, requiredFields, ...) {
 }
 
 
-postProcessQueriedPlotData <- function(plotter, plotData) UseMethod("postProcessQueriedPlotData")
+postProcessQueriedPlotData <- 
+  function(plotter, plotData) UseMethod("postProcessQueriedPlotData")
 
 postProcessQueriedPlotData.default <- function(plotter, plotData) {
     plotData
