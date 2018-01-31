@@ -253,7 +253,7 @@ registerPlotType(
                      "latitude, longitude, level, statid,",
                      "(%s) as plotValues",
                      "FROM usage WHERE %s"),
-               list("obnumber"=7, "obname", "levels"),
+               list("obnumber", "obname", "levels"),
                dataColumn="fg_dep+biascrl")
 )
 registerPlotType(
@@ -287,7 +287,7 @@ registerPlotType(
                      "latitude, longitude, level, statid,",
                      "(%s) as plotValues",
                      "FROM usage WHERE %s"),
-               list("obnumber"=7, "obname", "levels"),
+               list("obnumber", "obname", "levels"),
                dataColumn="biascrl")
 )
 registerPlotType(
