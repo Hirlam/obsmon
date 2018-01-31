@@ -309,7 +309,9 @@ registerPlotType(
 registerPlotCategory("AverageMaps")
 
 mapThresholdWithRangeAggregateAndApplyFunction <-
-  function(plotter, plotData, FUN='mean', aggregateBy=c("statid", "level")) {
+  function(plotter, plotData, FUN='mean', 
+    aggregateBy=c("statid", "latitude", "longitude", "level")
+  ) {
   # Grouping data by the colnames specified in aggregateBy, 
   # then applying function FUN within each group
   if(nrow(plotData) > 0) {
@@ -330,16 +332,39 @@ mapThresholdWithRangeAggregateAndApplyFunction <-
 postProcessQueriedPlotData.mapThresholdWithRangeAvgs <-
   function(plotter, plotData) {
     mapThresholdWithRangeAggregateAndApplyFunction(
-      plotter, plotData, FUN="mean", aggregateBy=c("statid", "level")
+      plotter, plotData, FUN="mean", 
+      aggregateBy=c("statid", "latitude", "longitude", "level")
   )
 }
 
 registerPlotType(
     "AverageMaps",
     plotCreate(c("mapThresholdWithRangeAvgs", "mapThreshold", "plotMap"),
+               "Average First Guess Departure Map", "range",
+               paste("SELECT",
+                     "latitude, longitude, level, statid, obsvalue,",
+                     "(%s) as plotValues",
+                     "FROM usage WHERE %s"),
+               list("obnumber", "obname", "levels"),
+               dataColumn="fg_dep")
+)
+registerPlotType(
+    "AverageMaps",
+    plotCreate(c("mapThresholdWithRangeAvgs", "mapThreshold", "plotMap"),
+               "Average Analysis Departure Map", "range",
+               paste("SELECT",
+                     "latitude, longitude, level, statid, obsvalue,",
+                     "(%s) as plotValues",
+                     "FROM usage WHERE %s"),
+               list("obnumber", "obname", "levels"),
+               dataColumn="an_dep")
+)
+registerPlotType(
+    "AverageMaps",
+    plotCreate(c("mapThresholdWithRangeAvgs", "mapThreshold", "plotMap"),
                "Average Analysis Increment Map", "range",
                paste("SELECT",
-                     "DTG, latitude, longitude, level, statid,",
+                     "latitude, longitude, level, statid,",
                      "obsvalue, fg_dep, an_dep,",
                      "(%s) as plotValues",
                      "FROM usage WHERE %s"),
