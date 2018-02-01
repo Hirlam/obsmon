@@ -5,11 +5,18 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
+### Added
+- "AverageMaps" plot category
+    - Average First Guess Departure Map
+    - Average Analysis Departure Map
+    - Average Analysis Increment Map
+- Possibility to start obsmon from any directory (obsmon must be in the PATH)
+
 ### Changed
 - Auto-discovery cache is now sqlite-based (Fixes: #148)
-### Added
-- Average Analysis Increment Map
-- Possibility to start obsmon from any directory (obsmon must be in the PATH)
+
+### Fixed
+- Bias correction and First Guess Departure+Bias Correction maps are back
 
 ## [2.1.0] - 2017-10-20
 ### Added
