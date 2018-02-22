@@ -4,7 +4,9 @@ lib=Sys.getenv("R_LIBS_USER")
 pkgs <- c(
     "Cairo",
     "chron",
+    "dbplyr",
     "dplyr",
+    "flock",
     "futile.logger",
     "future",
     "ggplot2",
@@ -21,9 +23,7 @@ pkgs <- c(
     "scales",
     "shiny",
     "shinyjs",
-    "V8",
-    "dbplyr",
-    "flock"
+    "V8"
 )
 
 installedPkgs <- installed.packages(lib.loc=lib)
