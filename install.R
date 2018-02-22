@@ -1,5 +1,9 @@
+#!/usr/bin/env Rscript
+
 repo=c("http://cran.ma.imperial.ac.uk/")
 lib=Sys.getenv("R_LIBS_USER")
+if(lib=="") lib=file.path(Sys.getenv("HOME"), "R", "library")
+if(!dir.exists(lib)) dir.create(lib, recursive=TRUE)
 
 pkgs <- c(
     "Cairo",
@@ -27,10 +31,11 @@ pkgs <- c(
 )
 
 installedPkgs <- installed.packages(lib.loc=lib)
-
 newPkgs <- pkgs[!(pkgs %in% installedPkgs)]
 
-update.packages(lib.loc=lib, repos=repo, ask=FALSE)
+withCallingHandlers(update.packages(lib.loc=lib, repos=repo, ask=FALSE),
+                    warning = function(w) stop(w))
 if(length(newPkgs)>0) {
-  install.packages(newPkgs, lib=lib, repos=repo)
+  withCallingHandlers(install.packages(newPkgs, lib=lib, repos=repo),
+                      warning = function(w) stop(w))
 }
