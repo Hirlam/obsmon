@@ -253,7 +253,7 @@ registerPlotType(
                      "latitude, longitude, level, statid,",
                      "(%s) as plotValues",
                      "FROM usage WHERE %s"),
-               list("obnumber"=7, "obname", "levels"),
+               list("obnumber", "obname", "levels"),
                dataColumn="fg_dep+biascrl")
 )
 registerPlotType(
@@ -287,7 +287,7 @@ registerPlotType(
                      "latitude, longitude, level, statid,",
                      "(%s) as plotValues",
                      "FROM usage WHERE %s"),
-               list("obnumber"=7, "obname", "levels"),
+               list("obnumber", "obname", "levels"),
                dataColumn="biascrl")
 )
 registerPlotType(
@@ -304,36 +304,67 @@ registerPlotType(
 
 # The "mapThresholdWithRangeAvgs" class is similar to mapThreshold, except
 # that it takes in a date range and supports the selection of multiple cycles.
-# The plotData will represent an average of the selected dataColumn over the
+# The plotValues will represent an average of the selected dataColumn over the
 # selectes dates and cycles.
-postProcessQueriedPlotData.mapThresholdWithRangeAvgs <-
-  function(plotter, plotData) {
-  # Grouping data by spacial coordinates, level and statid, and then averaging
-  aggregateByList <- list(plotData$latitude, plotData$longitude, 
-                       plotData$level, plotData$statid
-                     )
-  columnsToBeAveraged <- c("obsvalue", "fg_dep", "an_dep", "plotValues")
-  plotData <- aggregate(plotData[, columnsToBeAveraged], 
-                by=aggregateByList,
-                FUN='mean',
-                na.rm=TRUE
-              )
-  # Recovering column names lost by calling aggregate 
-  names(plotData)[names(plotData)=="Group.1"] <- "latitude"
-  names(plotData)[names(plotData)=="Group.2"] <- "longitude"
-  names(plotData)[names(plotData)=="Group.3"] <- "level"
-  names(plotData)[names(plotData)=="Group.4"] <- "statid"
+registerPlotCategory("AverageMaps")
 
+mapThresholdWithRangeAggregateAndApplyFunction <-
+  function(plotter, plotData, FUN='mean', 
+    aggregateBy=c("statid", "latitude", "longitude", "level")
+  ) {
+  # Grouping data by the colnames specified in aggregateBy, 
+  # then applying function FUN within each group
+  if(nrow(plotData) > 0) {
+    aggregateByList = plotData[, aggregateBy]
+    columnsNotToBeAggreg <- which(colnames(plotData) %in% 
+                                c("DTG", aggregateBy)
+                              )
+    plotData <- aggregate(plotData[, -columnsNotToBeAggreg], 
+                  by=aggregateByList,
+                  FUN=FUN,
+                  na.rm=TRUE
+                )
+  }
   # Returning
   plotData
 }
 
+postProcessQueriedPlotData.mapThresholdWithRangeAvgs <-
+  function(plotter, plotData) {
+    mapThresholdWithRangeAggregateAndApplyFunction(
+      plotter, plotData, FUN="mean", 
+      aggregateBy=c("statid", "latitude", "longitude", "level")
+  )
+}
+
 registerPlotType(
-    "Maps",
+    "AverageMaps",
+    plotCreate(c("mapThresholdWithRangeAvgs", "mapThreshold", "plotMap"),
+               "Average First Guess Departure Map", "range",
+               paste("SELECT",
+                     "latitude, longitude, level, statid, obsvalue,",
+                     "(%s) as plotValues",
+                     "FROM usage WHERE %s"),
+               list("obnumber", "obname", "levels"),
+               dataColumn="fg_dep")
+)
+registerPlotType(
+    "AverageMaps",
+    plotCreate(c("mapThresholdWithRangeAvgs", "mapThreshold", "plotMap"),
+               "Average Analysis Departure Map", "range",
+               paste("SELECT",
+                     "latitude, longitude, level, statid, obsvalue,",
+                     "(%s) as plotValues",
+                     "FROM usage WHERE %s"),
+               list("obnumber", "obname", "levels"),
+               dataColumn="an_dep")
+)
+registerPlotType(
+    "AverageMaps",
     plotCreate(c("mapThresholdWithRangeAvgs", "mapThreshold", "plotMap"),
                "Average Analysis Increment Map", "range",
                paste("SELECT",
-                     "DTG, latitude, longitude, level, statid,",
+                     "latitude, longitude, level, statid,",
                      "obsvalue, fg_dep, an_dep,",
                      "(%s) as plotValues",
                      "FROM usage WHERE %s"),
