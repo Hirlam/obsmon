@@ -39,3 +39,47 @@ if(length(newPkgs)>0) {
   withCallingHandlers(install.packages(newPkgs, lib=lib, repos=repo),
                       warning = function(w) stop(w))
 }
+
+# Install any eventual missing dependencies.
+# Although the documented behaviour of the install.packages method is to
+# install all dependencies listed under "Depends", "Imports", "LinkingTo"
+# in the DESCRIPTION files of the packages to be installed, this doesn't
+# always happen, it seems.
+installedPkgs <- installed.packages(lib.loc=lib)
+basePackagesR <- rownames(installed.packages(priority="base"))
+installedPkgNames <- rownames(installedPkgs)
+
+depToDependants <- list()
+for (pkgName in installedPkgNames) {
+  dependenciesStr <- paste(
+                       installedPkgs[pkgName, 
+                         c("Depends", "Imports", "LinkingTo")],
+                       sep=""
+                     )
+  # Removing parentheses and enclosed text
+  dependenciesStr <- gsub("\\s*\\([^\\)]+\\)","", dependenciesStr)
+  # Removing all types of white space
+  dependenciesStr <- gsub("[[:space:]]", "", dependenciesStr)
+
+  newDeps <- unlist(strsplit(dependenciesStr, ",", fixed=TRUE))
+  newDeps <- newDeps[!(newDeps %in% c("R", "NA", basePackagesR))]
+
+  for (depName in newDeps){
+    depToDependants[[depName]] <- c(depToDependants[[depName]], pkgName)
+  }
+}
+allPkgDeps <- names(depToDependants)
+missingDeps <- allPkgDeps[!(allPkgDeps %in% installedPkgs)]
+
+if(length(missingDeps)>0) {
+  msg <- "The following dependencies were still missing after the\n"
+  msg <- paste(msg,"regular install, and have been manually installed:\n")
+  for (depName in missingDeps) {
+    msg <- paste(msg, ">", depName, "- needed by:")
+    msg <- paste(msg, paste(depToDependants[[depName]], collapse=", "), "\n")
+  }
+  warning(msg)
+  withCallingHandlers(install.packages(missingDeps, lib=lib, repos=repo),
+                      warning = function(w) print(w))
+
+}
