@@ -38,48 +38,70 @@ withCallingHandlers(update.packages(lib.loc=lib, repos=repo, ask=FALSE),
 if(length(newPkgs)>0) {
   withCallingHandlers(install.packages(newPkgs, lib=lib, repos=repo),
                       warning = function(w) stop(w))
+} else {
+  cat("The listed packages have already been installed.\n")
 }
 
-# Install any eventual missing dependencies.
 # Although the documented behaviour of the install.packages method is to
 # install all dependencies listed under "Depends", "Imports", "LinkingTo"
 # in the DESCRIPTION files of the packages to be installed, this doesn't
 # always happen, it seems.
-installedPkgs <- installed.packages(lib.loc=lib)
-basePackagesR <- rownames(installed.packages(priority="base"))
-installedPkgNames <- rownames(installedPkgs)
-
-depToDependants <- list()
-for (pkgName in installedPkgNames) {
+dependencies <- function(pkgName, 
+                  availablePkgs=available.packages(repos=repo), 
+                  basePackagesR=rownames(installed.packages(priority="base"))
+                ) {
+  # Checks, recursively, the dependencies of package pkgName
   dependenciesStr <- paste(
-                       installedPkgs[pkgName, 
+                       availablePkgs[pkgName, 
                          c("Depends", "Imports", "LinkingTo")],
                        sep=""
                      )
-  # Removing parentheses and enclosed text
+  # Removing parentheses and enclosed text, as well as white spaces
   dependenciesStr <- gsub("\\s*\\([^\\)]+\\)","", dependenciesStr)
-  # Removing all types of white space
   dependenciesStr <- gsub("[[:space:]]", "", dependenciesStr)
 
-  newDeps <- unlist(strsplit(dependenciesStr, ",", fixed=TRUE))
-  newDeps <- newDeps[!(newDeps %in% c("R", "NA", basePackagesR))]
+  pkgDeps <- unlist(strsplit(dependenciesStr, ",", fixed=TRUE))
+  pkgDeps <- pkgDeps[!(pkgDeps %in% c("R", "NA", basePackagesR))]
+  
+  if(length(pkgDeps)==0) {
+    return(NULL)
+  } else {
+    return(unique(c(pkgDeps, dependencies(pkgDeps))))
+  }
+}
 
-  for (depName in newDeps){
+cat("Checking for dependencies not installed by install.packages... \n")
+installedPkgNames <- rownames(installed.packages(lib.loc=lib))
+depToDependants <- list()
+for (pkgName in installedPkgNames) {
+  cat("  > Checking package", pkgName, "... \n")
+  pkgDeps <- dependencies(pkgName)
+  for (depName in pkgDeps){
     depToDependants[[depName]] <- c(depToDependants[[depName]], pkgName)
   }
 }
 allPkgDeps <- names(depToDependants)
-missingDeps <- allPkgDeps[!(allPkgDeps %in% installedPkgs)]
+missingDeps <- allPkgDeps[!(allPkgDeps %in% installedPkgNames)]
 
-if(length(missingDeps)>0) {
-  msg <- "The following dependencies were still missing after the\n"
-  msg <- paste(msg,"regular install, and have been manually installed:\n")
+if(length(missingDeps)==0) {
+  cat("All dependencies seem to have been installed. \n")
+} else {
+  msg_deps <- ''
   for (depName in missingDeps) {
-    msg <- paste(msg, ">", depName, "- needed by:")
-    msg <- paste(msg, paste(depToDependants[[depName]], collapse=", "), "\n")
+    msg_deps <- paste(msg_deps, ">", depName,
+                      "- needed by (or by dependencies of):")
+                
+    msg_deps <- paste(msg_deps, 
+                      paste(depToDependants[[depName]], collapse=", "),
+                      "\n"
+                )
   }
-  warning(msg)
-  withCallingHandlers(install.packages(missingDeps, lib=lib, repos=repo),
-                      warning = function(w) print(w))
+  cat("The following missing dependencies will be installed: \n")
+  cat(msg_deps)
 
+  withCallingHandlers(install.packages(missingDeps, lib=lib, repos=repo),
+                      warning = function(w) warning(w))
+  warn_msg<-"Dependencies missed by install.packages and handled explicitly:\n"
+  warn_msg <- paste(warn_msg, msg_deps)
+  warning(warn_msg)
 }
