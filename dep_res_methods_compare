@@ -1,0 +1,143 @@
+#!/usr/bin/env Rscript
+# A simple diagnostic test to see if we can trust R's automatic
+# dependency resolution.
+
+repo=c("http://cran.ma.imperial.ac.uk/")
+lib=Sys.getenv("R_LIBS_USER")
+if(lib=="") lib=file.path(Sys.getenv("HOME"), "R", "library")
+if(!dir.exists(lib)) dir.create(lib, recursive=TRUE)
+
+pkgs <- c(
+    "Cairo",
+    "chron",
+    "dbplyr",
+    "dplyr",
+    "flock",
+    "futile.logger",
+    "future",
+    "ggplot2",
+    "gridExtra",
+    "httpuv",
+    "jpeg",
+    "leaflet",
+    "mapproj",
+    "pbapply",
+    "pryr",
+    "RcppTOML",
+    "RSQLite",
+    "reshape2",
+    "scales",
+    "shiny",
+    "shinyjs",
+    "V8"
+)
+
+dependencies <- function(pkgName,
+                  depType=c("Depends", "Imports", "LinkingTo"),
+                  availablePkgs=available.packages(repos=repo), 
+                  basePackagesR=rownames(installed.packages(priority="base"))
+                ) {
+  # Checks, recursively, the dependencies of package pkgName
+
+  dependenciesStr <- tryCatch(
+    paste(availablePkgs[pkgName, depType], sep=""),
+    error = function(e) NULL
+  )
+  # Removing parentheses and enclosed text, as well as white spaces
+  dependenciesStr <- gsub("\\s*\\([^\\)]+\\)","", dependenciesStr)
+  dependenciesStr <- gsub("[[:space:]]", "", dependenciesStr)
+
+  pkgDeps <- unlist(strsplit(dependenciesStr, ",", fixed=TRUE))
+  pkgDeps <- pkgDeps[!(pkgDeps %in% c("R", "NA", basePackagesR))]
+  
+  if(length(pkgDeps)==0) {
+    return(pkgDeps)
+  } else {
+    return(unique(c(dependencies(pkgDeps), pkgDeps)))
+  }
+}
+
+depsInWrongOrder <- function(depList) {
+  rtn <- list()
+  for(iPkg in seq_along(depList)) {
+    pkgName <- depList[iPkg]
+    pkgDeps <- dependencies(pkgName)
+    depsIntersect <- intersect(pkgDeps, depList[iPkg:length(depList)])
+
+    if(length(depsIntersect)>0) rtn[[pkgName]] <- depsIntersect
+  }
+  return(rtn)
+}
+
+print_deps_list_sanity_diag <- function(depsInWrongOrder, owner) {
+  if(length(depsInWrongOrder)==0) {
+    cat("    *",owner,": OK \n")
+  } else {
+    cat("    *",owner,": INCONSISTENT ORDER! The problematic entries are: \n")
+    for(pkgName in names(depsInWrongOrder)) {
+      misplacedDeps <- depsInWrongOrder[[pkgName]]
+      cat("          >",pkgName,"should appear after:",misplacedDeps,"\n")
+    }
+  }
+}
+
+basePackagesR = rownames(installed.packages(priority="base"))
+nInconsistDepOrderMine <- 0
+nInconsistDepOrderR <- 0
+for (pkgName in pkgs) {
+  cat(pkgName,":\n")
+
+  start.time <- Sys.time()
+  depsMine <- dependencies(pkgName)
+  elapsed_mine <- Sys.time() - start.time
+
+  start.time <- Sys.time()
+  depsR <- tools::package_dependencies(pkgName, db=available.packages(repos=repo), 
+                               which=c("Depends", "Imports", "LinkingTo"),
+                               recursive = TRUE
+                              )[[pkgName]]
+  depsR <- depsR[!(depsR %in% basePackagesR)]
+  elapsed_R <- Sys.time() - start.time
+
+  depsMatch <- all(depsMine==depsR)
+  if(depsMatch) {
+    cat("  > OK: The dependency lists match (",length(depsR),")")
+  } else {
+    cat("  > WARNING: The dependency lists do NOT match.\n")
+    cat("    * PM (",length(depsMine),"): ", depsMine, "\n")
+    cat("    *  R (",length(depsR),"): ", depsR, "\n")
+  }
+  cat("\n")
+
+  cat("  > Checking whether order of dependencies is consistent:\n")
+  if(depsMatch) {
+    misplacedDeps <- depsInWrongOrder(depsR)
+    print_deps_list_sanity_diag(misplacedDeps, "R/PM")
+    if(length(misplacedDeps)>0) {
+      nInconsistDepOrderMine <- nInconsistDepOrderMine + 1
+      nInconsistDepOrderR <- nInconsistDepOrderR + 1
+    }
+  } else {
+    misplacedDepsMine <- depsInWrongOrder(depsMine)
+    print_deps_list_sanity_diag(misplacedDepsMine, "PM")
+    misplacedDepsR <- depsInWrongOrder(depsR)
+    print_deps_list_sanity_diag(misplacedDepsR, "R")
+    if(length(misplacedDepsMine)>0) {
+      nInconsistDepOrderMine <- nInconsistDepOrderMine + 1
+    }
+    if(length(misplacedDepsR)>0) {
+      nInconsistDepOrderR <- nInconsistDepOrderR + 1
+    }
+  }
+  cat("\n")
+
+  cat("  Time needed to gather all dependencies:\n")
+  cat("    * PM's method:    ", elapsed_mine, "s\n")
+  cat("    * R tools' method:", elapsed_R, "s\n")
+  cat("\n")
+}
+
+cat("#packages with inconsistent dep order with R         :",
+    nInconsistDepOrderR, "\n")
+cat("#packages with inconsistent dep order with own method:",
+    nInconsistDepOrderMine, "\n")
