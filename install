@@ -47,15 +47,19 @@ if(length(newPkgs)>0) {
 # in the DESCRIPTION files of the packages to be installed, this doesn't
 # always happen, it seems.
 dependencies <- function(pkgName, 
+                  depType=c("Depends", "Imports", "LinkingTo"),
                   availablePkgs=available.packages(repos=repo), 
                   basePackagesR=rownames(installed.packages(priority="base"))
                 ) {
   # Checks, recursively, the dependencies of package pkgName
-  dependenciesStr <- paste(
-                       availablePkgs[pkgName, 
-                         c("Depends", "Imports", "LinkingTo")],
-                       sep=""
-                     )
+  # I am aware of tools::package_dependencies, but that method does not
+  # always seem to return the dependencies in the order they should be 
+  # installed.
+
+  dependenciesStr <- tryCatch(
+    paste(availablePkgs[pkgName, depType], sep=""),
+    error = function(e) NULL
+  )
   # Removing parentheses and enclosed text, as well as white spaces
   dependenciesStr <- gsub("\\s*\\([^\\)]+\\)","", dependenciesStr)
   dependenciesStr <- gsub("[[:space:]]", "", dependenciesStr)
@@ -64,11 +68,12 @@ dependencies <- function(pkgName,
   pkgDeps <- pkgDeps[!(pkgDeps %in% c("R", "NA", basePackagesR))]
   
   if(length(pkgDeps)==0) {
-    return(NULL)
+    return(pkgDeps)
   } else {
-    return(unique(c(pkgDeps, dependencies(pkgDeps))))
+    return(unique(c(dependencies(pkgDeps), pkgDeps)))
   }
 }
+
 
 cat("Checking for dependencies not installed by install.packages... \n")
 installedPkgNames <- rownames(installed.packages(lib.loc=lib))
