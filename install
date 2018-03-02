@@ -1,34 +1,48 @@
 #!/usr/bin/env Rscript
 
 repo=c("http://cran.ma.imperial.ac.uk/")
+basePackagesR <- rownames(installed.packages(priority="base"))
 lib=Sys.getenv("R_LIBS_USER")
 if(lib=="") lib=file.path(Sys.getenv("HOME"), "R", "library")
 if(!dir.exists(lib)) dir.create(lib, recursive=TRUE)
 
-pkgs <- c(
-    "Cairo",
-    "chron",
-    "dbplyr",
-    "dplyr",
-    "flock",
-    "futile.logger",
-    "future",
-    "ggplot2",
-    "gridExtra",
-    "httpuv",
-    "jpeg",
-    "leaflet",
-    "mapproj",
-    "pbapply",
-    "pryr",
-    "RcppTOML",
-    "RSQLite",
-    "reshape2",
-    "scales",
-    "shiny",
-    "shinyjs",
-    "V8"
+# Parsing ".R" files in directory to look for needed packages.
+# These may have been imported explicitly using "library" or "require",
+# or used without explicit import (as in "myLib::myFunction").
+allRFiles <- list.files(pattern=".R$", recursive=TRUE)
+pattParentheses <- "[[:space:]]*\\(+[[:space:]]*.+[[:space:]]*\\)"
+pattLib <- paste("library+", pattParentheses, sep='')
+pattReq <- paste("require+", pattParentheses, sep='')
+patDubColon <- "[[:alpha:]]+\\w*[[:space:]]*::"
+importedPkgs <- c()
+doubleColonPkgs <- c()
+for (file in allRFiles) {
+  fLines <- readLines(file)
+  importedPkgs <- c(importedPkgs, grep(pattLib, fLines, value=TRUE))
+  importedPkgs <- c(importedPkgs, grep(pattReq, fLines, value=TRUE))
+  doubleColonPkgs <- c(doubleColonPkgs, grep(patDubColon, fLines, value=TRUE))
+}
+# Keeping only package names (i.e., no punctuation, white spaces etc.)
+importedPkgs <- unique(
+  gsub("[\\(\\)[:space:]]", "", 
+    regmatches(importedPkgs, gregexpr("\\(.*?\\)", importedPkgs))
+  )
 )
+doubleColonPkgs <- unique(
+  gsub("[:[:space:]]", "", 
+    regmatches(doubleColonPkgs, gregexpr(patDubColon, doubleColonPkgs))
+  )
+)
+
+# Building list of packages to be installed. Dependencies are not yet 
+# considered at this stage.
+pkgs <- c(importedPkgs, doubleColonPkgs)
+pkgs <- unique(pkgs[!(pkgs %in% basePackagesR)])
+# V8 is listed as a suggested dependency of shinyjs (and therefore not 
+# installed by default by install.packages). Obsmon will crash if V8 is not
+# present though. We should really force suggested dependencies to be installed,
+# for the sake of reliability..
+pkgs <- c(pkgs, "V8")
 
 installedPkgs <- installed.packages(lib.loc=lib)
 newPkgs <- pkgs[!(pkgs %in% installedPkgs)]
