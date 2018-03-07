@@ -6,7 +6,47 @@ lib=Sys.getenv("R_LIBS_USER")
 if(lib=="") lib=file.path(Sys.getenv("HOME"), "R", "library")
 if(!dir.exists(lib)) dir.create(lib, recursive=TRUE)
 
-# Parsing ".R" files in directory to look for needed packages.
+dependencies <- function(pkgName, 
+  levelOneDepsType=c("Depends", "Imports", "LinkingTo", "Suggests"),
+  levelTwoDepsType=c("Depends", "Imports", "LinkingTo"),
+  availablePkgs=available.packages(repos=repo), 
+  exclude=rownames(installed.packages(priority="base"))){
+#  Recursively search dependencies if package pkgName.
+#
+#  pkgName: Package(s) for which dependencies should be searched
+#  levelOneDepsType: What type of 1st-order (recursion depth 0) dependencies should be 
+#           included in the search
+#  levelTwoDepsType: What type of secondary (recursion depth > 0) dependencies 
+#                    should be included in the search
+#  exclude: Dependencies that should not be included in the return value
+#
+#  In principle, we should not need to write such a function, given that
+#  install.packages is supposed to resolve dependencies (the behaviour 
+#  implemented here is in principle equivalent to setting dependencies=TRUE
+#  in install.packages). Nonetheless, from our tests on the behaviour of the
+#  install.packages method itself (which defaults to recursively installing
+#  all dependencies listed under "Depends", "Imports", "LinkingTo" in the 
+#  DESCRIPTION files of the main packages to be installed), it seems that
+#  that method can yield somewhat erratic results. This function therefore
+#  gives us more control over what is to be installed.
+
+  mainDeps <- tools::package_dependencies(pkgName, db=availablePkgs,
+                       which=levelOneDepsType,
+                       recursive=FALSE
+                     )[[pkgName]]
+  depsLevel2 <- tools::package_dependencies(mainDeps, db=availablePkgs,
+                         which=levelTwoDepsType,
+                         recursive=TRUE
+                       )
+  allDeps <- c()
+  for (mainDep in mainDeps) {
+    allDeps <- c(allDeps, depsLevel2[[mainDep]], mainDep)
+  }
+
+  return(unique(allDeps[!(allDeps %in% exclude)])) 
+}
+
+cat('Gathering packages used in the ".R" files in current dir and subdirs...')
 # These may have been imported explicitly using "library" or "require",
 # or used without explicit import (as in "myLib::myFunction").
 allRFiles <- list.files(pattern=".R$", recursive=TRUE)
@@ -34,93 +74,54 @@ doubleColonPkgs <- unique(
   )
 )
 
-# Building list of packages to be installed. Dependencies are not yet 
-# considered at this stage.
-pkgs <- c(importedPkgs, doubleColonPkgs)
-pkgs <- unique(pkgs[!(pkgs %in% basePackagesR)])
-# V8 is listed as a suggested dependency of shinyjs (and therefore not 
-# installed by default by install.packages). Obsmon will crash if V8 is not
-# present though. We should really force suggested dependencies to be installed,
-# for the sake of reliability..
-pkgs <- c(pkgs, "V8")
+# Finally building the list of main packages used.
+# Dependencies are not yet considered at this stage.
+mainPkgs <- c(importedPkgs, doubleColonPkgs)
+mainPkgs <- sort(unique(mainPkgs[!(mainPkgs %in% basePackagesR)]))
 
+cat("Done.\n  > The following",length(mainPkgs),"main packages were found:\n")
+for (pkg in mainPkgs) {
+  cat("    *", pkg, "\n")
+}
+
+cat("\n")
+cat("Building recursive dependency list: \n") 
+# Doing this manually because we've had too many problems with somewhat erratic
+# behaviour of the install.packages own dependency resolution
+recursiveDepsOfMainPkgs <- c()
+for (pkg in mainPkgs) {
+  cat("  >", pkg, "... ")
+  deps <- dependencies(pkg)
+  newDeps <- setdiff(deps, intersect(deps,c(mainPkgs,recursiveDepsOfMainPkgs)))
+  cat("nDependencies =", length(deps), "(", length(newDeps),"new)\n")
+  recursiveDepsOfMainPkgs <- c(recursiveDepsOfMainPkgs, newDeps)
+}
+
+# At last, building the full list of pkgs to be installed
+pkgs <- sort(unique(c(recursiveDepsOfMainPkgs, mainPkgs)))
+
+cat("\n")
+cat("The following packages should be available after installation:\n")
+for (pkg in pkgs) {
+  cat("  >", pkg, "\n")
+}
+cat("Total:", length(pkgs), "packages.\n \n")
+
+# Installation
 installedPkgs <- installed.packages(lib.loc=lib)
 newPkgs <- pkgs[!(pkgs %in% installedPkgs)]
 
-withCallingHandlers(update.packages(lib.loc=lib, repos=repo, ask=FALSE),
-                    warning = function(w) stop(w))
+withCallingHandlers(
+  update.packages(lib.loc=lib, repos=repo, ask=FALSE, dependencies=FALSE),
+  warning = function(w) warning(w)
+)
+
 if(length(newPkgs)>0) {
-  withCallingHandlers(install.packages(newPkgs, lib=lib, repos=repo),
-                      warning = function(w) stop(w))
+  withCallingHandlers(
+    install.packages(newPkgs, lib=lib, repos=repo, dependencies=FALSE),
+    warning = function(w) stop(w)
+  )
 } else {
   cat("The listed packages have already been installed.\n")
 }
 
-# Although the documented behaviour of the install.packages method is to
-# install all dependencies listed under "Depends", "Imports", "LinkingTo"
-# in the DESCRIPTION files of the packages to be installed, this doesn't
-# always happen, it seems.
-dependencies <- function(pkgName, 
-                  depType=c("Depends", "Imports", "LinkingTo"),
-                  availablePkgs=available.packages(repos=repo), 
-                  basePackagesR=rownames(installed.packages(priority="base"))
-                ) {
-  # Checks, recursively, the dependencies of package pkgName
-  # I am aware of tools::package_dependencies, but that method does not
-  # always seem to return the dependencies in the order they should be 
-  # installed.
-
-  dependenciesStr <- tryCatch(
-    paste(availablePkgs[pkgName, depType], sep=""),
-    error = function(e) NULL
-  )
-  # Removing parentheses and enclosed text, as well as white spaces
-  dependenciesStr <- gsub("\\s*\\([^\\)]+\\)","", dependenciesStr)
-  dependenciesStr <- gsub("[[:space:]]", "", dependenciesStr)
-
-  pkgDeps <- unlist(strsplit(dependenciesStr, ",", fixed=TRUE))
-  pkgDeps <- pkgDeps[!(pkgDeps %in% c("R", "NA", basePackagesR))]
-  
-  if(length(pkgDeps)==0) {
-    return(pkgDeps)
-  } else {
-    return(unique(c(dependencies(pkgDeps), pkgDeps)))
-  }
-}
-
-
-cat("Checking for dependencies not installed by install.packages... \n")
-installedPkgNames <- rownames(installed.packages(lib.loc=lib))
-depToDependants <- list()
-for (pkgName in installedPkgNames) {
-  cat("  > Checking package", pkgName, "... \n")
-  pkgDeps <- dependencies(pkgName)
-  for (depName in pkgDeps){
-    depToDependants[[depName]] <- c(depToDependants[[depName]], pkgName)
-  }
-}
-allPkgDeps <- names(depToDependants)
-missingDeps <- allPkgDeps[!(allPkgDeps %in% installedPkgNames)]
-
-if(length(missingDeps)==0) {
-  cat("All dependencies seem to have been installed. \n")
-} else {
-  msg_deps <- ''
-  for (depName in missingDeps) {
-    msg_deps <- paste(msg_deps, ">", depName,
-                      "- needed by (or by dependencies of):")
-                
-    msg_deps <- paste(msg_deps, 
-                      paste(depToDependants[[depName]], collapse=", "),
-                      "\n"
-                )
-  }
-  cat("The following missing dependencies will be installed: \n")
-  cat(msg_deps)
-
-  withCallingHandlers(install.packages(missingDeps, lib=lib, repos=repo),
-                      warning = function(w) warning(w))
-  warn_msg<-"Dependencies missed by install.packages and handled explicitly:\n"
-  warn_msg <- paste(warn_msg, msg_deps)
-  warning(warn_msg)
-}
