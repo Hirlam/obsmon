@@ -1,0 +1,64 @@
+List of system dependencies for R packages used in Obsmon.
+OS: Fedora 27 (Workstation Edition), clean installation.
+Date: 2018-03-13
+
+Cairo:
+  * cairo-devel
+  * libXt-devel
+
+DBI:
+  * libcurl-devel (for "curl" dependency)
+  * openssl-devel (for "openssl" dependency)
+  * libxml2-devel (for "xml2" dependency)
+
+dbplyr:
+  * mariadb-devel (for "RMariaDB" dependency)
+  * postgresql-devel (for "RPostgreSQL" dependency)
+
+leaflet:
+  * geos-devel (for "sf" dependency)
+  * udunits2-devel (for "udunits2" dependency)
+  * proj-devel (for "sf" dependency, see note below)
+  * proj-epsg (for "sf" dependency, see note below)
+  * gdal-devel (for "sf" and "rgdal" dependencies, see note below)
+
+shinyjs:
+  * v8-314-devel (for "V8" dependency)
+
+
+Installing the system dependencies proj-devel, proj-epsg and gdal-devel
+ The sf dependency requires gdal-devel v > 2.0.0. This version, however, is not
+ currently available for Red Hat Enterprise Linux Client release 7.4 (Maipo) at
+ SMHI via simple yum usage. The inslattation, therefore, needs some more work.
+
+ Additional system dependencies that can be installed via yum:
+ libtool
+ libtiff-devel
+ freexl-devel
+ unixODBC-devel
+
+  ant
+  armadillo-devel
+  cfitsio-devel
+  chrpath
+  doxygen
+  g2clib-static
+  hdf-devel
+  hdf-static
+  jasper-devel
+  libgta-devel
+  libspatialite-devel
+  libwebp-devel
+  giflib-devel
+  netcdf-devel
+  libdap-devel
+  librx-devel
+  python3-numpy
+  perl-devel
+  perl-generators
+  openjpeg2-devel
+  poppler-devel
+  python3-devel
+  swig
+  xerces-c-devel
+
