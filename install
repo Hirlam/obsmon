@@ -98,11 +98,11 @@ for (pkg in mainPkgs) {
 }
 
 # At last, building the full list of pkgs to be installed
-pkgs <- sort(unique(c(recursiveDepsOfMainPkgs, mainPkgs)))
+pkgs <- unique(c(recursiveDepsOfMainPkgs, mainPkgs))
 
 cat("\n")
 cat("The following packages should be available after installation:\n")
-for (pkg in pkgs) {
+for (pkg in sort(pkgs)) {
   cat("  >", pkg, "\n")
 }
 cat("Total:", length(pkgs), "packages.\n \n")
