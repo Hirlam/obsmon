@@ -112,13 +112,19 @@ installedPkgs <- installed.packages(lib.loc=lib)
 newPkgs <- pkgs[!(pkgs %in% installedPkgs)]
 
 withCallingHandlers(
-  update.packages(lib.loc=lib, repos=repo, ask=FALSE, dependencies=FALSE),
+  update.packages(
+    lib.loc=lib, repos=repo, ask=FALSE, dependencies=FALSE,
+    configure.args=c(udunits2='--with-udunits2-include=/usr/include/udunits2')
+  ),
   warning = function(w) warning(w)
 )
 
 if(length(newPkgs)>0) {
   withCallingHandlers(
-    install.packages(newPkgs, lib=lib, repos=repo, dependencies=FALSE),
+    install.packages(
+      newPkgs, lib=lib, repos=repo, dependencies=FALSE,
+      configure.args=c(udunits2='--with-udunits2-include=/usr/include/udunits2')
+    ),
     warning = function(w) stop(w)
   )
 } else {
