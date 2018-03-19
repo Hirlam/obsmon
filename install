@@ -108,7 +108,7 @@ for (pkg in sort(pkgs)) {
 cat("Total:", length(pkgs), "packages.\n \n")
 
 # Installation
-installedPkgs <- installed.packages(lib.loc=lib)
+installedPkgs <- installed.packages(lib.loc=lib)[,1]
 newPkgs <- pkgs[!(pkgs %in% installedPkgs)]
 
 withCallingHandlers(
