@@ -1,9 +1,6 @@
 #!/usr/bin/env bash
 
 WORKING_DIR=`pwd`
-RPMBUILD_DIR="${HOME}/rpmbuild"
-SPECS_DIR="${RPMBUILD_DIR}/SPECS"
-COMPILED_RPMS_SYS_DIR="${RPMBUILD_DIR}/RPMS/x86_64"
 TMPDIR='/tmp/obsmon_sys_deps'
 RPM_DEST_DIR="${WORKING_DIR}/obsmon_deps_RHEL7"
 FC25_REPO='http://dl.fedoraproject.org/pub/fedora/linux/releases/25/Everything/source/tree/Packages'
@@ -17,13 +14,20 @@ yum_pkgs_append () {
 }
 
 # ${PKGS_YUM}: Pkgs that can be directly installed via yum
+#              Python3* needed to be installed manually on CentOS7 (like we do 
+#              here for libkml), but can be installed via yum on SMHI/LINDA
+yum_pkgs_append "R"
+yum_pkgs_append "gcc make cmake gcc-c++"
+yum_pkgs_append "rpm-build redhat-rpm-config"
+yum_pkgs_append "epel-release"
 yum_pkgs_append "cairo-devel libXt-devel"
 yum_pkgs_append "libcurl-devel openssl-devel libxml2-devel"
 yum_pkgs_append "mariadb-devel postgresql-devel"
-yum_pkgs_append "geos-devel udunits2-devel v8-314-devel"
+yum_pkgs_append "geos-devel udunits2-devel v8-devel v8-314-devel"
+yum_pkgs_append "python3-devel python3-numpy"
 sudo yum -y install ${PKGS_YUM} || { echo "Problems installing ${PKGS_YUM}"; exit 1; }
 # ${PKGS}: Packages that need a bit more work
-# NB.: The order of the pkgs listed below DOES matter.
+#          NB.: The order of the pkgs listed below DOES matter.
 pkgs_append "libkml-1.3.0-3.el7.x86_64.rpm"
 pkgs_append "libkml-devel-1.3.0-3.el7.x86_64.rpm"
 pkgs_append "proj-4.9.2-2.fc24.src.rpm"
@@ -32,6 +36,16 @@ pkgs_append "libspatialite-4.3.0a-2.fc24.src.rpm"
 pkgs_append "ogdi-3.2.0-0.26.beta2.fc24.src.rpm"
 pkgs_append "gdal-2.1.0-8.fc25.src.rpm"
 
+# Preparing for rpmbuild
+if [ ! -f "${HOME}/.rpmmacros" ]; then
+  mkdir -p ${HOME}/rpmbuild/{BUILD,RPMS,SOURCES,SPECS,SRPMS}
+  echo '%_topdir %(echo $HOME)/rpmbuild' > ${HOME}/.rpmmacros
+fi
+RPMBUILD_DIR=`rpmbuild --eval='%_topdir'`
+SPECS_DIR=`rpmbuild --eval='%_specdir'`
+COMPILED_RPMS_SYS_DIR=`rpmbuild --eval='%_rpmdir/%{_arch}'`
+
+# Producing/installing RPMs
 mkdir -p ${TMPDIR}
 for PKG in ${PKGS}; do
   echo "Handling package ${PKG}" 
