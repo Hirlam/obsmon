@@ -13,13 +13,14 @@ yum_pkgs_append () {
   PKGS_YUM="${PKGS_YUM} ${1}"
 }
 
+# epel-release is needed before checking the other dependencies
+sudo yum -y install "epel-release" || { echo "Problems installing epel-release"; exit 1; }
 # ${PKGS_YUM}: Pkgs that can be directly installed via yum
 #              Python3* needed to be installed manually on CentOS7 (like we do 
 #              here for libkml), but can be installed via yum on SMHI/LINDA
 yum_pkgs_append "R"
-yum_pkgs_append "gcc make cmake gcc-c++"
+yum_pkgs_append "gcc make cmake gcc-c++ wget"
 yum_pkgs_append "rpm-build redhat-rpm-config"
-yum_pkgs_append "epel-release"
 yum_pkgs_append "cairo-devel libXt-devel"
 yum_pkgs_append "libcurl-devel openssl-devel libxml2-devel"
 yum_pkgs_append "mariadb-devel postgresql-devel"
