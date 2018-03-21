@@ -78,8 +78,9 @@ for PKG in ${PKGS}; do
       rpm --nomd5 -i ${PKG} || { echo "Problems unpacking ${PKG}"; exit 1; }
 
       SPEC_FILE=${SPECS_DIR}/${PKG_NAME}.spec
-      if [[ $PKG_NAME = *"gdal"* ]]; then
-        sed -i '/%files/a %{_exec_prefix}/etc/bash_completion.d/gdal-bash-completion.sh' ${SPEC_FILE}
+      if [[ $PKG_NAME = *"gdal"* ]] && ( rpm -qa | grep -qw 'bash-completion' ); then
+        GDAL_BC_FILE_PATH='%{_exec_prefix}/%{_sysconfdir}/bash_completion.d/gdal-bash-completion.sh'
+        sed -i "/^%files$/a ${GDAL_BC_FILE_PATH}" ${SPEC_FILE}
         if [ $? -ne 0 ]; then
           echo "Problems editing ${PKG_NAME} spec file."
           exit 1
