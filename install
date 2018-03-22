@@ -1,6 +1,7 @@
 #!/usr/bin/env Rscript
 
 repo=c("http://cran.ma.imperial.ac.uk/")
+repo=c("http://ftp.acc.umu.se/mirror/CRAN/")
 basePackagesR <- rownames(installed.packages(priority="base"))
 lib=Sys.getenv("R_LIBS_USER")
 if(lib=="") lib=file.path(Sys.getenv("HOME"), "R", "library")
@@ -10,7 +11,8 @@ dependencies <- function(pkgName,
   levelOneDepsType=c("Depends", "Imports", "LinkingTo", "Suggests"),
   levelTwoDepsType=c("Depends", "Imports", "LinkingTo"),
   availablePkgs=available.packages(repos=repo), 
-  exclude=rownames(installed.packages(priority="base"))){
+  exclude=rownames(installed.packages(priority="base")),
+  exclude_from_suggests=c("sf")){
 #  Recursively search dependencies if package pkgName.
 #
 #  pkgName: Package(s) for which dependencies should be searched
@@ -34,6 +36,20 @@ dependencies <- function(pkgName,
                        which=levelOneDepsType,
                        recursive=FALSE
                      )[[pkgName]]
+  # Some "Suggests" dependencies may be problematic, and it may be better to
+  # accept the risk of removing them than having to solve issues related to
+  # system dependencies. The "sf" package is one of such cases at SMHI/LINDA.
+  if(("Suggests" %in% levelOneDepsType) && length(exclude_from_suggests)>0) {
+    mainDepsSuggestsType <- tools::package_dependencies(pkgName,
+                                     db=availablePkgs,
+                                     which=c("Suggests"),
+                                     recursive=FALSE
+                                   )[[pkgName]]
+    sugDeps2BDel <- mainDepsSuggestsType[mainDepsSuggestsType %in% 
+                                         exclude_from_suggests]
+    mainDeps <- mainDeps[!(mainDeps %in% sugDeps2BDel)]
+  }
+
   depsLevel2 <- tools::package_dependencies(mainDeps, db=availablePkgs,
                          which=levelTwoDepsType,
                          recursive=TRUE

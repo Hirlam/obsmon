@@ -1,42 +1,70 @@
 #!/usr/bin/env bash
 
+# Parsing command line arguments
+SF_SUPPORT=false # Support to "sf" R package?
+while [[ $# -gt 0 ]]; do
+  key="$1"
+  case $key in
+    -sf|--enable_R_sf)
+      SF_SUPPORT=true
+      shift # past argument
+    ;;
+    *)    # unknown option
+      shift # past argument
+    ;;
+  esac
+done
+
 WORKING_DIR=`pwd`
 TMPDIR='/tmp/obsmon_sys_deps'
 RPM_DEST_DIR="${WORKING_DIR}/obsmon_deps_RHEL7"
 FC25_REPO='http://dl.fedoraproject.org/pub/fedora/linux/releases/25/Everything/source/tree/Packages'
 REPO_LIBKML='http://cbs.centos.org/kojifiles/packages/libkml/1.3.0/3.el7/x86_64'
 
-pkgs_append () {
-  PKGS="${PKGS} ${1}"
-}
-yum_pkgs_append () {
-  PKGS_YUM="${PKGS_YUM} ${1}"
-}
+yum_pkgs_append () { PKGS_YUM="${PKGS_YUM} ${1}" ; }
+pkgs_append () { PKGS="${PKGS} ${1}" ; }
 
 # epel-release is needed before checking the other dependencies
 sudo yum -y install "epel-release" || { echo "Problems installing epel-release"; exit 1; }
+
 # ${PKGS_YUM}: Pkgs that can be directly installed via yum
 #              Python3* needed to be installed manually on CentOS7 (like we do 
 #              here for libkml), but can be installed via yum on SMHI/LINDA
+# Needed to build
 yum_pkgs_append "R"
 yum_pkgs_append "gcc make cmake gcc-c++ wget"
 yum_pkgs_append "rpm-build redhat-rpm-config"
+# Needed by R packages
 yum_pkgs_append "cairo-devel libXt-devel"
 yum_pkgs_append "libcurl-devel openssl-devel libxml2-devel"
 yum_pkgs_append "mariadb-devel postgresql-devel"
-yum_pkgs_append "geos-devel udunits2-devel v8-devel v8-314-devel"
-yum_pkgs_append "python3-devel python3-numpy"
+yum_pkgs_append "v8-devel"
+yum_pkgs_append "geos-devel"
+# If support to R "sf" library is required
+if [ "${SF_SUPPORT}" = true ]; then
+  yum_pkgs_append "udunits2-devel"
+  yum_pkgs_append "python3-devel python3-numpy"
+  # ${PKGS}: Packages that need a bit more work
+  #          NB.: The order of the pkgs listed below DOES matter.
+  pkgs_append "libkml-1.3.0-3.el7.x86_64.rpm"
+  pkgs_append "libkml-devel-1.3.0-3.el7.x86_64.rpm"
+  pkgs_append "proj-4.9.2-2.fc24.src.rpm"
+  pkgs_append "libgeotiff-1.4.0-7.fc24.src.rpm"
+  pkgs_append "libspatialite-4.3.0a-2.fc24.src.rpm"
+  pkgs_append "ogdi-3.2.0-0.26.beta2.fc24.src.rpm"
+  pkgs_append "gdal-2.1.0-8.fc25.src.rpm"
+else
+  yum_pkgs_append "proj-devel proj-epsg gdal-devel"
+fi
+# Installing packages that do not require further medling
 sudo yum -y install ${PKGS_YUM} || { echo "Problems installing ${PKGS_YUM}"; exit 1; }
-# ${PKGS}: Packages that need a bit more work
-#          NB.: The order of the pkgs listed below DOES matter.
-pkgs_append "libkml-1.3.0-3.el7.x86_64.rpm"
-pkgs_append "libkml-devel-1.3.0-3.el7.x86_64.rpm"
-pkgs_append "proj-4.9.2-2.fc24.src.rpm"
-pkgs_append "libgeotiff-1.4.0-7.fc24.src.rpm"
-pkgs_append "libspatialite-4.3.0a-2.fc24.src.rpm"
-pkgs_append "ogdi-3.2.0-0.26.beta2.fc24.src.rpm"
-pkgs_append "gdal-2.1.0-8.fc25.src.rpm"
 
+if [ -z "${PKGS}" ]; then
+  echo "Finished."
+  exit 0
+fi
+
+# The code below only applies if there are RPMs to handle manually
 # Preparing for rpmbuild
 if [ ! -f "${HOME}/.rpmmacros" ]; then
   mkdir -p ${HOME}/rpmbuild/{BUILD,RPMS,SOURCES,SPECS,SRPMS}
