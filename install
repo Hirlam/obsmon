@@ -1,7 +1,6 @@
 #!/usr/bin/env Rscript
 
 repo=c("http://cran.ma.imperial.ac.uk/")
-repo=c("http://ftp.acc.umu.se/mirror/CRAN/")
 basePackagesR <- rownames(installed.packages(priority="base"))
 lib=Sys.getenv("R_LIBS_USER")
 if(lib=="") lib=file.path(Sys.getenv("HOME"), "R", "library")
