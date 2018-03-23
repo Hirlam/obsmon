@@ -1,5 +1,8 @@
 #!/usr/bin/env Rscript
 
+args <- commandArgs(trailingOnly=TRUE)
+showDepsAndQuit <- "--listdeps" %in% args
+
 repo=c("http://cran.ma.imperial.ac.uk/")
 basePackagesR <- rownames(installed.packages(priority="base"))
 lib=Sys.getenv("R_LIBS_USER")
@@ -122,6 +125,11 @@ for (pkg in sort(pkgs)) {
 }
 cat("Total:", length(pkgs), "packages.\n \n")
 
+if(showDepsAndQuit) {
+  cat('Option "--listdeps" passed. Not installing packages. \n')
+  cat('Stopping now.\n')
+  quit()
+}
 # Installation
 installedPkgs <- installed.packages(lib.loc=lib)[,1]
 newPkgs <- pkgs[!(pkgs %in% installedPkgs)]
