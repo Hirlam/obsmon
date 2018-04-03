@@ -155,6 +155,7 @@ if(showDepsAndQuit) {
 
 # Installation
 installedPkgs <- installed.packages(lib.loc=lib)[,1]
+preCompPkgsCopied <- FALSE
 
 # Copying pre-compiled packages to the library, if not already installed
 preCompiledPkgs <- list.files(preCompiledPkgsDir, pattern="\\.tar\\.gz$|\\.tgz$")
@@ -167,14 +168,21 @@ for (preCompPkg in preCompiledPkgs) {
     )
     utils::untar(preCompPkgPath, exdir=lib, compressed=TRUE)
     cat("Done \n")
+    preCompPkgsCopied <- TRUE
   }
 }
-# installedPkgs needs to be updated now
+
+# installedPkgs now needs to be updated
 installedPkgs <- installed.packages(lib.loc=lib)[,1]
 newPkgs <- pkgs[!(pkgs %in% installedPkgs)]
 if(length(newPkgs)==0) {
-  cat("The listed packages seem to have already been installed.\n")
-  cat("Nothing to do.\n")
+  if(preCompPkgsCopied) {
+    cat("\n")
+    cat("No further packages need to be compiled. Installation finished. \n")
+  } else {
+    cat("The listed packages seem to have already been installed.\n")
+    cat("Nothing to do.\n")
+  }
   quit()
 }
 
