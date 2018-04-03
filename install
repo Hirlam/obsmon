@@ -12,7 +12,9 @@ if(!dir.exists(lib)) dir.create(lib, recursive=TRUE)
 depsCacheFile <- "utils/build/pkg_dependencies.Rdata"
 platform <- R.Version()$platform
 localRLibDir <- "utils/build/local_R_library"
+pkgSrcDir <- paste(localRLibDir, "src", sep="/")
 preCompiledPkgsDir <- paste(localRLibDir, "pre_compiled", platform, sep="/")
+if(!dir.exists(pkgSrcDir)) dir.create(pkgSrcDir, recursive=TRUE)
 if(!dir.exists(preCompiledPkgsDir)) dir.create(preCompiledPkgsDir, recursive=TRUE)
 
 dependencies <- function(pkgName, 
@@ -168,23 +170,20 @@ for (preCompPkg in preCompiledPkgs) {
 installedPkgs <- installed.packages(lib.loc=lib)[,1]
 newPkgs <- pkgs[!(pkgs %in% installedPkgs)]
 
-withCallingHandlers(
-  update.packages(
-    lib.loc=lib, repos=repo, ask=FALSE, dependencies=FALSE,
-    configure.args=c(udunits2='--with-udunits2-include=/usr/include/udunits2')
-  ),
-  warning = function(w) warning(w)
-)
+srcsAvailable <- list.files(pkgSrcDir, pattern="\\.tar\\.gz$|\\.tgz$")
 
-if(length(newPkgs)>0) {
+srcsToBeCompiled <- c()
+for (pkg in newPkgs) {
+  patt <- paste("^", pkg, "\\_", sep="")
+  matchIndices <- grep(patt, srcsAvailable)
+  srcsToBeCompiled <- c(srcsToBeCompiled, srcsAvailable[matchIndices])
+}
+
+if(length(srcsToBeCompiled)>0) {
+  srcsToBeCompiledFullPath <- paste(pkgSrcDir, srcsToBeCompiled, sep="/")
   withCallingHandlers(
-    install.packages(
-      newPkgs, lib=lib, repos=repo, dependencies=FALSE,
-      configure.args=c(udunits2='--with-udunits2-include=/usr/include/udunits2')
-    ),
-    warning = function(w) stop(w)
+    install.packages(srcsToBeCompiledFullPath, lib=lib, repos=NULL, type="source"),
+    warning = function(w) warning(w)
   )
-} else {
-  cat("The listed packages have already been installed.\n")
 }
 
