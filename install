@@ -3,6 +3,7 @@
 args <- commandArgs(trailingOnly=TRUE)
 showDepsAndQuit <- "--listdeps" %in% args
 refreshDeps <- "--refreshdeps" %in% args
+abortIfMissingNeededSrcs <- "--abort-if-missing-src" %in% args
 
 repo=c("http://cran.ma.imperial.ac.uk/")
 basePackagesR <- rownames(installed.packages(priority="base"))
@@ -161,7 +162,9 @@ for (preCompPkg in preCompiledPkgs) {
   pkgName <- strsplit(preCompPkg, split="\\.tar\\.gz$|\\.tgz$")[[1]]
   preCompPkgPath <- paste(preCompiledPkgsDir, preCompPkg, sep="/")
   if(!(pkgName %in% installedPkgs)) {
-    cat('Copying pre-compiled pkg"',pkgName,'"to the library... ')
+    cat(paste('Found pre-compiled pkg "', pkgName, 
+          '". Copying to the library... ', sep='')
+    )
     utils::untar(preCompPkgPath, exdir=lib, compressed=TRUE)
     cat("Done \n")
   }
@@ -169,8 +172,47 @@ for (preCompPkg in preCompiledPkgs) {
 # installedPkgs needs to be updated now
 installedPkgs <- installed.packages(lib.loc=lib)[,1]
 newPkgs <- pkgs[!(pkgs %in% installedPkgs)]
+if(length(newPkgs)==0) {
+  cat("The listed packages seem to have already been installed.\n")
+  cat("Nothing to do.\n")
+  quit()
+}
 
 srcsAvailable <- list.files(pkgSrcDir, pattern="\\.tar\\.gz$|\\.tgz$")
+# Checking whether sources files for newPkgs are missing
+newPkgsWithMissingSrcs <- c()
+for (pkg in newPkgs) {
+  patt <- paste("^", pkg, "\\_", sep="")
+  matchIndices <- grep(patt, srcsAvailable)
+  if(length(matchIndices)==0) {
+    newPkgsWithMissingSrcs <- c(newPkgsWithMissingSrcs, pkg)
+  }
+}
+
+# Deciding whether or not to download needed source files that are missing.
+# The default is to download them. This is to keep backwards compatibility.
+# It is preferrable, however, to have them downloaded and verified in a secure
+# computer, and then moved to pkgSrcDir once they are considered safe.
+# Use the "--abort-if-missing-src" command line option if you want the install
+# script to abort if sources are not available locally. 
+if(length(newPkgsWithMissingSrcs)>0) {
+  if(abortIfMissingNeededSrcs) {
+    errMsg <- paste("The source files for following packages are missing:\n")
+    for (pkg in newPkgsWithMissingSrcs) {
+      errMsg <- paste(errMsg, "  >", pkg, "\n")
+    }
+    errMsg <- paste(errMsg,
+                "Please add them to the", pkgSrcDir, 
+                "directory and try again.\n"
+              )
+    stop(errMsg)
+  } else {
+    download.packages(newPkgsWithMissingSrcs, destdir=pkgSrcDir, 
+                      repos=repo, type="source")
+    # Refreshing list of available src files
+    srcsAvailable <- list.files(pkgSrcDir, pattern="\\.tar\\.gz$|\\.tgz$")
+  }
+}
 
 srcsToBeCompiled <- c()
 for (pkg in newPkgs) {
@@ -187,3 +229,4 @@ if(length(srcsToBeCompiled)>0) {
   )
 }
 
+cat("Obsmon install script has finished. \n")
