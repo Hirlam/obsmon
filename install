@@ -10,6 +10,10 @@ lib=Sys.getenv("R_LIBS_USER")
 if(lib=="") lib=file.path(Sys.getenv("HOME"), "R", "library")
 if(!dir.exists(lib)) dir.create(lib, recursive=TRUE)
 depsCacheFile <- "utils/build/pkg_dependencies.Rdata"
+platform <- R.Version()$platform
+localRLibDir <- "utils/build/local_R_library"
+preCompiledPkgsDir <- paste(localRLibDir, "pre_compiled", platform, sep="/")
+if(!dir.exists(preCompiledPkgsDir)) dir.create(preCompiledPkgsDir, recursive=TRUE)
 
 dependencies <- function(pkgName, 
   levelOneDepsType=c("Depends", "Imports", "LinkingTo", "Suggests"),
@@ -145,7 +149,22 @@ if(showDepsAndQuit) {
   cat('Stopping now.\n')
   quit()
 }
+
 # Installation
+installedPkgs <- installed.packages(lib.loc=lib)[,1]
+
+# Copying pre-compiled packages to the library, if not already installed
+preCompiledPkgs <- list.files(preCompiledPkgsDir, pattern="\\.tar\\.gz$|\\.tgz$")
+for (preCompPkg in preCompiledPkgs) {
+  pkgName <- strsplit(preCompPkg, split="\\.tar\\.gz$|\\.tgz$")[[1]]
+  preCompPkgPath <- paste(preCompiledPkgsDir, preCompPkg, sep="/")
+  if(!(pkgName %in% installedPkgs)) {
+    cat('Copying pre-compiled pkg"',pkgName,'"to the library... ')
+    utils::untar(preCompPkgPath, exdir=lib, compressed=TRUE)
+    cat("Done \n")
+  }
+}
+# installedPkgs needs to be updated now
 installedPkgs <- installed.packages(lib.loc=lib)[,1]
 newPkgs <- pkgs[!(pkgs %in% installedPkgs)]
 
