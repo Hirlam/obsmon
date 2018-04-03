@@ -6,17 +6,19 @@ refreshDeps <- "--refreshdeps" %in% args
 abortIfMissingNeededSrcs <- "--abort-if-missing-src" %in% args
 
 repo=c("http://cran.ma.imperial.ac.uk/")
-basePackagesR <- rownames(installed.packages(priority="base"))
 lib=Sys.getenv("R_LIBS_USER")
 if(lib=="") lib=file.path(Sys.getenv("HOME"), "R", "library")
 if(!dir.exists(lib)) dir.create(lib, recursive=TRUE)
-depsCacheFile <- "utils/build/pkg_dependencies.Rdata"
+
 platform <- R.Version()$platform
 localRLibDir <- "utils/build/local_R_library"
+depsCacheFile <- "utils/build/pkg_dependencies.Rdata"
 pkgSrcDir <- paste(localRLibDir, "src", sep="/")
 preCompiledPkgsDir <- paste(localRLibDir, "pre_compiled", platform, sep="/")
 if(!dir.exists(pkgSrcDir)) dir.create(pkgSrcDir, recursive=TRUE)
 if(!dir.exists(preCompiledPkgsDir)) dir.create(preCompiledPkgsDir, recursive=TRUE)
+
+basePackagesR <- rownames(installed.packages(priority="base"))
 
 dependencies <- function(pkgName, 
   levelOneDepsType=c("Depends", "Imports", "LinkingTo", "Suggests"),
