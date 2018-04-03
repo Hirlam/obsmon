@@ -2,12 +2,14 @@
 
 args <- commandArgs(trailingOnly=TRUE)
 showDepsAndQuit <- "--listdeps" %in% args
+refreshDeps <- "--refreshdeps" %in% args
 
 repo=c("http://cran.ma.imperial.ac.uk/")
 basePackagesR <- rownames(installed.packages(priority="base"))
 lib=Sys.getenv("R_LIBS_USER")
 if(lib=="") lib=file.path(Sys.getenv("HOME"), "R", "library")
 if(!dir.exists(lib)) dir.create(lib, recursive=TRUE)
+depsCacheFile <- "utils/build/pkg_dependencies.Rdata"
 
 dependencies <- function(pkgName, 
   levelOneDepsType=c("Depends", "Imports", "LinkingTo", "Suggests"),
@@ -61,7 +63,9 @@ dependencies <- function(pkgName,
     allDeps <- c(allDeps, depsLevel2[[mainDep]], mainDep)
   }
 
-  return(unique(allDeps[!(allDeps %in% exclude)])) 
+  allDeps <- unique(allDeps[!(allDeps %in% exclude)])
+  if(is.null(allDeps)) allDeps <- character(0)
+  return(allDeps)
 }
 
 cat('Gathering packages used in the ".R" files in current dir and subdirs...')
@@ -103,17 +107,28 @@ for (pkg in mainPkgs) {
 }
 
 cat("\n")
-cat("Building recursive dependency list: \n") 
+cat("Getting recursive dependency list: \n") 
 # Doing this manually because we've had too many problems with somewhat erratic
 # behaviour of the install.packages own dependency resolution
+# First, attempt to read cached dependencies to avoid checking online
+pkgsDeps <- list()
+if(file.exists(depsCacheFile)) {
+  pkgsDeps <- readRDS(depsCacheFile)
+}
 recursiveDepsOfMainPkgs <- c()
 for (pkg in mainPkgs) {
   cat("  >", pkg, "... ")
-  deps <- dependencies(pkg)
+  if(refreshDeps || !(pkg %in% names(pkgsDeps))) {
+    deps <- dependencies(pkg)
+    pkgsDeps[[pkg]] <- deps
+  } else {
+    deps <- pkgsDeps[[pkg]]
+  }
   newDeps <- setdiff(deps, intersect(deps,c(mainPkgs,recursiveDepsOfMainPkgs)))
   cat("nDependencies =", length(deps), "(", length(newDeps),"new)\n")
   recursiveDepsOfMainPkgs <- c(recursiveDepsOfMainPkgs, newDeps)
 }
+saveRDS(pkgsDeps, file=depsCacheFile)
 
 # At last, building the full list of pkgs to be installed
 pkgs <- unique(c(recursiveDepsOfMainPkgs, mainPkgs))
