@@ -4,6 +4,7 @@ args <- commandArgs(trailingOnly=TRUE)
 showDepsAndQuit <- "--listdeps" %in% args
 refreshDeps <- "--refreshdeps" %in% args
 abortIfMissingNeededSrcs <- "--abort-if-missing-src" %in% args
+forceCompiledPkgs <- "--force-compile" %in% args
 
 repo=c("http://cran.ma.imperial.ac.uk/")
 lib=Sys.getenv("R_LIBS_USER")
@@ -157,26 +158,31 @@ if(showDepsAndQuit) {
 
 # Installation
 installedPkgs <- installed.packages(lib.loc=lib)[,1]
-preCompPkgsCopied <- FALSE
 
-# Copying pre-compiled packages to the library, if not already installed
-preCompiledPkgs <- list.files(preCompiledPkgsDir, pattern="\\.tar\\.gz$|\\.tgz$")
-for (preCompPkg in preCompiledPkgs) {
-  pkgName <- strsplit(preCompPkg, split="\\.tar\\.gz$|\\.tgz$")[[1]]
-  preCompPkgPath <- paste(preCompiledPkgsDir, preCompPkg, sep="/")
-  if(!(pkgName %in% installedPkgs)) {
-    cat(paste('Found pre-compiled pkg "', pkgName, 
-          '". Copying to the library... ', sep='')
-    )
-    utils::untar(preCompPkgPath, exdir=lib, compressed=TRUE)
-    cat("Done \n")
-    preCompPkgsCopied <- TRUE
-  }
+preCompPkgsCopied <- FALSE
+if(forceCompiledPkgs) {
+  cat('Flag "--force-compile" found. Compiling all packages.\n')
+  newPkgs <- pkgs
+} else {
+  # Copying pre-compiled packages to the library, if not already installed
+  preCompiledPkgs <- list.files(preCompiledPkgsDir, pattern="\\.tar\\.gz$|\\.tgz$")
+  for (preCompPkg in preCompiledPkgs) {
+    pkgName <- strsplit(preCompPkg, split="\\.tar\\.gz$|\\.tgz$")[[1]]
+    preCompPkgPath <- paste(preCompiledPkgsDir, preCompPkg, sep="/")
+    if(!(pkgName %in% installedPkgs)) {
+      cat(paste('Found pre-compiled pkg "', pkgName, 
+            '". Copying to the library... ', sep='')
+      )
+      utils::untar(preCompPkgPath, exdir=lib, compressed=TRUE)
+      cat("Done \n")
+      preCompPkgsCopied <- TRUE
+    }
+  }  
+  # installedPkgs now needs to be updated
+  installedPkgs <- installed.packages(lib.loc=lib)[,1]
+  newPkgs <- pkgs[!(pkgs %in% installedPkgs)]
 }
 
-# installedPkgs now needs to be updated
-installedPkgs <- installed.packages(lib.loc=lib)[,1]
-newPkgs <- pkgs[!(pkgs %in% installedPkgs)]
 if(length(newPkgs)==0) {
   if(preCompPkgsCopied) {
     cat("\n")
