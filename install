@@ -235,7 +235,7 @@ if(length(srcsToBeCompiled)>0) {
   srcsToBeCompiledFullPath <- paste(pkgSrcDir, srcsToBeCompiled, sep="/")
   withCallingHandlers(
     install.packages(srcsToBeCompiledFullPath, lib=lib, repos=NULL, type="source"),
-    warning = function(w) warning(w)
+    warning = function(w) stop(w)
   )
 }
 
