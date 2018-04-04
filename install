@@ -21,6 +21,7 @@ if(!dir.exists(preCompiledPkgsDir)) dir.create(preCompiledPkgsDir, recursive=TRU
 basePackagesR <- rownames(installed.packages(priority="base"))
 
 dependencies <- function(pkgName, 
+  recDepth=0,
   levelOneDepsType=c("Depends", "Imports", "LinkingTo", "Suggests"),
   levelTwoDepsType=c("Depends", "Imports", "LinkingTo"),
   availablePkgs=available.packages(repos=repo), 
@@ -45,36 +46,35 @@ dependencies <- function(pkgName,
 #  that method can yield somewhat erratic results. This function therefore
 #  gives us more control over what is to be installed.
 
-  mainDeps <- tools::package_dependencies(pkgName, db=availablePkgs,
-                       which=levelOneDepsType,
-                       recursive=FALSE
-                     )[[pkgName]]
-  # Some "Suggests" dependencies may be problematic, and it may be better to
-  # accept the risk of removing them than having to solve issues related to
-  # system dependencies. The "sf" package is one of such cases at SMHI/LINDA.
-  if(("Suggests" %in% levelOneDepsType) && length(exclude_from_suggests)>0) {
-    mainDepsSuggestsType <- tools::package_dependencies(pkgName,
-                                     db=availablePkgs,
-                                     which=c("Suggests"),
-                                     recursive=FALSE
-                                   )[[pkgName]]
-    sugDeps2BDel <- mainDepsSuggestsType[mainDepsSuggestsType %in% 
-                                         exclude_from_suggests]
-    mainDeps <- mainDeps[!(mainDeps %in% sugDeps2BDel)]
-  }
+  depsType <- levelOneDepsType
+  if(recDepth>0) depsType <- levelTwoDepsType
+  deps <- unlist(tools::package_dependencies(pkgName, db=availablePkgs,
+                          which=depsType,
+                          recursive=FALSE
+                        )
+          )
+  deps <- deps[!(deps %in% exclude)]
 
-  depsLevel2 <- tools::package_dependencies(mainDeps, db=availablePkgs,
-                         which=levelTwoDepsType,
-                         recursive=TRUE
-                       )
-  allDeps <- c()
-  for (mainDep in mainDeps) {
-    allDeps <- c(allDeps, depsLevel2[[mainDep]], mainDep)
-  }
+  if(length(deps)==0) {
+    return(character(0))
+  } else {
+    if(("Suggests" %in% depsType) && length(exclude_from_suggests)>0) {
+      # Some "Suggests" dependencies may be problematic, and it may be better to
+      # accept the risk of removing them than having to solve issues related to
+      # system dependencies. The "sf" package is one of such cases at SMHI/LINDA.
+      suggestsTypeDeps <- unlist(tools::package_dependencies(pkgName,
+                                          db=availablePkgs,
+                                          which=c("Suggests"),
+                                          recursive=FALSE
+                                        )
+                          )
+      sugDeps2BDel <- suggestsTypeDeps[suggestsTypeDeps %in% exclude_from_suggests]
+      deps <- deps[!(deps %in% sugDeps2BDel)]
+    }
 
-  allDeps <- unique(allDeps[!(allDeps %in% exclude)])
-  if(is.null(allDeps)) allDeps <- character(0)
-  return(allDeps)
+    deps <- unique(c(dependencies(deps, recDepth=recDepth+1), deps))
+    return(deps)
+  }
 }
 
 cat('Gathering packages used in the ".R" files in current dir and subdirs...')
@@ -135,7 +135,7 @@ for (pkg in mainPkgs) {
   }
   newDeps <- setdiff(deps, intersect(deps,c(mainPkgs,recursiveDepsOfMainPkgs)))
   cat("nDependencies =", length(deps), "(", length(newDeps),"new)\n")
-  recursiveDepsOfMainPkgs <- c(recursiveDepsOfMainPkgs, newDeps)
+  recursiveDepsOfMainPkgs <- c(recursiveDepsOfMainPkgs, deps)
 }
 saveRDS(pkgsDeps, file=depsCacheFile)
 
