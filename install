@@ -192,6 +192,13 @@ if(length(newPkgs)==0) {
     cat("Nothing to do.\n")
   }
   quit()
+} else {
+  cat("\n")
+  cat("The following packages are marked for compilation:\n")
+  for (pkg in newPkgs) {
+    cat("  >", pkg, "\n")
+  }
+  cat("Total:", length(newPkgs), "new packages.\n")
 }
 
 srcsAvailable <- list.files(pkgSrcDir, pattern="\\.tar\\.gz$|\\.tgz$")
