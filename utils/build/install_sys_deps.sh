@@ -2,11 +2,16 @@
 
 # Parsing command line arguments
 SF_SUPPORT=false # Support to "sf" R package?
+LIST_MISSING_PKGS=false # List missing pkgs and exit?
 while [[ $# -gt 0 ]]; do
   key="$1"
   case $key in
     -sf|--enable_R_sf)
       SF_SUPPORT=true
+      shift # past argument
+    ;;
+    -lm|--list-missing)
+      LIST_MISSING_PKGS=true
       shift # past argument
     ;;
     *)    # unknown option
@@ -25,7 +30,11 @@ yum_pkgs_append () { PKGS_YUM="${PKGS_YUM} ${1}" ; }
 pkgs_append () { PKGS="${PKGS} ${1}" ; }
 
 # epel-release is needed before checking the other dependencies
-sudo yum -y install "epel-release" || { echo "Problems installing epel-release"; exit 1; }
+if [ "${LIST_MISSING_PKGS}" = true ]; then
+  yum_pkgs_append "epel-release"
+else
+  sudo yum -y install "epel-release" || { echo "Problems installing epel-release"; exit 1; }
+fi
 
 # ${PKGS_YUM}: Pkgs that can be directly installed via yum
 #              Python3* needed to be installed manually on CentOS7 (like we do 
@@ -56,6 +65,17 @@ if [ "${SF_SUPPORT}" = true ]; then
 else
   yum_pkgs_append "proj-devel proj-epsg gdal-devel"
 fi
+
+if [ "${LIST_MISSING_PKGS}" = true ]; then
+  YUM_INSTALLED=`yum list installed`
+  for PKG in ${PKGS_YUM} ${PKGS}; do
+    if [[ $YUM_INSTALLED != *"${PKG}"* ]]; then 
+      echo "${PKG}"
+    fi
+  done
+  exit 0
+fi
+
 # Installing packages that do not require further medling
 sudo yum -y install ${PKGS_YUM} || { echo "Problems installing ${PKGS_YUM}"; exit 1; }
 
