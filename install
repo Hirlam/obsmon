@@ -157,7 +157,7 @@ saveRDS(pkgsDeps, file=depsCacheFile)
 pkgs <- unique(c(recursiveDepsOfMainPkgs, mainPkgs))
 
 cat("\n")
-cat("The following packages should be available after installation:\n")
+cat("The following pkgs should be available after a successful full install:\n")
 for (pkg in sort(pkgs)) {
   cat("  >", pkg, "\n")
 }
