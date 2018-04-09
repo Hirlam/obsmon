@@ -138,30 +138,54 @@ pkgsDeps <- list()
 if(file.exists(depsCacheFile)) {
   pkgsDeps <- readRDS(depsCacheFile)
 }
-recursiveDepsOfMainPkgs <- c()
+# Having separate lists with the names of essencial packages and packages that are only needed as 
+# "Suggests"-type dependencies (and recursive dependencies of these) will allow us, later on, to
+# decide what to do in case a package fails to be installed
+allEssencialDeps <- c()
+allSuggestsDeps <- c()
+allPkgDeps <- c()
+essentialDepsTypes <- c("Depends", "Imports", "LinkingTo")
 for (pkg in mainPkgs) {
   cat("  >", pkg, "... ")
   if(refreshDeps || !(pkg %in% names(pkgsDeps))) {
-    deps <- dependencies(pkg)
-    pkgsDeps[[pkg]] <- deps
-  } else {
-    deps <- pkgsDeps[[pkg]]
+    essencialDeps <- dependencies(pkg, levelOneDepsType=essentialDepsTypes)
+    suggestsDeps <- dependencies(pkg, levelOneDepsType="Suggests")
+    # A Suggests type dependency may also end up being a recursive non-suggests dependency
+    # of the essencial packages. We don't want to have these considered as optional.
+    suggestsDeps <- suggestsDeps[!(suggestsDeps %in% essencialDeps)]
+    pkgsDeps[[pkg]] <- list(essencial=essencialDeps, Suggests=suggestsDeps)
   }
-  newDeps <- setdiff(deps, intersect(deps,c(mainPkgs,recursiveDepsOfMainPkgs)))
-  cat("nDependencies =", length(deps), "(", length(newDeps),"new)\n")
-  recursiveDepsOfMainPkgs <- c(recursiveDepsOfMainPkgs, deps)
+  thisPkgDeps <- c(pkgsDeps[[pkg]][["essencial"]], pkgsDeps[[pkg]][["Suggests"]])
+  newDeps <- setdiff(thisPkgDeps, intersect(thisPkgDeps, c(mainPkgs, allPkgDeps)))
+  cat("nDependencies =", length(thisPkgDeps), "(", length(newDeps),"new)\n")
+  allEssencialDeps <- c(allEssencialDeps, pkgsDeps[[pkg]][["essencial"]])
+  allSuggestsDeps <- c(allSuggestsDeps, pkgsDeps[[pkg]][["Suggests"]])
+  allPkgDeps <- c(allPkgDeps, allEssencialDeps, allSuggestsDeps)
 }
 saveRDS(pkgsDeps, file=depsCacheFile)
 
 # At last, building the full list of pkgs to be installed
-pkgs <- unique(c(recursiveDepsOfMainPkgs, mainPkgs))
+pkgs <- unique(c(allPkgDeps, mainPkgs))
+allEssencialDeps <- unique(allEssencialDeps[!(allEssencialDeps %in% mainPkgs)])
+allSuggestsDeps <- unique(allSuggestsDeps[!(allSuggestsDeps %in% c(allEssencialDeps, mainPkgs))])
 
 cat("\n")
-cat("The following pkgs should be available after a successful full install:\n")
-for (pkg in sort(pkgs)) {
+msg <- "In addition to the main packages listed above, the following dependencies"
+msg <- paste(msg, "should also be available after a successful full install:\n", sep="\n")
+cat(msg)
+cat("* Essencial dependencies:\n")
+for (pkg in sort(allEssencialDeps)) {
   cat("  >", pkg, "\n")
 }
-cat("Total:", length(pkgs), "packages.\n \n")
+cat("* Suggests-type dependencies:\n")
+for (pkg in sort(allSuggestsDeps)) {
+  cat("  >", pkg, "\n")
+}
+cat("Total:", length(pkgs), "packages.\n")
+cat("  Main packages:", length(mainPkgs), "\n")
+cat("  Essencial dependencies:", length(allEssencialDeps), "\n")
+cat("  Suggests-type dependencies:", length(allSuggestsDeps), "\n")
+cat("\n")
 
 if(showDepsAndQuit) {
   cat('Option "--listdeps" passed. Not installing packages. \n')
@@ -257,11 +281,27 @@ for (pkg in newPkgs) {
   srcsToBeCompiled <- c(srcsToBeCompiled, srcsAvailable[matchIndices])
 }
 
+handleInstallFailure <- function(callAndErrorMsg, okToProceed=allSuggestsDeps) {
+  # 'Warning' function to be used along with "withCallingHandlers" when calling install.packages.
+  # The function will issue warnings "Suggests"-type dependencies fail to be installed, but will
+  # stop installation if any falure occurs with the other types of dependencies.
+  msg <- callAndErrorMsg[["message"]]
+  pattBackticks <- "‘+.+’+"
+  offendingFile <- gsub("‘*’*", "", regmatches(msg, gregexpr(pattBackticks, msg)))
+  offendingPkg <- grep("\\.tar\\.gz$|\\.tgz$", unlist(strsplit(offendingFile, split="/")), value=TRUE)
+  offendingPkg <- gsub("_.+\\.tar\\.gz$|_.+\\.tgz$", "", offendingPkg)
+  if(offendingPkg %in% okToProceed) {
+    warning(callAndErrorMsg)
+  } else {
+    stop(callAndErrorMsg)
+  }
+}
+
 if(length(srcsToBeCompiled)>0) {
   srcsToBeCompiledFullPath <- paste(pkgSrcDir, srcsToBeCompiled, sep="/")
   withCallingHandlers(
     install.packages(srcsToBeCompiledFullPath, lib=lib, repos=NULL, type="source"),
-    warning = function(w) stop(w)
+    warning = function(w) handleInstallFailure(w)
   )
 }
 
