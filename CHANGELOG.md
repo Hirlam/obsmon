@@ -15,16 +15,17 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 ### Changed
 - Auto-discovery cache is now sqlite-based (Fixes: #148)
 - Info about installtion moved to INSTALL.md file
+- The install script now supports some command lines options
 - Automatic determination of R packages to be installed
-    - Their recursive dependencies are now handled explicitly, for the sake of 
+    - Their recursive dependencies are now handled explicitly, for the sake of
       clarity and sanity
-    - A list of R packages needed by obsmon is now kept on 
-      utils/build/pkg_dependencies.Rdata, which allows quicker installation.
-      The list can be updated by running the install script with the option
-      "--refreshdeps"
-- Pre-compiled R packages added (RHEL7, x86_64-redhat-linux-gnu), as well as
-  their source files, for faster installation.
-- Added utility script "install_sys_deps.sh" to help installing system 
+    - A list of R packages needed by obsmon is now kept on
+      utils/build/pkg_dependencies.Rdata, which, by avoiding communication with
+      CRAN, allows quicker installation. The list can be updated by running the
+      install script with the option "--refreshdeps"
+- Added pre-compiled R packages as well as their source files, for faster
+  installation. See dirs located under utils/build/local_R_library
+- Added utility script "install_sys_deps.sh" to help installing system
   dependencies of the R packages needed (RHEL7)
 
 ### Fixed
