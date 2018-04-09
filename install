@@ -41,24 +41,24 @@ dependencies <- function(pkgName,
   availablePkgs=available.packages(repos=repo), 
   exclude=rownames(installed.packages(priority="base")),
   exclude_from_suggests=c("sf")){
-#  Recursively search dependencies if package pkgName.
-#
-#  pkgName: Package(s) for which dependencies should be searched
-#  levelOneDepsType: What type of 1st-order (recursion depth 0) dependencies should be 
-#           included in the search
-#  levelTwoDepsType: What type of secondary (recursion depth > 0) dependencies 
-#                    should be included in the search
-#  exclude: Dependencies that should not be included in the return value
-#
-#  In principle, we should not need to write such a function, given that
-#  install.packages is supposed to resolve dependencies (the behaviour 
-#  implemented here is in principle equivalent to setting dependencies=TRUE
-#  in install.packages). Nonetheless, from our tests on the behaviour of the
-#  install.packages method itself (which defaults to recursively installing
-#  all dependencies listed under "Depends", "Imports", "LinkingTo" in the 
-#  DESCRIPTION files of the main packages to be installed), it seems that
-#  that method can yield somewhat erratic results. This function therefore
-#  gives us more control over what is to be installed.
+  #  Recursively search dependencies if package pkgName.
+  #
+  #  pkgName: Package(s) for which dependencies should be searched
+  #  levelOneDepsType: What type of 1st-order (recursion depth 0) dependencies should be 
+  #           included in the search
+  #  levelTwoDepsType: What type of secondary (recursion depth > 0) dependencies 
+  #                    should be included in the search
+  #  exclude: Dependencies that should not be included in the return value
+  #
+  #  In principle, we should not need to write such a function, given that
+  #  install.packages is supposed to resolve dependencies (the behaviour 
+  #  implemented here is in principle equivalent to setting dependencies=TRUE
+  #  in install.packages). Nonetheless, from our tests on the behaviour of the
+  #  install.packages method itself (which defaults to recursively installing
+  #  all dependencies listed under "Depends", "Imports", "LinkingTo" in the 
+  #  DESCRIPTION files of the main packages to be installed), it seems that
+  #  that method can yield somewhat erratic results. This function therefore
+  #  gives us more control over what is to be installed.
 
   depsType <- levelOneDepsType
   if(recDepth>0) depsType <- levelTwoDepsType
