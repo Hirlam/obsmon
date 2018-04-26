@@ -12,7 +12,9 @@ source(file.path(includeDirR, "dependencies.R"))
 source(file.path(includeDirR, "getExplicitlyUsedRPkgs.R"))
 source(file.path(includeDirR, "handleInstallFailure.R"))
 
-repo=c("http://cran.ma.imperial.ac.uk/")
+remoteRepo <- c("http://cran.ma.imperial.ac.uk/")
+localRepo <- c(file.path("file:", getwd(),"utils", "build", "local_R_library"))
+
 lib=Sys.getenv("R_LIBS_USER")
 if(lib=="") lib=file.path(Sys.getenv("HOME"), "R", "library")
 if(!dir.exists(lib)) dir.create(lib, recursive=TRUE)
@@ -60,7 +62,7 @@ essentialDepsTypes <- c("Depends", "Imports", "LinkingTo")
 for (pkg in mainPkgs) {
   cat("  >", pkg, "... ")
   if(refreshDeps || !(pkg %in% names(pkgsDeps))) {
-    availablePkgs <- available.packages(repos=repo)
+    availablePkgs <- available.packages(repos=remoteRepo)
     essencialDeps <- dependencies(pkg, db=availablePkgs,
                        levelOneDepsType=essentialDepsTypes
                      )
@@ -118,12 +120,21 @@ if(showDepsAndQuit) {
 
 # Installation
 installedPkgs <- installed.packages(lib.loc=lib)[,1]
+pkgsToBeUpdated <- rownames(old.packages(lib.loc=lib, repos=localRepo))
 
 preCompPkgsCopied <- FALSE
 if(forceCompiledPkgs) {
   cat('Flag "--force-compile" found. Compiling all packages.\n')
-  newPkgs <- pkgs
+  pkgsToCompile <- pkgs
 } else {
+  if(length(pkgsToBeUpdated)>0) {
+    cat("\n")
+    cat("The following packages will be updated:\n")
+    for (pkg in pkgsToBeUpdated) {
+      cat("  >", pkg, "\n")
+    }
+    cat("Total:", length(pkgsToBeUpdated), "packages to be updated.\n")
+  }
   # Copying pre-compiled packages to the library, if not already installed
   preCompiledPkgs <- list.files(preCompiledPkgsDir,
                        pattern="\\.tar\\.gz$|\\.tgz$"
@@ -131,21 +142,28 @@ if(forceCompiledPkgs) {
   for (preCompPkg in preCompiledPkgs) {
     pkgName <- strsplit(preCompPkg, split="\\.tar\\.gz$|\\.tgz$")[[1]]
     preCompPkgPath <- paste(preCompiledPkgsDir, preCompPkg, sep="/")
-    if(!(pkgName %in% installedPkgs)) {
+    if((pkgName %in% pkgsToBeUpdated) | !(pkgName %in% installedPkgs)) {
       cat(paste('Found pre-compiled pkg "', pkgName,
             '". Copying to the library... ', sep='')
       )
+      if(pkgName %in% pkgsToBeUpdated) {
+        # This assumes that binaries are consistent with the local repo sources
+        cat('(this updates the package) ')
+        pkgDir <- file.path(lib, pkgName)
+        unlink(pkgDir, recursive=TRUE)
+      }
       utils::untar(preCompPkgPath, exdir=lib, compressed=TRUE)
       cat("Done \n")
       preCompPkgsCopied <- TRUE
     }
   }
-  # installedPkgs now needs to be updated
+  # installedPkgs and pkgsToBeUpdated lists now need to be updated
   installedPkgs <- installed.packages(lib.loc=lib)[,1]
-  newPkgs <- pkgs[!(pkgs %in% installedPkgs)]
+  pkgsToBeUpdated <- rownames(old.packages(lib.loc=lib, repos=localRepo))
+  pkgsToCompile <- pkgs[(pkgs %in% pkgsToBeUpdated) | !(pkgs %in% installedPkgs)]
 }
 
-if(length(newPkgs)==0) {
+if(length(pkgsToCompile)==0) {
   if(preCompPkgsCopied) {
     cat("\n")
     cat("No further packages need to be compiled. Installation finished. \n")
@@ -157,20 +175,20 @@ if(length(newPkgs)==0) {
 } else {
   cat("\n")
   cat("The following packages are marked for compilation:\n")
-  for (pkg in newPkgs) {
+  for (pkg in pkgsToCompile) {
     cat("  >", pkg, "\n")
   }
-  cat("Total:", length(newPkgs), "new packages.\n")
+  cat("Total:", length(pkgsToCompile), "new packages.\n")
 }
 
 srcsAvailable <- list.files(pkgSrcDir, pattern="\\.tar\\.gz$|\\.tgz$")
-# Checking whether sources files for newPkgs are missing
-newPkgsWithMissingSrcs <- c()
-for (pkg in newPkgs) {
+# Checking whether sources files for pkgsToCompile are missing
+pkgsToCompileWithMissingSrcs <- c()
+for (pkg in pkgsToCompile) {
   patt <- paste("^", pkg, "\\_", sep="")
   matchIndices <- grep(patt, srcsAvailable)
   if(length(matchIndices)==0) {
-    newPkgsWithMissingSrcs <- c(newPkgsWithMissingSrcs, pkg)
+    pkgsToCompileWithMissingSrcs <- c(pkgsToCompileWithMissingSrcs, pkg)
   }
 }
 
@@ -180,10 +198,10 @@ for (pkg in newPkgs) {
 # computer, and then moved to pkgSrcDir once they are considered safe.
 # Use the "--abort-if-missing-src" command line option if you want the install
 # script to abort if sources are not available locally.
-if(length(newPkgsWithMissingSrcs)>0) {
+if(length(pkgsToCompileWithMissingSrcs)>0) {
   if(abortIfMissingNeededSrcs) {
     errMsg <- paste("The source files for following packages are missing:\n")
-    for (pkg in newPkgsWithMissingSrcs) {
+    for (pkg in pkgsToCompileWithMissingSrcs) {
       errMsg <- paste(errMsg, "  >", pkg, "\n")
     }
     errMsg <- paste(errMsg,
@@ -192,15 +210,16 @@ if(length(newPkgsWithMissingSrcs)>0) {
               )
     stop(errMsg)
   } else {
-    download.packages(newPkgsWithMissingSrcs, destdir=pkgSrcDir,
-                      repos=repo, type="source")
+    download.packages(pkgsToCompileWithMissingSrcs, destdir=pkgSrcDir,
+                      repos=remoteRepo, type="source")
     # Refreshing list of available src files
+    tools::write_PACKAGES(dir=pkgSrcDir)
     srcsAvailable <- list.files(pkgSrcDir, pattern="\\.tar\\.gz$|\\.tgz$")
   }
 }
 
 srcsToBeCompiled <- c()
-for (pkg in newPkgs) {
+for (pkg in pkgsToCompile) {
   patt <- paste("^", pkg, "\\_", sep="")
   matchIndices <- grep(patt, srcsAvailable)
   srcsToBeCompiled <- c(srcsToBeCompiled, srcsAvailable[matchIndices])
