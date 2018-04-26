@@ -27,12 +27,12 @@ for (dir in c(pkgSrcDir, preCompiledPkgsDir)) {
 }
 
 basePackagesR <- rownames(installed.packages(priority="base"))
+availablePkgs <- available.packages(repos=repo)
 
-dependencies <- function(pkgName,
+dependencies <- function(pkgName, db,
   recDepth=0,
   levelOneDepsType=c("Depends", "Imports", "LinkingTo", "Suggests"),
   levelTwoDepsType=c("Depends", "Imports", "LinkingTo"),
-  availablePkgs=available.packages(repos=repo),
   exclude=rownames(installed.packages(priority="base")),
   exclude_from_suggests=c("sf")){
   #  Recursively search dependencies if package pkgName.
@@ -56,7 +56,7 @@ dependencies <- function(pkgName,
 
   depsType <- levelOneDepsType
   if(recDepth>0) depsType <- levelTwoDepsType
-  deps <- unlist(tools::package_dependencies(pkgName, db=availablePkgs,
+  deps <- unlist(tools::package_dependencies(pkgName, db=db,
                           which=depsType,
                           recursive=FALSE
                         )
@@ -72,7 +72,7 @@ dependencies <- function(pkgName,
       # to system dependencies. The "sf" package is one of such cases at
       # SMHI/LINDA.
       suggestsTypeDeps <- unlist(tools::package_dependencies(pkgName,
-                                          db=availablePkgs,
+                                          db=db,
                                           which=c("Suggests"),
                                           recursive=FALSE
                                         )
@@ -144,8 +144,12 @@ essentialDepsTypes <- c("Depends", "Imports", "LinkingTo")
 for (pkg in mainPkgs) {
   cat("  >", pkg, "... ")
   if(refreshDeps || !(pkg %in% names(pkgsDeps))) {
-    essencialDeps <- dependencies(pkg, levelOneDepsType=essentialDepsTypes)
-    suggestsDeps <- dependencies(pkg, levelOneDepsType="Suggests")
+    essencialDeps <- dependencies(pkg, db=availablePkgs,
+                       levelOneDepsType=essentialDepsTypes
+                     )
+    suggestsDeps <- dependencies(pkg, db=availablePkgs,
+                      levelOneDepsType="Suggests"
+                    )
     # A Suggests type dependency may also end up being a recursive non-suggests
     # dependency of the essencial packages. We don't want to have these
     # considered as optional.
