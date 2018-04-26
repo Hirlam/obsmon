@@ -9,6 +9,7 @@ forceCompiledPkgs <- "--force-compile" %in% args
 includeDirR <- file.path("utils", "build", "include", "R")
 source(file.path(includeDirR, "getSysInfo.R"))
 source(file.path(includeDirR, "dependencies.R"))
+source(file.path(includeDirR, "getExplicitlyUsedRPkgs.R"))
 
 repo=c("http://cran.ma.imperial.ac.uk/")
 lib=Sys.getenv("R_LIBS_USER")
@@ -27,41 +28,11 @@ for (dir in c(pkgSrcDir, preCompiledPkgsDir)) {
   if(!dir.exists(dir)) dir.create(dir, recursive=TRUE)
 }
 
-basePackagesR <- rownames(installed.packages(priority="base"))
-
-
 cat('Gathering packages used in the ".R" files in current dir and subdirs...')
 # These may have been imported explicitly using "library" or "require",
-# or used without explicit import (as in "myLib::myFunction").
+# or used without explicit import (double-colon syntax).
 allRFiles <- list.files(pattern=".R$", recursive=TRUE)
-pattParentheses <- "[[:space:]]*\\(+[[:space:]]*.+[[:space:]]*\\)"
-pattLib <- paste("library+", pattParentheses, sep='')
-pattReq <- paste("require+", pattParentheses, sep='')
-patDubColon <- "[[:alpha:]]+\\w*[[:space:]]*::"
-importedPkgs <- c()
-doubleColonPkgs <- c()
-for (file in allRFiles) {
-  fLines <- readLines(file)
-  importedPkgs <- c(importedPkgs, grep(pattLib, fLines, value=TRUE))
-  importedPkgs <- c(importedPkgs, grep(pattReq, fLines, value=TRUE))
-  doubleColonPkgs <- c(doubleColonPkgs, grep(patDubColon, fLines, value=TRUE))
-}
-# Keeping only package names (i.e., no punctuation, white spaces etc.)
-importedPkgs <- unique(
-  gsub("[\\(\\)[:space:]]", "",
-    regmatches(importedPkgs, gregexpr("\\(.*?\\)", importedPkgs))
-  )
-)
-doubleColonPkgs <- unique(
-  gsub("[:[:space:]]", "",
-    regmatches(doubleColonPkgs, gregexpr(patDubColon, doubleColonPkgs))
-  )
-)
-
-# Finally building the list of main packages used.
-# Dependencies are not yet considered at this stage.
-mainPkgs <- c(importedPkgs, doubleColonPkgs)
-mainPkgs <- sort(unique(mainPkgs[!(mainPkgs %in% basePackagesR)]))
+mainPkgs <- getExplicitlyUsedRPkgs(allRFiles)
 
 cat("Done.\n  > The following",length(mainPkgs),"main packages were found:\n")
 for (pkg in mainPkgs) {
