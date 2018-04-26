@@ -6,24 +6,15 @@ refreshDeps <- "--refreshdeps" %in% args
 abortIfMissingNeededSrcs <- "--abort-if-missing-src" %in% args
 forceCompiledPkgs <- "--force-compile" %in% args
 
+includeDirR <- file.path("utils", "build", "include", "R")
+source(file.path(includeDirR, "getSysInfo.R"))
+
 repo=c("http://cran.ma.imperial.ac.uk/")
 lib=Sys.getenv("R_LIBS_USER")
 if(lib=="") lib=file.path(Sys.getenv("HOME"), "R", "library")
 if(!dir.exists(lib)) dir.create(lib, recursive=TRUE)
 
-platform <- R.Version()$platform
-sysName <- 'unknown'
-sysRel <- 'unknown'
-try(
-  {
-    sysName <- system2("lsb_release", args=c("-i"), stdout=TRUE, stderr=FALSE)
-    sysRel <- system2("lsb_release", args=c("-r"), stdout=TRUE, stderr=FALSE)
-    sysName <- strsplit(sysName, ":[[:space:]]*")[[1]][2]
-    sysRel <- strsplit(sysRel, ":[[:space:]]*")[[1]][2]
-  },
-  silent=TRUE
-)
-sysInfoString <- paste(platform, sysName, sysRel, sep="-")
+sysInfoString <- getSysInfo()
 
 localRLibDir <- "utils/build/local_R_library"
 depsCacheFile <- "utils/build/pkg_dependencies.Rdata"
