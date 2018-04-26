@@ -21,7 +21,7 @@ sysInfoString <- getSysInfo()
 
 localRLibDir <- "utils/build/local_R_library"
 depsCacheFile <- "utils/build/pkg_dependencies.Rdata"
-pkgSrcDir <- paste(localRLibDir, "src", sep="/")
+pkgSrcDir <- paste(localRLibDir, "src", "contrib", sep="/")
 preCompiledPkgsDir <- paste(localRLibDir, "pre_compiled",
                         sysInfoString, sep="/"
                       )
