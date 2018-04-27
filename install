@@ -1,107 +1,238 @@
 #!/usr/bin/env Rscript
 
-repo=c("http://cran.ma.imperial.ac.uk/")
+args <- commandArgs(trailingOnly=TRUE)
+showDepsAndQuit <- "--listdeps" %in% args
+refreshDeps <- "--refreshdeps" %in% args
+abortIfMissingNeededSrcs <- "--abort-if-missing-src" %in% args
+forceCompiledPkgs <- "--force-compile" %in% args
+
+includeDirR <- file.path("utils", "build", "include", "R")
+source(file.path(includeDirR, "getSysInfo.R"))
+source(file.path(includeDirR, "dependencies.R"))
+source(file.path(includeDirR, "getExplicitlyUsedRPkgs.R"))
+source(file.path(includeDirR, "handleInstallFailure.R"))
+
+remoteRepo <- c("http://cran.ma.imperial.ac.uk/")
+localRepo <- c(file.path("file:", getwd(),"utils", "build", "local_R_library"))
+
 lib=Sys.getenv("R_LIBS_USER")
 if(lib=="") lib=file.path(Sys.getenv("HOME"), "R", "library")
 if(!dir.exists(lib)) dir.create(lib, recursive=TRUE)
 
-pkgs <- c(
-    "Cairo",
-    "chron",
-    "dbplyr",
-    "dplyr",
-    "flock",
-    "futile.logger",
-    "future",
-    "ggplot2",
-    "gridExtra",
-    "httpuv",
-    "jpeg",
-    "leaflet",
-    "mapproj",
-    "pbapply",
-    "pryr",
-    "RcppTOML",
-    "RSQLite",
-    "reshape2",
-    "scales",
-    "shiny",
-    "shinyjs",
-    "V8"
-)
+sysInfoString <- getSysInfo()
 
-installedPkgs <- installed.packages(lib.loc=lib)
-newPkgs <- pkgs[!(pkgs %in% installedPkgs)]
-
-withCallingHandlers(update.packages(lib.loc=lib, repos=repo, ask=FALSE),
-                    warning = function(w) stop(w))
-if(length(newPkgs)>0) {
-  withCallingHandlers(install.packages(newPkgs, lib=lib, repos=repo),
-                      warning = function(w) stop(w))
-} else {
-  cat("The listed packages have already been installed.\n")
+localRLibDir <- "utils/build/local_R_library"
+depsCacheFile <- "utils/build/pkg_dependencies.Rdata"
+pkgSrcDir <- paste(localRLibDir, "src", "contrib", sep="/")
+preCompiledPkgsDir <- paste(localRLibDir, "pre_compiled",
+                        sysInfoString, sep="/"
+                      )
+for (dir in c(pkgSrcDir, preCompiledPkgsDir)) {
+  if(!dir.exists(dir)) dir.create(dir, recursive=TRUE)
 }
 
-# Although the documented behaviour of the install.packages method is to
-# install all dependencies listed under "Depends", "Imports", "LinkingTo"
-# in the DESCRIPTION files of the packages to be installed, this doesn't
-# always happen, it seems.
-dependencies <- function(pkgName, 
-                  availablePkgs=available.packages(repos=repo), 
-                  basePackagesR=rownames(installed.packages(priority="base"))
-                ) {
-  # Checks, recursively, the dependencies of package pkgName
-  dependenciesStr <- paste(
-                       availablePkgs[pkgName, 
-                         c("Depends", "Imports", "LinkingTo")],
-                       sep=""
+cat('Gathering packages used in the ".R" files in current dir and subdirs...')
+# These may have been imported explicitly using "library" or "require",
+# or used without explicit import (double-colon syntax).
+allRFiles <- list.files(pattern=".R$", recursive=TRUE)
+mainPkgs <- getExplicitlyUsedRPkgs(allRFiles)
+
+cat("Done.\n  > The following",length(mainPkgs),"main packages were found:\n")
+for (pkg in mainPkgs) {
+  cat("    *", pkg, "\n")
+}
+
+cat("\n")
+cat("Getting recursive dependency list: \n")
+# Doing this manually because we've had too many problems with somewhat erratic
+# behaviour of the install.packages own dependency resolution
+# First, attempt to read cached dependencies to avoid checking online
+pkgsDeps <- list()
+if(file.exists(depsCacheFile)) {
+  pkgsDeps <- readRDS(depsCacheFile)
+}
+# Having separate lists with the names of essencial packages and packages that
+# are only needed as "Suggests"-type dependencies (and recursive dependencies
+# of these) will allow us, later on, to decide what to do in case a package
+# fails to be installed
+allEssencialDeps <- c()
+allSuggestsDeps <- c()
+allPkgDeps <- c()
+essentialDepsTypes <- c("Depends", "Imports", "LinkingTo")
+for (pkg in mainPkgs) {
+  cat("  >", pkg, "... ")
+  if(refreshDeps || !(pkg %in% names(pkgsDeps))) {
+    availablePkgs <- available.packages(repos=remoteRepo)
+    essencialDeps <- dependencies(pkg, db=availablePkgs,
+                       levelOneDepsType=essentialDepsTypes
                      )
-  # Removing parentheses and enclosed text, as well as white spaces
-  dependenciesStr <- gsub("\\s*\\([^\\)]+\\)","", dependenciesStr)
-  dependenciesStr <- gsub("[[:space:]]", "", dependenciesStr)
-
-  pkgDeps <- unlist(strsplit(dependenciesStr, ",", fixed=TRUE))
-  pkgDeps <- pkgDeps[!(pkgDeps %in% c("R", "NA", basePackagesR))]
-  
-  if(length(pkgDeps)==0) {
-    return(NULL)
-  } else {
-    return(unique(c(pkgDeps, dependencies(pkgDeps))))
+    suggestsDeps <- dependencies(pkg, db=availablePkgs,
+                      levelOneDepsType="Suggests"
+                    )
+    # A Suggests type dependency may also end up being a recursive non-suggests
+    # dependency of the essencial packages. We don't want to have these
+    # considered as optional.
+    suggestsDeps <- suggestsDeps[!(suggestsDeps %in% essencialDeps)]
+    pkgsDeps[[pkg]] <- list(essencial=essencialDeps, Suggests=suggestsDeps)
   }
+  thisPkgDeps <-c(pkgsDeps[[pkg]][["essencial"]],pkgsDeps[[pkg]][["Suggests"]])
+  newDeps <-setdiff(thisPkgDeps,intersect(thisPkgDeps,c(mainPkgs, allPkgDeps)))
+  cat("nDependencies =", length(thisPkgDeps), "(", length(newDeps),"new)\n")
+  allEssencialDeps <- c(allEssencialDeps, pkgsDeps[[pkg]][["essencial"]])
+  allSuggestsDeps <- c(allSuggestsDeps, pkgsDeps[[pkg]][["Suggests"]])
+  allPkgDeps <- c(allPkgDeps, allEssencialDeps, allSuggestsDeps)
+}
+saveRDS(pkgsDeps, file=depsCacheFile)
+
+# At last, building the full list of pkgs to be installed
+pkgs <- unique(c(allPkgDeps, mainPkgs))
+allEssencialDeps <- unique(allEssencialDeps[!(allEssencialDeps %in% mainPkgs)])
+allSuggestsDeps <- unique(
+                     allSuggestsDeps[
+                       !(allSuggestsDeps %in% c(allEssencialDeps, mainPkgs))
+                     ]
+                   )
+
+cat("\n")
+msg <- "In addition to the main packages listed above,"
+msg <- paste(msg, "the following dependencies should also", sep=" ")
+msg <- paste(msg, "be available after a successful full install:\n", sep="\n")
+cat(msg)
+cat("* Essencial dependencies:\n")
+for (pkg in sort(allEssencialDeps)) {
+  cat("  >", pkg, "\n")
+}
+cat("* Suggests-type dependencies:\n")
+for (pkg in sort(allSuggestsDeps)) {
+  cat("  >", pkg, "\n")
+}
+cat("Total:", length(pkgs), "packages.\n")
+cat("  Main packages:", length(mainPkgs), "\n")
+cat("  Essencial dependencies:", length(allEssencialDeps), "\n")
+cat("  Suggests-type dependencies:", length(allSuggestsDeps), "\n")
+cat("\n")
+
+if(showDepsAndQuit) {
+  cat('Option "--listdeps" passed. Not installing packages. \n')
+  cat('Stopping now.\n')
+  quit()
 }
 
-cat("Checking for dependencies not installed by install.packages... \n")
-installedPkgNames <- rownames(installed.packages(lib.loc=lib))
-depToDependants <- list()
-for (pkgName in installedPkgNames) {
-  cat("  > Checking package", pkgName, "... \n")
-  pkgDeps <- dependencies(pkgName)
-  for (depName in pkgDeps){
-    depToDependants[[depName]] <- c(depToDependants[[depName]], pkgName)
-  }
-}
-allPkgDeps <- names(depToDependants)
-missingDeps <- allPkgDeps[!(allPkgDeps %in% installedPkgNames)]
+# Installation
+installedPkgs <- installed.packages(lib.loc=lib)[,1]
+pkgsToBeUpdated <- rownames(old.packages(lib.loc=lib, repos=localRepo))
 
-if(length(missingDeps)==0) {
-  cat("All dependencies seem to have been installed. \n")
+preCompPkgsCopied <- FALSE
+if(forceCompiledPkgs) {
+  cat('Flag "--force-compile" found. Compiling all packages.\n')
+  pkgsToCompile <- pkgs
 } else {
-  msg_deps <- ''
-  for (depName in missingDeps) {
-    msg_deps <- paste(msg_deps, ">", depName,
-                      "- needed by (or by dependencies of):")
-                
-    msg_deps <- paste(msg_deps, 
-                      paste(depToDependants[[depName]], collapse=", "),
-                      "\n"
-                )
+  if(length(pkgsToBeUpdated)>0) {
+    cat("\n")
+    cat("The following packages will be updated:\n")
+    for (pkg in pkgsToBeUpdated) {
+      cat("  >", pkg, "\n")
+    }
+    cat("Total:", length(pkgsToBeUpdated), "packages to be updated.\n")
   }
-  cat("The following missing dependencies will be installed: \n")
-  cat(msg_deps)
-
-  withCallingHandlers(install.packages(missingDeps, lib=lib, repos=repo),
-                      warning = function(w) warning(w))
-  warn_msg<-"Dependencies missed by install.packages and handled explicitly:\n"
-  warn_msg <- paste(warn_msg, msg_deps)
-  warning(warn_msg)
+  # Copying pre-compiled packages to the library, if not already installed
+  preCompiledPkgs <- list.files(preCompiledPkgsDir,
+                       pattern="\\.tar\\.gz$|\\.tgz$"
+                     )
+  for (preCompPkg in preCompiledPkgs) {
+    pkgName <- strsplit(preCompPkg, split="\\.tar\\.gz$|\\.tgz$")[[1]]
+    preCompPkgPath <- paste(preCompiledPkgsDir, preCompPkg, sep="/")
+    if((pkgName %in% pkgsToBeUpdated) | !(pkgName %in% installedPkgs)) {
+      cat(paste('Found pre-compiled pkg "', pkgName,
+            '". Copying to the library... ', sep='')
+      )
+      if(pkgName %in% pkgsToBeUpdated) {
+        # This assumes that binaries are consistent with the local repo sources
+        cat('(this updates the package) ')
+        pkgDir <- file.path(lib, pkgName)
+        unlink(pkgDir, recursive=TRUE)
+      }
+      utils::untar(preCompPkgPath, exdir=lib, compressed=TRUE)
+      cat("Done \n")
+      preCompPkgsCopied <- TRUE
+    }
+  }
+  # installedPkgs and pkgsToBeUpdated lists now need to be updated
+  installedPkgs <- installed.packages(lib.loc=lib)[,1]
+  pkgsToBeUpdated <- rownames(old.packages(lib.loc=lib, repos=localRepo))
+  pkgsToCompile <- pkgs[(pkgs %in% pkgsToBeUpdated) | !(pkgs %in% installedPkgs)]
 }
+
+if(length(pkgsToCompile)==0) {
+  if(preCompPkgsCopied) {
+    cat("\n")
+    cat("No further packages need to be compiled. Installation finished. \n")
+  } else {
+    cat("The listed packages seem to have already been installed.\n")
+    cat("Nothing to do.\n")
+  }
+  quit()
+} else {
+  cat("\n")
+  cat("The following packages are marked for compilation:\n")
+  for (pkg in pkgsToCompile) {
+    cat("  >", pkg, "\n")
+  }
+  cat("Total:", length(pkgsToCompile), "new packages.\n")
+}
+
+srcsAvailable <- list.files(pkgSrcDir, pattern="\\.tar\\.gz$|\\.tgz$")
+# Checking whether sources files for pkgsToCompile are missing
+pkgsToCompileWithMissingSrcs <- c()
+for (pkg in pkgsToCompile) {
+  patt <- paste("^", pkg, "\\_", sep="")
+  matchIndices <- grep(patt, srcsAvailable)
+  if(length(matchIndices)==0) {
+    pkgsToCompileWithMissingSrcs <- c(pkgsToCompileWithMissingSrcs, pkg)
+  }
+}
+
+# Deciding whether or not to download needed source files that are missing.
+# The default is to download them. This is to keep backwards compatibility.
+# It is preferrable, however, to have them downloaded and verified in a secure
+# computer, and then moved to pkgSrcDir once they are considered safe.
+# Use the "--abort-if-missing-src" command line option if you want the install
+# script to abort if sources are not available locally.
+if(length(pkgsToCompileWithMissingSrcs)>0) {
+  if(abortIfMissingNeededSrcs) {
+    errMsg <- paste("The source files for following packages are missing:\n")
+    for (pkg in pkgsToCompileWithMissingSrcs) {
+      errMsg <- paste(errMsg, "  >", pkg, "\n")
+    }
+    errMsg <- paste(errMsg,
+                "Please add them to the", pkgSrcDir,
+                "directory and try again.\n"
+              )
+    stop(errMsg)
+  } else {
+    download.packages(pkgsToCompileWithMissingSrcs, destdir=pkgSrcDir,
+                      repos=remoteRepo, type="source")
+    # Refreshing list of available src files
+    tools::write_PACKAGES(dir=pkgSrcDir)
+    srcsAvailable <- list.files(pkgSrcDir, pattern="\\.tar\\.gz$|\\.tgz$")
+  }
+}
+
+srcsToBeCompiled <- c()
+for (pkg in pkgsToCompile) {
+  patt <- paste("^", pkg, "\\_", sep="")
+  matchIndices <- grep(patt, srcsAvailable)
+  srcsToBeCompiled <- c(srcsToBeCompiled, srcsAvailable[matchIndices])
+}
+
+if(length(srcsToBeCompiled)>0) {
+  srcsToBeCompiledFullPath <- paste(pkgSrcDir, srcsToBeCompiled, sep="/")
+  withCallingHandlers(
+    install.packages(srcsToBeCompiledFullPath, lib=lib,
+      repos=NULL, type="source"
+    ),
+    warning = function(w) handleInstallFailure(w, okToProceed=allSuggestsDeps)
+  )
+}
+
+cat("Obsmon install script has finished. \n")
