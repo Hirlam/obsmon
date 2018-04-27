@@ -120,6 +120,7 @@ if(showDepsAndQuit) {
 }
 
 # Installation
+cat("R libraries will be installed to: ", lib, "\n")
 installedPkgs <- installed.packages(lib.loc=lib)[,1]
 pkgsToBeUpdated <- rownames(old.packages(lib.loc=lib, repos=localRepo))
 
