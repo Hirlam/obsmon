@@ -17,6 +17,7 @@ localRepo <- c(file.path("file:", getwd(),"utils", "build", "local_R_library"))
 
 lib=Sys.getenv("R_LIBS_USER")
 if(lib=="") lib=file.path(Sys.getenv("HOME"), "R", "library")
+lib <- path.expand(lib)
 if(!dir.exists(lib)) dir.create(lib, recursive=TRUE)
 
 sysInfoString <- getSysInfo()
