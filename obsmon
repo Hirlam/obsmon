@@ -1,4 +1,5 @@
 #!/usr/bin/env Rscript
+args <- commandArgs(trailingOnly = FALSE)
 
 libLoc=Sys.getenv("R_LIBS_USER")
 if(libLoc=="") libLoc=file.path(Sys.getenv("HOME"), "R", "library")
@@ -6,8 +7,10 @@ libLoc <- path.expand(libLoc)
 Sys.setenv(R_LIBS_USER=libLoc)
 
 # Changing work dir to obsmonSrcDir, so all needed files can be found
-obsmonSrcDir <- dirname(Sys.readlink(file.path(path.expand(getwd()),'obsmon')))
-if(is.na(obsmonSrcDir) || obsmonSrcDir=='') obsmonSrcDir <- path.expand(getwd())
+thisFilePath <- normalizePath(sub("--file=", "", args[grep("--file=", args)]))
+# Accounting for the fact that the script may be executed via a symlink
+obsmonSrcDir <- dirname(Sys.readlink(thisFilePath))
+if(obsmonSrcDir=="" || is.na(obsmonSrcDir)) obsmonSrcDir<-dirname(thisFilePath)
 setwd(obsmonSrcDir)
 
 # Initialising
