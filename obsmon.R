@@ -1,12 +1,13 @@
+#!/usr/bin/env Rscript
+
 libLoc=Sys.getenv("R_LIBS_USER")
 if(libLoc=="") libLoc=file.path(Sys.getenv("HOME"), "R", "library")
 libLoc <- path.expand(libLoc)
 Sys.setenv(R_LIBS_USER=libLoc)
 
-# Getting the directory where the obsmon files are located
-# The env var OBSMON_SRC_DIR is exported in the obsmon bash script
-obsmonSrcDir <- Sys.getenv('OBSMON_SRC_DIR')
 # Changing work dir to obsmonSrcDir, so all needed files can be found
+obsmonSrcDir <- dirname(Sys.readlink(file.path(path.expand(getwd()),'obsmon')))
+if(is.na(obsmonSrcDir) || obsmonSrcDir=='') obsmonSrcDir <- path.expand(getwd())
 setwd(obsmonSrcDir)
 
 # Initialising
