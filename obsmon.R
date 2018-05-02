@@ -1,3 +1,8 @@
+libLoc=Sys.getenv("R_LIBS_USER")
+if(libLoc=="") libLoc=file.path(Sys.getenv("HOME"), "R", "library")
+libLoc <- path.expand(libLoc)
+Sys.setenv(R_LIBS_USER=libLoc)
+
 # Getting the directory where the obsmon files are located
 # The env var OBSMON_SRC_DIR is exported in the obsmon bash script
 obsmonSrcDir <- Sys.getenv('OBSMON_SRC_DIR')
