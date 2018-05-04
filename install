@@ -34,7 +34,7 @@ for (dir in c(pkgSrcDir, preCompiledPkgsDir)) {
 cat('Gathering packages used in the ".R" files in current dir and subdirs...')
 # These may have been imported explicitly using "library" or "require",
 # or used without explicit import (double-colon syntax).
-allRFiles <- list.files(pattern=".R$", recursive=TRUE)
+allRFiles <- list.files(pattern="\\.R$", recursive=TRUE)
 mainPkgs <- getExplicitlyUsedRPkgs(allRFiles)
 
 cat("Done.\n  > The following",length(mainPkgs),"main packages were found:\n")
