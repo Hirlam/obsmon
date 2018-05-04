@@ -1,9 +1,6 @@
 
 getSysInfo <- function(includeSysName=FALSE, includeSysRelease=FALSE) {
-  rVersion <- R.Version()
-  platform <- rVersion$platform
-  lang <- rVersion$language
-  rtn <- paste(lang, platform, sep="-")
+  rtn <- R.Version()$platform
 
   if(includeSysName) {
     sysName <- 'unknown'
