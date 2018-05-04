@@ -51,6 +51,7 @@ pkgsDeps <- list()
 if(file.exists(depsCacheFile)) {
   pkgsDeps <- readRDS(depsCacheFile)
 }
+depsRefreshed <- FALSE
 # Having separate lists with the names of essencial packages and packages that
 # are only needed as "Suggests"-type dependencies (and recursive dependencies
 # of these) will allow us, later on, to decide what to do in case a package
@@ -74,6 +75,7 @@ for (pkg in mainPkgs) {
     # considered as optional.
     suggestsDeps <- suggestsDeps[!(suggestsDeps %in% essencialDeps)]
     pkgsDeps[[pkg]] <- list(essencial=essencialDeps, Suggests=suggestsDeps)
+    depsRefreshed <- TRUE
   }
   thisPkgDeps <-c(pkgsDeps[[pkg]][["essencial"]],pkgsDeps[[pkg]][["Suggests"]])
   newDeps <-setdiff(thisPkgDeps,intersect(thisPkgDeps,c(mainPkgs, allPkgDeps)))
@@ -82,7 +84,7 @@ for (pkg in mainPkgs) {
   allSuggestsDeps <- c(allSuggestsDeps, pkgsDeps[[pkg]][["Suggests"]])
   allPkgDeps <- c(allPkgDeps, allEssencialDeps, allSuggestsDeps)
 }
-saveRDS(pkgsDeps, file=depsCacheFile)
+if(depsRefreshed) saveRDS(pkgsDeps, file=depsCacheFile)
 
 # At last, building the full list of pkgs to be installed
 pkgs <- unique(c(allPkgDeps, mainPkgs))
