@@ -230,12 +230,22 @@ for (pkg in pkgsToCompile) {
 
 if(length(srcsToBeCompiled)>0) {
   srcsToBeCompiledFullPath <- file.path(pkgSrcDir, srcsToBeCompiled)
+  # Moving to a tempdir so that the work dir doesn't get full of tarballs
+  tmpDir <- normalizePath(tempdir())
+  setwd(tmpDir)
   withCallingHandlers(
     install.packages(srcsToBeCompiledFullPath, lib=lib,
-      repos=NULL, type="source"
+      repos=NULL, type="source", INSTALL_opts="--build",
     ),
     warning = function(w) handleInstallFailure(w, okToProceed=allSuggestsDeps)
   )
+  # Copying compiled binaries, so they are available next time
+  # file.remove doesn't work cross-device, but copy && remove do. Go figure...
+  gzBinFiles <- file.path(tmpDir, list.files(pattern="\\.gz$"))
+  file.copy(gzBinFiles, file.path(preCompiledPkgsDir, basename(gzBinFiles)))
+  file.remove(gzBinFiles)
+  # Back to the original dir
+  setwd(workDir)
 }
 
 cat("Obsmon install script has finished. \n")
