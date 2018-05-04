@@ -63,11 +63,11 @@ essentialDepsTypes <- c("Depends", "Imports", "LinkingTo")
 for (pkg in mainPkgs) {
   cat("  >", pkg, "... ")
   if(refreshDeps || !(pkg %in% names(pkgsDeps))) {
-    availablePkgs <- available.packages(repos=remoteRepo)
-    essencialDeps <- dependencies(pkg, db=availablePkgs,
+    availablePkgsRemote <- available.packages(repos=remoteRepo)
+    essencialDeps <- dependencies(pkg, db=availablePkgsRemote,
                        levelOneDepsType=essentialDepsTypes
                      )
-    suggestsDeps <- dependencies(pkg, db=availablePkgs,
+    suggestsDeps <- dependencies(pkg, db=availablePkgsRemote,
                       levelOneDepsType="Suggests"
                     )
     # A Suggests type dependency may also end up being a recursive non-suggests
