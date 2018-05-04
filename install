@@ -6,28 +6,27 @@ refreshDeps <- "--refreshdeps" %in% args
 abortIfMissingNeededSrcs <- "--abort-if-missing-src" %in% args
 forceCompiledPkgs <- "--force-compile" %in% args
 
-includeDirR <- file.path("utils", "build", "include", "R")
+workDir <- normalizePath(getwd())
+includeDirR <- file.path(workDir, "utils", "build", "include", "R")
 source(file.path(includeDirR, "getSysInfo.R"))
 source(file.path(includeDirR, "dependencies.R"))
 source(file.path(includeDirR, "getExplicitlyUsedRPkgs.R"))
 source(file.path(includeDirR, "handleInstallFailure.R"))
 
+sysInfoString <- getSysInfo()
+localRLibDir <- file.path(workDir,"utils", "build", "local_R_library")
+depsCacheFile <- file.path(workDir,"utils", "build", "pkg_dependencies.Rdata")
+pkgSrcDir <- file.path(localRLibDir, "src", "contrib")
+preCompiledPkgsDir <- file.path(localRLibDir, "pre_compiled", sysInfoString)
+
 remoteRepo <- c("http://cran.ma.imperial.ac.uk/")
-localRepo <- c(file.path("file:", getwd(),"utils", "build", "local_R_library"))
+localRepo <- c(file.path("file:", localRLibDir))
 
 lib=Sys.getenv("R_LIBS_USER")
 if(lib=="") lib=file.path(Sys.getenv("HOME"), "R", "library")
 lib <- path.expand(lib)
 if(!dir.exists(lib)) dir.create(lib, recursive=TRUE)
 
-sysInfoString <- getSysInfo()
-
-localRLibDir <- "utils/build/local_R_library"
-depsCacheFile <- "utils/build/pkg_dependencies.Rdata"
-pkgSrcDir <- paste(localRLibDir, "src", "contrib", sep="/")
-preCompiledPkgsDir <- paste(localRLibDir, "pre_compiled",
-                        sysInfoString, sep="/"
-                      )
 for (dir in c(pkgSrcDir, preCompiledPkgsDir)) {
   if(!dir.exists(dir)) dir.create(dir, recursive=TRUE)
 }
@@ -143,7 +142,7 @@ if(forceCompiledPkgs) {
                      )
   for (preCompPkg in preCompiledPkgs) {
     pkgName <- strsplit(preCompPkg, split="\\.tar\\.gz$|\\.tgz$")[[1]]
-    preCompPkgPath <- paste(preCompiledPkgsDir, preCompPkg, sep="/")
+    preCompPkgPath <- file.path(preCompiledPkgsDir, preCompPkg)
     if((pkgName %in% pkgsToBeUpdated) | !(pkgName %in% installedPkgs)) {
       cat(paste('Found pre-compiled pkg "', pkgName,
             '". Copying to the library... ', sep='')
@@ -228,7 +227,7 @@ for (pkg in pkgsToCompile) {
 }
 
 if(length(srcsToBeCompiled)>0) {
-  srcsToBeCompiledFullPath <- paste(pkgSrcDir, srcsToBeCompiled, sep="/")
+  srcsToBeCompiledFullPath <- file.path(pkgSrcDir, srcsToBeCompiled)
   withCallingHandlers(
     install.packages(srcsToBeCompiledFullPath, lib=lib,
       repos=NULL, type="source"
