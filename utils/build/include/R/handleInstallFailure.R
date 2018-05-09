@@ -14,6 +14,7 @@ handleInstallFailure <- function(callAndErrorMsg, okToProceed){
                     value=TRUE
                   )
   offendingPkg <- gsub("_.+\\.tar\\.gz$|_.+\\.tgz$", "", offendingPkg)
+  if(length(offendingPkg)==0) stop(callAndErrorMsg)
   if(offendingPkg %in% okToProceed) {
     warning(callAndErrorMsg)
   } else {
