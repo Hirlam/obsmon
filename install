@@ -189,14 +189,16 @@ if(length(missingSrcsReqPkgs)>0) {
 
 # Build step
 # At this point, sources for all required packages should be available locally
-if(rebuildAll) {
-  cat('Flag "--rebuild-all" found. Building all packages.\n')
+if(rebuildAll | length(binFileNames)==0) {
   binsToBeBuilt <- allPkgs
 } else {
   binsToBeBuilt <- c()
   for (pkgName in srcsReqInRepo) {
     pkgVer <- availablePkgsLocalRepo[pkgName, "Version"]
-    fPath <- pathToBinary(pkgName, pkgVer, platform=sysInfoString, fullBinList=binFileNames)
+    fPath <- pathToBinary(
+               pkgName, pkgVer, platform=sysInfoString, 
+               fullBinList=binFileNames
+             )
     if(is.na(fPath)) binsToBeBuilt <- c(binsToBeBuilt, pkgName)
   }
 }
@@ -254,14 +256,19 @@ if(length(pkgsToBeUpdated)>0) {
 }
 
 cat("R libraries will be installed to: ", lib, "\n")
-binFileNames <- list.files(preCompiledPkgsDir, pattern="\\.tar\\.gz$|\\.tgz$", full.names=TRUE)
+binFileNames <- list.files(
+                  preCompiledPkgsDir, pattern="\\.tar\\.gz$|\\.tgz$", 
+                  full.names=TRUE
+                )
 for (pkgName in pkgsToBeInstalled) {
   installAction <- "  > Installing"
   if(pkgName %in% pkgsToBeUpdated) installAction <- "  > Updating"
   cat(paste(installAction, " ", pkgName, '... ', sep=""))
   pkgVer <- availablePkgsLocalRepo[pkgName, "Version"]
-  preCompPkgPath <- pathToBinary(pkgName, pkgVer, platform=sysInfoString, fullBinList=binFileNames)
-
+  preCompPkgPath <- pathToBinary(
+                      pkgName, pkgVer, platform=sysInfoString, 
+                      fullBinList=binFileNames
+                    )
   pkgDir <- file.path(lib, pkgName)
   if(dir.exists(pkgDir)) unlink(pkgDir, recursive=TRUE)
   utils::untar(preCompPkgPath, exdir=lib, compressed=TRUE)
