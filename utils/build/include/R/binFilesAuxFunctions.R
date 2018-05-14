@@ -24,3 +24,22 @@ pathToBinary <- function(pkgName, pkgVer, platform, binDir=NULL, fullBinList=NUL
 
   return(pkgFile)
 }
+
+mvPkgsBinsToRepo <- function(tmpDirForBuild, preCompiledPkgsDir) {
+  gzBinFiles <- file.path(tmpDirForBuild, list.files(pattern="\\.gz$"))
+  # file.remove doesn't work cross-device, but copy && remove do. Go figure...
+  file.copy(gzBinFiles, file.path(preCompiledPkgsDir, basename(gzBinFiles)))
+  file.remove(gzBinFiles)
+}
+
+install_binaries <- function(fPaths, lib, overwrite=TRUE) {
+  for (fPath in fPaths) {
+    pkgName <- unlist(strsplit(basename(fPath), split="_",fixed=TRUE))[1]
+    pkgDir <- file.path(lib, pkgName)
+    if(!dir.exists(pkgDir) | overwrite) {
+      # The R doc says "Not deleting a non-existent file is not a failure"
+      unlink(pkgDir, recursive=TRUE)
+      utils::untar(fPath, exdir=lib, compressed=TRUE)
+    }
+  }
+}
