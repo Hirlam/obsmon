@@ -16,7 +16,7 @@ source(file.path(includeDirR, "getSysInfo.R"))
 source(file.path(includeDirR, "dependencies.R"))
 source(file.path(includeDirR, "getExplicitlyUsedRPkgs.R"))
 source(file.path(includeDirR, "handleInstallFailure.R"))
-source(file.path(includeDirR, "pathToBinary.R"))
+source(file.path(includeDirR, "binFilesAuxFunctions.R"))
 
 sysInfoString <- getSysInfo()
 localRLibDir <- file.path(workDir,"utils", "build", "local_R_library")
