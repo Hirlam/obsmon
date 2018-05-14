@@ -210,6 +210,18 @@ mvPkgsBinsToRepo <- function(tmpDirForBuild, preCompiledPkgsDir) {
   file.remove(gzBinFiles)
 }
 
+install_binaries <- function(fPaths, lib, overwrite=TRUE) {
+  for (fPath in fPaths) {
+    pkgName <- unlist(strsplit(basename(fPath), split="_",fixed=TRUE))[1]
+    pkgDir <- file.path(lib, pkgName)
+    if(!dir.exists(pkgDir) | overwrite) {
+      # The R doc says "Not deleting a non-existent file is not a failure"
+      unlink(pkgDir, recursive=TRUE)
+      utils::untar(fPath, exdir=lib, compressed=TRUE)
+    }
+  }
+}
+
 if(length(binsToBeBuilt)==0) {
   cat("No binaries need to be built.\n")
 } else {
@@ -221,6 +233,10 @@ if(length(binsToBeBuilt)==0) {
   cat("Total:", length(binsToBeBuilt), "packages to be built.\n")
 
   cat("\n")
+  # If we do not do this, then install.packages may download these pkgs
+  cat("Handling eventual pre-compiled but not installed R-pkg dependencies...")
+  install_binaries(fPaths=binFileNames, lib=tmpLibForBuild, overwrite=FALSE)
+  cat(" Done.\n")
   cat("Building now...\n")
   # Moving to a tempdir so that the work dir doesn't get full of tarballs
   setwd(tmpDirForBuild)
@@ -264,6 +280,7 @@ binFileNames <- list.files(
                   preCompiledPkgsDir, pattern="\\.tar\\.gz$|\\.tgz$", 
                   full.names=TRUE
                 )
+
 for (pkgName in pkgsToBeInstalled) {
   installAction <- "  > Installing"
   if(pkgName %in% pkgsToBeUpdated) installAction <- "  > Updating"
@@ -273,9 +290,7 @@ for (pkgName in pkgsToBeInstalled) {
                       pkgName, pkgVer, platform=sysInfoString, 
                       fullBinList=binFileNames
                     )
-  pkgDir <- file.path(lib, pkgName)
-  if(dir.exists(pkgDir)) unlink(pkgDir, recursive=TRUE)
-  utils::untar(preCompPkgPath, exdir=lib, compressed=TRUE)
+  install_binaries(fPaths=preCompPkgPath, lib=lib, overwrite=TRUE)
   cat("Done.\n")
 }
 
