@@ -223,12 +223,15 @@ if(length(binsToBeBuilt)==0) {
   setwd(tmpDirForBuild)
   tryCatch(
     install.packages(binsToBeBuilt, lib=tmpLibForBuild,
-      repos=localRepo, type="source", INSTALL_opts="--build"
+      repos=localRepo, type="source", INSTALL_opts="--build",
+      Ncpus=max(parallel::detectCores()-1, 1)
     ),
     warning = function(w) handleInstallFailure(w, okToProceed=allSuggestsDeps),
     # Copying compiled binaries, so they are available next time
     finally=mvPkgsBinsToRepo(tmpDirForBuild, preCompiledPkgsDir)
   )
+  # The finally clause does not seem to work when running with Ncpus>1
+  mvPkgsBinsToRepo(tmpDirForBuild, preCompiledPkgsDir)
   # Back to the original dir
   setwd(workDir)
   cat("Build finished.\n")
