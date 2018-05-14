@@ -217,17 +217,19 @@ if(length(binsToBeBuilt)==0) {
   cat("Building now...\n")
   # Moving to a tempdir so that the work dir doesn't get full of tarballs
   setwd(tmpDirForBuild)
-  withCallingHandlers(
-    install.packages(binsToBeBuilt, lib=tmpLibForBuild,
-      repos=localRepo, type="source", INSTALL_opts="--build",
-    ),
-    warning = function(w) handleInstallFailure(w, okToProceed=allSuggestsDeps)
-  )
-  # Copying compiled binaries, so they are available next time
-  # file.remove doesn't work cross-device, but copy && remove do. Go figure...
-  gzBinFiles <- file.path(tmpDirForBuild, list.files(pattern="\\.gz$"))
-  file.copy(gzBinFiles, file.path(preCompiledPkgsDir, basename(gzBinFiles)))
-  file.remove(gzBinFiles)
+  for (pkgName in binsToBeBuilt) {
+    withCallingHandlers(
+      install.packages(pkgName, lib=tmpLibForBuild,
+        repos=localRepo, type="source", INSTALL_opts="--build"
+      ),
+      warning = function(w) handleInstallFailure(w, okToProceed=allSuggestsDeps)
+    )
+    # Copying compiled binaries, so they are available next time
+    # file.remove doesn't work cross-device, but copy && remove do. Go figure...
+    gzBinFiles <- file.path(tmpDirForBuild, list.files(pattern="\\.gz$"))
+    file.copy(gzBinFiles, file.path(preCompiledPkgsDir, basename(gzBinFiles)))
+    file.remove(gzBinFiles)
+  }
   # Back to the original dir
   setwd(workDir)
   cat("Build finished.\n")
