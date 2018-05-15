@@ -26,7 +26,10 @@ pathToBinary <- function(pkgName, pkgVer, platform, binDir=NULL, fullBinList=NUL
 }
 
 mvPkgsBinsToRepo <- function(tmpDirForBuild, preCompiledPkgsDir) {
-  gzBinFiles <- file.path(tmpDirForBuild, list.files(pattern="\\.gz$"))
+  gzBinFiles <- list.files(tmpDirForBuild, pattern="\\.tar\\.gz$", 
+                  recursive=TRUE, full.names=TRUE
+                )
+  gzBinFiles <- normalizePath(gzBinFiles, mustWork=FALSE)
   # file.remove doesn't work cross-device, but copy && remove do. Go figure...
   file.copy(gzBinFiles, file.path(preCompiledPkgsDir, basename(gzBinFiles)))
   file.remove(gzBinFiles)

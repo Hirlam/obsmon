@@ -204,7 +204,7 @@ if(rebuildAll | length(binFileNames)==0) {
 }
 
 if(length(binsToBeBuilt)==0) {
-  cat("No binaries need to be built.\n")
+  cat("All needed binaries are available. No binaries need to be built.\n")
 } else {
   cat("\n")
   cat("The following packages are marked to be built:\n")
@@ -221,17 +221,16 @@ if(length(binsToBeBuilt)==0) {
   cat("Building now...\n")
   # Moving to a tempdir so that the work dir doesn't get full of tarballs
   setwd(tmpDirForBuild)
-  tryCatch(
-    install.packages(binsToBeBuilt, lib=tmpLibForBuild,
-      repos=localRepo, type="source", INSTALL_opts="--build",
-      Ncpus=max(parallel::detectCores()-1, 1)
-    ),
-    warning = function(w) handleInstallFailure(w, okToProceed=allSuggestsDeps),
-    # Copying compiled binaries, so they are available next time
-    finally=mvPkgsBinsToRepo(tmpDirForBuild, preCompiledPkgsDir)
-  )
-  # The finally clause does not seem to work when running with Ncpus>1
-  mvPkgsBinsToRepo(tmpDirForBuild, preCompiledPkgsDir)
+  for (pkgName in binsToBeBuilt) {
+    tryCatch(
+      install.packages(pkgName, lib=tmpLibForBuild,
+        repos=localRepo, type="source", INSTALL_opts="--build"
+      ),
+      warning = function(w) handleInstallFailure(w, okToProceed=allSuggestsDeps),
+      # Copying compiled binaries, so they are available next time
+      finally=mvPkgsBinsToRepo(tmpDirForBuild, preCompiledPkgsDir)
+    )
+  }
   # Back to the original dir
   setwd(workDir)
   cat("Build finished.\n")
