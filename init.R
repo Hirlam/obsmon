@@ -145,9 +145,31 @@ readConfig <- function() {
   config
 }
 
+assertCacheDirWritable <- function(config, verbose=FALSE) {
+
+  cacheDirPath <- config$general[["cacheDir"]]
+
+  dir.create(cacheDirPath, recursive=TRUE, showWarnings=FALSE)
+  writable <- tryCatch(
+    file.access(cacheDirPath, mode=2)==0,
+    error=function(e) FALSE
+  )
+
+  if(!writable) {
+    msg <- paste("Cannot write to cacheDir", cacheDirPath, "\n")
+    msg <- paste(msg, "Please specify a valid cacheDir value under the\n")
+    msg <- paste(msg, '"[general]" section in your config file.\n')
+    stop(msg)
+  }
+
+  if(verbose) flog.info(paste("cacheDir set to:", cacheDirPath, "\n"))
+
+}
+
 configure <- function() {
   if (!exists("obsmonConfig")) {
     config <- readConfig()
+    assertCacheDirWritable(config, verbose=TRUE)
     setPackageOptions(config)
     obsmonConfig <<- config
     sourceObsmonFiles()
