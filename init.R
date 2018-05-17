@@ -70,12 +70,32 @@ fillInDefault <- function(config, key, default) {
   if (is.null(config$general[[key]])) {
     config$general[[key]] <- default
   }
+  if(key=="cacheDir") {
+    config$general[[key]] <- normalizePath(config$general[[key]], mustWork=FALSE)
+  }
   config
 }
 
+getSuitableCacheDirDefault <- function() {
+
+  cacheDirPath <- NA
+  systemCacheDirPath <- file.path("", "var", "cache", "obsmon", Sys.getenv("USER"))
+  homeCacheDirPath <- file.path(Sys.getenv("HOME"), ".obsmon", "experiments_cache")
+
+  cacheDirPrio <- c(systemCacheDirPath, homeCacheDirPath)
+  for(dirPath in cacheDirPrio) {
+    dirCreated <- dir.create(dirPath, recursive=TRUE, showWarnings=FALSE)
+    if(!(dirCreated | dir.exists(dirPath))) next
+    if(file.access(dirPath, mode=2)==0) cacheDirPath <- dirPath
+    if(dirCreated) unlink(dirPath, recursive=TRUE)
+    if(!is.na(cacheDirPath)) break
+  }
+
+  return(cacheDirPath)
+}
+
 fillInDefaults <- function(config) {
-  config <- fillInDefault(config, "cacheDir",
-                          file.path("", "var", "cache", "obsmon"))
+  config <- fillInDefault(config, "cacheDir", getSuitableCacheDirDefault())
   config <- fillInDefault(config, "logLevel", "WARN")
   config
 }
