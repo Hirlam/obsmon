@@ -100,14 +100,47 @@ fillInDefaults <- function(config) {
   config
 }
 
-readConfig <- function() {
-  configFile <- "config.toml"
-  if (file.exists(configFile)) {
-    configPath <- configFile
-  } else {
-    systemConfigDir <- file.path("", "etc", "obsmon")
-    configPath <- file.path(systemConfigDir, configFile)
+getValidConfigFilePath <- function(verbose=FALSE) {
+  
+  configFileDefBasename <- "config.toml"
+  exampleConfigFilePath <- file.path(obsmonSrcDir, "config.toml.example")
+
+  userEnvConfigPath <- Sys.getenv("OBSMON_CONFIG_FILE")
+  obsmonSrcDirConfigPath <- file.path(obsmonSrcDir, configFileDefBasename)
+  systemConfigDir <- file.path("", "etc", "obsmon", Sys.getenv("USER"))
+  sysDirConfigPath <- file.path(systemConfigDir, configFileDefBasename)
+  confOrder <- c(userEnvConfigPath, obsmonSrcDirConfigPath, sysDirConfigPath)
+
+  configPath <- NA
+  for (fPath in confOrder) {
+    if(file.exists(fPath)) {
+      configPath <- normalizePath(fPath)
+      break
+    }
   }
+
+  if(is.na(configPath)) {
+    msg <- paste('Config file"', configFileDefBasename, '"not found.\n')
+    msg <- paste(msg, "\n")
+    msg <- paste(msg, "Please put such file in one of the following dirs:\n")
+    msg <- paste(msg, "  >", obsmonSrcDir, "\n")
+    msg <- paste(msg, "  >", systemConfigDir, "\n")
+    msg <- paste(msg, "\n")
+    msg <- paste(msg, "Alternatively, you can specify the full path to your")
+    msg <- paste(msg, "config file by exporting the\n")
+    msg <- paste(msg, "envvar OBSMON_CONFIG_FILE\n")
+    msg <- paste(msg, "\n")
+    msg <- paste(msg, "Please check the following config file template:\n")
+    msg <- paste(msg, "  >", exampleConfigFilePath, "\n")
+    stop(msg)
+  } 
+
+  if(verbose) flog.info(paste("Config file found:", configPath, "\n"))
+  return(configPath)
+}
+
+readConfig <- function() {
+  configPath <- getValidConfigFilePath(verbose=TRUE)
   config <- fillInDefaults(parseTOML(configPath))
   config
 }
