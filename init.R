@@ -19,6 +19,9 @@ library(shiny)
 library(shinyjs)
 library(stringi)
 
+systemConfigDir <- file.path("", "etc", "obsmon", Sys.getenv("USER"))
+systemCacheDirPath <- file.path("", "var", "cache", "obsmon", Sys.getenv("USER"))
+
 runAppHandlingBusyPort <- function(
   callAndErrorMsg=NULL,appDir=getwd(),defaultPort=5391,recDepth=0,maxNAtt=10
 ) {
@@ -79,7 +82,6 @@ fillInDefault <- function(config, key, default) {
 getSuitableCacheDirDefault <- function() {
 
   cacheDirPath <- NA
-  systemCacheDirPath <- file.path("", "var", "cache", "obsmon", Sys.getenv("USER"))
   homeCacheDirPath <- file.path(Sys.getenv("HOME"), ".obsmon", "experiments_cache")
 
   cacheDirPrio <- c(systemCacheDirPath, homeCacheDirPath)
@@ -107,7 +109,6 @@ getValidConfigFilePath <- function(verbose=FALSE) {
 
   userEnvConfigPath <- Sys.getenv("OBSMON_CONFIG_FILE")
   obsmonSrcDirConfigPath <- file.path(obsmonSrcDir, configFileDefBasename)
-  systemConfigDir <- file.path("", "etc", "obsmon", Sys.getenv("USER"))
   sysDirConfigPath <- file.path(systemConfigDir, configFileDefBasename)
   confOrder <- c(userEnvConfigPath, obsmonSrcDirConfigPath, sysDirConfigPath)
 
