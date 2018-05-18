@@ -84,7 +84,7 @@ getSuitableCacheDirDefault <- function() {
 
   cacheDirPrio <- c(systemCacheDirPath, homeCacheDirPath)
   for(dirPath in cacheDirPrio) {
-    dirCreated <- dir.create(dirPath, recursive=TRUE, showWarnings=FALSE)
+    dirCreated <- dir.create(dirPath, recursive=TRUE, showWarnings=FALSE, mode="0700")
     if(!(dirCreated | dir.exists(dirPath))) next
     if(file.access(dirPath, mode=2)==0) cacheDirPath <- dirPath
     if(dirCreated) unlink(dirPath, recursive=TRUE)
@@ -149,7 +149,7 @@ assertCacheDirWritable <- function(config, verbose=FALSE) {
 
   cacheDirPath <- config$general[["cacheDir"]]
 
-  dir.create(cacheDirPath, recursive=TRUE, showWarnings=FALSE)
+  dir.create(cacheDirPath, recursive=TRUE, showWarnings=FALSE, mode="0700")
   writable <- tryCatch(
     file.access(cacheDirPath, mode=2)==0,
     error=function(e) FALSE
