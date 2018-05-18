@@ -8,6 +8,9 @@ buildOnly <- "--build" %in% args # Just build, do not install
 rebuildAll <- "--rebuild-all" %in% args
 # --pedantic: Requires all srcs and builds all missing binaries.
 pedanticBuild <- "--pedantic" %in% args 
+# --local-install is useful whenever minimum interference with current R setup
+# is desirable
+localInstallRequested <- "--local-install" %in% args 
 
 workDir <- normalizePath(getwd())
 tmpDirForBuild <- normalizePath(tempdir())
@@ -23,6 +26,7 @@ localRLibDir <- file.path(workDir,"utils", "build", "local_R_library")
 depsCacheFile <- file.path(workDir,"utils", "build", "pkg_dependencies.Rdata")
 pkgSrcDir <- file.path(localRLibDir, "src", "contrib")
 preCompiledPkgsDir <- file.path(localRLibDir, "pre_compiled", sysInfoString)
+localInstallRLib <- file.path(localRLibDir, "locally_installed_R_library")
 
 remoteRepo <- c("http://cran.ma.imperial.ac.uk/")
 localRepo <- c(file.path("file:", localRLibDir))
@@ -32,12 +36,14 @@ binFileNames <- list.files(
                   full.names=TRUE
                 )
 
-lib=Sys.getenv("R_LIBS_USER")
-if(lib=="") lib=file.path(Sys.getenv("HOME"), "R", "library")
+# Configuring library search paths
+userRLib <- Sys.getenv("R_LIBS_USER")
+if(userRLib=="") userRLib <- file.path(Sys.getenv("HOME"), "R", "library")
+lib <- userRLib
+if(localInstallRequested) lib <- localInstallRLib
 lib <- path.expand(lib)
-
 tmpLibForBuild <- file.path(tmpDirForBuild, "temp_R_lib")
-.libPaths(unique(c(lib, tmpLibForBuild, .libPaths())))
+.libPaths(unique(c(localInstallRLib, userRLib, lib, tmpLibForBuild, .libPaths())))
 
 for (dir in c(lib, tmpLibForBuild, pkgSrcDir, preCompiledPkgsDir)) {
   if(!dir.exists(dir)) dir.create(dir, recursive=TRUE)
