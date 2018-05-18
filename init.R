@@ -19,8 +19,18 @@ library(shiny)
 library(shinyjs)
 library(stringi)
 
+# Creating some default config and cache dirs
 systemConfigDir <- file.path("", "etc", "obsmon", Sys.getenv("USER"))
 systemCacheDirPath <- file.path("", "var", "cache", "obsmon", Sys.getenv("USER"))
+for(dir in c(systemConfigDir, systemCacheDirPath)) {
+  # These dir.create commands fails silently if user has no permission or if
+  # the directories already exist. That is OK.
+  # All users can rwx to dirname(systemCacheDirPath), but no one modifies what
+  # someone else has created
+  dir.create(dirname(dir), recursive=TRUE, showWarnings=FALSE, mode="1777")
+  # Access to a user's own cache files only
+  dir.create(dir, recursive=FALSE, showWarnings=FALSE, mode="0700")
+}
 
 runAppHandlingBusyPort <- function(
   callAndErrorMsg=NULL,appDir=getwd(),defaultPort=5391,recDepth=0,maxNAtt=10
