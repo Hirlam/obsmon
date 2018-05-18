@@ -44,6 +44,11 @@ if(localInstallRequested) lib <- localInstallRLib
 lib <- path.expand(lib)
 tmpLibForBuild <- file.path(tmpDirForBuild, "temp_R_lib")
 .libPaths(unique(c(localInstallRLib, userRLib, lib, tmpLibForBuild, .libPaths())))
+cat("Directories in the R library search path (in order of priority):\n")
+for(dir in .libPaths()) {
+  cat(paste("  >", dir, "\n"))
+}
+cat("\n")
 
 for (dir in c(lib, tmpLibForBuild, pkgSrcDir, preCompiledPkgsDir)) {
   if(!dir.exists(dir)) dir.create(dir, recursive=TRUE)
@@ -249,6 +254,8 @@ if(buildOnly) {
 # Install step
 # At this stage, all needed binaries should be available
 cat("\n")
+cat("R libraries will (if needed) be installed to: ", lib, "\n")
+cat("\n")
 if(length(pkgsToBeInstalled)==0) {
  cat("The listed packages seem to have already been installed.\n")
  cat("Nothing to do.\n")
@@ -264,7 +271,6 @@ if(length(pkgsToBeUpdated)>0) {
   cat("Total:", length(pkgsToBeUpdated), "packages to be updated.\n")
 }
 
-cat("R libraries will be installed to: ", lib, "\n")
 binFileNames <- list.files(
                   preCompiledPkgsDir, pattern="\\.tar\\.gz$|\\.tgz$", 
                   full.names=TRUE

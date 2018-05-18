@@ -19,6 +19,12 @@ library(shiny)
 library(shinyjs)
 library(stringi)
 
+libMsg <- "Directories in the R library search path (in order of priority):\n"
+for(dir in .libPaths()) {
+  libMsg <- paste(libMsg, " >", dir, "\n")
+}
+flog.info(libMsg)
+
 # Creating some default config and cache dirs
 systemConfigDir <- file.path("", "etc", "obsmon", Sys.getenv("USER"))
 systemCacheDirPath <- file.path("", "var", "cache", "obsmon", Sys.getenv("USER"))
