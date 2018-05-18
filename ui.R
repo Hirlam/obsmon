@@ -1,4 +1,3 @@
-source("init.R")
 
 jscode <- "
 shinyjs.disableTab = function(name) {

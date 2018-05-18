@@ -1,4 +1,3 @@
-source("init.R")
 configure()
 
 clamp <- function(value, min, max, default=max) {
