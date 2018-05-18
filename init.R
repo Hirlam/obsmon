@@ -19,6 +19,19 @@ library(shiny)
 library(shinyjs)
 library(stringi)
 
+# Creating some default config and cache dirs
+systemConfigDir <- file.path("", "etc", "obsmon", Sys.getenv("USER"))
+systemCacheDirPath <- file.path("", "var", "cache", "obsmon", Sys.getenv("USER"))
+for(dir in c(systemConfigDir, systemCacheDirPath)) {
+  # These dir.create commands fails silently if user has no permission or if
+  # the directories already exist. That is OK.
+  # All users can rwx to dirname(systemCacheDirPath), but no one modifies what
+  # someone else has created
+  dir.create(dirname(dir), recursive=TRUE, showWarnings=FALSE, mode="1777")
+  # Access to a user's own cache files only
+  dir.create(dir, recursive=FALSE, showWarnings=FALSE, mode="0700")
+}
+
 runAppHandlingBusyPort <- function(
   callAndErrorMsg=NULL,appDir=getwd(),defaultPort=5391,recDepth=0,maxNAtt=10
 ) {
@@ -70,31 +83,104 @@ fillInDefault <- function(config, key, default) {
   if (is.null(config$general[[key]])) {
     config$general[[key]] <- default
   }
+  if(key=="cacheDir") {
+    config$general[[key]] <- normalizePath(config$general[[key]], mustWork=FALSE)
+  }
   config
 }
 
+getSuitableCacheDirDefault <- function() {
+
+  cacheDirPath <- NA
+  homeCacheDirPath <- file.path(Sys.getenv("HOME"), ".obsmon", "experiments_cache")
+
+  cacheDirPrio <- c(systemCacheDirPath, homeCacheDirPath)
+  for(dirPath in cacheDirPrio) {
+    dirCreated <- dir.create(dirPath, recursive=TRUE, showWarnings=FALSE, mode="0700")
+    if(!(dirCreated | dir.exists(dirPath))) next
+    if(file.access(dirPath, mode=2)==0) cacheDirPath <- dirPath
+    if(dirCreated) unlink(dirPath, recursive=TRUE)
+    if(!is.na(cacheDirPath)) break
+  }
+
+  return(cacheDirPath)
+}
+
 fillInDefaults <- function(config) {
-  config <- fillInDefault(config, "cacheDir",
-                          file.path("", "var", "cache", "obsmon"))
+  config <- fillInDefault(config, "cacheDir", getSuitableCacheDirDefault())
   config <- fillInDefault(config, "logLevel", "WARN")
   config
 }
 
-readConfig <- function() {
-  configFile <- "config.toml"
-  if (file.exists(configFile)) {
-    configPath <- configFile
-  } else {
-    systemConfigDir <- file.path("", "etc", "obsmon")
-    configPath <- file.path(systemConfigDir, configFile)
+getValidConfigFilePath <- function(verbose=FALSE) {
+  
+  configFileDefBasename <- "config.toml"
+  exampleConfigFilePath <- file.path(obsmonSrcDir, "config.toml.example")
+
+  userEnvConfigPath <- Sys.getenv("OBSMON_CONFIG_FILE")
+  obsmonSrcDirConfigPath <- file.path(obsmonSrcDir, configFileDefBasename)
+  sysDirConfigPath <- file.path(systemConfigDir, configFileDefBasename)
+  confOrder <- c(userEnvConfigPath, obsmonSrcDirConfigPath, sysDirConfigPath)
+
+  configPath <- NA
+  for (fPath in confOrder) {
+    if(file.exists(fPath)) {
+      configPath <- normalizePath(fPath)
+      break
+    }
   }
+
+  if(is.na(configPath)) {
+    msg <- paste('Config file"', configFileDefBasename, '"not found.\n')
+    msg <- paste(msg, "\n")
+    msg <- paste(msg, "Please put such file in one of the following dirs:\n")
+    msg <- paste(msg, "  >", obsmonSrcDir, "\n")
+    msg <- paste(msg, "  >", systemConfigDir, "\n")
+    msg <- paste(msg, "\n")
+    msg <- paste(msg, "Alternatively, you can specify the full path to your")
+    msg <- paste(msg, "config file by exporting the\n")
+    msg <- paste(msg, "envvar OBSMON_CONFIG_FILE\n")
+    msg <- paste(msg, "\n")
+    msg <- paste(msg, "Please check the following config file template:\n")
+    msg <- paste(msg, "  >", exampleConfigFilePath, "\n")
+    stop(msg)
+  } 
+
+  if(verbose) flog.info(paste("Config file found:", configPath, "\n"))
+  return(configPath)
+}
+
+readConfig <- function() {
+  configPath <- getValidConfigFilePath(verbose=TRUE)
   config <- fillInDefaults(parseTOML(configPath))
   config
+}
+
+assertCacheDirWritable <- function(config, verbose=FALSE) {
+
+  cacheDirPath <- config$general[["cacheDir"]]
+
+  dir.create(cacheDirPath, recursive=TRUE, showWarnings=FALSE, mode="0700")
+  writable <- tryCatch(
+    file.access(cacheDirPath, mode=2)==0,
+    error=function(e) FALSE
+  )
+
+  if(!writable) {
+    msg <- paste("Cannot write to cacheDir", cacheDirPath, "\n")
+    msg <- paste(msg, "Please specify a valid cacheDir value under the\n")
+    msg <- paste(msg, '"[general]" section in your config file.\n')
+    stop(msg)
+  }
+
+  if(verbose) flog.info(paste("cacheDir set to:", cacheDirPath, "\n"))
+
 }
 
 configure <- function() {
   if (!exists("obsmonConfig")) {
     config <- readConfig()
+    assertCacheDirWritable(config, verbose=TRUE)
     setPackageOptions(config)
     obsmonConfig <<- config
     sourceObsmonFiles()
