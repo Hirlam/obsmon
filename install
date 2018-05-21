@@ -58,6 +58,9 @@ cat('Gathering packages used in the ".R" files in current dir and subdirs...')
 # These may have been imported explicitly using "library" or "require",
 # or used without explicit import (double-colon syntax).
 allRFiles <- list.files(pattern="\\.R$", recursive=TRUE)
+# The local R library will certainly contain R files, but we wil handle those
+# via the "dependencies" function
+allRFiles <- allRFiles[!grepl(basename(localRLibDir), allRFiles)]
 mainPkgs <- getExplicitlyUsedRPkgs(allRFiles)
 
 cat("Done.\n  > The following",length(mainPkgs),"main packages were found:\n")
