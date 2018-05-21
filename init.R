@@ -1,31 +1,46 @@
 # Flagging that this file has been sourced
 initFileSourced <- TRUE
-library(Cairo)
-library(DBI)
-library(dplyr)
-library(dbplyr)
-library(flock)
-library(futile.logger)
-library(future)
-library(ggplot2)
-library(grid)
-library(gridExtra)
-library(leaflet)
-library(methods)
-library(pbapply)
-library(png)
-library(pryr)
-library(RcppTOML)
-library(reshape2)
-library(shiny)
-library(shinyjs)
-library(stringi)
+
+# Configuring library paths
+localRLibDir <- file.path(obsmonSrcDir,"utils", "build", "local_R_library")
+localInstallRLib <- file.path(localRLibDir, "locally_installed_R_library")
+userRLib <- Sys.getenv("R_LIBS_USER")
+if(userRLib=="") userRLib <- file.path(Sys.getenv("HOME"), "R", "library")
+userRLib <- normalizePath(userRLib, mustWork=FALSE)
+.libPaths(unique(c(localInstallRLib, userRLib, .libPaths())))
 
 libMsg <- "Directories in the R library search path (in order of priority):\n"
 for(dir in .libPaths()) {
   libMsg <- paste(libMsg, " >", dir, "\n")
 }
-flog.info(libMsg)
+
+tryCatch(
+  {
+    library(Cairo)
+    library(DBI)
+    library(dplyr)
+    library(dbplyr)
+    library(flock)
+    library(futile.logger)
+    library(future)
+    library(ggplot2)
+    library(grid)
+    library(gridExtra)
+    library(leaflet)
+    library(methods)
+    library(pbapply)
+    library(png)
+    library(pryr)
+    library(RcppTOML)
+    library(reshape2)
+    library(shiny)
+    library(shinyjs)
+    library(stringi)
+
+    flog.info(libMsg)
+  },
+  error=function(e) stop(paste(e, libMsg, sep="\n"))
+)
 
 # Creating some default config and cache dirs
 systemConfigDir <- file.path("", "etc", "obsmon", Sys.getenv("USER"))

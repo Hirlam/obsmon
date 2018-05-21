@@ -8,14 +8,6 @@ obsmonSrcDir <- dirname(Sys.readlink(thisFilePath))
 if(obsmonSrcDir=="" || is.na(obsmonSrcDir)) obsmonSrcDir<-dirname(thisFilePath)
 setwd(obsmonSrcDir)
 
-# Configuring library paths
-localRLibDir <- file.path(obsmonSrcDir,"utils", "build", "local_R_library")
-localInstallRLib <- file.path(localRLibDir, "locally_installed_R_library")
-userRLib <- Sys.getenv("R_LIBS_USER")
-if(userRLib=="") userRLib <- file.path(Sys.getenv("HOME"), "R", "library")
-userRLib <- normalizePath(userRLib, mustWork=FALSE)
-.libPaths(unique(c(localInstallRLib, userRLib, .libPaths())))
-
 # Initialising
 source("init.R")
 
