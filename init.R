@@ -1,3 +1,5 @@
+# Flagging that this file has been sourced
+initFileSourced <- TRUE
 library(Cairo)
 library(DBI)
 library(dplyr)
