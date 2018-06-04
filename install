@@ -259,7 +259,8 @@ if(length(binsToBeBuilt)==0) {
   for (pkgName in binsToBeBuilt) {
     tryCatch(
       install.packages(pkgName, lib=tmpLibForBuild,
-        repos=localRepo, type="source", INSTALL_opts="--build"
+        repos=localRepo, type="source", INSTALL_opts="--build",
+        configure.args=c(udunits2='--with-udunits2-include=/usr/include/udunits2')
       ),
       warning = function(w) handleInstallFailure(w, okToProceed=allSuggestsDeps),
       # Copying compiled binaries, so they are available next time
