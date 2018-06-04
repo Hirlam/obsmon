@@ -11,6 +11,10 @@ pedanticBuild <- "--pedantic" %in% args
 # --local-install is useful whenever minimum interference with current R setup
 # is desirable
 localInstallRequested <- "--local-install" %in% args 
+# The sf R library is only needed as a "requires" dependency and is not
+# installed be default, as it depends on gdal v2, which is not available
+# in some systems yet.
+sfSupport <- "--sf-support" %in% args 
 
 workDir <- normalizePath(getwd())
 tmpDirForBuild <- normalizePath(tempdir())
@@ -86,15 +90,32 @@ allEssencialDeps <- c()
 allSuggestsDeps <- c()
 allPkgDeps <- c()
 essentialDepsTypes <- c("Depends", "Imports", "LinkingTo")
+# Warning user if sf is to be intalled, as this may cause installation to fail
+# in some systems due to the lack of gdal v due to the lack of gdal v2
+exclude_from_suggests <- c("sf")
+if(sfSupport) {
+  cat("WARNING: Support to the sf R library requires gdal>2.0.\n")
+  cat("         The build will fail if your system doesn't have gdal v2.\n")
+  exclude_from_suggests <- exclude_from_suggests[!(exclude_from_suggests %in% "sf")]
+}
+sfSupportFlagModified <- ((!sfSupport && ("sf" %in% unlist(pkgsDeps))) |
+  (sfSupport && !("sf" %in% unlist(pkgsDeps))))
+refreshDeps <- refreshDeps | sfSupportFlagModified
+if(sfSupportFlagModified && !sfSupport) {
+  cat("WARNING: Support to the sf R-library removed from compilation\n")
+}
+
 for (pkg in mainPkgs) {
   cat("  >", pkg, "... ")
   if(refreshDeps | !(pkg %in% names(pkgsDeps))) {
     availablePkgsRemote <- available.packages(repos=remoteRepo)
     essencialDeps <- dependencies(pkg, db=availablePkgsRemote,
-                       levelOneDepsType=essentialDepsTypes
+                       levelOneDepsType=essentialDepsTypes,
+                       exclude_from_suggests=exclude_from_suggests
                      )
     suggestsDeps <- dependencies(pkg, db=availablePkgsRemote,
-                      levelOneDepsType="Suggests"
+                      levelOneDepsType="Suggests",
+                      exclude_from_suggests=exclude_from_suggests
                     )
     # A Suggests type dependency may also end up being a recursive non-suggests
     # dependency of the essencial packages. We don't want to have these

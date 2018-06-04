@@ -4,7 +4,7 @@ dependencies <- function(pkgName, db,
   levelOneDepsType=c("Depends", "Imports", "LinkingTo", "Suggests"),
   levelTwoDepsType=c("Depends", "Imports", "LinkingTo"),
   exclude=rownames(installed.packages(priority="base")),
-  exclude_from_suggests=c("sf")){
+  exclude_from_suggests=NULL){
   #  Recursively search dependencies if package pkgName.
   #
   #  pkgName: Package(s) for which dependencies should be searched
