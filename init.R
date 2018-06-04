@@ -1,6 +1,15 @@
 # Flagging that this file has been sourced
 initFileSourced <- TRUE
 
+getUserName <- function() {
+
+  userName <- Sys.info()[["user"]]
+  if (is.null(userName) | userName == "") userName <- Sys.getenv("USER")
+  if (is.null(userName) | userName == "") userName <- Sys.getenv("LOGNAME")
+  return(userName)
+}
+
+userName <- getUserName()
 # Configuring library paths
 localRLibDir <- normalizePath(file.path("utils", "build", "local_R_library"), mustWork=FALSE)
 localInstallRLib <- file.path(localRLibDir, "locally_installed_R_library")
@@ -38,13 +47,14 @@ tryCatch(
     library(stringi)
 
     flog.info(libMsg)
+    flog.info(paste('Running as user "', userName, '"', sep=""))
   },
   error=function(e) stop(paste(e, libMsg, sep="\n"))
 )
 
 # Creating some default config and cache dirs
-systemConfigDir <- file.path("", "etc", "obsmon", Sys.getenv("USER"))
-systemCacheDirPath <- file.path("", "var", "cache", "obsmon", Sys.getenv("USER"))
+systemConfigDir <- file.path("", "etc", "obsmon", userName)
+systemCacheDirPath <- file.path("", "var", "cache", "obsmon", userName)
 for(dir in c(systemConfigDir, systemCacheDirPath)) {
   # These dir.create commands fails silently if user has no permission or if
   # the directories already exist. That is OK.
