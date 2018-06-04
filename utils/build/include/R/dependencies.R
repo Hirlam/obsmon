@@ -51,7 +51,7 @@ dependencies <- function(pkgName, db,
       deps <- deps[!(deps %in% sugDeps2Rm)]
     }
 
-    deps <- unique(c(dependencies(deps, recDepth=recDepth+1), deps))
+    deps <- unique(c(dependencies(deps, db=db, recDepth=recDepth+1), deps))
     return(deps)
   }
 }
