@@ -163,11 +163,12 @@ initCache <- function(cachePath) {
 openCache <- function(db) {
   cacheFile <- slugify(paste(db$basename, db$name, "db", sep="."))
   cachePath <- file.path(obsmonConfig$general$cacheDir, cacheFile)
-  flog.info("Cache path: %s", cachePath)
   if (file.exists(cachePath)) {
+    flog.info('Cache path "%s" exists. Connecting.', cachePath)
     cache <- dbConnect(RSQLite::SQLite(), cachePath)
     setPragmas(cache)
   } else {
+    flog.info('Cache path "%s" does not exist. Initialising.', cachePath)
     cache <- initCache(cachePath)
   }
   cache
@@ -346,10 +347,15 @@ createDb <- function(dir, basename, name, file) {
     db <- prepareConnections(db)
     flog.info("......done checking dtgs......")
     flog.info("......updating db info......")
+    flog.debug("Opening cache db")
     db$cache <- openCache(db)
+    flog.debug("Attempting to update cache")
     db <- updateCache(db)
+    flog.debug("Initialising observation types")
     db <- initObtypes(db)
+    flog.debug("Initialising stations")
     db <- initStations(db)
+    flog.debug("Updating dates")
     db <- updateDates(db)
     flog.info("......done updating db info......")
     flog.info("...finished %s db...", name)
