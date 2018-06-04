@@ -64,7 +64,7 @@ for(dir in c(systemConfigDir, systemCacheDirPath)) {
   # someone else has created
   dir.create(dirname(dir), recursive=TRUE, showWarnings=FALSE, mode="1777")
   # Access to a user's own cache files only
-  dir.create(dir, recursive=FALSE, showWarnings=FALSE, mode="0700")
+  dir.create(dir, recursive=FALSE, showWarnings=FALSE, mode="0755")
 }
 
 runAppHandlingBusyPort <- function(
@@ -131,7 +131,7 @@ getSuitableCacheDirDefault <- function() {
 
   cacheDirPrio <- c(systemCacheDirPath, homeCacheDirPath)
   for(dirPath in cacheDirPrio) {
-    dirCreated <- dir.create(dirPath, recursive=TRUE, showWarnings=FALSE, mode="0700")
+    dirCreated <- dir.create(dirPath, recursive=TRUE, showWarnings=FALSE, mode="0755")
     if(!(dirCreated | dir.exists(dirPath))) next
     if(file.access(dirPath, mode=2)==0) cacheDirPath <- dirPath
     if(dirCreated) unlink(dirPath, recursive=TRUE)
@@ -195,7 +195,7 @@ assertCacheDirWritable <- function(config, verbose=FALSE) {
 
   cacheDirPath <- config$general[["cacheDir"]]
 
-  dir.create(cacheDirPath, recursive=TRUE, showWarnings=FALSE, mode="0700")
+  dir.create(cacheDirPath, recursive=TRUE, showWarnings=FALSE, mode="0755")
   writable <- tryCatch(
     file.access(cacheDirPath, mode=2)==0,
     error=function(e) FALSE
