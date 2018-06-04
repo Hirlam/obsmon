@@ -38,15 +38,6 @@ css <- "
 }
 "
 
-obsmonVersion <- if (file.exists("VERSION")) {
-                   versionFile <- file("VERSION", "r")
-                   version <- readLines(versionFile, 1)
-                   close(versionFile)
-                   version
-                 } else {
-                   "unknown"
-                 }
-
 shinyUI(
     fluidPage(
         tags$head(tags$script(HTML("
@@ -59,12 +50,12 @@ shinyUI(
         inlineCSS(css),
         div(
             id="loading-content",
-            h2(sprintf("Loading Obsmon (%s)...", obsmonVersion))
+            h2(sprintf("Loading Obsmon v%s. Please wait until caching finishes...", obsmonVersion))
         ),
         hidden(div(id="app-content",
         tagList(
-            tags$head(tags$title("Obsmon v2")),
-            h3(sprintf("Obsmon (%s)", obsmonVersion),
+            tags$head(tags$title(sprintf("Obsmon v%s", obsmonVersion))),
+            h3(sprintf("Obsmon v%s", obsmonVersion),
                style="text-align: center;"),
             hr()
         ),

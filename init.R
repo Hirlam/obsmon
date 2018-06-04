@@ -1,6 +1,8 @@
 # Flagging that this file has been sourced
 initFileSourced <- TRUE
 
+obsmonVersion <- "2.2.0-beta0"
+
 getUserName <- function() {
 
   userName <- Sys.info()[["user"]]

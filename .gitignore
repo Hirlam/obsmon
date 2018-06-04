@@ -18,3 +18,6 @@ Rplots.pdf
 rtags
 rtags.R
 TAGS
+
+locally_installed_R_library/
+pre_compiled/
