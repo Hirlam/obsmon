@@ -2,7 +2,7 @@
 initFileSourced <- TRUE
 
 # Configuring library paths
-localRLibDir <- file.path(obsmonSrcDir,"utils", "build", "local_R_library")
+localRLibDir <- normalizePath(file.path("utils", "build", "local_R_library"), mustWork=FALSE)
 localInstallRLib <- file.path(localRLibDir, "locally_installed_R_library")
 userRLib <- Sys.getenv("R_LIBS_USER")
 if(userRLib=="") userRLib <- file.path(Sys.getenv("HOME"), "R", "library")
@@ -138,10 +138,10 @@ fillInDefaults <- function(config) {
 getValidConfigFilePath <- function(verbose=FALSE) {
   
   configFileDefBasename <- "config.toml"
-  exampleConfigFilePath <- file.path(obsmonSrcDir, "config.toml.example")
+  exampleConfigFilePath <- normalizePath("config.toml.example", mustWork=FALSE)
 
   userEnvConfigPath <- Sys.getenv("OBSMON_CONFIG_FILE")
-  obsmonSrcDirConfigPath <- file.path(obsmonSrcDir, configFileDefBasename)
+  obsmonSrcDirConfigPath <- normalizePath(configFileDefBasename, mustWork=FALSE)
   sysDirConfigPath <- file.path(systemConfigDir, configFileDefBasename)
   confOrder <- c(userEnvConfigPath, obsmonSrcDirConfigPath, sysDirConfigPath)
 
@@ -157,7 +157,7 @@ getValidConfigFilePath <- function(verbose=FALSE) {
     msg <- paste('Config file"', configFileDefBasename, '"not found.\n')
     msg <- paste(msg, "\n")
     msg <- paste(msg, "Please put such file in one of the following dirs:\n")
-    msg <- paste(msg, "  >", obsmonSrcDir, "\n")
+    msg <- paste(msg, "  >", dirname(exampleConfigFilePath), "\n")
     msg <- paste(msg, "  >", systemConfigDir, "\n")
     msg <- paste(msg, "\n")
     msg <- paste(msg, "Alternatively, you can specify the full path to your")
