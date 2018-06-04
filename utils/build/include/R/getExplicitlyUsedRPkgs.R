@@ -1,39 +1,49 @@
 
 getExplicitlyUsedRPkgs <- function(files) {
-  # These may have been imported explicitly using "library" or "require",
-  # or used without explicit import (double-colon syntax).
+  # This routine returns a vector containing the names of the R packages
+  # that have explicitly been used in the files listed in the input variable.
+  #
+  # These packages may have been imported explicitly (using the statements
+  # listed in the local variable importTypeStatements), or used without
+  # explicit import by means of the double-colon syntax
+  #
+  # Dependencies of these packages are not investigates here.
 
   basePackagesR <- rownames(installed.packages(priority="base"))
 
+  # Defining the patterns to be used with regex
   pattParentheses <- "[[:space:]]*\\(+[[:space:]]*.+[[:space:]]*\\)"
-  pattLib <- paste("library+", pattParentheses, sep='')
-  pattReq <- paste("require+", pattParentheses, sep='')
   patDubColon <- "[[:alpha:]]+\\w*[[:space:]]*::"
-
-  importedPkgs <- c()
-  doubleColonPkgs <- c()
-  for (file in files) {
-    fLines <- readLines(file)
-    importedPkgs <- c(importedPkgs, grep(pattLib, fLines, value=TRUE))
-    importedPkgs <- c(importedPkgs, grep(pattReq, fLines, value=TRUE))
-    doubleColonPkgs <- c(doubleColonPkgs, grep(patDubColon, fLines, value=TRUE))
+  importTypeStatements <- c("library", "require", "requireNamespace",
+                            "attachNamespace", "loadNamespace")
+  importTypePatts <- c()
+  for(importTypeStatement in importTypeStatements) {
+    patt <- paste(importTypeStatement, "{1}", pattParentheses, sep='')
+    importTypePatts <- c(importTypePatts, patt)
   }
 
-  # Keeping only package names (i.e., no punctuation, white spaces etc.)
-  importedPkgs <- unique(
-    gsub("[\\(\\)[:space:]]", "",
-      regmatches(importedPkgs, gregexpr("\\(.*?\\)", importedPkgs))
-    )
-  )
-  doubleColonPkgs <- unique(
-    gsub("[:[:space:]]", "",
-      regmatches(doubleColonPkgs, gregexpr(patDubColon, doubleColonPkgs))
-    )
-  )
+  # Now using regex to find out which packages have been used
+  explicitlyUsedPkgs <- c()
+  for (file in files) {
+    fLines <- readLines(file)
 
-  # Finally building the list of main packages used.
-  # Dependencies are not yet considered at this stage.
-  rtn <- c(importedPkgs, doubleColonPkgs)
-  rtn <- sort(unique(rtn[!(rtn %in% basePackagesR)]))
-  return(rtn)
+    for(patt in importTypePatts) {
+      linesWithImports <- grep(patt, fLines, value=TRUE)
+      importTypeCalls <- regmatches(linesWithImports, regexpr(patt, linesWithImports))
+      importCallsArgs <- gsub("[\\(\\)[:space:]]", "",
+                           regmatches(importTypeCalls, regexpr("\\(.*?\\)", importTypeCalls))
+                         )
+      pkgsImportedInFile <- gsub(",.*", "", importCallsArgs)
+      explicitlyUsedPkgs <- c(explicitlyUsedPkgs, pkgsImportedInFile)
+    }
+
+    doubleColonLines <- grep(patDubColon, fLines, value=TRUE)
+    doubleColonUses <- regmatches(doubleColonLines, regexpr(patDubColon, doubleColonLines))
+    doubleColonPkgsInFile <- gsub("[:[:space:]]", "", doubleColonUses)
+
+    explicitlyUsedPkgs <- c(explicitlyUsedPkgs, doubleColonPkgsInFile)
+  }
+
+  return(sort(unique(explicitlyUsedPkgs[!(explicitlyUsedPkgs %in% basePackagesR)])))
 }
+
