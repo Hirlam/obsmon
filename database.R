@@ -185,7 +185,8 @@ updateCache <- function(db) {
   newDtgs <- db$dtgs[!oldDtgIdx]
   ingestShard <- function(dtg) {
     path <- db$paths[[dtg]]
-    if (!is.null(path) && file.exists(path)) {
+    if (is.null(path)) return(NULL)
+    else if (file.exists(path) && file.access(path, mode=4)==0) {
       dbExecute(db$cache, sprintf("ATTACH '%s' AS 'shard'", path))
       tables <- dbGetQuery(db$cache, "SELECT name FROM shard.sqlite_master WHERE type='table'")
       if (all(c("obsmon", "usage") %in% tables$name)) {
@@ -234,6 +235,9 @@ updateCache <- function(db) {
         )
       }
       dbExecute(db$cache, "DETACH 'shard'")
+    } else if(file.access(path, mode=4)!=0) {
+      flog.warn('User "%s" does NOT have read access to db file "%s"!', userName, path)
+      return(NULL)
     }
   }
   if(length(newDtgs)>0) {
