@@ -3,9 +3,10 @@
 args <- commandArgs(trailingOnly=TRUE)
 showDepsAndQuit <- "--listdeps" %in% args
 refreshDeps <- "--refreshdeps" %in% args
-allowSrcDownload <- !"--abort-if-src-missing" %in% args
 buildOnly <- "--build" %in% args # Just build, do not install
 rebuildAll <- "--rebuild-all" %in% args
+# Options that control whether downloads can be made from CRAN or not
+allowSrcDownload <- "--allow-downloads" %in% args | resetLocalRepo
 # --pedantic: Requires all srcs and builds all missing binaries.
 pedanticBuild <- "--pedantic" %in% args 
 # --local-install is useful whenever minimum interference with current R setup
@@ -187,11 +188,6 @@ if(pedanticBuild | rebuildAll) srcsReqInRepo <- allPkgs
 missingSrcsReqPkgs <- srcsReqInRepo[!(srcsReqInRepo %in% rownames(availablePkgsLocalRepo))]
 if(length(missingSrcsReqPkgs)>0) {
   # Deciding whether or not to download needed source files that are missing.
-  # The default is to download them. This is to keep backwards compatibility.
-  # It is preferrable, however, to have them downloaded and verified in a
-  # secure computer, and then moved to pkgSrcDir once they are considered safe.
-  # Use the "--abort-if-missing-src" command line option if you want the
-  # install script to abort if sources are not available locally.
   errMsg <- "The local R repo does not contain all required sources!\n"
   errMsg <- paste(errMsg, 
               "Sources are missing for the following packages:\n",
@@ -212,8 +208,9 @@ if(length(missingSrcsReqPkgs)>0) {
     availablePkgsLocalRepo <- available.packages(repos=localRepo)
     cat("Done.\n")
   } else {
-    errMsg <- paste(errMsg,'Cannot continue ("--abort-if-src-missing" used)\n')
-    errMsg <- paste(errMsg, "Please add the missing package tarballs to the\n")
+    errMsg <- paste(errMsg,'If you wish the missing sources to be downloaded,\n')
+    errMsg <- paste(errMsg,'please run the code with the "--allow-downloads" option.\n')
+    errMsg <- paste(errMsg, "You can also manually add the missing package tarballs to the\n")
     errMsg <- paste(errMsg, pkgSrcDir, "\n")
     errMsg <- paste(errMsg, "directory, use R's tools::write_PACKAGES",
                 "function to update the repo, and try again.\n"
