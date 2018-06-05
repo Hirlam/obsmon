@@ -20,6 +20,7 @@ getSysInfo <- function(includeSysName=FALSE, includeSysRelease=FALSE) {
       {
         sysRel <- system2("lsb_release", args=c("-r"), stdout=TRUE, stderr=FALSE)
         sysRel <- strsplit(sysRel, ":[[:space:]]*")[[1]][2]
+        sysRel <- strsplit(sysRel, ".", fixed=TRUE)[[1]][1]
       },
       silent=TRUE
     )

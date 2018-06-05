@@ -25,6 +25,14 @@ pathToBinary <- function(pkgName, pkgVer, platform, binDir=NULL, fullBinList=NUL
   return(pkgFile)
 }
 
+listBinFiles <- function(searchDirs) {
+  binFilePaths <- list.files(
+                    searchDirs, pattern="\\.tar\\.gz$|\\.tgz$",
+                    full.names=TRUE
+                  )
+  return(binFilePaths)
+}
+
 mvPkgsBinsToRepo <- function(tmpDirForBuild, preCompiledPkgsDir) {
   gzBinFiles <- list.files(tmpDirForBuild, pattern="\\.tar\\.gz$", 
                   recursive=TRUE, full.names=TRUE

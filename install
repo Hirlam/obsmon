@@ -27,20 +27,21 @@ source(file.path(includeDirR, "getExplicitlyUsedRPkgs.R"))
 source(file.path(includeDirR, "handleInstallFailure.R"))
 source(file.path(includeDirR, "binFilesAuxFunctions.R"))
 
-sysInfoString <- getSysInfo()
+sysInfoStringShort <- getSysInfo()
+sysInfoStringLong <- getSysInfo(includeSysName=TRUE, includeSysRelease=TRUE)
+
 localRLibDir <- file.path(workDir,"utils", "build", "local_R_library")
-depsCacheFile <- file.path(workDir,"utils", "build", "pkg_dependencies.Rdata")
 pkgSrcDir <- file.path(localRLibDir, "src", "contrib")
-preCompiledPkgsDir <- file.path(localRLibDir, "pre_compiled", sysInfoString)
 localInstallRLib <- file.path(localRLibDir, "locally_installed_R_library")
+localPreCompiledPkgsDir <- file.path(localRLibDir, "pre_compiled", sysInfoStringLong)
+envVarPreCompiledPkgsDir <- file.path(
+  unlist(strsplit(Sys.getenv("R_LIBS_BIN_REPO_ROOTDIR"), ":")),
+  sysInfoStringLong
+)
 
 remoteRepo <- c("http://cran.ma.imperial.ac.uk/")
 localRepo <- c(file.path("file:", localRLibDir))
 availablePkgsLocalRepo <- available.packages(repos=localRepo)
-binFileNames <- list.files(
-                  preCompiledPkgsDir, pattern="\\.tar\\.gz$|\\.tgz$",
-                  full.names=TRUE
-                )
 
 # Configuring library search paths
 userRLib <- Sys.getenv("R_LIBS_USER")
@@ -56,7 +57,7 @@ for(dir in .libPaths()) {
 }
 cat("\n")
 
-for (dir in c(lib, tmpLibForBuild, pkgSrcDir, preCompiledPkgsDir)) {
+for (dir in c(lib, tmpLibForBuild, pkgSrcDir, localPreCompiledPkgsDir)) {
   if(!dir.exists(dir)) dir.create(dir, recursive=TRUE)
 }
 
@@ -222,15 +223,19 @@ if(length(missingSrcsReqPkgs)>0) {
 
 # Build step
 # At this point, sources for all required packages should be available locally
-if(rebuildAll | length(binFileNames)==0) {
+binSearchPaths <- c(localPreCompiledPkgsDir, envVarPreCompiledPkgsDir)
+cat("Looking for pre-compiled binaries at:\n")
+for(dir in binSearchPaths) cat(paste("  >", dir, "\n"))
+binFilePaths <- listBinFiles(binSearchPaths)
+if(rebuildAll | length(binFilePaths)==0) {
   binsToBeBuilt <- allPkgs
 } else {
   binsToBeBuilt <- c()
   for (pkgName in srcsReqInRepo) {
     pkgVer <- availablePkgsLocalRepo[pkgName, "Version"]
     fPath <- pathToBinary(
-               pkgName, pkgVer, platform=sysInfoString, 
-               fullBinList=binFileNames
+               pkgName, pkgVer, platform=sysInfoStringShort, 
+               fullBinList=binFilePaths
              )
     if(is.na(fPath)) binsToBeBuilt <- c(binsToBeBuilt, pkgName)
   }
@@ -249,7 +254,7 @@ if(length(binsToBeBuilt)==0) {
   cat("\n")
   # If we do not do this, then install.packages may download these pkgs
   cat("Handling eventual pre-compiled but not installed R-pkg dependencies...")
-  install_binaries(fPaths=binFileNames, lib=tmpLibForBuild, overwrite=FALSE)
+  install_binaries(fPaths=binFilePaths, lib=tmpLibForBuild, overwrite=FALSE)
   cat(" Done.\n")
   cat("Building now...\n")
   # Moving to a tempdir so that the work dir doesn't get full of tarballs
@@ -262,7 +267,7 @@ if(length(binsToBeBuilt)==0) {
       ),
       warning = function(w) handleInstallFailure(w, okToProceed=allSuggestsDeps),
       # Copying compiled binaries, so they are available next time
-      finally=mvPkgsBinsToRepo(tmpDirForBuild, preCompiledPkgsDir)
+      finally=mvPkgsBinsToRepo(tmpDirForBuild, localPreCompiledPkgsDir)
     )
   }
   # Back to the original dir
@@ -294,19 +299,15 @@ if(length(pkgsToBeUpdated)>0) {
   cat("Total:", length(pkgsToBeUpdated), "packages to be updated.\n")
 }
 
-binFileNames <- list.files(
-                  preCompiledPkgsDir, pattern="\\.tar\\.gz$|\\.tgz$", 
-                  full.names=TRUE
-                )
-
+binFilePaths <- listBinFiles(binSearchPaths)
 for (pkgName in pkgsToBeInstalled) {
   installAction <- "  > Installing"
   if(pkgName %in% pkgsToBeUpdated) installAction <- "  > Updating"
   cat(paste(installAction, " ", pkgName, '... ', sep=""))
   pkgVer <- availablePkgsLocalRepo[pkgName, "Version"]
   preCompPkgPath <- pathToBinary(
-                      pkgName, pkgVer, platform=sysInfoString, 
-                      fullBinList=binFileNames
+                      pkgName, pkgVer, platform=sysInfoStringShort, 
+                      fullBinList=binFilePaths
                     )
   install_binaries(fPaths=preCompPkgPath, lib=lib, overwrite=TRUE)
   cat("Done.\n")
