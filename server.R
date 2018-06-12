@@ -65,9 +65,49 @@ updateCheckboxGroup <- function(session, inputId, choices, select="NORMAL") {
                              choices=choices, selected=selection, inline=TRUE)
 }
 
+
+separateReadyAndCachingExpts <- function(experiments) {
+  # Checks whether caching of each experiment has finished.
+  # Experiments for which caching is finished will be returned, and
+  # empty, placeholder experiments will be returned for those for which
+  # caching is ongoing. This makes it possible to access data from
+  # experiments that are ready even if there are experiments that are not.
+  rtn <- list()
+  resolvedStatus <- resolved(experiments)
+  exptNamesinConfig <- c()
+  for(config in obsmonConfig$experiments) {
+    exptNamesinConfig <- c(exptNamesinConfig, config$displayName)
+  }
+  exptNames <- exptNamesinConfig[exptNamesinConfig %in% ls(experiments)]
+
+  readyExpts <- list()
+  stillCachingExpts <- list()
+  for (exptName in exptNames) {
+    if(resolvedStatus[[exptName]]) {
+      readyExpts[[exptName]] <- experiments[[exptName]]
+    } else {
+      newName <- paste(exptName, "(Caching. Please check later...)")
+      stillCachingExpts[[newName]] <- emptyExperiment(newName)
+    }
+  }
+  return(c(readyExpts, stillCachingExpts))
+}
+
 shinyServer(function(input, output, session) {
   # Initial population of experiments; triggers cascade for other form fields
-  updateSelectInput(session, "experiment", choices=names(experiments))
+  exptNames <- c("")
+  experiments <- reactive ({
+    # Keep checking for updates in the experiments. Useful when chaching.
+    invalidateLater(1000, session)
+    separateReadyAndCachingExpts(experimentsAsPromises)
+  })
+  observe({
+      newExptNames <- names(experiments())
+      if(!all(exptNames==newExptNames)) {
+        updateSelectInput(session, "experiment", choices=newExptNames)
+        exptNames <<- newExptNames
+      }
+  })
   shinyjs::hide(id="loading-content", anim=TRUE, animType="fade")
   shinyjs::show("app-content")
 
@@ -77,7 +117,7 @@ shinyServer(function(input, output, session) {
   activeDb <- reactive({
     expName <- req(input$experiment)
     dbName <- req(input$odbBase)
-    experiments[[expName]]$dbs[[dbName]]
+    isolate(experiments()[[expName]]$dbs[[dbName]])
   })
 
   # Update database options according to chosen category
@@ -198,7 +238,7 @@ shinyServer(function(input, output, session) {
 
   # Build named list of criteria
   buildCriteria <- function() {
-    exp <- experiments[[req(input$experiment)]]
+    exp <- isolate(experiments()[[req(input$experiment)]])
     db <- req(input$odbBase)
     adb <- activeDb()
     res <- list()

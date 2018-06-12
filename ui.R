@@ -50,7 +50,7 @@ shinyUI(
         inlineCSS(css),
         div(
             id="loading-content",
-            h2(sprintf("Loading Obsmon v%s. Please wait until caching finishes...", obsmonVersion))
+            h2(sprintf("Loading Obsmon v%s...", obsmonVersion))
         ),
         hidden(div(id="app-content",
         tagList(

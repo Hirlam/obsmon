@@ -333,36 +333,36 @@ initStations <- function(db) {
 }
 
 createDb <- function(dir, basename, name, file) {
-  flog.info("...creating %s db...", name)
+  flog.info("...%s: creating %s db...", basename, name)
   db <- structure(list(), class="sqliteShardedDtgDb")
   db$dir <- dir
   db$basename <- basename
   db$name <- name
   db$file <- file
-  flog.info("......finding dtgs......")
+  flog.info("......%s: finding %s dtgs......", basename, name)
   db$dtgs <- as.integer(dir(path=dir, pattern="[0-9]{10}"))
   if (length(db$dtgs)==0) {
-    flog.warn("Db contains no dtgs. Aborting.")
-    warning("Db contains no dtgs. Aborting.")
+    flog.warn("%s: Db %s contains no dtgs. Aborting.", basename, name)
+    warning("%s: Db %s contains no dtgs. Aborting.", basename, name)
     NULL
   } else {
-    flog.info("......done finding dtgs......")
-    flog.info("......checking dtgs......")
+    flog.info("......%s: done finding %s dtgs......", basename, name)
+    flog.info("......%s: checking %s dtgs......", basename, name)
     db <- prepareConnections(db)
-    flog.info("......done checking dtgs......")
-    flog.info("......updating db info......")
-    flog.debug("Opening cache db")
+    flog.info("......%s: done checking %s dtgs......", basename, name)
+    flog.info("......%s: updating %s db info......", basename, name)
+    flog.debug("%s: Opening %s cache db", basename, name)
     db$cache <- openCache(db)
-    flog.debug("Attempting to update cache")
+    flog.debug("%s: Attempting to update %s cache db", basename, name)
     db <- updateCache(db)
-    flog.debug("Initialising observation types")
+    flog.debug("%s: Initialising %s observation types", basename, name)
     db <- initObtypes(db)
-    flog.debug("Initialising stations")
+    flog.debug("%s: Initialising %s stations", basename, name)
     db <- initStations(db)
-    flog.debug("Updating dates")
+    flog.debug("%s: Updating %s dates", basename, name)
     db <- updateDates(db)
-    flog.info("......done updating db info......")
-    flog.info("...finished %s db...", name)
+    flog.info("......%s: done updating %s db info......", basename, name)
+    flog.info("...%s: finished %s db...", basename, name)
     db
   }
 }
