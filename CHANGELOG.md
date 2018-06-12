@@ -4,32 +4,35 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
-## [Unreleased]
+## [2.2.0] 2018-06-12
 ### Added
 - "AverageMaps" plot category
     - Average First Guess Departure Map
     - Average Analysis Departure Map
     - Average Analysis Increment Map
 - Possibility to start obsmon from any directory (obsmon must be in the PATH)
+- Support to command line options in the install script
+- Possibility to install R-packages used by obsmon locally (as part of obsmon
+  itself), making it independent of R libraries installed in the system. This
+  is useful for packaging.
+- Support to offline installation
+- Support to using pre-compiled R libraries
 
 ### Changed
 - Auto-discovery cache is now sqlite-based (Fixes: #148)
+- Auto-discovery cache is also done asynchronously now. This means that, if
+  multiple experiments are being dealt with, the auto-discovery caching for
+  all of them can be performed simultaneously. Any experiment can now be
+  selected as soon as it is ready, without the need to wait for the others
+  to finish caching.
 - Info about installtion moved to INSTALL.md file
-- The install script now supports some command lines options
-- Automatic determination of R packages to be installed
-    - Their recursive dependencies are now handled explicitly, for the sake of
-      clarity and sanity
-    - A list of R packages needed by obsmon is now kept on
-      utils/build/pkg_dependencies.Rdata, which, by avoiding communication with
-      CRAN, allows quicker installation. The list can be updated by running the
-      install script with the option "--refreshdeps"
-- Added pre-compiled R packages as well as their source files, for faster
-  installation. See dirs located under utils/build/local_R_library
-- Added utility script "install_sys_deps.sh" to help installing system
-  dependencies of the R packages needed (RHEL7)
+- Automatic determination of imported R libraries
+    - R dependencies recursively determined prior to installation
+- obsmon and install executables are now R scripts (used to be bash)
 
 ### Fixed
 - Bias correction and First Guess Departure+Bias Correction maps are back
+- Look for an alternative TCP port if cannot use the one initially chosen
 
 ## [2.1.0] - 2017-10-20
 ### Added
@@ -61,5 +64,5 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - Settings tab
 - Environment variables for configuration
 
-[Unreleased]: https://git.smhi.se/paulo/obsmon/compare/obsmon-2.1.0...obsmon-2.2.x
+[2.2.0]: https://git.smhi.se/foum/obsmon/compare/obsmon-2.1.0...obsmon-2.2.0-rc.1
 [2.1.0]: https://git.smhi.se/a002160/obsmon/compare/obsmon-2.0.0...obsmon-2.1.0
