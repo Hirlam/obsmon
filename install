@@ -97,15 +97,20 @@ if(sfSupport) {
   exclude_from_suggests <- exclude_from_suggests[!(exclude_from_suggests %in% "sf")]
 }
 
+mainPkgsNotAvailableLocally <- mainPkgs[!(mainPkgs %in% rownames(availablePkgsLocalRepo))]
+if(resetLocalRepo | length(mainPkgsNotAvailableLocally)>0) {
+  availablePkgsRemoteRepo <- available.packages(repos=remoteRepo)
+}
+pkgsDbForDepsRefresh <- availablePkgsLocalRepo
+if(resetLocalRepo) pkgsDbForDepsRefresh <- availablePkgsRemoteRepo 
+
 for (pkg in mainPkgs) {
   cat("  >", pkg, "... ")
 
-  if(!exists("pkgsDbForDepsRefresh")) {
-    if(resetLocalRepo) {
-      pkgsDbForDepsRefresh <- available.packages(repos=remoteRepo)
-    } else {
-      pkgsDbForDepsRefresh <- availablePkgsLocalRepo
-    }
+  if(resetLocalRepo | (pkg %in% mainPkgsNotAvailableLocally)) {
+    pkgsDbForDepsRefresh <- availablePkgsRemoteRepo
+  } else {
+    pkgsDbForDepsRefresh <- availablePkgsLocalRepo
   }
   essencialDeps <- dependencies(pkg, db=pkgsDbForDepsRefresh,
                      levelOneDepsType=essentialDepsTypes,
