@@ -25,7 +25,8 @@ getExplicitlyUsedRPkgs <- function(files) {
   # Now using regex to find out which packages have been used
   explicitlyUsedPkgs <- c()
   for (file in files) {
-    fLines <- readLines(file)
+    fLines <- trimws(readLines(file))
+    fLines <- fLines[!startsWith(fLines, "#")]
 
     for(patt in importTypePatts) {
       linesWithImports <- grep(patt, fLines, value=TRUE)
