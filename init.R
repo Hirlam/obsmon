@@ -221,3 +221,5 @@ configure <- function() {
     sourceObsmonFiles()
   }
 }
+
+configure()

@@ -1,7 +1,5 @@
 if(!exists("initFileSourced")) source("init.R")
 
-configure()
-
 clamp <- function(value, min, max, default=max) {
   if (is.null(value)) {
     default
