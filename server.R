@@ -103,6 +103,7 @@ shinyServer(function(input, output, session) {
   })
   observe({
       newExptNames <- names(experiments())
+      if(length(newExptNames)==0) newExptNames <- c("No experiment available!")
       if(!all(exptNames==newExptNames)) {
         updateSelectInput(session, "experiment", choices=newExptNames)
         exptNames <<- newExptNames
@@ -132,6 +133,28 @@ shinyServer(function(input, output, session) {
       updateSelectInput(session, "odbBase", choices=list("Surface"="ecmaSfc"))
       shinyjs::disable("odbBase")
       shinyjs::disable("levels")
+    }
+  })
+
+  # Enable/disable choices if activeDB is/isn't NULL
+  observeEvent(activeDb(), ignoreNULL=FALSE, {
+    db <- activeDb()
+    allInputs <- names(input)
+    inputsNotToDisable <- c("experiment", "category", "odbBase")
+    inputsNotToEnable <- c()
+    category <- req(input$category)
+    if(category == "surface") {
+      inputsNotToEnable <- c(inputsNotToEnable, "odbBase", "levels")
+    }
+    if(is.null(db)) {
+      inputsToDisable <- allInputs[!(allInputs %in% inputsNotToDisable)]
+      for(inp in inputsToDisable) shinyjs::disable(inp)
+      updateActionButton(session, inputId="doPlot",
+        label = "No data for selected experiment/category/database")
+    } else {
+      inputsToEnable <- allInputs[!(allInputs %in% inputsNotToEnable)]
+      for(inp in inputsToEnable) shinyjs::enable(inp)
+      updateActionButton(session, inputId="doPlot", label = "Plot")
     }
   })
 

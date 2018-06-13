@@ -9,7 +9,13 @@ expCreateSqliteShardedDtg <- function(name,
                             name, "ecmaSfc", "ecma.db")
   x$dbs$ccma <- createDb(file.path(baseDir, experiment, "ccma"),
                          name, "ccma", "ccma.db")
-  flog.info("Finished initialization of experiment %s.", name)
+  nullExp <- is.null(x$dbs$ecma) & is.null(x$dbs$ecmaSfc) & is.null(x$dbs$ccma)
+  if(nullExp) {
+    flog.warn("Could not find any data for experiment %s. Skipping it.", name)
+    x <- NULL
+  } else {
+    flog.info("Finished initialization of experiment %s.", name)
+  }
   x
 }
 
