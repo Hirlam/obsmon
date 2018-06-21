@@ -19,5 +19,6 @@ rtags
 rtags.R
 TAGS
 
-locally_installed_R_library/
+R-libs/
+R-libs
 pre_compiled/
