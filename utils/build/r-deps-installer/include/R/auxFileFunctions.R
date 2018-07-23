@@ -9,7 +9,11 @@ filesAreR <- function(fPaths) {
       con = file(fPath, "r")
       line = readLines(con, n=1, warn=FALSE)
       close(con)
-      rtn <- c(rtn, grepl("Rscript", line, fixed=TRUE, useBytes=TRUE))
+      if(length(line)>0) {
+        rtn <- c(rtn, grepl("Rscript", line, fixed=TRUE, useBytes=TRUE))
+      } else {
+        rtn <- c(rtn, FALSE)
+      }
     }
     else rtn <- c(rtn, FALSE)
   }
