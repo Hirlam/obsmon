@@ -31,7 +31,7 @@ getExplicitlyUsedRPkgs <- function(files) {
     for(patt in importTypePatts) {
       linesWithImports <- grep(patt, fLines, value=TRUE)
       importTypeCalls <- regmatches(linesWithImports, regexpr(patt, linesWithImports))
-      importCallsArgs <- gsub("[\\(\\)[:space:]]", "",
+      importCallsArgs <- gsub("[\\(\\)[:space:]\"]", "",
                            regmatches(importTypeCalls, regexpr("\\(.*?\\)", importTypeCalls))
                          )
       pkgsImportedInFile <- gsub(",.*", "", importCallsArgs)
