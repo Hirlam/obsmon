@@ -1,6 +1,19 @@
 #!/usr/bin/env Rscript
 
 args <- commandArgs(trailingOnly=FALSE)
+
+getArgVal <- function(argName) {
+  argPatt <- paste(argName, "={1}", sep="")
+  argStr <- grep(argPatt, args, value=TRUE)
+
+  if(length(argStr)==0) argVal <- NULL
+  else {
+    argVal <- gsub(argPatt, "", argStr)
+    if(is.na(argVal) | argVal=="") argVal <- NULL
+  }
+  return(argVal)
+}
+
 showDepsAndQuit <- "--listdeps" %in% args
 buildOnly <- "--build" %in% args # Just build, do not install
 rebuildAll <- "--rebuild-all" %in% args
@@ -23,7 +36,7 @@ pkgsSafeToIgnore <- c("RadarBE")
 excludeFromSuggests <- c("sf")
 
 # Getting file path and defining workDir
-thisFileRelPath <- sub("--file=", "", args[grep("--file=", args)])
+thisFileRelPath <- getArgVal("--file")
 thisFileDir <- normalizePath(dirname(thisFileRelPath))
 thisFileName <- basename(thisFileRelPath)
 thisFileAbsPath <- file.path(thisFileDir, thisFileName)
