@@ -30,6 +30,9 @@ localInstallRequested <- "--local-install" %in% args
 # installed be default, as it depends on gdal v2, which is not available
 # in some systems yet.
 sfSuggestsSupport <- "--sf-suggests-support" %in% args 
+# Relative path to the local R library directory
+# (to replace the default localRLibDir, optionally)
+localRLibDirUserArg <- getArgVal("--local-R-lib-dir")
 
 # List here packages that can be ignored
 pkgsSafeToIgnore <- c("RadarBE")
@@ -58,6 +61,9 @@ sysInfoStringShort <- getSysInfo()
 sysInfoStringLong <- getSysInfo(includeSysName=TRUE, includeSysRelease=TRUE)
 
 localRLibDir <- file.path(workDir,"utils", "build", "local_R_library")
+if(!is.null(localRLibDirUserArg)) {
+  localRLibDir <- file.path(workDir, localRLibDirUserArg)
+}
 pkgSrcDir <- file.path(localRLibDir, "src", "contrib")
 localInstallRLib <- file.path(localRLibDir, "R-libs")
 localPreCompiledPkgsDir <- file.path(localRLibDir, "pre_compiled", sysInfoStringLong)
