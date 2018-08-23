@@ -1,6 +1,19 @@
 #!/usr/bin/env Rscript
 
 args <- commandArgs(trailingOnly=FALSE)
+
+getArgVal <- function(argName) {
+  argPatt <- paste(argName, "={1}", sep="")
+  argStr <- grep(argPatt, args, value=TRUE)
+
+  if(length(argStr)==0) argVal <- NULL
+  else {
+    argVal <- gsub(argPatt, "", argStr)
+    if(is.na(argVal) | argVal=="") argVal <- NULL
+  }
+  return(argVal)
+}
+
 showDepsAndQuit <- "--listdeps" %in% args
 buildOnly <- "--build" %in% args # Just build, do not install
 rebuildAll <- "--rebuild-all" %in% args
@@ -16,10 +29,19 @@ localInstallRequested <- "--local-install" %in% args
 # The sf R library is only needed as a "requires" dependency and is not
 # installed be default, as it depends on gdal v2, which is not available
 # in some systems yet.
-sfSupport <- "--sf-support" %in% args 
+sfSuggestsSupport <- "--sf-suggests-support" %in% args 
+# Optional user-specified workDir
+workDirUserArg <- getArgVal("--workdir")
+# Path to the local R library directory (relative to workDir)
+# (to replace the default localRLibDir, optionally)
+localRLibDirUserArg <- getArgVal("--local-R-lib-dir")
+
+# List here packages that can be ignored
+pkgsSafeToIgnore <- c("RadarBE")
+excludeFromSuggests <- c("sf")
 
 # Getting file path and defining workDir
-thisFileRelPath <- sub("--file=", "", args[grep("--file=", args)])
+thisFileRelPath <- getArgVal("--file")
 thisFileDir <- normalizePath(dirname(thisFileRelPath))
 thisFileName <- basename(thisFileRelPath)
 thisFileAbsPath <- file.path(thisFileDir, thisFileName)
@@ -27,6 +49,8 @@ thisFileAbsPath <- file.path(thisFileDir, thisFileName)
 thisFileRealPath <- normalizePath(thisFileAbsPath)
 thisFileRealDirPath <- normalizePath(dirname(thisFileRealPath))
 workDir <- thisFileDir
+if(!is.null(workDirUserArg)) workDir <- normalizePath(workDirUserArg)
+setwd(workDir)
 
 tmpDirForBuild <- normalizePath(tempdir())
 includeDirR <- file.path(thisFileRealDirPath, "include", "R")
@@ -34,14 +58,18 @@ source(file.path(includeDirR, "getSysInfo.R"))
 source(file.path(includeDirR, "dependencies.R"))
 source(file.path(includeDirR, "getExplicitlyUsedRPkgs.R"))
 source(file.path(includeDirR, "handleInstallFailure.R"))
+source(file.path(includeDirR, "auxFileFunctions.R"))
 source(file.path(includeDirR, "binFilesAuxFunctions.R"))
 
 sysInfoStringShort <- getSysInfo()
 sysInfoStringLong <- getSysInfo(includeSysName=TRUE, includeSysRelease=TRUE)
 
 localRLibDir <- file.path(workDir,"utils", "build", "local_R_library")
+if(!is.null(localRLibDirUserArg)) {
+  localRLibDir <- file.path(workDir, localRLibDirUserArg)
+}
 pkgSrcDir <- file.path(localRLibDir, "src", "contrib")
-localInstallRLib <- file.path(localRLibDir, "locally_installed_R_library")
+localInstallRLib <- file.path(localRLibDir, "R-libs")
 localPreCompiledPkgsDir <- file.path(localRLibDir, "pre_compiled", sysInfoStringLong)
 envVarPreCompiledPkgsDir <- file.path(
   unlist(strsplit(Sys.getenv("R_LIBS_BIN_REPO_ROOTDIR"), ":")),
@@ -50,33 +78,46 @@ envVarPreCompiledPkgsDir <- file.path(
 
 remoteRepo <- c("http://cran.ma.imperial.ac.uk/")
 localRepo <- c(file.path("file:", localRLibDir))
-availablePkgsLocalRepo <- available.packages(repos=localRepo)
 
 # Configuring library search paths
-userRLib <- Sys.getenv("R_LIBS_USER")
-if(userRLib=="") userRLib <- file.path(Sys.getenv("HOME"), "R", "library")
-lib <- userRLib
-if(localInstallRequested) lib <- localInstallRLib
+originalLibPaths <- .libPaths()
+.libPaths("")
+if(localInstallRequested) {
+  lib <- localInstallRLib
+} else {
+  .libPaths(originalLibPaths)
+  userRLib <- Sys.getenv("R_LIBS_USER")
+  if(userRLib=="") userRLib <- file.path(Sys.getenv("HOME"), "R", "library")
+  lib <- userRLib
+}
 lib <- path.expand(lib)
 tmpLibForBuild <- file.path(tmpDirForBuild, "temp_R_lib")
-.libPaths(unique(c(localInstallRLib, userRLib, lib, tmpLibForBuild, .libPaths())))
+newLibPaths <- unique(c(localInstallRLib, lib, tmpLibForBuild, .libPaths()))
+for (dir in newLibPaths) if(!dir.exists(dir)) dir.create(dir, recursive=TRUE)
+.libPaths(newLibPaths)
 cat("Directories in the R library search path (in order of priority):\n")
 for(dir in .libPaths()) {
   cat(paste("  >", dir, "\n"))
 }
 cat("\n")
 
-for (dir in c(lib, tmpLibForBuild, pkgSrcDir, localPreCompiledPkgsDir)) {
-  if(!dir.exists(dir)) dir.create(dir, recursive=TRUE)
+# Initialising local repo if it doesn't exist
+if(!dir.exists(pkgSrcDir)) {
+  dir.create(pkgSrcDir, recursive=TRUE)
+  file.create(file.path(pkgSrcDir, "PACKAGES"))
 }
+if(!dir.exists(localPreCompiledPkgsDir)) dir.create(localPreCompiledPkgsDir, recursive=TRUE)
+
+availablePkgsLocalRepo <- available.packages(repos=localRepo)
 
 cat('Gathering packages used in the ".R" files in current dir and subdirs...')
 # These may have been imported explicitly using "library" or "require",
 # or used without explicit import (double-colon syntax).
-allRFiles <- list.files(pattern="\\.R$", recursive=TRUE)
+allFiles <- list.files(path=".", recursive=TRUE, full.names=TRUE)
+allFiles <- allFiles[!grepl(basename(localInstallRLib), allFiles)]
 # The local R library will certainly contain R files, but we wil handle those
 # via the "dependencies" function
-allRFiles <- allRFiles[!grepl(basename(localRLibDir), allRFiles)]
+allRFiles <- allFiles[filesAreR(allFiles)]
 mainPkgs <- getExplicitlyUsedRPkgs(allRFiles)
 
 cat("Done.\n  > The following",length(mainPkgs),"main packages were found:\n")
@@ -97,13 +138,12 @@ allEssencialDeps <- c()
 allSuggestsDeps <- c()
 allPkgDeps <- c()
 essentialDepsTypes <- c("Depends", "Imports", "LinkingTo")
-# Warning user if sf is to be intalled, as this may cause installation to fail
-# in some systems due to the lack of gdal v due to the lack of gdal v2
-exclude_from_suggests <- c("sf")
-if(sfSupport) {
+# Warning user if sf is to be installed as a suggests-type dependency, as this
+# may cause installation to fail in some systems due to the lack of gdal v2
+if(sfSuggestsSupport) {
   cat("WARNING: Support to the sf R library requires gdal>2.0.\n")
   cat("         The build will fail if your system doesn't have gdal v2.\n")
-  exclude_from_suggests <- exclude_from_suggests[!(exclude_from_suggests %in% "sf")]
+  excludeFromSuggests <- excludeFromSuggests[!(excludeFromSuggests %in% "sf")]
 }
 
 mainPkgsNotAvailableLocally <- mainPkgs[!(mainPkgs %in% rownames(availablePkgsLocalRepo))]
@@ -123,11 +163,11 @@ for (pkg in mainPkgs) {
   }
   essencialDeps <- dependencies(pkg, db=pkgsDbForDepsRefresh,
                      levelOneDepsType=essentialDepsTypes,
-                     exclude_from_suggests=exclude_from_suggests
+                     exclude_from_suggests=excludeFromSuggests
                    )
   suggestsDeps <- dependencies(pkg, db=pkgsDbForDepsRefresh,
                     levelOneDepsType="Suggests",
-                    exclude_from_suggests=exclude_from_suggests
+                    exclude_from_suggests=excludeFromSuggests
                   )
   # A Suggests type dependency may also end up being a recursive non-suggests
   # dependency of the essencial packages. We don't want to have these
@@ -212,17 +252,29 @@ if(length(missingSrcsReqPkgs)>0) {
   for(pkgName in missingSrcsReqPkgs) {
     errMsg <- paste(errMsg, "  >", pkgName, "\n")
   }
+
+  downloadedPkgs <- c()
   if(allowSrcDownload) {
-    errMsg <- paste(errMsg, "Missing sources will be downloaded from CRAN.\n")
+    errMsg <- paste(errMsg, "Missing sources will be downloaded from CRAN if available.\n")
     errMsg <- paste(errMsg, "They will be saved under", pkgSrcDir, "\n")
     cat(errMsg)
     # Downloading
-    download.packages(missingSrcsReqPkgs, destdir=pkgSrcDir,
-                      repos=remoteRepo, type="source")
-    cat("Updating local R repo... ")
-    tools::write_PACKAGES(dir=pkgSrcDir)
-    availablePkgsLocalRepo <- available.packages(repos=localRepo)
-    cat("Done.\n")
+    for(pkg in missingSrcsReqPkgs) {
+      tryCatch(
+        {
+          download.packages(pkg, destdir=pkgSrcDir, repos=remoteRepo, type="source")
+          downloadedPkgs <- c(downloadedPkgs, pkg)
+        },
+        warning=function(w) warning(w),
+        error=function(e) warning(e)
+      )
+    }
+    if(length(downloadedPkgs)>0) {
+      cat("Updating local R repo... ")
+      tools::write_PACKAGES(dir=pkgSrcDir)
+      availablePkgsLocalRepo <- available.packages(repos=localRepo)
+      cat("Done.\n")
+    }
   } else {
     errMsg <- paste(errMsg,'If you wish the missing sources to be downloaded,\n')
     errMsg <- paste(errMsg,'please run the code with the "--allow-downloads" option.\n')
@@ -231,7 +283,40 @@ if(length(missingSrcsReqPkgs)>0) {
     errMsg <- paste(errMsg, "directory, use R's tools::write_PACKAGES",
                 "function to update the repo, and try again.\n"
               )
-    stop(errMsg)
+    cat(errMsg)
+  }
+  # Updating missing pkgs list
+  missingSrcsReqPkgs <- missingSrcsReqPkgs[!(missingSrcsReqPkgs %in% downloadedPkgs)]
+  if(length(missingSrcsReqPkgs)>0) {
+    ignoredPkgs <- missingSrcsReqPkgs[missingSrcsReqPkgs %in% pkgsSafeToIgnore]
+    pkgsCannotBeIgnored <- missingSrcsReqPkgs[!(missingSrcsReqPkgs %in% pkgsSafeToIgnore)]
+    # Updating allPkgs and srcsReqInRepo lists to take into account ignored pkgs
+    allPkgs <- allPkgs[!(allPkgs %in% ignoredPkgs)]
+    srcsReqInRepo <- srcsReqInRepo[!(srcsReqInRepo %in% ignoredPkgs)]
+    pkgsToBeInstalled <- pkgsToBeInstalled[!(pkgsToBeInstalled %in% ignoredPkgs)]
+
+    if(length(ignoredPkgs)>0) {
+      cat("\n")
+      cat('Ignoring the following missing packages (see variable "pkgsSafeToIgnore"):\n')
+      for (pkg in pkgsSafeToIgnore) {
+        cat("    *", pkg, "\n")
+      }
+    }
+
+    if(length(pkgsCannotBeIgnored)>0) {
+      errMsg <- 'The following pkg sources are missing and cannot be ignored:\n'
+      for(pkg in pkgsCannotBeIgnored) {
+        errMsg <- paste(errMsg, "  >", pkg, "\n")
+      }
+      errMsg <- paste(errMsg, "Please add the missing package tarballs to the\n")
+      errMsg <- paste(errMsg, pkgSrcDir, "\n")
+      errMsg <- paste(errMsg, "directory, use R's tools::write_PACKAGES",
+                  "function to update the repo, and try again.\n"
+                )
+      errMsg <- paste(errMsg, "Cannot countinue.\n")
+      cat("\n")
+      stop(errMsg)
+    }
   }
 }
 
@@ -296,6 +381,11 @@ if(buildOnly) {
 # Install step
 # At this stage, all needed binaries should be available
 cat("\n")
+# Cretaing symlink to localInstallRLib
+symlinkTarget <- gsub(paste("^", workDir, "{1}/*", sep=""), "", localInstallRLib)
+unlink(basename(localInstallRLib))
+symlinkCreated <- file.symlink(symlinkTarget, basename(localInstallRLib))
+
 cat("R libraries will (if needed) be installed to: ", lib, "\n")
 cat("\n")
 if(length(pkgsToBeInstalled)==0) {
