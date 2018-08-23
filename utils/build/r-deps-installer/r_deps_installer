@@ -30,7 +30,9 @@ localInstallRequested <- "--local-install" %in% args
 # installed be default, as it depends on gdal v2, which is not available
 # in some systems yet.
 sfSuggestsSupport <- "--sf-suggests-support" %in% args 
-# Relative path to the local R library directory
+# Optional user-specified workDir
+workDirUserArg <- getArgVal("--workdir")
+# Path to the local R library directory (relative to workDir)
 # (to replace the default localRLibDir, optionally)
 localRLibDirUserArg <- getArgVal("--local-R-lib-dir")
 
@@ -47,6 +49,8 @@ thisFileAbsPath <- file.path(thisFileDir, thisFileName)
 thisFileRealPath <- normalizePath(thisFileAbsPath)
 thisFileRealDirPath <- normalizePath(dirname(thisFileRealPath))
 workDir <- thisFileDir
+if(!is.null(workDirUserArg)) workDir <- normalizePath(workDirUserArg)
+setwd(workDir)
 
 tmpDirForBuild <- normalizePath(tempdir())
 includeDirR <- file.path(thisFileRealDirPath, "include", "R")
