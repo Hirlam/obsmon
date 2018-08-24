@@ -47,6 +47,7 @@ tryCatch(
     library(shiny)
     library(shinyjs)
     library(stringi)
+    library(V8)
 
     flog.info(libMsg)
     flog.info(paste('Running as user "', userName, '"', sep=""))
