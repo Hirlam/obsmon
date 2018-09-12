@@ -1,6 +1,8 @@
 #!/usr/bin/env Rscript
 args <- commandArgs(trailingOnly = FALSE)
 
+#
+launchBrowser <- "--launch" %in% args
 # Changing work dir to obsmonSrcDir, so all needed files can be found
 thisFilePath <- normalizePath(sub("--file=", "", args[grep("--file=", args)]))
 # Accounting for the fact that the script may be executed via a symlink
@@ -12,4 +14,6 @@ setwd(obsmonSrcDir)
 source("init.R")
 
 # Running the shinny app. This routine is defined in the file init.R
-runAppHandlingBusyPort(appDir=obsmonSrcDir, defaultPort=5391)
+runAppHandlingBusyPort(
+    appDir=obsmonSrcDir, defaultPort=5391, launch.browser=launchBrowser
+)

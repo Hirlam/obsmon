@@ -69,11 +69,12 @@ for(dir in c(systemConfigDir, systemCacheDirPath)) {
 }
 
 runAppHandlingBusyPort <- function(
-  callAndErrorMsg=NULL,appDir=getwd(),defaultPort=5391,recDepth=0,maxNAtt=10
+  callAndErrorMsg=NULL,appDir=getwd(),defaultPort=5391,launch.browser=FALSE,
+  recDepth=0,maxNAtt=10
 ) {
   if(recDepth==0) {
     tryCatch(
-      runApp(appDir, launch.browser=FALSE, port=defaultPort),
+      runApp(appDir, launch.browser=launch.browser, port=defaultPort),
       error=function(w) runAppHandlingBusyPort(w, appDir=appDir,recDepth=recDepth+1)
     )
   } else if (recDepth+1>maxNAtt) {
@@ -85,7 +86,7 @@ runAppHandlingBusyPort <- function(
       cat(msg, "\n")
       cat("Trying again with a different TCP port:\n")
       tryCatch(
-        runApp(appDir, launch.browser=FALSE),
+        runApp(appDir, launch.browser=launch.browser),
         error=function(w) runAppHandlingBusyPort(w, appDir=appDir, recDepth=recDepth+1)
       )
   }
