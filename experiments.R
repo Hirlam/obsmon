@@ -1,6 +1,6 @@
 expCreateSqliteShardedDtg <- function(name,
                                       baseDir, experiment) {
-  flog.info("Initialization of experiment %s...", name)
+  flog.info("Initializing experiment %s...", name)
   x <- structure(list(), class = "sqliteShardedDtg")
   x$name <- name
   x$dbs$ecma <- createDb(file.path(baseDir, experiment, "ecma"),

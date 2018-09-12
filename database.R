@@ -333,24 +333,24 @@ initStations <- function(db) {
 }
 
 createDb <- function(dir, basename, name, file) {
-  flog.info("...%s: creating %s db...", basename, name)
+  flog.debug("...%s: creating %s db...", basename, name)
   db <- structure(list(), class="sqliteShardedDtgDb")
   db$dir <- dir
   db$basename <- basename
   db$name <- name
   db$file <- file
-  flog.info("......%s: finding %s dtgs......", basename, name)
+  flog.debug("......%s: finding %s dtgs......", basename, name)
   db$dtgs <- as.integer(dir(path=dir, pattern="[0-9]{10}"))
   if (length(db$dtgs)==0) {
     flog.warn("%s: Db %s contains no dtgs. Aborting.", basename, name)
     warning("%s: Db %s contains no dtgs. Aborting.", basename, name)
     NULL
   } else {
-    flog.info("......%s: done finding %s dtgs......", basename, name)
-    flog.info("......%s: checking %s dtgs......", basename, name)
+    flog.debug("......%s: done finding %s dtgs......", basename, name)
+    flog.debug("......%s: checking %s dtgs......", basename, name)
     db <- prepareConnections(db)
-    flog.info("......%s: done checking %s dtgs......", basename, name)
-    flog.info("......%s: updating %s db info......", basename, name)
+    flog.debug("......%s: done checking %s dtgs......", basename, name)
+    flog.debug("......%s: updating %s db info......", basename, name)
     flog.debug("%s: Opening %s cache db", basename, name)
     db$cache <- openCache(db)
     flog.debug("%s: Attempting to update %s cache db", basename, name)
@@ -361,8 +361,8 @@ createDb <- function(dir, basename, name, file) {
     db <- initStations(db)
     flog.debug("%s: Updating %s dates", basename, name)
     db <- updateDates(db)
-    flog.info("......%s: done updating %s db info......", basename, name)
-    flog.info("...%s: finished %s db...", basename, name)
+    flog.debug("......%s: done updating %s db info......", basename, name)
+    flog.debug("...%s: finished %s db...", basename, name)
     db
   }
 }
