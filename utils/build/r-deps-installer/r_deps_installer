@@ -242,6 +242,19 @@ if(resetLocalRepo) {
 } else {
   missingSrcsReqPkgs <- srcsReqInRepo[!(srcsReqInRepo %in% rownames(availablePkgsLocalRepo))]
 }
+
+
+errMsgSolveMissingPkgs <- paste(
+  '>>> If you wish the missing sources to be downloaded automatically, please\n',
+  '    run the installation script with the option "--allow-downloads',
+  '\n \n',
+  "You can also manually add the missing package tarballs to the\n",
+  pkgSrcDir, "\n",
+  "directory, go to that directory, open R, run\n",
+  "    tools::write_PACKAGES() \n",
+  "to update the repo, and try again.\n"
+)
+
 if(length(missingSrcsReqPkgs)>0) {
   # Deciding whether or not to download needed source files that are missing.
   errMsg <- "The local R repo does not contain all required sources!\n"
@@ -276,13 +289,7 @@ if(length(missingSrcsReqPkgs)>0) {
       cat("Done.\n")
     }
   } else {
-    errMsg <- paste(errMsg,'If you wish the missing sources to be downloaded,\n')
-    errMsg <- paste(errMsg,'please run the code with the "--allow-downloads" option.\n')
-    errMsg <- paste(errMsg, "You can also manually add the missing package tarballs to the\n")
-    errMsg <- paste(errMsg, pkgSrcDir, "\n")
-    errMsg <- paste(errMsg, "directory, use R's tools::write_PACKAGES",
-                "function to update the repo, and try again.\n"
-              )
+    errMsg <- paste('WARNING: ', errMsg,'\n', errMsgSolveMissingPkgs)
     cat(errMsg)
   }
   # Updating missing pkgs list
@@ -308,12 +315,8 @@ if(length(missingSrcsReqPkgs)>0) {
       for(pkg in pkgsCannotBeIgnored) {
         errMsg <- paste(errMsg, "  >", pkg, "\n")
       }
-      errMsg <- paste(errMsg, "Please add the missing package tarballs to the\n")
-      errMsg <- paste(errMsg, pkgSrcDir, "\n")
-      errMsg <- paste(errMsg, "directory, use R's tools::write_PACKAGES",
-                  "function to update the repo, and try again.\n"
-                )
-      errMsg <- paste(errMsg, "Cannot countinue.\n")
+      errMsg <- paste(errMsg, "\n", errMsgSolveMissingPkgs)
+      errMsg <- paste(errMsg, "\n", "Cannot countinue.\n")
       cat("\n")
       stop(errMsg)
     }
@@ -346,7 +349,8 @@ if(length(binsToBeBuilt)==0) {
   cat("\n")
   cat("The following packages are marked to be built:\n")
   for (pkgName in binsToBeBuilt) {
-    cat("  >", pkgName, "\n")
+    pkgVer <- availablePkgsLocalRepo[pkgName, "Version"]
+    cat("  >", pkgName, paste("(v", pkgVer, ")", sep=''), "\n")
   }
   cat("Total:", length(binsToBeBuilt), "packages to be built.\n")
 
