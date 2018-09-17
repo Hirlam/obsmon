@@ -164,11 +164,11 @@ openCache <- function(db) {
   cacheFile <- slugify(paste(db$basename, db$name, "db", sep="."))
   cachePath <- file.path(obsmonConfig$general$cacheDir, cacheFile)
   if (file.exists(cachePath)) {
-    flog.info('Cache path "%s" exists. Connecting.', cachePath)
+    flog.debug('Cache path "%s" exists. Connecting.', cachePath)
     cache <- dbConnect(RSQLite::SQLite(), cachePath)
     setPragmas(cache)
   } else {
-    flog.info('Cache path "%s" does not exist. Initialising.', cachePath)
+    flog.debug('Cache path "%s" does not exist. Initialising.', cachePath)
     cache <- initCache(cachePath)
   }
   cache
@@ -342,7 +342,7 @@ createDb <- function(dir, basename, name, file) {
   flog.debug("......%s: finding %s dtgs......", basename, name)
   db$dtgs <- as.integer(dir(path=dir, pattern="[0-9]{10}"))
   if (length(db$dtgs)==0) {
-    flog.warn("%s: Db %s contains no dtgs. Aborting.", basename, name)
+    flog.debug("%s: Db %s contains no dtgs. Aborting.", basename, name)
     warning("%s: Db %s contains no dtgs. Aborting.", basename, name)
     NULL
   } else {
@@ -353,7 +353,9 @@ createDb <- function(dir, basename, name, file) {
     flog.debug("......%s: updating %s db info......", basename, name)
     flog.debug("%s: Opening %s cache db", basename, name)
     db$cache <- openCache(db)
-    flog.debug("%s: Attempting to update %s cache db", basename, name)
+    flog.debug(
+      "%s: Updating %s cache db. This may take some time.", basename, name
+    )
     db <- updateCache(db)
     flog.debug("%s: Initialising %s observation types", basename, name)
     db <- initObtypes(db)

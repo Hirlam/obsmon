@@ -49,7 +49,7 @@ tryCatch(
     library(stringi)
     library(V8)
 
-    flog.info(libMsg)
+    flog.debug(libMsg)
     flog.info(paste('Running as user "', userName, '"', sep=""))
   },
   error=function(e) stop(paste(e, libMsg, sep="\n"))
