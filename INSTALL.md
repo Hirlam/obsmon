@@ -6,7 +6,7 @@ To get obsmon up and running quickly, follow these steps:
 
 1. Install R. Chances are, it is available in your distributions repositories.
 2. Execute `./install` in the obsmon directory. This will install the needed R
-   packages, provided that all system dependencies are fulfilled.
+   packages, provided that all system dependencies are fulfilled. If you want the installation of Obsmon to be completely separated from your current R environment, you can, alternatively, run `./install --local-install`.
    * There is unfortunately no robust way currently to programatically determine the *system* dependencies of the R packages. The script `install_sys_deps.sh`, located under `./utils/build`, should install all dependencies needed at SMHI, but it may ocasionally need to be updated (also, please see the [note about the "sf" R package](Note-about-the-"sf"-R-package:) further down in this document).
 3. Copy `config.toml.example` to `config.toml` and adapt it to your data paths.
    It is highly recommended to start out with only one experiment that doesn't
@@ -17,6 +17,7 @@ To get obsmon up and running quickly, follow these steps:
    ```
    Listening on http://127.0.0.1:5391
    ```
+   If you want the browser to be open automatically, then run `./obsmon --launch` instead.
 5. Point your browser to this address. Note, that this only works if the
    browser is running on the same machine as obsmon. Otherwise you will need to use ssh port forwarding or x forwarding to connect to the server.
 
@@ -46,11 +47,13 @@ running. From there, follow these steps:
    `/var/log/shiny-server/obsmon-*.log`.
 
 ### System dependencies
-Below is a list of system dependencies for R packages used in obsmon. The method used to obtain the list was rather brute-force: Attempting to install obsmon on a clean system installation (CentOS 7, minimal) and keeping note of the system packages that needed to be installed in order to fix the errors that appeared along the way. That means, among other things, that the list is not comprehensive, in the sense that many other packages are installed automatically as "dependencies of dependencies", being thus omitted here.
+Below is a list of system dependencies for R packages used in obsmon. The method used to obtain the list was rather brute-force: Attempting to install obsmon on a clean system installation (CentOS 7, minimal) and keeping note of the system packages that needed to be installed in order to fix the errors that appeared along the way. That means, among other things, that the list is not exhaustive, in the sense that many other packages are installed automatically as "dependencies of dependencies", being thus omitted here.
 
-The systems dependencies listed here can be installed at SMHI using the script `install_sys_deps.sh`, located under `./utils/build`. If you find that any dependencies are missing, please update that file (and this one as well).
+The system dependencies listed here can be installed at SMHI using the script `install_sys_deps.sh`, located under `./utils/build`. If you find that any dependencies are missing, please update that file (and this one as well).
 
 In the following, the headers give the names of the R packages, and the items in the bullets refer to the Linux packages (RHEL 7) that need to be installed. The list was last updated on 2018-03-22.
+
+N.B.: The names of these system dependencies may (most likely will) differ if you use another system (e.g. ubuntu).
 
 Cairo:
   * cairo-devel
