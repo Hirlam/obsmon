@@ -174,6 +174,13 @@ openCache <- function(db) {
   cache
 }
 
+updateCachingStatusFile <- function(db, exptsCachingProgress) {
+  thisExptCachingProgress <- exptsCachingProgress[[db$basename]]
+  save(
+    'thisExptCachingProgress',
+    file=exptsCacheProgLogFilePath[[db$basename]]
+  )
+}
 
 updateCache <- function(db) {
   cachedDtgs <- dbGetQuery(db$cache, "SELECT dtg FROM dtg")[["dtg"]]
@@ -253,11 +260,7 @@ updateCache <- function(db) {
 
       perc <- floor(mean(unlist(exptsCachingProgress[[db$basename]])))
       if(perc >= thresholdUpdtCacheLogFile) {
-        thisExptCachingProgress <- exptsCachingProgress[[db$basename]]
-        save(
-          'thisExptCachingProgress',
-          file=exptsCacheProgLogFilePath[[db$basename]]
-        )
+        updateCachingStatusFile(db, exptsCachingProgress)
         thresholdUpdtCacheLogFile <<- floor(perc) + 1
       }
     }
@@ -266,11 +269,7 @@ updateCache <- function(db) {
 
   } else {
     exptsCachingProgress[[db$basename]][[db$name]] <<- 100.0
-    thisExptCachingProgress <- exptsCachingProgress[[db$basename]]
-    save(
-      'thisExptCachingProgress',
-      file=exptsCacheProgLogFilePath[[db$basename]]
-    )
+    updateCachingStatusFile(db, exptsCachingProgress)
   }
   db
 }
