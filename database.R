@@ -372,6 +372,8 @@ createDb <- function(dir, basename, name, file) {
   if (length(db$dtgs)==0) {
     flog.debug("%s: Db %s contains no dtgs. Aborting.", basename, name)
     warning("%s: Db %s contains no dtgs. Aborting.", basename, name)
+    exptsCachingProgress[[db$basename]][[db$name]] <<- 100.0
+    updateCachingStatusFile(db, exptsCachingProgress)
     NULL
   } else {
     flog.debug("......%s: done finding %s dtgs......", basename, name)
