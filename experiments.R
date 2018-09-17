@@ -3,12 +3,12 @@ expCreateSqliteShardedDtg <- function(name,
   flog.info("Initializing experiment %s...", name)
   x <- structure(list(), class = "sqliteShardedDtg")
   x$name <- name
-  x$dbs$ecma <- createDb(file.path(baseDir, experiment, "ecma"),
-                         name, "ecma", "ecma.db")
   x$dbs$ecmaSfc <- createDb(file.path(baseDir, experiment, "ecma_sfc"),
                             name, "ecmaSfc", "ecma.db")
   x$dbs$ccma <- createDb(file.path(baseDir, experiment, "ccma"),
                          name, "ccma", "ccma.db")
+  x$dbs$ecma <- createDb(file.path(baseDir, experiment, "ecma"),
+                         name, "ecma", "ecma.db")
   nullExp <- is.null(x$dbs$ecma) & is.null(x$dbs$ecmaSfc) & is.null(x$dbs$ccma)
   if(nullExp) {
     flog.warn("Could not find any data for experiment %s. Skipping it.", name)
