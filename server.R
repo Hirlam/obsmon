@@ -86,7 +86,15 @@ separateReadyAndCachingExpts <- function(experiments) {
     if(resolvedStatus[[exptName]]) {
       readyExpts[[exptName]] <- experiments[[exptName]]
     } else {
-      newName <- paste(exptName, "(Caching. Please check later...)")
+      newName <- tryCatch({
+        load(exptsCacheProgLogFilePath[[exptName]])
+        # Using floor here to avoid showing 100% when we actually have, e.g.,
+        # cachingProgress>=99.5%. I'm sure users would not be amused by this.
+        perc <- floor(mean(unlist(thisExptCachingProgress)))
+        paste(exptName, ': Updating cache (', perc, "%)", sep='')
+        },
+        error=function(e) paste(exptName, ': Initialising cache...', sep='')
+      )
       stillCachingExpts[[newName]] <- emptyExperiment(newName)
     }
   }
@@ -98,13 +106,14 @@ shinyServer(function(input, output, session) {
   exptNames <- c("")
   experiments <- reactive ({
     # Keep checking for updates in the experiments. Useful when chaching.
-    invalidateLater(1000, session)
+    invalidateLater(5000, session)
     separateReadyAndCachingExpts(experimentsAsPromises)
   })
   observe({
       newExptNames <- names(experiments())
       if(length(newExptNames)==0) newExptNames <- c("No experiment available!")
-      if(!all(exptNames==newExptNames)) {
+      if((length(newExptNames) != length(exptNames)) |
+         !all(exptNames==newExptNames)) {
         updateSelectInput(session, "experiment", choices=newExptNames)
         exptNames <<- newExptNames
       }

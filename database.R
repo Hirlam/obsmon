@@ -241,7 +241,36 @@ updateCache <- function(db) {
     }
   }
   if(length(newDtgs)>0) {
-    pblapply(as.character(newDtgs), ingestShard)
+    thresholdUpdtCacheLogFile <- 0
+    ingestShardUpdatingStatus <- function(dtg) {
+
+      ingestShard(dtg)
+
+      exptsCachingProgress[[db$basename]][[db$name]] <<- (
+        exptsCachingProgress[[db$basename]][[db$name]] +
+        100.0/length(newDtgs)
+      )
+
+      perc <- floor(mean(unlist(exptsCachingProgress[[db$basename]])))
+      if(perc >= thresholdUpdtCacheLogFile) {
+        thisExptCachingProgress <- exptsCachingProgress[[db$basename]]
+        save(
+          'thisExptCachingProgress',
+          file=exptsCacheProgLogFilePath[[db$basename]]
+        )
+        thresholdUpdtCacheLogFile <<- floor(perc) + 1
+      }
+    }
+
+    lapply(as.character(newDtgs), ingestShardUpdatingStatus)
+
+  } else {
+    exptsCachingProgress[[db$basename]][[db$name]] <<- 100.0
+    thisExptCachingProgress <- exptsCachingProgress[[db$basename]]
+    save(
+      'thisExptCachingProgress',
+      file=exptsCacheProgLogFilePath[[db$basename]]
+    )
   }
   db
 }

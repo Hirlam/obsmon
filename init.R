@@ -73,6 +73,7 @@ runAppHandlingBusyPort <- function(
   recDepth=0,maxNAtt=10
 ) {
   if(recDepth==0) {
+    on.exit(removeExptCachingStatusFiles())
     tryCatch(
       runApp(appDir, launch.browser=launch.browser, port=defaultPort),
       error=function(w) runAppHandlingBusyPort(w, appDir=appDir,recDepth=recDepth+1)
