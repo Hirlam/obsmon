@@ -1,0 +1,13 @@
+[general]
+logLevel = "INFO"
+
+[[experiments]]
+displayName = "First Experiment"
+baseDir = "/full/path/to/experiments/dir1"
+experiment = "mbr000"
+
+[[experiments]]
+displayName = "Second Experiment"
+baseDir = "/full/path/to/experiments/dir2"
+experiment = "mbr001"
+

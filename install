@@ -1,7 +1,1 @@
-#!/bin/bash
-
-export R_LIBS_USER=${R_LIBS_USER-"$HOME/R/library"}
-[ -d $R_LIBS_USER ] || mkdir -p $R_LIBS_USER
-
-Rscript install.R || exit 1
-
+utils/build/r-deps-installer/r_deps_installer

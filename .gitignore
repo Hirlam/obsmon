@@ -1,0 +1,24 @@
+# Pattern based ignores
+\#*\#
+*~
+*.db
+.nfs*
+*.org
+*.Rout
+*.tar.gz
+*.swp
+
+# Untracked helper files
+bak
+config.toml
+.markdown-preview.html
+.Rcache*
+.Rhistory
+Rplots.pdf
+rtags
+rtags.R
+TAGS
+
+R-libs/
+R-libs
+pre_compiled/

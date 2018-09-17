@@ -1,393 +1,192 @@
-library(shiny)
-library(leaflet)
+if(!exists("initFileSourced")) source("init.R")
 
-shinyUI(navbarPage("OBSMON v2",id="tabs",
-  tabPanel("Upper air (3D-VAR/4D-VAR)",
-    fluidRow(
-      column(5,
-        wellPanel("I: Time and file",
-          fluidRow(
-            column(6,
-              uiOutput("select_base")
-            ),
-            column(6,
-              fluidRow(
-                column(12,
-                  uiOutput("select_experiment")
-                )
-              ),
-              fluidRow( 
-                column(8,
-                  uiOutput("select_date")
-                ),  
-                column(4,
-                  uiOutput("select_cycle")
-                )
-              )
-            )
-          ),
-          hr()
-        )
-      ),
-      column(7,
-        fluidRow(
-          wellPanel("II: Variable selection",
-            fluidRow(
-              column(4,
-                uiOutput("select_obtype")
-              ),
-              column(5,
-                uiOutput("select_plottype"),
-                tags$style(type='text/css', "#select_plottype { width: 250px;}"),
+jscode <- "
+shinyjs.disableTab = function(name) {
+  var tab = $('.nav li a[data-value=' + name + ']');
+  tab.bind('click.tab', function(e) {
+    e.preventDefault();
+    return false;
+  });
+  tab.addClass('disabled');
+}
 
-                # Only show this panel if obtype == SATEM
-                conditionalPanel(
-                  condition = "input.obtype == 'SATEM'",
-                  uiOutput("select_sensor"),
-                  uiOutput("select_satelite"),
-                  uiOutput("select_channel")
-    
-                ),
-                conditionalPanel(
-                  condition = "input.obtype != 'SATEM'",
-                  uiOutput("select_variable"),
-                  uiOutput("select_level")
-                )
-              ),
-              column(3,
-                actionButton("doPlot", label = "Plot!"),
-                tags$style(type='text/css', "#doPlot { vertical-align: middle; height: 70px; width: 100px; background: green; color: white;}")
-              )
-            )
-          )
-        )
-      ),
-      hr(),
-      fluidRow(
-        column(10,offset=2,
-          tabsetPanel(
-            tabPanel("Plot",
-              fluidRow(
-                column(10,
-                  plotOutput(outputId="ObsmonPlot",height="auto",width="auto"),
-                  tags$style(type="text/css", "body { overflow-y: scroll; }")
-                ),
-                column(2,
-                  conditionalPanel(
-                    condition = "input.doPlot != 0",
-                    wellPanel(
-                      radioButtons('plotTypeFormat','Format of plot to download',c('eps','pdf','png'),'eps'),
-                      downloadButton("downloadImage","Download Plot")
-                    )
-                  )
-                )
-              )
-            ),
-            tabPanel("Map",
-              fluidRow(
-                column(12,
-                  textOutput("map_title"),
-                  tags$style(type="text/css", ".shiny-text-output { text-align: center; }")
-                )
-              ),
-              fluidRow(
-                column(9,
-                  leafletOutput(outputId="Map",height="600",width="900")
-                ),
-                column(3,align="right",
-                  uiOutput("select_map"),
-                  uiOutput("select_map_acc"),
-                  uiOutput("select_level_ncfile")
-                )
-              )
-            ),
-            tabPanel("Query and data",
-              wellPanel(h5("Query used:"),
-                uiOutput("query_used")
-              ),
-              hr(),
-              br(),
-              wellPanel(h5("Data:"),
-                uiOutput("data_plotted")
-              )
-            )
-          )
-        )
-      )
-    )
-  ),
-  tabPanel("Surface (CANARI)",value="Surface",
-    fluidRow(
-      column(3,
-        wellPanel(
-          uiOutput("select_experiment_SA"),
-          hr(),
-          fluidRow(
-            column(7,
-              uiOutput("select_date_SA")
-            ),  
-            column(4,offset=1,
-              uiOutput("select_cycle_SA")
-            )   
-          )
-        )
-      ),  
-      column(9,
-        fluidRow(
-          column(4,
-            fluidRow(
-              column(12,
-                uiOutput("select_obtype_SA")
-              )   
-            )  
-          ),
-          column(4,
-            uiOutput("select_plottype_SA"),
-            tags$style(type='text/css', "#select_plottype_SA { width: 250px;}"),  
-            uiOutput("select_variable_SA")
-          ),  
-          column(4,
-            uiOutput("plotButton_SA"),
-            actionButton("doPlot_SA", label = "Plot!"),
-            tags$style(type='text/css', "#doPlot_SA { vertical-align: middle; height: 70px; width: 100px; background: green; color: white;}")
-          )   
+shinyjs.enableTab = function(name) {
+  var tab = $('.nav li a[data-value=' + name + ']');
+  tab.unbind('click.tab');
+  tab.removeClass('disabled');
+}
+"
+
+css <- "
+.nav li a.disabled {
+  background-color: #aaa !important;
+  color: #333 !important;
+  cursor: not-allowed !important;
+  border-color: #aaa !important;
+}
+
+#loading-content {
+  position: absolute;
+  background: #000000;
+  opacity: 0.9;
+  z-index: 100;
+  left: 0;
+  right: 0;
+  height: 100%;
+  text-align: center;
+  color: #FFFFFF;
+}
+"
+
+shinyUI(
+    fluidPage(
+        tags$head(tags$script(HTML("
+          (function() {
+            $.fn.bsDatepicker.defaults.autoclose = true;
+          })();
+        "))),
+        useShinyjs(),
+        extendShinyjs(text=jscode),
+        inlineCSS(css),
+        div(
+            id="loading-content",
+            h2(sprintf("Loading Obsmon v%s...", obsmonVersion))
         ),
-        hr(),
-        fluidRow(
-          column(12,
-            tabsetPanel(
-              tabPanel("Plot",
-                fluidRow(
-                  column(10,
-                    plotOutput(outputId="ObsmonPlot_SA",height="auto",width="auto"),
-                    tags$style(type="text/css", "body { overflow-y: scroll; }")
-                  ),
-                  column(2,
-                    conditionalPanel(
-                      condition = "input.doPlot_SA != 0",
-
-                      wellPanel(
-                        radioButtons('plotTypeFormat_SA','Format of plot to download',c('eps','pdf','png'),'eps'),
-                        downloadButton("downloadImage_SA","Download Plot")
-                      )
-                    )         
-                  )
-                )
-              ),
-              tabPanel("Map",
-                fluidRow(
-                  column(12,
-                    textOutput("map_title_SA"),
-                    tags$style(type="text/css", ".shiny-text-output { text-align: center; }")
-                  )
+        hidden(div(id="app-content",
+        tagList(
+            tags$head(tags$title(sprintf("Obsmon v%s", obsmonVersion))),
+            h3(sprintf("Obsmon v%s", obsmonVersion),
+               style="text-align: center;"),
+            hr()
+        ),
+        sidebarLayout(
+            sidebarPanel(
+                width=3,
+                selectInput("experiment",
+                            label="Experiment",
+                            choices=c()),
+                selectInput("category",
+                            label="Category",
+                            choices=list("Upper Air (3D-VAR/4D-VAR)"="upperAir",
+                                         "Surface (CANARI)"="surface")),
+                selectInput("odbBase",
+                            "Database",
+                            choices=c()),
+                selectInput("obtype",
+                            "Observation Type",
+                            choices=c()),
+                conditionalPanel(
+                    condition = "input.obtype == 'satem'",
+                    selectInput("sensor",
+                                "Sensor",
+                                choices=c()),
+                    selectInput("satellite",
+                                "Satellite",
+                                choices=c()),
+                    selectInput("channels",
+                                tags$div("Channels",
+                                         "(Select",
+                                         actionLink("channelsSelectAll", "all"),
+                                         actionLink("channelsSelectNone", "none"),
+                                         ")"
+                                         ),
+                                choices=c(),
+                                multiple=TRUE,
+                                selectize=FALSE)
                 ),
-                fluidRow(
-                  column(9,
-                    leafletOutput(outputId="Map_SA",height="600",width="900")
-                  ),
-                  column(3,align="right",
-                    uiOutput("select_map_SA"),
-                    uiOutput("select_map_acc_SA")
-                  )
-                )
-              ),
-              tabPanel("Query and data",
-                wellPanel(h5("Query used:"),
-                  uiOutput("query_used_SA")
+                conditionalPanel(
+                    condition = "input.obtype != 'satem'",
+                    selectInput("variable",
+                                "Variable",
+                                choices=c()),
+                    selectInput("levels",
+                                tags$div("Levels",
+                                         "(Select",
+                                         actionLink("levelsSelectAll", "all"),
+                                         actionLink("levelsSelectNone", "none"),
+                                         ")"
+                                         ),
+                                choices=c(),
+                                multiple=TRUE,
+                                selectize=FALSE),
+                    selectInput("station",
+                                "Station",
+                                choices=c())
                 ),
-                hr(),
-                br(),
-                wellPanel(h5("Data"),
-                  uiOutput("data_plotted_SA")
+                selectInput("plottype",
+                            "Type of Plot",
+                            choices=c()),
+                conditionalPanel(
+                    condition = "output.dateType == 'single'",
+                    fluidRow(
+                        column(8,
+                               dateInput("date", "Date")
+                               ),
+                        column(4,
+                               selectInput("cycle",
+                                           label="Cycle",
+                                           choices=c()))
+                    )
+                ),
+                conditionalPanel(
+                    condition = "output.dateType == 'range'",
+                    dateRangeInput("dateRange",
+                                   label="Date Range"),
+                    checkboxGroupInput("cycles",
+                                       label=tags$div("Cycles",
+                                                      "(Select",
+                                                      actionLink("cyclesSelectAll", "all"),
+                                                      actionLink("cyclesSelectNone", "none"),
+                                                      ")"
+                                                      ),
+                                       inline=TRUE,
+                                       choices=c())
+                ),
+                actionButton("doPlot", "Plot", width="100%")
+            ),
+            mainPanel(
+                width=9,
+                tabsetPanel(
+                    id="mainArea",
+                    tabPanel(
+                        "Plot",
+                        value="plotTab",
+                        fluidRow(
+                            column(12, align="center",
+                                   tags$head(tags$style("#plot{height:80vh !important;}")),
+                                   plotOutput(outputId="plot", height="auto", width="auto"),
+                                   tags$style(type="text/css", "body { overflow-y: scroll; }")
+                                   )
+                        )
+                    ),
+                    tabPanel(
+                        "Map",
+                        value="mapTab",
+                        fluidRow(
+                            column(12,
+                                   textOutput("mapTitle"),
+                                   tags$style(type="text/css", ".shiny-text-output { text-align: center; }")
+                                   )
+                        ),
+                        fluidRow(
+                            column(12, align="center",
+                                   tags$head(tags$style("#map{height:80vh !important;}")),
+                                   leafletOutput(outputId="map", height="auto", width="auto"),
+                                   tags$style(type="text/css", "body { overflow-y: scroll; }")
+                                   )
+                        )
+                    ),
+                    tabPanel(
+                        value="dataTab",
+                        "Query and data",
+                        wellPanel(h5("Query used:"),
+                                  textOutput("queryUsed")
+                                  ),
+                        h5("Data:"),
+                        dataTableOutput("dataTable")
+                    )
                 )
-              )
             )
-          )
-        )
-      )
+        )))
     )
-  ),
-  tabPanel("Pre-defined plots",
-    fluidRow(
-      column(3,align="right",
-        uiOutput("select_group_predef")
-      ),
-      column(6,
-        uiOutput("select_plottype_predef"),
-        tags$style(type='text/css', "#select_plottype_predef { width: 100%;}")
-      ),
-      column(3,
-         actionButton("doPlotPreDef", label = "Generate pre-defined plot!"),
-         tags$style(type='text/css', "#doPlotPreDef { vertical-align: middle; height: 70px; width: 200px; background: green; color: white;}")
-      )
-    ),
-    hr(),
-    fluidRow(
-      column(10,offset=2,
-        tabsetPanel(
-          tabPanel("Plot",
-            fluidRow(
-              column(12,
-                uiOutput("commentPreDefined")
-              )
-            ),
-            fluidRow(
-              column(12,
-                plotOutput(outputId="ObsmonPlotPreDef",height="auto",width="auto"),
-                tags$style(type="text/css", "body { overflow-y: scroll; }")
-              )
-            )
-          ),
-          tabPanel("Query and data",
-            wellPanel(h5("Query used:"),
-              uiOutput("query_usedPreDefined")
-            ),
-            hr(),
-            br(),
-            wellPanel(h5("Data:"),
-              uiOutput("data_plottedPreDefined")
-            )
-          )
-        )
-      )
-    )
-  ),
-  tabPanel("Surface diagnostics",value="surfdia",
-    fluidRow(
-      column(3,align="right",
-        uiOutput("select_variable_surfdia")
-      ),
-      column(3,align="right",
-        uiOutput("select_experiment_SD"),
-        uiOutput("select_days_surfdia")
-      ),
-      column(4,
-        uiOutput("select_stations_surfdia"),
-        tags$style(type='text/css', "#select_stations_surfdia { width: 100%;}")
-      ),
-      column(2,
-         actionButton("doPlotSurfdia", label = "Plot!"),
-         tags$style(type='text/css', "#doPlotSurfdia { vertical-align: middle; height: 70px; width: 200px; background: green; color: white;}")
-      )
-    ),
-    hr(),
-    fluidRow(
-      column(10,offset=2,
-        tabsetPanel(
-          tabPanel("Plot",
-            column(12,
-              plotOutput(outputId="surfdiaPlot",height="auto",width="auto"),
-              tags$style(type="text/css", "body { overflow-y: scroll; }")
-            )
-          ),
-          tabPanel("Query and data",
-            wellPanel(h5("Query used:"),
-              uiOutput("query_used_SD")
-            ),
-            hr(),
-            br(),
-            wellPanel(h5("Data:"),
-              uiOutput("data_plotted_SD")
-            )
-          )
-        )
-      )
-    )
-  ),
-  tabPanel("Dump database",value="dump",
-    fluidRow(
-      column(12,align="center",
-        wellPanel(
-          h5("NB! Do not dump big data bases as this could be demanding for your system")
-        )
-      )
-    ),
-    fluidRow(
-      column(3,align="right",
-             uiOutput("select_dump_base")
-      ),
-      column(3,align="right",
-             uiOutput("select_dump_experiment")
-      ),
-      column(3,align="right",
-             selectInput("dump_table",h5("Table to dump:"),c("obsmon","usage"))
-      ),
-      column(3,
-         uiOutput("dumpDB_button"),
-         tags$style(type='text/css', "#doDump { vertical-align: middle; height: 70px; width: 200px; background: green; color: white;}"),
-         tags$style(type='text/css', "#doDumpDisabled { vertical-align: middle; height: 70px; width: 200px; background: red; color: white;}")
-      )
-    ),
-    fluidRow(
-      column(12,align="right",
-        uiOutput("dumpDB")
-      )
-    )
-  ),
-  tabPanel("Settings",
-    fluidRow(
-      column(12,
-        wellPanel(h2("Settings"),
-          uiOutput("set_verbosity"),
-          checkboxInput(inputId="showExistingDataOnly",label=h5("Show existing data only"),value=TRUE),
-          hr(),
-          numericInput(inputId="maxUpload",label=h5("Max file size for SQLite data bases (MB)"),value=30,min = 0)
-        )
-      )
-    ),
-    h3("clientData values"),
-    verbatimTextOutput("clientdataText")
-  ),
-  tabPanel("Help",
-    fluidRow(
-      column(12,
-        wellPanel(h2("About"),
-          p("Developed by ",a("HIRLAM",href="http://hirlam.org",style = "color:blue")," as a tool to monitor observation usage in ",
-          span("HARMONIE",style = "color:blue"),".")
-        )
-      ),
-      wellPanel(h1("Help"),
-        h3("General usage"),
-        hr(),
-        p("Shiny is reactive. It means when you change something that has a dependency, the dependency will adjust."),
-        p("There is one tab for upper air assimilation and one for surface assimilation. The selection menus have a dependency from left to right and top to bottom. It means that if you change something to the left or above your settings durther downstream could be canceled. You will need to press the button for plotting to get the current plot. Next to the plot you can see the SQL query and extracted data for the last plot excecuted."), 
-        p("You set you selections in the left grey box first, before selecting the details in the right grey box."),
-        p("Date range is valid for time series. For other plots the ",em("start")," of the time range is plotted."),
-        p("When you start the Shiny interface you can set the following environment variables:"),
-        em("This will become experiment \"Shiny environment\""),
-        br(),
-        code("DBDIR_ECMA=PATH-TO-ECMA-FILE.db"),
-        br(),
-        code("DBDIR_ECMA_SFC=PATH-TO-ECMA_SFC-FILE.db"),
-        br(),
-        code("DBDIR_CCMA=PATH-TO-CCMA-FILE.db"),
-        br(),
-        em("This will become \"Shiny environment II\""),
-        br(),
-        code("DBDIR_ECMA2=PATH-TO-ECMA-FILE.db"),
-        br(),
-        code("DBDIR_ECMA_SFC2=PATH-TO-ECMA_SFC-FILE.db"),
-        br(),
-        code("DBDIR_CCMA2=PATH-TO-CCMA-FILE.db"),
-        hr(),
-        br(),
-        h4("Pre-defined plots"),
-        p("This tab is meant as a short-cut for frequently used plots. It is designed for several groups so that e.g. duty forecasters can monitor the production by using their own group of pre-defined plots."),
-        br(),
-        h4("Surface diagnostics"),
-        p("Here you get time series for surface fields showing the observations,first guess and the analysis together. The idea is that these could be coupled against model output. The ODB base used in the plot is the one you set in the ",em("Upper air")," tab (for U10,V10,Z) and in the ",em("Surface assimilation")," (for T2M,RH2m/Snow)"),
-        br(),
-        h4("Dump database"),
-        p("This tab is good for debugging of small data bases, but should not be used on large operational data bases as it could overload your system."),
-        br(),
-        h4("Settings"),
-        span("Show existing data only",style="color:red"),
-        p("By enabling this, the user experience will be slower but you will only show options found in the selected SQLite table. The menus have a dependency from left to right and top to bottom. It means if you change the timing or the monitoring level, most of the other options will have a dependency and will be re-checked. If you disable the check for exixting data the options will have a normal dependency from left to right. NB! The whole date range is checked. You might have observations from another cycle, but not the one you are trying to plot."),
-        span("Max file size for SQLite data bases (MB)",style="color:red"),
-        p("You can upload a data base to your /tmp directory from local disc. This data base will then be used in OBSMON. If you have a big data base you might have to adjust this setting."),
-        hr(),
-        p("In the scripts there is a setting ",span("productionSite",style="color:red")," which should be set TRUE for sites running the OBSMON shiny interface as a constantly running daemon. This switch disables potentially performance destroying features like the dumping of the SQLite data base")
-      )
-    )
-  )
-))
+)
