@@ -1,21 +1,19 @@
-#!/bin/bash
+#!/usr/bin/env Rscript
+args <- commandArgs(trailingOnly = FALSE)
 
-export R_LIBS_USER=${R_LIBS_USER-"$HOME/R/library"}
+#
+launchBrowser <- "--launch" %in% args
+# Changing work dir to obsmonSrcDir, so all needed files can be found
+thisFilePath <- normalizePath(sub("--file=", "", args[grep("--file=", args)]))
+# Accounting for the fact that the script may be executed via a symlink
+obsmonSrcDir <- dirname(Sys.readlink(thisFilePath))
+if(obsmonSrcDir=="" || is.na(obsmonSrcDir)) obsmonSrcDir<-dirname(thisFilePath)
+setwd(obsmonSrcDir)
 
-# Set path to SQLITE data bases
-export DBDIR_ECMA=${DBDIR_ECMA-$PWD/dbfiles/ecma/}
-export DBDIR_ECMA_SFC=${DBDIR_ECMA_SFC-$PWD/dbfiles/ecma_sfc/}
-export DBDIR_CCMA=${DBDIR_CCMA-$PWD/dbfiles/ccma/}
-export DBDIR_ECMA2=${DBDIR_ECMA2-$PWD/dbfiles2/ecma/}
-export DBDIR_ECMA_SFC2=${DBDIR_ECMA_SFC2-$PWD/dbfiles2/ecma_sfc/}
-export DBDIR_CCMA2=${DBDIR_CCMA2-$PWD/dbfiles2/ccma/}
+# Initialising
+source("init.R")
 
-echo "     DBDIR_ECMA: $DBDIR_ECMA"
-echo " DBDIR_ECMA_SFC: $DBDIR_ECMA_SFC"
-echo "     DBDIR_CCMA: $DBDIR_CCMA"
-echo "    DBDIR_ECMA2: $DBDIR_ECMA2"
-echo "DBDIR_ECMA_SFC2: $DBDIR_ECMA_SFC2"
-echo "    DBDIR_CCMA2: $DBDIR_CCMA2"
-
-# Call R-script (or alternatively CMD BATCH)
-Rscript obsmon.R || R CMD BATCH obsmon.R || exit 1
+# Running the shinny app. This routine is defined in the file init.R
+runAppHandlingBusyPort(
+    appDir=obsmonSrcDir, defaultPort=5391, launch.browser=launchBrowser
+)
