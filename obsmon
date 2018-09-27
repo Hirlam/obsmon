@@ -33,5 +33,5 @@ source("init.R")
 
 # Running the shinny app. This routine is defined in the file init.R
 runAppHandlingBusyPort(
-    appDir=obsmonSrcDir, defaultPort=args$port, launch.browser=args$launch
+    appDir=obsmonSrcDir, defaultPort=args$port, launch.browser=args$launch, quiet=TRUE
 )

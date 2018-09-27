@@ -64,27 +64,46 @@ for(dir in c(systemConfigDir, systemCacheDirPath)) {
 }
 
 runAppHandlingBusyPort <- function(
-  callAndErrorMsg=NULL,appDir=getwd(),defaultPort=5391,launch.browser=FALSE,
-  recDepth=0,maxNAtt=10
+  appDir=getwd(), defaultPort=getOption("shiny.port"),
+  launch.browser=getOption("shiny.launch.browser", interactive()),
+  host = getOption("shiny.host", "127.0.0.1"),
+  maxNAtt=10,
+  ...
 ) {
-  if(recDepth==0) {
-    on.exit(removeExptCachingStatusFiles())
+
+  on.exit(removeExptCachingStatusFiles())
+
+  port <- defaultPort
+  success <- FALSE
+  nAtt <- 0
+  lisOnMsgStart <- 'Listening on '
+  lisOnMsgMarker <- "===================================="
+  while (!success & (nAtt<maxNAtt)) {
     tryCatch(
-      runApp(appDir, launch.browser=launch.browser, port=defaultPort),
-      error=function(w) runAppHandlingBusyPort(w, appDir=appDir,recDepth=recDepth+1)
+      {
+        cat("\n")
+        cat(paste(lisOnMsgMarker, "\n", sep=""))
+        lisOn <- paste(lisOnMsgStart, "http://", host, ":", port, sep='')
+        cat(paste(lisOn, "\n", sep=" "))
+        cat(paste(lisOnMsgMarker, "\n", sep=""))
+
+        runApp(appDir, launch.browser=launch.browser, port=port, ...)
+        success <- TRUE
+      },
+      error=function(w) {
+        flog.warn(paste('Failed to create server using port', port, sep=" "))
+        port <<- sample(1024:65535, 1)
+        lisOnMsgStart <<- "Port updated: Listening on "
+        lisOnMsgMarker <<- "================================================="
+      }
     )
-  } else if (recDepth+1>maxNAtt) {
-    msg <- paste("Failed to create server after",maxNAtt,"attempts.",sep=" ")
-    msg <- paste(msg, "\n", "Stopping now.\n", sep=" ")
+    nAtt <- nAtt + 1
+  }
+
+  if(!success) {
+    msg <- paste("Failed to create server after", nAtt, "attempts.\n",sep=" ")
+    msg <- paste(msg, "Stopping now.\n", sep=" ")
     stop(msg)
-  } else {
-      msg <- callAndErrorMsg[["message"]]
-      cat(msg, "\n")
-      cat("Trying again with a different TCP port:\n")
-      tryCatch(
-        runApp(appDir, launch.browser=launch.browser),
-        error=function(w) runAppHandlingBusyPort(w, appDir=appDir, recDepth=recDepth+1)
-      )
   }
 }
 
