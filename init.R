@@ -3,22 +3,17 @@ initFileSourced <- TRUE
 
 obsmonVersion <- "2.2.0"
 
-getUserName <- function() {
+if(!exists("localInstallRLib")) {
+  source('lib_paths_config.R')
+}
 
+getUserName <- function() {
   userName <- Sys.info()[["user"]]
   if (is.null(userName) | userName == "") userName <- Sys.getenv("USER")
   if (is.null(userName) | userName == "") userName <- Sys.getenv("LOGNAME")
   return(userName)
 }
-
 userName <- getUserName()
-# Configuring library paths
-localRLibDir <- normalizePath(file.path("utils", "build", "local_R_library"), mustWork=FALSE)
-localInstallRLib <- file.path(localRLibDir, "R-libs")
-userRLib <- Sys.getenv("R_LIBS_USER")
-if(userRLib=="") userRLib <- file.path(Sys.getenv("HOME"), "R", "library")
-userRLib <- normalizePath(userRLib, mustWork=FALSE)
-.libPaths(unique(c(localInstallRLib, userRLib, .libPaths())))
 
 libMsg <- "Directories in the R library search path (in order of priority):\n"
 for(dir in .libPaths()) {
