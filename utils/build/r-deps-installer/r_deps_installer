@@ -252,6 +252,8 @@ errMsgSolveMissingPkgs <- paste(
   pkgSrcDir, "\n",
   "directory, go to that directory, open R, run\n",
   "    tools::write_PACKAGES() \n",
+  '    db = read.dcf("PACKAGES") \n',
+  '    saveRDS(db, "PACKAGES.rds") \n',
   "to update the repo, and try again.\n"
 )
 
@@ -284,7 +286,7 @@ if(length(missingSrcsReqPkgs)>0) {
     }
     if(length(downloadedPkgs)>0) {
       cat("Updating local R repo... ")
-      tools::write_PACKAGES(dir=pkgSrcDir)
+      write_PACKAGES(dir=pkgSrcDir)
       availablePkgsLocalRepo <- available.packages(repos=localRepo)
       cat("Done.\n")
     }
