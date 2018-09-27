@@ -1,7 +1,7 @@
 # Flagging that this file has been sourced
 initFileSourced <- TRUE
 
-obsmonVersion <- "2.2.0"
+obsmonVersion <- "2.2.1"
 
 if(!exists("localInstallRLib")) {
   source('lib_paths_config.R')
