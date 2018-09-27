@@ -1,19 +1,37 @@
 #!/usr/bin/env Rscript
-args <- commandArgs(trailingOnly = FALSE)
+# argv contains the raw vector of arguments passed to the script
+# The parsing of the arguments will be performed later
+argv <- commandArgs(trailingOnly = FALSE)
 
-#
-launchBrowser <- "--launch" %in% args
 # Changing work dir to obsmonSrcDir, so all needed files can be found
-thisFilePath <- normalizePath(sub("--file=", "", args[grep("--file=", args)]))
+thisFilePath <- normalizePath(sub("--file=", "", argv[grep("--file=", argv)]))
 # Accounting for the fact that the script may be executed via a symlink
 obsmonSrcDir <- dirname(Sys.readlink(thisFilePath))
 if(obsmonSrcDir=="" || is.na(obsmonSrcDir)) obsmonSrcDir<-dirname(thisFilePath)
 setwd(obsmonSrcDir)
 
-# Initialising
+# Configuring libPaths
+# We will do this here instead of inside init.R because we need this to be able to
+# load argparse, which is used when running this executable, but not used when
+# running in a shiny server
+source('lib_paths_config.R')
+
+# Parsing command line arguments
+suppressPackageStartupMessages(library(argparse))
+parser <- ArgumentParser()
+parser$add_argument("--launch", action="store_true", help="Launch browser")
+parser$add_argument('-pt', '--port', type="integer", default=5391,
+  help=paste('Port the app will listen to (default: 5391).',
+         'If busy, the code will attempt to pick a valid port number randomly.'
+       )
+)
+args <- parser$parse_args()
+
+# Initialising the rest of the code
 source("init.R")
+
 
 # Running the shinny app. This routine is defined in the file init.R
 runAppHandlingBusyPort(
-    appDir=obsmonSrcDir, defaultPort=5391, launch.browser=launchBrowser
+    appDir=obsmonSrcDir, defaultPort=args$port, launch.browser=args$launch
 )
