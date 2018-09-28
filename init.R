@@ -7,6 +7,11 @@ if(!exists("runningAsStandalone") || runningAsStandalone==FALSE) {
   runningAsStandalone <- FALSE
 }
 
+if(!runningAsStandalone) {
+  # This info is already printted in a banner when runningAsStandalone
+  cat(obsmonBanner)
+}
+
 getUserName <- function() {
   userName <- Sys.info()[["user"]]
   if (is.null(userName) | userName == "") userName <- Sys.getenv("USER")
