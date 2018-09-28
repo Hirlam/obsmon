@@ -1,10 +1,10 @@
 # Flagging that this file has been sourced
 initFileSourced <- TRUE
 
-obsmonVersion <- "2.2.1"
-
-if(!exists("localInstallRLib")) {
+if(!exists("runningAsStandalone") || runningAsStandalone==FALSE) {
+  source("src_info_obsmon.R")
   source('lib_paths_config.R')
+  runningAsStandalone <- FALSE
 }
 
 getUserName <- function() {

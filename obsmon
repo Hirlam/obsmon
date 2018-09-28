@@ -3,6 +3,12 @@
 # The parsing of the arguments will be performed later
 argv <- commandArgs(trailingOnly = FALSE)
 
+# Flagging whether that obsmon is being run as a standalone application, i.e.,
+# not within a shiny server
+runningAsStandalone <- TRUE
+
+source("src_info_obsmon.R")
+
 # Changing work dir to obsmonSrcDir, so all needed files can be found
 thisFilePath <- normalizePath(sub("--file=", "", argv[grep("--file=", argv)]))
 # Accounting for the fact that the script may be executed via a symlink
