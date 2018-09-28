@@ -72,20 +72,34 @@ runAppHandlingBusyPort <- function(
 ) {
 
   on.exit(removeExptCachingStatusFiles())
+  exitMsg <- paste(
+               "===============",
+               "Exiting Obsmon.",
+               "===============",
+               "",
+               sep="\n"
+             )
+  on.exit(cat(exitMsg), add=TRUE)
 
   port <- defaultPort
   success <- FALSE
   nAtt <- 0
   lisOnMsgStart <- 'Listening on '
-  lisOnMsgMarker <- "===================================="
+  lisOnMsgMarker <- "------------------------------------"
   while (!success & (nAtt<maxNAtt)) {
     tryCatch(
       {
         cat("\n")
         cat(paste(lisOnMsgMarker, "\n", sep=""))
-        lisOn <- paste(lisOnMsgStart, "http://", host, ":", port, sep='')
-        cat(paste(lisOn, "\n", sep=" "))
+        lisOnMsg <- paste(lisOnMsgStart,"http://",host,":",port,"\n", sep='')
+        cat(lisOnMsg)
         cat(paste(lisOnMsgMarker, "\n", sep=""))
+        if(!args$launch) {
+          cat(paste('Tip: To have the browser launched automatically,',
+                'run obsmon with the --launch option\n', sep=" "
+              )
+          )
+        }
 
         runApp(appDir, launch.browser=launch.browser, port=port, ...)
         success <- TRUE
@@ -94,7 +108,7 @@ runAppHandlingBusyPort <- function(
         flog.warn(paste('Failed to create server using port', port, sep=" "))
         port <<- sample(1024:65535, 1)
         lisOnMsgStart <<- "Port updated: Listening on "
-        lisOnMsgMarker <<- "================================================="
+        lisOnMsgMarker <<- "-------------------------------------------------"
       }
     )
     nAtt <- nAtt + 1
