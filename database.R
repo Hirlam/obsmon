@@ -211,14 +211,22 @@ updateCache <- function(db) {
                                         "  UNIQUE(obnumber, obtype, variable, division),",
                                         "  UNIQUE(obnumber, obtype, sensor, satellite, division)",
                                         ")", sep=""))
-              dbExecute(db$cache, paste("INSERT INTO temp.obtype (",
-                                        "  obnumber, obtype, variable, division",
-                                        ") SELECT DISTINCT obnumber, obname, varname, level ",
-                                        "FROM shard.obsmon WHERE obnumber!=7", sep=""))
-              dbExecute(db$cache, paste("INSERT INTO temp.obtype (",
-                                        "  obnumber, obtype, sensor, satellite, division",
-                                        ") SELECT DISTINCT obnumber, 'satem', obname, satname, level ",
-                                        "FROM shard.obsmon WHERE obnumber==7", sep=""))
+              dbExecute(db$cache, paste("INSERT INTO temp.obtype ",
+                                        "  (obnumber, obtype, variable, division)",
+                                        "  SELECT DISTINCT obnumber, obname, varname, level ",
+                                        "FROM shard.obsmon WHERE obnumber!=7 ",
+                                        "UNION ",
+                                        "  SELECT DISTINCT obnumber, obname, varname, level ",
+                                        "FROM shard.usage WHERE obnumber!=7 ",
+                                        sep=""))
+              dbExecute(db$cache, paste("INSERT INTO temp.obtype ",
+                                        "  (obnumber, obtype, sensor, satellite, division)",
+                                        "  SELECT DISTINCT obnumber, 'satem', obname, satname, level ",
+                                        "FROM shard.obsmon WHERE obnumber==7 ",
+                                        "UNION ",
+                                        "  SELECT DISTINCT obnumber, 'satem', obname, satname, level ",
+                                        "FROM shard.usage WHERE obnumber==7 ",
+                                        sep=""))
               dbExecute(db$cache, paste("INSERT OR IGNORE INTO main.obtype (",
                                         "  obnumber, obtype, variable, sensor, satellite, division",
                                         ") SELECT * FROM temp.obtype"))
