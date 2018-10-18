@@ -286,63 +286,60 @@ updateCache <- function(db) {
 
 initObtypes <- function(db) {
   obtypes <- collect(tbl(db$cache, "obtype"))
-  res <- obtypes %>%
-    filter(!is.na(variable)) %>%
-    #filter(fromDbTable=='usage') %>% # TEST
-    select(obtype, variable, fromDbTable, division) %>%
-    group_by(obtype, variable) %>%
-    summarize(
-      levelChoicesObsmonTable=list(sort(as.integer(division[fromDbTable=="obsmon"]))),
-      levelChoicesUsageTable=list(sort(as.integer(division[fromDbTable=="usage"])))
-    ) %>%
-    group_by(obtype) %>%
-    summarize(
-      variableFromObsmonTable={
-        lc <- levelChoicesObsmonTable
-        names(lc) <- variable
-        list(lc)
-      },
-      variableFromUsageTable={
-        lc <- levelChoicesUsageTable
-        names(lc) <- variable
-        list(lc)
-      },
-    ) %>%
-    summarize(obtype={
-      vFromObsmonTable <- variableFromObsmonTable
-      vFromUsageTable <- variableFromUsageTable
-      names(vFromObsmonTable) <- obtype
-      names(vFromUsageTable) <- obtype
-      list(list(
-        divisionsFromObsmonTable=vFromObsmonTable,
-        divisionsFromUsageTable=vFromUsageTable
-      ))
-    })
-  nonSatObs <- res[[1, 1]][['divisionsFromUsageTable']]
-  #nonSatObs <- res[[1, 1]]
-  res <- obtypes %>%
-    filter(is.na(variable)) %>%
-    select(obtype, sensor, satellite, division) %>%
-    group_by(obtype, sensor, satellite) %>%
-    summarize(channelChoices=list(sort(as.integer(division)))) %>%
-    group_by(obtype, sensor) %>%
-    summarize(satellite={
-      cc <- channelChoices
-      names(cc) <- satellite
-      list(cc)
-    }) %>%
-    group_by(obtype) %>%
-    summarize(sensor={
-      sat <- satellite
-      names(sat) <- sensor
-      list(sat)
-    }) %>%
-    summarize(obtype={
-      s <- sensor
-      names(s) <- obtype
-      list(s)
-    })
-  satObs <- res[[1,1]]
+
+  getNonSatObs <- function(obtypes, dbTable) {
+    res <- obtypes %>%
+      filter(!is.na(variable)) %>%
+      filter(fromDbTable==dbTable) %>%
+      select(obtype, variable, division) %>%
+      group_by(obtype, variable) %>%
+      summarize(levelChoices=list(sort(as.integer(division)))) %>%
+      group_by(obtype) %>%
+      summarize(
+        variable={
+          lc <- levelChoices
+          names(lc) <- variable
+          list(lc)
+        }) %>%
+      summarize(obtype={
+        v <- variable
+        names(v) <- obtype
+        list(v)
+      })
+    return(res[[1, 1]])
+  }
+
+  getSatObs <- function(obtypes, dbTable) {
+    res <- obtypes %>%
+      filter(is.na(variable)) %>%
+      filter(fromDbTable==dbTable) %>%
+      select(obtype, sensor, satellite, division) %>%
+      group_by(obtype, sensor, satellite) %>%
+      summarize(channelChoices=list(sort(as.integer(division)))) %>%
+      group_by(obtype, sensor) %>%
+      summarize(satellite={
+        cc <- channelChoices
+        names(cc) <- satellite
+        list(cc)
+      }) %>%
+      group_by(obtype) %>%
+      summarize(sensor={
+        sat <- satellite
+        names(sat) <- sensor
+        list(sat)
+      }) %>%
+      summarize(obtype={
+        s <- sensor
+        names(s) <- obtype
+        list(s)
+      })
+    return(res[[1, 1]])
+  }
+
+
+  nonSatObs <- getNonSatObs(obtypes, 'obsmon')
+  satObs <- getSatObs(obtypes, 'obsmon')
+
   obs <- c(satObs, nonSatObs)
   db$obtypes <- obs[sort(names(obs))]
   res <- dbGetQuery(db$cache, paste("SELECT DISTINCT obnumber, ",
