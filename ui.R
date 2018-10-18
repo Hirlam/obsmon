@@ -102,6 +102,7 @@ shinyUI(
                     selectInput("levels",
                                 tags$div("Levels",
                                          "(Select",
+                                         actionLink("levelsSelectStandard", "standard"),
                                          actionLink("levelsSelectAll", "all"),
                                          actionLink("levelsSelectNone", "none"),
                                          ")"

@@ -287,10 +287,10 @@ updateCache <- function(db) {
 initObtypes <- function(db) {
   obtypes <- collect(tbl(db$cache, "obtype"))
 
-  getNonSatObs <- function(obtypes, dbTable) {
+  getNonSatObs <- function(obtypes, dbTable=NA) {
     res <- obtypes %>%
       filter(!is.na(variable)) %>%
-      filter(fromDbTable==dbTable) %>%
+      filter(if(!is.na(dbTable)) fromDbTable==dbTable else !is.na(fromDbTable)) %>%
       select(obtype, variable, division) %>%
       group_by(obtype, variable) %>%
       summarize(levelChoices=list(sort(as.integer(division)))) %>%
@@ -309,10 +309,10 @@ initObtypes <- function(db) {
     return(res[[1, 1]])
   }
 
-  getSatObs <- function(obtypes, dbTable) {
+  getSatObs <- function(obtypes, dbTable=NA) {
     res <- obtypes %>%
       filter(is.na(variable)) %>%
-      filter(fromDbTable==dbTable) %>%
+      filter(if(!is.na(dbTable)) fromDbTable==dbTable else !is.na(fromDbTable)) %>%
       select(obtype, sensor, satellite, division) %>%
       group_by(obtype, sensor, satellite) %>%
       summarize(channelChoices=list(sort(as.integer(division)))) %>%
@@ -336,12 +336,14 @@ initObtypes <- function(db) {
     return(res[[1, 1]])
   }
 
+  obsObsmonTable <- c(getSatObs(obtypes, 'obsmon'), getNonSatObs(obtypes, 'obsmon'))
+  obsUsageTable <- c(getSatObs(obtypes, 'usage'), getNonSatObs(obtypes, 'usage'))
+  obsAllTables <- c(getSatObs(obtypes), getNonSatObs(obtypes))
 
-  nonSatObs <- getNonSatObs(obtypes, 'obsmon')
-  satObs <- getSatObs(obtypes, 'obsmon')
+  db$obtypes <- obsAllTables[sort(names(obsAllTables))]
+  db$obtypesObsmonTable <- obsObsmonTable[sort(names(obsObsmonTable))]
+  db$obtypesUsageTable <- obsUsageTable[sort(names(obsUsageTable))]
 
-  obs <- c(satObs, nonSatObs)
-  db$obtypes <- obs[sort(names(obs))]
   res <- dbGetQuery(db$cache, paste("SELECT DISTINCT obnumber, ",
                                     "CASE obtype ",
                                     "WHEN 'satem' THEN sensor ",

@@ -122,7 +122,11 @@ shinyServer(function(input, output, session) {
   shinyjs::show("app-content")
 
   levelChoices <- list()
+  levelChoicesObsmonTable <- list()
+  levelChoicesUsageTable <- list()
   channelChoices <- list()
+  channelChoicesObsmonTable <- list()
+  channelChoicesUsageTable <- list()
 
   activeDb <- reactive({
     expName <- req(input$experiment)
@@ -229,7 +233,9 @@ shinyServer(function(input, output, session) {
       db <- activeDb()
       sens <- req(input$sensor)
       sat <- req(input$satellite)
-      channelChoices <<- db$obtypes[[obtype]][[sens]][[sat]]
+      channelChoicesObsmonTable <<- db$obtypesObsmonTable[[obtype]][[sens]][[sat]]
+      channelChoicesUsageTable <<- db$obtypesUsageTable[[obtype]][[sens]][[sat]]
+      channelChoices <<- unique(c(channelChoicesObsmonTable, channelChoicesUsageTable))
       updateSelection(session, "channels", channelChoices)
     }
   })
@@ -248,9 +254,16 @@ shinyServer(function(input, output, session) {
     if (obtype != "satem") {
       db <- activeDb()
       var <- req(input$variable)
-      levelChoices <<- db$obtypes[[obtype]][[var]]
+      levelChoicesObsmonTable <<- db$obtypesObsmonTable[[obtype]][[var]]
+      levelChoicesUsageTable <<- db$obtypesUsageTable[[obtype]][[var]]
+      levelChoices <<- unique(c(levelChoicesObsmonTable, levelChoicesUsageTable))
       updateSelection(session, "levels", levelChoices)
     }
+  })
+
+  observeEvent(input$levelsSelectStandard, {
+    updateSelectInput(session, "levels",
+                      choices=levelChoices, selected=levelChoicesObsmonTable)
   })
 
   observeEvent(input$levelsSelectAll, {
