@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
+## [Unreleased]
+### Fixed
+- Fixed missing level values
+    - Some level values existed in the data but did not appear in the GUI
+      and therefore could not be selected. This is now fixed.
+
 ## [2.2.0] 2018-09-17
 ### Added
 - "AverageMaps" plot category

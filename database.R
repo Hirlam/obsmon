@@ -137,8 +137,9 @@ initCache <- function(cachePath) {
                            "  sensor VARCHAR(20),",
                            "  satellite VARCHAR(20),",
                            "  division INTEGER NOT NULL,",
-                           "  UNIQUE(obnumber, obtype, variable, division),",
-                           "  UNIQUE(obnumber, obtype, sensor, satellite, division)",
+                           "  fromDbTable VARCHAR(20) NOT NULL,",
+                           "  UNIQUE(obnumber, obtype, variable, division, fromDbTable),",
+                           "  UNIQUE(obnumber, obtype, sensor, satellite, division, fromDbTable)",
                            ")", sep=""))
     dbExecute(cache, paste("CREATE TABLE dtg (",
                            "  dtg INTEGER PRIMARY KEY",
@@ -208,30 +209,39 @@ updateCache <- function(db) {
                                         "  sensor VARCHAR(20),",
                                         "  satellite VARCHAR(20),",
                                         "  division INTEGER NOT NULL,",
-                                        "  UNIQUE(obnumber, obtype, variable, division),",
-                                        "  UNIQUE(obnumber, obtype, sensor, satellite, division)",
+                                        "  fromDbTable VARCHAR(20) NOT NULL,",
+                                        "  UNIQUE(obnumber, obtype, variable, division, fromDbTable),",
+                                        "  UNIQUE(obnumber, obtype, sensor, satellite, division, fromDbTable)",
                                         ")", sep=""))
-              dbExecute(db$cache, paste("INSERT INTO temp.obtype (",
-                                        "  obnumber, obtype, variable, division",
-                                        ") SELECT DISTINCT obnumber, obname, varname, level ",
-                                        "FROM shard.obsmon WHERE obnumber!=7", sep=""))
-              dbExecute(db$cache, paste("INSERT INTO temp.obtype (",
-                                        "  obnumber, obtype, sensor, satellite, division",
-                                        ") SELECT DISTINCT obnumber, 'satem', obname, satname, level ",
-                                        "FROM shard.obsmon WHERE obnumber==7", sep=""))
+              dbExecute(db$cache, paste("INSERT INTO temp.obtype ",
+                                        "  (obnumber, obtype, variable, division, fromDbTable)",
+                                        "  SELECT DISTINCT obnumber, obname, varname, level, 'obsmon' ",
+                                        "FROM shard.obsmon WHERE obnumber!=7 ",
+                                        "UNION ",
+                                        "  SELECT DISTINCT obnumber, obname, varname, level, 'usage' ",
+                                        "FROM shard.usage WHERE obnumber!=7 ",
+                                        sep=""))
+              dbExecute(db$cache, paste("INSERT INTO temp.obtype ",
+                                        "  (obnumber, obtype, sensor, satellite, division, fromDbTable)",
+                                        "  SELECT DISTINCT obnumber, 'satem', obname, satname, level, 'obsmon' ",
+                                        "FROM shard.obsmon WHERE obnumber==7 ",
+                                        "UNION ",
+                                        "  SELECT DISTINCT obnumber, 'satem', obname, satname, level, 'usage' ",
+                                        "FROM shard.usage WHERE obnumber==7 ",
+                                        sep=""))
               dbExecute(db$cache, paste("INSERT OR IGNORE INTO main.obtype (",
-                                        "  obnumber, obtype, variable, sensor, satellite, division",
+                                        "  obnumber, obtype, variable, sensor, satellite, division, fromDbTable",
                                         ") SELECT * FROM temp.obtype"))
               dbExecute(db$cache, paste(sprintf("INSERT INTO main.dtg_obtype SELECT %s, ", dtg),
                                         "m.obtype_id FROM main.obtype m ",
                                         "JOIN temp.obtype t ",
-                                        "USING (obnumber, obtype, variable, division) ",
+                                        "USING (obnumber, obtype, variable, division, fromDbTable) ",
                                         "WHERE t.variable IS NOT NULL",
                                         sep=""))
               dbExecute(db$cache, paste(sprintf("INSERT INTO main.dtg_obtype SELECT %s, ", dtg),
                                         "m.obtype_id FROM main.obtype m ",
                                         "JOIN temp.obtype t ",
-                                        "USING (obnumber, obtype, sensor, satellite, division) ",
+                                        "USING (obnumber, obtype, sensor, satellite, division, fromDbTable) ",
                                         "WHERE t.variable IS NULL",
                                         sep=""))
               dbExecute(db$cache, "DROP TABLE temp.obtype")
@@ -276,48 +286,64 @@ updateCache <- function(db) {
 
 initObtypes <- function(db) {
   obtypes <- collect(tbl(db$cache, "obtype"))
-  res <- obtypes %>%
-    filter(!is.na(variable)) %>%
-    select(obtype, variable, division) %>%
-    group_by(obtype, variable) %>%
-    summarize(levelChoices=list(sort(as.integer(division)))) %>%
-    group_by(obtype) %>%
-    summarize(variable={
-      lc <- levelChoices
-      names(lc) <- variable
-      list(lc)
-    }) %>%
-    summarize(obtype={
-      v <- variable
-      names(v) <- obtype
-      list(v)
-    })
-  nonSatObs <- res[[1,1]]
-  res <- obtypes %>%
-    filter(is.na(variable)) %>%
-    select(obtype, sensor, satellite, division) %>%
-    group_by(obtype, sensor, satellite) %>%
-    summarize(channelChoices=list(sort(as.integer(division)))) %>%
-    group_by(obtype, sensor) %>%
-    summarize(satellite={
-      cc <- channelChoices
-      names(cc) <- satellite
-      list(cc)
-    }) %>%
-    group_by(obtype) %>%
-    summarize(sensor={
-      sat <- satellite
-      names(sat) <- sensor
-      list(sat)
-    }) %>%
-    summarize(obtype={
-      s <- sensor
-      names(s) <- obtype
-      list(s)
-    })
-  satObs <- res[[1,1]]
-  obs <- c(satObs, nonSatObs)
-  db$obtypes <- obs[sort(names(obs))]
+
+  getNonSatObs <- function(obtypes, dbTable=NA) {
+    res <- obtypes %>%
+      filter(!is.na(variable)) %>%
+      filter(if(!is.na(dbTable)) fromDbTable==dbTable else !is.na(fromDbTable)) %>%
+      select(obtype, variable, division) %>%
+      group_by(obtype, variable) %>%
+      summarize(levelChoices=list(sort(as.integer(division)))) %>%
+      group_by(obtype) %>%
+      summarize(
+        variable={
+          lc <- levelChoices
+          names(lc) <- variable
+          list(lc)
+        }) %>%
+      summarize(obtype={
+        v <- variable
+        names(v) <- obtype
+        list(v)
+      })
+    return(res[[1, 1]])
+  }
+
+  getSatObs <- function(obtypes, dbTable=NA) {
+    res <- obtypes %>%
+      filter(is.na(variable)) %>%
+      filter(if(!is.na(dbTable)) fromDbTable==dbTable else !is.na(fromDbTable)) %>%
+      select(obtype, sensor, satellite, division) %>%
+      group_by(obtype, sensor, satellite) %>%
+      summarize(channelChoices=list(sort(as.integer(division)))) %>%
+      group_by(obtype, sensor) %>%
+      summarize(satellite={
+        cc <- channelChoices
+        names(cc) <- satellite
+        list(cc)
+      }) %>%
+      group_by(obtype) %>%
+      summarize(sensor={
+        sat <- satellite
+        names(sat) <- sensor
+        list(sat)
+      }) %>%
+      summarize(obtype={
+        s <- sensor
+        names(s) <- obtype
+        list(s)
+      })
+    return(res[[1, 1]])
+  }
+
+  obsObsmonTable <- c(getSatObs(obtypes, 'obsmon'), getNonSatObs(obtypes, 'obsmon'))
+  obsUsageTable <- c(getSatObs(obtypes, 'usage'), getNonSatObs(obtypes, 'usage'))
+  obsAllTables <- c(getSatObs(obtypes), getNonSatObs(obtypes))
+
+  db$obtypes <- obsAllTables[sort(names(obsAllTables))]
+  db$obtypesObsmonTable <- obsObsmonTable[sort(names(obsObsmonTable))]
+  db$obtypesUsageTable <- obsUsageTable[sort(names(obsUsageTable))]
+
   res <- dbGetQuery(db$cache, paste("SELECT DISTINCT obnumber, ",
                                     "CASE obtype ",
                                     "WHEN 'satem' THEN sensor ",
