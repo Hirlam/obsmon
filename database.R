@@ -162,15 +162,13 @@ initCache <- function(cachePath) {
 }
 
 openCache <- function(db) {
-  cacheFile <- slugify(paste(db$basename, db$name, "db", sep="."))
-  cachePath <- file.path(obsmonConfig$general$cacheDir, cacheFile)
-  if (file.exists(cachePath)) {
-    flog.debug('Cache path "%s" exists. Connecting.', cachePath)
-    cache <- dbConnect(RSQLite::SQLite(), cachePath)
+  if (file.exists(db$cachePath)) {
+    flog.debug('Cache path "%s" exists. Connecting.', db$cachePath)
+    cache <- dbConnect(RSQLite::SQLite(), db$cachePath)
     setPragmas(cache)
   } else {
-    flog.debug('Cache path "%s" does not exist. Initialising.', cachePath)
-    cache <- initCache(cachePath)
+    flog.debug('Cache path "%s" does not exist. Initialising.', db$cachePath)
+    cache <- initCache(db$cachePath)
   }
   cache
 }
@@ -393,6 +391,10 @@ createDb <- function(dir, basename, name, file) {
   db$basename <- basename
   db$name <- name
   db$file <- file
+
+  cacheFileName <- slugify(paste(basename, name, "db", sep="."))
+  db$cachePath <- file.path(obsmonConfig$general$cacheDir, cacheFileName)
+
   flog.debug("......%s: finding %s dtgs......", basename, name)
   db$dtgs <- as.integer(dir(path=dir, pattern="[0-9]{10}"))
   if (length(db$dtgs)==0) {
