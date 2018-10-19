@@ -283,7 +283,6 @@ updateCache <- function(db) {
 }
 
 initObtypes <- function(db) {
-  obtypes <- collect(tbl(db$cache, "obtype"))
 
   getNonSatObs <- function(obtypes, dbTable=NA) {
     res <- obtypes %>%
@@ -334,9 +333,28 @@ initObtypes <- function(db) {
     return(res[[1, 1]])
   }
 
-  obsObsmonTable <- c(getSatObs(obtypes, 'obsmon'), getNonSatObs(obtypes, 'obsmon'))
-  obsUsageTable <- c(getSatObs(obtypes, 'usage'), getNonSatObs(obtypes, 'usage'))
-  obsAllTables <- c(getSatObs(obtypes), getNonSatObs(obtypes))
+  obtypes <- collect(tbl(db$cache, "obtype"))
+  if("fromDbTable" %in% names(obtypes)) {
+    obsAllTables <- c(getSatObs(obtypes), getNonSatObs(obtypes))
+    obsObsmonTable <- c(getSatObs(obtypes, 'obsmon'), getNonSatObs(obtypes, 'obsmon'))
+    obsUsageTable <- c(getSatObs(obtypes, 'usage'), getNonSatObs(obtypes, 'usage'))
+  } else {
+    # Backwards-compatibility fix. In the future, obtypes should always
+    # contain a column named fromDbTable with values in [usage, obsmon]
+    obtypes$fromDbTable <- "unknown"
+    obsAllTables <- c(getSatObs(obtypes), getNonSatObs(obtypes))
+    obsObsmonTable <- obsAllTables
+    obsUsageTable <- obsAllTables
+
+    warnMsg <- paste(
+      "Cache file generated prior to missing data bug fix:",
+      paste("  >>>", db$cachePath),
+      "Applying backwards-compatibility fix, but please remove this file and restart obsmon.",
+      "Otherwise, you may not see all available data.",
+      sep="\n"
+    )
+    flog.warn(warnMsg)
+  }
 
   db$obtypes <- obsAllTables[sort(names(obsAllTables))]
   db$obtypesObsmonTable <- obsObsmonTable[sort(names(obsObsmonTable))]
