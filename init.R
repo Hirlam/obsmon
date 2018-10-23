@@ -94,12 +94,7 @@ runAppHandlingBusyPort <- function(
         lisOnMsg <- paste(lisOnMsgStart,"http://",host,":",port,"\n", sep='')
         cat(lisOnMsg)
         cat(paste(lisOnMsgMarker, "\n", sep=""))
-        if(!args$launch) {
-          cat(paste('Tip: To have the browser launched automatically,',
-                'run obsmon with the --launch option\n', sep=" "
-              )
-          )
-        }
+        cat("\n")
 
         runApp(appDir, launch.browser=launch.browser, port=port, ...)
         success <- TRUE

@@ -29,6 +29,7 @@ source('lib_paths_config.R')
 tryCatch(
   {
     suppressPackageStartupMessages(library(argparse))
+    cat('For a list of available options, please use the "-h" argument.\n\n')
   },
   error=function(e) stop(paste(e, libPathsMsg[['error']], sep="\n"))
 )
