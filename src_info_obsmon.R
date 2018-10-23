@@ -1,6 +1,6 @@
 
 # obsmonVersion is shown in the GUI and also printed along with the banner
-obsmonVersion <- "2.2.1"
+obsmonVersion <- "2.3.0"
 
 # Having the git info gathered below is useful when providing support to users
 gitCommitHash <- tryCatch(
