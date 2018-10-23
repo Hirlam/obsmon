@@ -20,11 +20,6 @@ getUserName <- function() {
 }
 userName <- getUserName()
 
-libMsg <- "Directories in the R library search path (in order of priority):\n"
-for(dir in .libPaths()) {
-  libMsg <- paste(libMsg, " >", dir, "\n")
-}
-
 tryCatch(
   {
     suppressPackageStartupMessages(library(Cairo))
@@ -49,10 +44,10 @@ tryCatch(
     suppressPackageStartupMessages(library(stringi))
     suppressPackageStartupMessages(library(V8))
 
-    flog.debug(libMsg)
     flog.info(paste('Running as user "', userName, '"', sep=""))
+    flog.info(libPathsMsg[['success']])
   },
-  error=function(e) stop(paste(e, libMsg, sep="\n"))
+  error=function(e) stop(paste(e, libPathsMsg[['error']], sep="\n"))
 )
 
 # Creating some default config and cache dirs
