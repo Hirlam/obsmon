@@ -126,37 +126,43 @@ initCache <- function(cachePath) {
   if(!dir.exists(dirname(cachePath))) {
     dir.create(dirname(cachePath), recursive = TRUE)
   }
-  cache <- dbConnect(RSQLite::SQLite(), cachePath)
-  if (!dbExistsTable(cache, "dtg")) {
-    setPragmas(cache)
-    dbExecute(cache, paste("CREATE TABLE obtype (",
-                           "  obtype_id INTEGER PRIMARY KEY,",
-                           "  obnumber INTEGER NOT NULL,",
-                           "  obtype VARCHAR(20) NOT NULL,",
-                           "  variable VARCHAR(20),",
-                           "  sensor VARCHAR(20),",
-                           "  satellite VARCHAR(20),",
-                           "  division INTEGER NOT NULL,",
-                           "  fromDbTable VARCHAR(20) NOT NULL,",
-                           "  UNIQUE(obnumber, obtype, variable, division, fromDbTable),",
-                           "  UNIQUE(obnumber, obtype, sensor, satellite, division, fromDbTable)",
-                           ")", sep=""))
-    dbExecute(cache, paste("CREATE TABLE dtg (",
-                           "  dtg INTEGER PRIMARY KEY",
-                           ")", sep=""))
-    dbExecute(cache, paste("CREATE TABLE dtg_obtype (",
-                           "  dtg INTEGER NOT NULL REFERENCES dtg(dtg),",
-                           "  obtype_id INTEGER NOT NULL REFERENCES obtype(obtype_id)",
-                           ")", sep=""))
-    dbExecute(cache, "CREATE INDEX dtg_obtype_dtg_idx ON dtg_obtype(dtg)")
-    dbExecute(cache, paste("CREATE TABLE station (",
-                           "  station_id INTEGER PRIMARY KEY,",
-                           "  obname VARCHAR(20) NOT NULL,",
-                           "  statid VARCHAR(20) NOT NULL,",
-                           "  label VARCHAR(20),",
-                           "  UNIQUE(obname, statid)",
-                           ")", sep=""))
+  # Making sure we are dealing with a new file
+  cacheFileDelStatus <- unlink(cachePath)
+  if(cacheFileDelStatus==1 && file.exists(cachePath)) {
+    flog.error(sprintf("Could not initialise cache on file %s", cachePath))
+    unlock(dbLock)
+    return(NULL)
   }
+
+  cache <- dbConnect(RSQLite::SQLite(), cachePath)
+  setPragmas(cache)
+  dbExecute(cache, paste("CREATE TABLE obtype (",
+                         "  obtype_id INTEGER PRIMARY KEY,",
+                         "  obnumber INTEGER NOT NULL,",
+                         "  obtype VARCHAR(20) NOT NULL,",
+                         "  variable VARCHAR(20),",
+                         "  sensor VARCHAR(20),",
+                         "  satellite VARCHAR(20),",
+                         "  division INTEGER NOT NULL,",
+                         "  fromDbTable VARCHAR(20) NOT NULL,",
+                         "  UNIQUE(obnumber, obtype, variable, division, fromDbTable),",
+                         "  UNIQUE(obnumber, obtype, sensor, satellite, division, fromDbTable)",
+                         ")", sep=""))
+  dbExecute(cache, paste("CREATE TABLE dtg (",
+                         "  dtg INTEGER PRIMARY KEY",
+                         ")", sep=""))
+  dbExecute(cache, paste("CREATE TABLE dtg_obtype (",
+                         "  dtg INTEGER NOT NULL REFERENCES dtg(dtg),",
+                         "  obtype_id INTEGER NOT NULL REFERENCES obtype(obtype_id)",
+                         ")", sep=""))
+  dbExecute(cache, "CREATE INDEX dtg_obtype_dtg_idx ON dtg_obtype(dtg)")
+  dbExecute(cache, paste("CREATE TABLE station (",
+                         "  station_id INTEGER PRIMARY KEY,",
+                         "  obname VARCHAR(20) NOT NULL,",
+                         "  statid VARCHAR(20) NOT NULL,",
+                         "  label VARCHAR(20),",
+                         "  UNIQUE(obname, statid)",
+                         ")", sep=""))
   unlock(dbLock)
   cache
 }
