@@ -172,6 +172,25 @@ openCache <- function(db) {
     flog.debug('Cache path "%s" exists. Connecting.', db$cachePath)
     cache <- dbConnect(RSQLite::SQLite(), db$cachePath)
     setPragmas(cache)
+    if(!("obtype" %in% dbListTables(cache)) ||
+       !("fromDbTable" %in% dbListFields(cache, "obtype"))) {
+      # Fixing obsmon cache files created before the "missing data" bugfix.
+      # Before that bugfix, only data from the "obsmon" table was not taken
+      # into account when building the cache, and "usage" was ignored.
+      # The "fromDbTable" field was then introduced in the cache's obtype table
+      # so that one knows which table the cached data was extracted from.
+      warnMsg <- paste(
+        "The cache file",
+        paste("  >>>", db$cachePath),
+        'was generated prior to "missing data" bugfix and will be reset.',
+        "This may cause caching to take longer than usual this time,",
+        "but part of the available data may become unselectable otherwise.",
+        sep="\n"
+      )
+      flog.warn(warnMsg)
+      dbDisconnect(cache)
+      cache <- initNewCache(db$cachePath)
+    }
   } else {
     flog.debug('Cache path "%s" does not exist. Initialising.', db$cachePath)
     cache <- initNewCache(db$cachePath)
@@ -340,27 +359,9 @@ initObtypes <- function(db) {
   }
 
   obtypes <- collect(tbl(db$cache, "obtype"))
-  if("fromDbTable" %in% names(obtypes)) {
-    obsAllTables <- c(getSatObs(obtypes), getNonSatObs(obtypes))
-    obsObsmonTable <- c(getSatObs(obtypes, 'obsmon'), getNonSatObs(obtypes, 'obsmon'))
-    obsUsageTable <- c(getSatObs(obtypes, 'usage'), getNonSatObs(obtypes, 'usage'))
-  } else {
-    # Backwards-compatibility fix. In the future, obtypes should always
-    # contain a column named fromDbTable with values in [usage, obsmon]
-    obtypes$fromDbTable <- "unknown"
-    obsAllTables <- c(getSatObs(obtypes), getNonSatObs(obtypes))
-    obsObsmonTable <- obsAllTables
-    obsUsageTable <- obsAllTables
-
-    warnMsg <- paste(
-      "Cache file generated prior to missing data bug fix:",
-      paste("  >>>", db$cachePath),
-      "Applying backwards-compatibility fix, but please remove this file and restart obsmon.",
-      "Otherwise, you may not see all available data.",
-      sep="\n"
-    )
-    flog.warn(warnMsg)
-  }
+  obsAllTables <- c(getSatObs(obtypes), getNonSatObs(obtypes))
+  obsObsmonTable <- c(getSatObs(obtypes, 'obsmon'), getNonSatObs(obtypes, 'obsmon'))
+  obsUsageTable <- c(getSatObs(obtypes, 'usage'), getNonSatObs(obtypes, 'usage'))
 
   db$obtypes <- obsAllTables[sort(names(obsAllTables))]
   db$obtypesObsmonTable <- obsObsmonTable[sort(names(obsObsmonTable))]
