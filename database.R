@@ -119,44 +119,50 @@ setPragmas <- function(connection) {
   dbExecute(connection, "PRAGMA foreign_keys=ON")
 }
 
-initCache <- function(cachePath) {
+initNewCache <- function(cachePath) {
   dbLock <- lock(cachePath)
   # dbConnect will create the DB file if it doesn't yet exist, but the
   # directory must exist
   if(!dir.exists(dirname(cachePath))) {
     dir.create(dirname(cachePath), recursive = TRUE)
   }
-  cache <- dbConnect(RSQLite::SQLite(), cachePath)
-  if (!dbExistsTable(cache, "dtg")) {
-    setPragmas(cache)
-    dbExecute(cache, paste("CREATE TABLE obtype (",
-                           "  obtype_id INTEGER PRIMARY KEY,",
-                           "  obnumber INTEGER NOT NULL,",
-                           "  obtype VARCHAR(20) NOT NULL,",
-                           "  variable VARCHAR(20),",
-                           "  sensor VARCHAR(20),",
-                           "  satellite VARCHAR(20),",
-                           "  division INTEGER NOT NULL,",
-                           "  fromDbTable VARCHAR(20) NOT NULL,",
-                           "  UNIQUE(obnumber, obtype, variable, division, fromDbTable),",
-                           "  UNIQUE(obnumber, obtype, sensor, satellite, division, fromDbTable)",
-                           ")", sep=""))
-    dbExecute(cache, paste("CREATE TABLE dtg (",
-                           "  dtg INTEGER PRIMARY KEY",
-                           ")", sep=""))
-    dbExecute(cache, paste("CREATE TABLE dtg_obtype (",
-                           "  dtg INTEGER NOT NULL REFERENCES dtg(dtg),",
-                           "  obtype_id INTEGER NOT NULL REFERENCES obtype(obtype_id)",
-                           ")", sep=""))
-    dbExecute(cache, "CREATE INDEX dtg_obtype_dtg_idx ON dtg_obtype(dtg)")
-    dbExecute(cache, paste("CREATE TABLE station (",
-                           "  station_id INTEGER PRIMARY KEY,",
-                           "  obname VARCHAR(20) NOT NULL,",
-                           "  statid VARCHAR(20) NOT NULL,",
-                           "  label VARCHAR(20),",
-                           "  UNIQUE(obname, statid)",
-                           ")", sep=""))
+  # Making sure we are dealing with a new file
+  cacheFileDelStatus <- unlink(cachePath)
+  if(cacheFileDelStatus==1 && file.exists(cachePath)) {
+    flog.error(sprintf("Could not initialise cache on file %s", cachePath))
+    unlock(dbLock)
+    return(NULL)
   }
+
+  cache <- dbConnect(RSQLite::SQLite(), cachePath)
+  setPragmas(cache)
+  dbExecute(cache, paste("CREATE TABLE obtype (",
+                         "  obtype_id INTEGER PRIMARY KEY,",
+                         "  obnumber INTEGER NOT NULL,",
+                         "  obtype VARCHAR(20) NOT NULL,",
+                         "  variable VARCHAR(20),",
+                         "  sensor VARCHAR(20),",
+                         "  satellite VARCHAR(20),",
+                         "  division INTEGER NOT NULL,",
+                         "  fromDbTable VARCHAR(20) NOT NULL,",
+                         "  UNIQUE(obnumber, obtype, variable, division, fromDbTable),",
+                         "  UNIQUE(obnumber, obtype, sensor, satellite, division, fromDbTable)",
+                         ")", sep=""))
+  dbExecute(cache, paste("CREATE TABLE dtg (",
+                         "  dtg INTEGER PRIMARY KEY",
+                         ")", sep=""))
+  dbExecute(cache, paste("CREATE TABLE dtg_obtype (",
+                         "  dtg INTEGER NOT NULL REFERENCES dtg(dtg),",
+                         "  obtype_id INTEGER NOT NULL REFERENCES obtype(obtype_id)",
+                         ")", sep=""))
+  dbExecute(cache, "CREATE INDEX dtg_obtype_dtg_idx ON dtg_obtype(dtg)")
+  dbExecute(cache, paste("CREATE TABLE station (",
+                         "  station_id INTEGER PRIMARY KEY,",
+                         "  obname VARCHAR(20) NOT NULL,",
+                         "  statid VARCHAR(20) NOT NULL,",
+                         "  label VARCHAR(20),",
+                         "  UNIQUE(obname, statid)",
+                         ")", sep=""))
   unlock(dbLock)
   cache
 }
@@ -166,9 +172,28 @@ openCache <- function(db) {
     flog.debug('Cache path "%s" exists. Connecting.', db$cachePath)
     cache <- dbConnect(RSQLite::SQLite(), db$cachePath)
     setPragmas(cache)
+    if(!("obtype" %in% dbListTables(cache)) ||
+       !("fromDbTable" %in% dbListFields(cache, "obtype"))) {
+      # Fixing obsmon cache files created before the "missing data" bugfix.
+      # Before that bugfix, only data from the "obsmon" table was not taken
+      # into account when building the cache, and "usage" was ignored.
+      # The "fromDbTable" field was then introduced in the cache's obtype table
+      # so that one knows which table the cached data was extracted from.
+      warnMsg <- paste(
+        "The cache file",
+        paste("  >>>", db$cachePath),
+        'was generated prior to "missing data" bugfix and will be reset.',
+        "This may cause caching to take longer than usual this time,",
+        "but part of the available data may become unselectable otherwise.",
+        sep="\n"
+      )
+      flog.warn(warnMsg)
+      dbDisconnect(cache)
+      cache <- initNewCache(db$cachePath)
+    }
   } else {
     flog.debug('Cache path "%s" does not exist. Initialising.', db$cachePath)
-    cache <- initCache(db$cachePath)
+    cache <- initNewCache(db$cachePath)
   }
   cache
 }
@@ -334,27 +359,9 @@ initObtypes <- function(db) {
   }
 
   obtypes <- collect(tbl(db$cache, "obtype"))
-  if("fromDbTable" %in% names(obtypes)) {
-    obsAllTables <- c(getSatObs(obtypes), getNonSatObs(obtypes))
-    obsObsmonTable <- c(getSatObs(obtypes, 'obsmon'), getNonSatObs(obtypes, 'obsmon'))
-    obsUsageTable <- c(getSatObs(obtypes, 'usage'), getNonSatObs(obtypes, 'usage'))
-  } else {
-    # Backwards-compatibility fix. In the future, obtypes should always
-    # contain a column named fromDbTable with values in [usage, obsmon]
-    obtypes$fromDbTable <- "unknown"
-    obsAllTables <- c(getSatObs(obtypes), getNonSatObs(obtypes))
-    obsObsmonTable <- obsAllTables
-    obsUsageTable <- obsAllTables
-
-    warnMsg <- paste(
-      "Cache file generated prior to missing data bug fix:",
-      paste("  >>>", db$cachePath),
-      "Applying backwards-compatibility fix, but please remove this file and restart obsmon.",
-      "Otherwise, you may not see all available data.",
-      sep="\n"
-    )
-    flog.warn(warnMsg)
-  }
+  obsAllTables <- c(getSatObs(obtypes), getNonSatObs(obtypes))
+  obsObsmonTable <- c(getSatObs(obtypes, 'obsmon'), getNonSatObs(obtypes, 'obsmon'))
+  obsUsageTable <- c(getSatObs(obtypes, 'usage'), getNonSatObs(obtypes, 'usage'))
 
   db$obtypes <- obsAllTables[sort(names(obsAllTables))]
   db$obtypesObsmonTable <- obsObsmonTable[sort(names(obsObsmonTable))]
@@ -423,21 +430,21 @@ createDb <- function(dir, basename, name, file) {
     NULL
   } else {
     flog.debug("......%s: done finding %s dtgs......", basename, name)
+    flog.debug("......%s: Opening %s cache db", basename, name)
+    db$cache <- openCache(db)
     flog.debug("......%s: checking %s dtgs......", basename, name)
     db <- prepareConnections(db)
     flog.debug("......%s: done checking %s dtgs......", basename, name)
     flog.debug("......%s: updating %s db info......", basename, name)
-    flog.debug("%s: Opening %s cache db", basename, name)
-    db$cache <- openCache(db)
     flog.debug(
-      "%s: Updating %s cache db. This may take some time.", basename, name
+      "......%s: Updating %s cache db. This may take some time.",basename,name
     )
     db <- updateCache(db)
-    flog.debug("%s: Initialising %s observation types", basename, name)
+    flog.debug("......%s: Initialising %s observation types", basename, name)
     db <- initObtypes(db)
-    flog.debug("%s: Initialising %s stations", basename, name)
+    flog.debug("......%s: Initialising %s stations", basename, name)
     db <- initStations(db)
-    flog.debug("%s: Updating %s dates", basename, name)
+    flog.debug("......%s: Updating %s dates", basename, name)
     db <- updateDates(db)
     flog.debug("......%s: done updating %s db info......", basename, name)
     flog.debug("...%s: finished %s db...", basename, name)
