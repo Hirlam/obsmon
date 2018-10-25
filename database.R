@@ -430,21 +430,21 @@ createDb <- function(dir, basename, name, file) {
     NULL
   } else {
     flog.debug("......%s: done finding %s dtgs......", basename, name)
+    flog.debug("......%s: Opening %s cache db", basename, name)
+    db$cache <- openCache(db)
     flog.debug("......%s: checking %s dtgs......", basename, name)
     db <- prepareConnections(db)
     flog.debug("......%s: done checking %s dtgs......", basename, name)
     flog.debug("......%s: updating %s db info......", basename, name)
-    flog.debug("%s: Opening %s cache db", basename, name)
-    db$cache <- openCache(db)
     flog.debug(
-      "%s: Updating %s cache db. This may take some time.", basename, name
+      "......%s: Updating %s cache db. This may take some time.",basename,name
     )
     db <- updateCache(db)
-    flog.debug("%s: Initialising %s observation types", basename, name)
+    flog.debug("......%s: Initialising %s observation types", basename, name)
     db <- initObtypes(db)
-    flog.debug("%s: Initialising %s stations", basename, name)
+    flog.debug("......%s: Initialising %s stations", basename, name)
     db <- initStations(db)
-    flog.debug("%s: Updating %s dates", basename, name)
+    flog.debug("......%s: Updating %s dates", basename, name)
     db <- updateDates(db)
     flog.debug("......%s: done updating %s db info......", basename, name)
     flog.debug("...%s: finished %s db...", basename, name)
