@@ -119,7 +119,7 @@ setPragmas <- function(connection) {
   dbExecute(connection, "PRAGMA foreign_keys=ON")
 }
 
-initCache <- function(cachePath) {
+initNewCache <- function(cachePath) {
   dbLock <- lock(cachePath)
   # dbConnect will create the DB file if it doesn't yet exist, but the
   # directory must exist
@@ -174,7 +174,7 @@ openCache <- function(db) {
     setPragmas(cache)
   } else {
     flog.debug('Cache path "%s" does not exist. Initialising.', db$cachePath)
-    cache <- initCache(db$cachePath)
+    cache <- initNewCache(db$cachePath)
   }
   cache
 }
