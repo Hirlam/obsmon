@@ -179,16 +179,23 @@ openCache <- function(db) {
       # into account when building the cache, and "usage" was ignored.
       # The "fromDbTable" field was then introduced in the cache's obtype table
       # so that one knows which table the cached data was extracted from.
+      backup_fname <- paste(
+        db$cachePath, '.auto_backup_missing_data_bugfix_', Sys.Date(),
+        sep=""
+      )
       warnMsg <- paste(
         "The cache file",
         paste("  >>>", db$cachePath),
         'was generated prior to "missing data" bugfix and will be reset.',
         "This may cause caching to take longer than usual this time,",
         "but part of the available data may become unselectable otherwise.",
+        'A backup of the old file will be created as:',
+        paste("  >>>", backup_fname),
         sep="\n"
       )
       flog.warn(warnMsg)
       dbDisconnect(cache)
+      file.copy(db$cachePath, backup_fname)
       cache <- initNewCache(db$cachePath)
     }
   } else {
