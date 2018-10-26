@@ -119,57 +119,88 @@ setPragmas <- function(connection) {
   dbExecute(connection, "PRAGMA foreign_keys=ON")
 }
 
-initCache <- function(cachePath) {
+initNewCache <- function(cachePath) {
   dbLock <- lock(cachePath)
   # dbConnect will create the DB file if it doesn't yet exist, but the
   # directory must exist
   if(!dir.exists(dirname(cachePath))) {
     dir.create(dirname(cachePath), recursive = TRUE)
   }
-  cache <- dbConnect(RSQLite::SQLite(), cachePath)
-  if (!dbExistsTable(cache, "dtg")) {
-    setPragmas(cache)
-    dbExecute(cache, paste("CREATE TABLE obtype (",
-                           "  obtype_id INTEGER PRIMARY KEY,",
-                           "  obnumber INTEGER NOT NULL,",
-                           "  obtype VARCHAR(20) NOT NULL,",
-                           "  variable VARCHAR(20),",
-                           "  sensor VARCHAR(20),",
-                           "  satellite VARCHAR(20),",
-                           "  division INTEGER NOT NULL,",
-                           "  UNIQUE(obnumber, obtype, variable, division),",
-                           "  UNIQUE(obnumber, obtype, sensor, satellite, division)",
-                           ")", sep=""))
-    dbExecute(cache, paste("CREATE TABLE dtg (",
-                           "  dtg INTEGER PRIMARY KEY",
-                           ")", sep=""))
-    dbExecute(cache, paste("CREATE TABLE dtg_obtype (",
-                           "  dtg INTEGER NOT NULL REFERENCES dtg(dtg),",
-                           "  obtype_id INTEGER NOT NULL REFERENCES obtype(obtype_id)",
-                           ")", sep=""))
-    dbExecute(cache, "CREATE INDEX dtg_obtype_dtg_idx ON dtg_obtype(dtg)")
-    dbExecute(cache, paste("CREATE TABLE station (",
-                           "  station_id INTEGER PRIMARY KEY,",
-                           "  obname VARCHAR(20) NOT NULL,",
-                           "  statid VARCHAR(20) NOT NULL,",
-                           "  label VARCHAR(20),",
-                           "  UNIQUE(obname, statid)",
-                           ")", sep=""))
+  # Making sure we are dealing with a new file
+  cacheFileDelStatus <- unlink(cachePath)
+  if(cacheFileDelStatus==1 && file.exists(cachePath)) {
+    flog.error(sprintf("Could not initialise cache on file %s", cachePath))
+    unlock(dbLock)
+    return(NULL)
   }
+
+  cache <- dbConnect(RSQLite::SQLite(), cachePath)
+  setPragmas(cache)
+  dbExecute(cache, paste("CREATE TABLE obtype (",
+                         "  obtype_id INTEGER PRIMARY KEY,",
+                         "  obnumber INTEGER NOT NULL,",
+                         "  obtype VARCHAR(20) NOT NULL,",
+                         "  variable VARCHAR(20),",
+                         "  sensor VARCHAR(20),",
+                         "  satellite VARCHAR(20),",
+                         "  division INTEGER NOT NULL,",
+                         "  fromDbTable VARCHAR(20) NOT NULL,",
+                         "  UNIQUE(obnumber, obtype, variable, division, fromDbTable),",
+                         "  UNIQUE(obnumber, obtype, sensor, satellite, division, fromDbTable)",
+                         ")", sep=""))
+  dbExecute(cache, paste("CREATE TABLE dtg (",
+                         "  dtg INTEGER PRIMARY KEY",
+                         ")", sep=""))
+  dbExecute(cache, paste("CREATE TABLE dtg_obtype (",
+                         "  dtg INTEGER NOT NULL REFERENCES dtg(dtg),",
+                         "  obtype_id INTEGER NOT NULL REFERENCES obtype(obtype_id)",
+                         ")", sep=""))
+  dbExecute(cache, "CREATE INDEX dtg_obtype_dtg_idx ON dtg_obtype(dtg)")
+  dbExecute(cache, paste("CREATE TABLE station (",
+                         "  station_id INTEGER PRIMARY KEY,",
+                         "  obname VARCHAR(20) NOT NULL,",
+                         "  statid VARCHAR(20) NOT NULL,",
+                         "  label VARCHAR(20),",
+                         "  UNIQUE(obname, statid)",
+                         ")", sep=""))
   unlock(dbLock)
   cache
 }
 
 openCache <- function(db) {
-  cacheFile <- slugify(paste(db$basename, db$name, "db", sep="."))
-  cachePath <- file.path(obsmonConfig$general$cacheDir, cacheFile)
-  if (file.exists(cachePath)) {
-    flog.debug('Cache path "%s" exists. Connecting.', cachePath)
-    cache <- dbConnect(RSQLite::SQLite(), cachePath)
+  if (file.exists(db$cachePath)) {
+    flog.debug('Cache path "%s" exists. Connecting.', db$cachePath)
+    cache <- dbConnect(RSQLite::SQLite(), db$cachePath)
     setPragmas(cache)
+    if(!("obtype" %in% dbListTables(cache)) ||
+       !("fromDbTable" %in% dbListFields(cache, "obtype"))) {
+      # Fixing obsmon cache files created before the "missing data" bugfix.
+      # Before that bugfix, only data from the "obsmon" table was not taken
+      # into account when building the cache, and "usage" was ignored.
+      # The "fromDbTable" field was then introduced in the cache's obtype table
+      # so that one knows which table the cached data was extracted from.
+      backup_fname <- paste(
+        db$cachePath, '.auto_backup_missing_data_bugfix_', Sys.Date(),
+        sep=""
+      )
+      warnMsg <- paste(
+        "The cache file",
+        paste("  >>>", db$cachePath),
+        'was generated prior to "missing data" bugfix and will be reset.',
+        "This may cause caching to take longer than usual this time,",
+        "but part of the available data may become unselectable otherwise.",
+        'A backup of the old file will be created as:',
+        paste("  >>>", backup_fname),
+        sep="\n"
+      )
+      flog.warn(warnMsg)
+      dbDisconnect(cache)
+      file.copy(db$cachePath, backup_fname)
+      cache <- initNewCache(db$cachePath)
+    }
   } else {
-    flog.debug('Cache path "%s" does not exist. Initialising.', cachePath)
-    cache <- initCache(cachePath)
+    flog.debug('Cache path "%s" does not exist. Initialising.', db$cachePath)
+    cache <- initNewCache(db$cachePath)
   }
   cache
 }
@@ -208,30 +239,39 @@ updateCache <- function(db) {
                                         "  sensor VARCHAR(20),",
                                         "  satellite VARCHAR(20),",
                                         "  division INTEGER NOT NULL,",
-                                        "  UNIQUE(obnumber, obtype, variable, division),",
-                                        "  UNIQUE(obnumber, obtype, sensor, satellite, division)",
+                                        "  fromDbTable VARCHAR(20) NOT NULL,",
+                                        "  UNIQUE(obnumber, obtype, variable, division, fromDbTable),",
+                                        "  UNIQUE(obnumber, obtype, sensor, satellite, division, fromDbTable)",
                                         ")", sep=""))
-              dbExecute(db$cache, paste("INSERT INTO temp.obtype (",
-                                        "  obnumber, obtype, variable, division",
-                                        ") SELECT DISTINCT obnumber, obname, varname, level ",
-                                        "FROM shard.obsmon WHERE obnumber!=7", sep=""))
-              dbExecute(db$cache, paste("INSERT INTO temp.obtype (",
-                                        "  obnumber, obtype, sensor, satellite, division",
-                                        ") SELECT DISTINCT obnumber, 'satem', obname, satname, level ",
-                                        "FROM shard.obsmon WHERE obnumber==7", sep=""))
+              dbExecute(db$cache, paste("INSERT INTO temp.obtype ",
+                                        "  (obnumber, obtype, variable, division, fromDbTable)",
+                                        "  SELECT DISTINCT obnumber, obname, varname, level, 'obsmon' ",
+                                        "FROM shard.obsmon WHERE obnumber!=7 ",
+                                        "UNION ",
+                                        "  SELECT DISTINCT obnumber, obname, varname, level, 'usage' ",
+                                        "FROM shard.usage WHERE obnumber!=7 ",
+                                        sep=""))
+              dbExecute(db$cache, paste("INSERT INTO temp.obtype ",
+                                        "  (obnumber, obtype, sensor, satellite, division, fromDbTable)",
+                                        "  SELECT DISTINCT obnumber, 'satem', obname, satname, level, 'obsmon' ",
+                                        "FROM shard.obsmon WHERE obnumber==7 ",
+                                        "UNION ",
+                                        "  SELECT DISTINCT obnumber, 'satem', obname, satname, level, 'usage' ",
+                                        "FROM shard.usage WHERE obnumber==7 ",
+                                        sep=""))
               dbExecute(db$cache, paste("INSERT OR IGNORE INTO main.obtype (",
-                                        "  obnumber, obtype, variable, sensor, satellite, division",
+                                        "  obnumber, obtype, variable, sensor, satellite, division, fromDbTable",
                                         ") SELECT * FROM temp.obtype"))
               dbExecute(db$cache, paste(sprintf("INSERT INTO main.dtg_obtype SELECT %s, ", dtg),
                                         "m.obtype_id FROM main.obtype m ",
                                         "JOIN temp.obtype t ",
-                                        "USING (obnumber, obtype, variable, division) ",
+                                        "USING (obnumber, obtype, variable, division, fromDbTable) ",
                                         "WHERE t.variable IS NOT NULL",
                                         sep=""))
               dbExecute(db$cache, paste(sprintf("INSERT INTO main.dtg_obtype SELECT %s, ", dtg),
                                         "m.obtype_id FROM main.obtype m ",
                                         "JOIN temp.obtype t ",
-                                        "USING (obnumber, obtype, sensor, satellite, division) ",
+                                        "USING (obnumber, obtype, sensor, satellite, division, fromDbTable) ",
                                         "WHERE t.variable IS NULL",
                                         sep=""))
               dbExecute(db$cache, "DROP TABLE temp.obtype")
@@ -275,49 +315,65 @@ updateCache <- function(db) {
 }
 
 initObtypes <- function(db) {
+
+  getNonSatObs <- function(obtypes, dbTable=NA) {
+    res <- obtypes %>%
+      filter(!is.na(variable)) %>%
+      filter(if(!is.na(dbTable)) fromDbTable==dbTable else !is.na(fromDbTable)) %>%
+      select(obtype, variable, division) %>%
+      group_by(obtype, variable) %>%
+      summarize(levelChoices=list(sort(as.integer(division)))) %>%
+      group_by(obtype) %>%
+      summarize(
+        variable={
+          lc <- levelChoices
+          names(lc) <- variable
+          list(lc)
+        }) %>%
+      summarize(obtype={
+        v <- variable
+        names(v) <- obtype
+        list(v)
+      })
+    return(res[[1, 1]])
+  }
+
+  getSatObs <- function(obtypes, dbTable=NA) {
+    res <- obtypes %>%
+      filter(is.na(variable)) %>%
+      filter(if(!is.na(dbTable)) fromDbTable==dbTable else !is.na(fromDbTable)) %>%
+      select(obtype, sensor, satellite, division) %>%
+      group_by(obtype, sensor, satellite) %>%
+      summarize(channelChoices=list(sort(as.integer(division)))) %>%
+      group_by(obtype, sensor) %>%
+      summarize(satellite={
+        cc <- channelChoices
+        names(cc) <- satellite
+        list(cc)
+      }) %>%
+      group_by(obtype) %>%
+      summarize(sensor={
+        sat <- satellite
+        names(sat) <- sensor
+        list(sat)
+      }) %>%
+      summarize(obtype={
+        s <- sensor
+        names(s) <- obtype
+        list(s)
+      })
+    return(res[[1, 1]])
+  }
+
   obtypes <- collect(tbl(db$cache, "obtype"))
-  res <- obtypes %>%
-    filter(!is.na(variable)) %>%
-    select(obtype, variable, division) %>%
-    group_by(obtype, variable) %>%
-    summarize(levelChoices=list(sort(as.integer(division)))) %>%
-    group_by(obtype) %>%
-    summarize(variable={
-      lc <- levelChoices
-      names(lc) <- variable
-      list(lc)
-    }) %>%
-    summarize(obtype={
-      v <- variable
-      names(v) <- obtype
-      list(v)
-    })
-  nonSatObs <- res[[1,1]]
-  res <- obtypes %>%
-    filter(is.na(variable)) %>%
-    select(obtype, sensor, satellite, division) %>%
-    group_by(obtype, sensor, satellite) %>%
-    summarize(channelChoices=list(sort(as.integer(division)))) %>%
-    group_by(obtype, sensor) %>%
-    summarize(satellite={
-      cc <- channelChoices
-      names(cc) <- satellite
-      list(cc)
-    }) %>%
-    group_by(obtype) %>%
-    summarize(sensor={
-      sat <- satellite
-      names(sat) <- sensor
-      list(sat)
-    }) %>%
-    summarize(obtype={
-      s <- sensor
-      names(s) <- obtype
-      list(s)
-    })
-  satObs <- res[[1,1]]
-  obs <- c(satObs, nonSatObs)
-  db$obtypes <- obs[sort(names(obs))]
+  obsAllTables <- c(getSatObs(obtypes), getNonSatObs(obtypes))
+  obsObsmonTable <- c(getSatObs(obtypes, 'obsmon'), getNonSatObs(obtypes, 'obsmon'))
+  obsUsageTable <- c(getSatObs(obtypes, 'usage'), getNonSatObs(obtypes, 'usage'))
+
+  db$obtypes <- obsAllTables[sort(names(obsAllTables))]
+  db$obtypesObsmonTable <- obsObsmonTable[sort(names(obsObsmonTable))]
+  db$obtypesUsageTable <- obsUsageTable[sort(names(obsUsageTable))]
+
   res <- dbGetQuery(db$cache, paste("SELECT DISTINCT obnumber, ",
                                     "CASE obtype ",
                                     "WHEN 'satem' THEN sensor ",
@@ -367,6 +423,10 @@ createDb <- function(dir, basename, name, file) {
   db$basename <- basename
   db$name <- name
   db$file <- file
+
+  cacheFileName <- slugify(paste(basename, name, "db", sep="."))
+  db$cachePath <- file.path(obsmonConfig$general$cacheDir, cacheFileName)
+
   flog.debug("......%s: finding %s dtgs......", basename, name)
   db$dtgs <- as.integer(dir(path=dir, pattern="[0-9]{10}"))
   if (length(db$dtgs)==0) {
@@ -377,21 +437,21 @@ createDb <- function(dir, basename, name, file) {
     NULL
   } else {
     flog.debug("......%s: done finding %s dtgs......", basename, name)
+    flog.debug("......%s: Opening %s cache db", basename, name)
+    db$cache <- openCache(db)
     flog.debug("......%s: checking %s dtgs......", basename, name)
     db <- prepareConnections(db)
     flog.debug("......%s: done checking %s dtgs......", basename, name)
     flog.debug("......%s: updating %s db info......", basename, name)
-    flog.debug("%s: Opening %s cache db", basename, name)
-    db$cache <- openCache(db)
     flog.debug(
-      "%s: Updating %s cache db. This may take some time.", basename, name
+      "......%s: Updating %s cache db. This may take some time.",basename,name
     )
     db <- updateCache(db)
-    flog.debug("%s: Initialising %s observation types", basename, name)
+    flog.debug("......%s: Initialising %s observation types", basename, name)
     db <- initObtypes(db)
-    flog.debug("%s: Initialising %s stations", basename, name)
+    flog.debug("......%s: Initialising %s stations", basename, name)
     db <- initStations(db)
-    flog.debug("%s: Updating %s dates", basename, name)
+    flog.debug("......%s: Updating %s dates", basename, name)
     db <- updateDates(db)
     flog.debug("......%s: done updating %s db info......", basename, name)
     flog.debug("...%s: finished %s db...", basename, name)

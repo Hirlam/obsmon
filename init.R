@@ -1,58 +1,53 @@
 # Flagging that this file has been sourced
 initFileSourced <- TRUE
 
-obsmonVersion <- "2.2.0"
+if(!exists("runningAsStandalone") || runningAsStandalone==FALSE) {
+  source("src_info_obsmon.R")
+  source('lib_paths_config.R')
+  runningAsStandalone <- FALSE
+}
+
+if(!runningAsStandalone) {
+  # This info is already printted in a banner when runningAsStandalone
+  cat(obsmonBanner)
+}
 
 getUserName <- function() {
-
   userName <- Sys.info()[["user"]]
   if (is.null(userName) | userName == "") userName <- Sys.getenv("USER")
   if (is.null(userName) | userName == "") userName <- Sys.getenv("LOGNAME")
   return(userName)
 }
-
 userName <- getUserName()
-# Configuring library paths
-localRLibDir <- normalizePath(file.path("utils", "build", "local_R_library"), mustWork=FALSE)
-localInstallRLib <- file.path(localRLibDir, "R-libs")
-userRLib <- Sys.getenv("R_LIBS_USER")
-if(userRLib=="") userRLib <- file.path(Sys.getenv("HOME"), "R", "library")
-userRLib <- normalizePath(userRLib, mustWork=FALSE)
-.libPaths(unique(c(localInstallRLib, userRLib, .libPaths())))
-
-libMsg <- "Directories in the R library search path (in order of priority):\n"
-for(dir in .libPaths()) {
-  libMsg <- paste(libMsg, " >", dir, "\n")
-}
 
 tryCatch(
   {
-    library(Cairo)
-    library(DBI)
-    library(dplyr)
-    library(dbplyr)
-    library(flock)
-    library(futile.logger)
-    library(future)
-    library(ggplot2)
-    library(grid)
-    library(gridExtra)
-    library(leaflet)
-    library(methods)
-    library(pbapply)
-    library(png)
-    library(pryr)
-    library(RcppTOML)
-    library(reshape2)
-    library(shiny)
-    library(shinyjs)
-    library(stringi)
-    library(V8)
+    suppressPackageStartupMessages(library(Cairo))
+    suppressPackageStartupMessages(library(DBI))
+    suppressPackageStartupMessages(library(dplyr))
+    suppressPackageStartupMessages(library(dbplyr))
+    suppressPackageStartupMessages(library(flock))
+    suppressPackageStartupMessages(library(futile.logger))
+    suppressPackageStartupMessages(library(future))
+    suppressPackageStartupMessages(library(ggplot2))
+    suppressPackageStartupMessages(library(grid))
+    suppressPackageStartupMessages(library(gridExtra))
+    suppressPackageStartupMessages(library(leaflet))
+    suppressPackageStartupMessages(library(methods))
+    suppressPackageStartupMessages(library(pbapply))
+    suppressPackageStartupMessages(library(png))
+    suppressPackageStartupMessages(library(pryr))
+    suppressPackageStartupMessages(library(RcppTOML))
+    suppressPackageStartupMessages(library(reshape2))
+    suppressPackageStartupMessages(library(shiny))
+    suppressPackageStartupMessages(library(shinyjs))
+    suppressPackageStartupMessages(library(stringi))
+    suppressPackageStartupMessages(library(V8))
 
-    flog.debug(libMsg)
     flog.info(paste('Running as user "', userName, '"', sep=""))
+    flog.info(libPathsMsg[['success']])
   },
-  error=function(e) stop(paste(e, libMsg, sep="\n"))
+  error=function(e) stop(paste(e, libPathsMsg[['error']], sep="\n"))
 )
 
 # Creating some default config and cache dirs
@@ -69,27 +64,55 @@ for(dir in c(systemConfigDir, systemCacheDirPath)) {
 }
 
 runAppHandlingBusyPort <- function(
-  callAndErrorMsg=NULL,appDir=getwd(),defaultPort=5391,launch.browser=FALSE,
-  recDepth=0,maxNAtt=10
+  appDir=getwd(), defaultPort=getOption("shiny.port"),
+  launch.browser=getOption("shiny.launch.browser", interactive()),
+  host = getOption("shiny.host", "127.0.0.1"),
+  maxNAtt=10,
+  ...
 ) {
-  if(recDepth==0) {
-    on.exit(removeExptCachingStatusFiles())
+
+  on.exit(removeExptCachingStatusFiles())
+  exitMsg <- paste(
+               "===============",
+               "Exiting Obsmon.",
+               "===============",
+               "",
+               sep="\n"
+             )
+  on.exit(cat(exitMsg), add=TRUE)
+
+  port <- defaultPort
+  success <- FALSE
+  nAtt <- 0
+  lisOnMsgStart <- 'Listening on '
+  lisOnMsgMarker <- "------------------------------------"
+  while (!success & (nAtt<maxNAtt)) {
     tryCatch(
-      runApp(appDir, launch.browser=launch.browser, port=defaultPort),
-      error=function(w) runAppHandlingBusyPort(w, appDir=appDir,recDepth=recDepth+1)
+      {
+        cat("\n")
+        cat(paste(lisOnMsgMarker, "\n", sep=""))
+        lisOnMsg <- paste(lisOnMsgStart,"http://",host,":",port,"\n", sep='')
+        cat(lisOnMsg)
+        cat(paste(lisOnMsgMarker, "\n", sep=""))
+        cat("\n")
+
+        runApp(appDir, launch.browser=launch.browser, port=port, ...)
+        success <- TRUE
+      },
+      error=function(w) {
+        flog.warn(paste('Failed to create server using port', port, sep=" "))
+        port <<- sample(1024:65535, 1)
+        lisOnMsgStart <<- "Port updated: Listening on "
+        lisOnMsgMarker <<- "-------------------------------------------------"
+      }
     )
-  } else if (recDepth+1>maxNAtt) {
-    msg <- paste("Failed to create server after",maxNAtt,"attempts.",sep=" ")
-    msg <- paste(msg, "\n", "Stopping now.\n", sep=" ")
+    nAtt <- nAtt + 1
+  }
+
+  if(!success) {
+    msg <- paste("Failed to create server after", nAtt, "attempts.\n",sep=" ")
+    msg <- paste(msg, "Stopping now.\n", sep=" ")
     stop(msg)
-  } else {
-      msg <- callAndErrorMsg[["message"]]
-      cat(msg, "\n")
-      cat("Trying again with a different TCP port:\n")
-      tryCatch(
-        runApp(appDir, launch.browser=launch.browser),
-        error=function(w) runAppHandlingBusyPort(w, appDir=appDir, recDepth=recDepth+1)
-      )
   }
 }
 

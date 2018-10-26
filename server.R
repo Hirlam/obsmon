@@ -114,7 +114,13 @@ shinyServer(function(input, output, session) {
       if(length(newExptNames)==0) newExptNames <- c("No experiment available!")
       if((length(newExptNames) != length(exptNames)) |
          !all(exptNames==newExptNames)) {
-        updateSelectInput(session, "experiment", choices=newExptNames)
+        selectedExpt <- tryCatch({
+          iExpt <- which(exptNames==input$experiment)[1]
+          if(is.na(iExpt)) NULL else newExptNames[iExpt]
+          },
+          error=function(e) NULL
+        )
+        updateSelectInput(session, "experiment", choices=newExptNames, selected=selectedExpt)
         exptNames <<- newExptNames
       }
   })
@@ -122,7 +128,11 @@ shinyServer(function(input, output, session) {
   shinyjs::show("app-content")
 
   levelChoices <- list()
+  levelChoicesObsmonTable <- list()
+  levelChoicesUsageTable <- list()
   channelChoices <- list()
+  channelChoicesObsmonTable <- list()
+  channelChoicesUsageTable <- list()
 
   activeDb <- reactive({
     expName <- req(input$experiment)
@@ -229,7 +239,9 @@ shinyServer(function(input, output, session) {
       db <- activeDb()
       sens <- req(input$sensor)
       sat <- req(input$satellite)
-      channelChoices <<- db$obtypes[[obtype]][[sens]][[sat]]
+      channelChoicesObsmonTable <<- db$obtypesObsmonTable[[obtype]][[sens]][[sat]]
+      channelChoicesUsageTable <<- db$obtypesUsageTable[[obtype]][[sens]][[sat]]
+      channelChoices <<- unique(c(channelChoicesObsmonTable, channelChoicesUsageTable))
       updateSelection(session, "channels", channelChoices)
     }
   })
@@ -248,9 +260,16 @@ shinyServer(function(input, output, session) {
     if (obtype != "satem") {
       db <- activeDb()
       var <- req(input$variable)
-      levelChoices <<- db$obtypes[[obtype]][[var]]
+      levelChoicesObsmonTable <<- db$obtypesObsmonTable[[obtype]][[var]]
+      levelChoicesUsageTable <<- db$obtypesUsageTable[[obtype]][[var]]
+      levelChoices <<- unique(c(levelChoicesObsmonTable, levelChoicesUsageTable))
       updateSelection(session, "levels", levelChoices)
     }
+  })
+
+  observeEvent(input$levelsSelectStandard, {
+    updateSelectInput(session, "levels",
+                      choices=levelChoices, selected=levelChoicesObsmonTable)
   })
 
   observeEvent(input$levelsSelectAll, {
