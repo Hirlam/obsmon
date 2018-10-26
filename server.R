@@ -114,7 +114,13 @@ shinyServer(function(input, output, session) {
       if(length(newExptNames)==0) newExptNames <- c("No experiment available!")
       if((length(newExptNames) != length(exptNames)) |
          !all(exptNames==newExptNames)) {
-        updateSelectInput(session, "experiment", choices=newExptNames)
+        selectedExpt <- tryCatch({
+          iExpt <- which(exptNames==input$experiment)[1]
+          if(is.na(iExpt)) NULL else newExptNames[iExpt]
+          },
+          error=function(e) NULL
+        )
+        updateSelectInput(session, "experiment", choices=newExptNames, selected=selectedExpt)
         exptNames <<- newExptNames
       }
   })
