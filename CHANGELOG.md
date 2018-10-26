@@ -4,7 +4,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
-## [2.3.0] 2018-10-23
+## [2.3.0] 2018-10-26
 ### Added
 - Option to select only standard levels/channels
     - The standard levels are considered to be those read from the
@@ -15,9 +15,11 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
   easier to provide users with support.
 
 ### Fixed
-- Fixed missing level values
-    - Some level values existed in the data but did not appear in the GUI
-      and therefore could not be selected. This is now fixed.
+- Missing levels
+    - In some occasions, available data would become impossible to select
+      because information about non-standard level values would not be
+      added to the cache. This is now fixed.
+- Experiment selection is kept when updating caching information in the GUI
 
 
 ## [2.2.0] 2018-09-17
