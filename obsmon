@@ -7,17 +7,17 @@ argv <- commandArgs(trailingOnly = FALSE)
 # not within a shiny server
 runningAsStandalone <- TRUE
 
-# Printing startup info such as code name, version and git info
-source("src_info_obsmon.R")
-cat(obsmonBanner)
-cat("Initializing Obsmon...\n")
-
 # Changing work dir to obsmonSrcDir, so all needed files can be found
 thisFilePath <- normalizePath(sub("--file=", "", argv[grep("--file=", argv)]))
 # Accounting for the fact that the script may be executed via a symlink
 obsmonSrcDir <- dirname(Sys.readlink(thisFilePath))
 if(obsmonSrcDir=="" || is.na(obsmonSrcDir)) obsmonSrcDir<-dirname(thisFilePath)
 setwd(obsmonSrcDir)
+
+# Printing startup info such as code name, version and git info
+source("src_info_obsmon.R")
+cat(obsmonBanner)
+cat("Initializing Obsmon...\n")
 
 # Configuring libPaths
 # We will do this here instead of inside init.R because we need this to be able to
