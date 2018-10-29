@@ -19,3 +19,12 @@ filesAreR <- function(fPaths) {
   }
   return(rtn)
 }
+
+
+write_PACKAGES <- function(dir=".", ...) {
+  tools::write_PACKAGES(dir=dir, ...)
+  # Some older versions of tools::write_PACKAGES do not
+  # write "PACKAGES.rds", which may lead to errors here.
+  db = read.dcf(file.path(dir, "PACKAGES"))
+  saveRDS(db, file.path(dir, "PACKAGES.rds"))
+}

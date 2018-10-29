@@ -1,4 +1,4 @@
-# Pattern based ignores
+# Pattern-based ignores
 \#*\#
 *~
 *.db
@@ -7,18 +7,22 @@
 *.Rout
 *.tar.gz
 *.swp
+.Rcache*
+config.toml*
 
 # Untracked helper files
 bak
-config.toml
 .markdown-preview.html
-.Rcache*
 .Rhistory
 Rplots.pdf
 rtags
 rtags.R
 TAGS
 
+# Stuff generated at run time or during installation
 R-libs/
 R-libs
 pre_compiled/
+
+# Stuff we do NOT want to ignore
+!config.toml.example

@@ -4,6 +4,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
+## [2.3.0] 2018-10-26
+### Added
+- Option to select only standard levels/channels
+    - The standard levels are considered to be those read from the
+      "obsmon" table in the sql data files.
+    - Selecting "standard" is equivalent to selecting "all" in v<=2.2.0.
+      See "Fixed missing level values" under [Fixed](#Fixed)
+- Git repo info printed in the standard output. This is to make it
+  easier to provide users with support.
+
+### Fixed
+- Missing levels
+    - In some occasions, available data would become impossible to select
+      because information about non-standard level values would not be
+      added to the cache. This is now fixed.
+- Experiment selection is kept when updating caching information in the GUI
+
+
 ## [2.2.0] 2018-09-17
 ### Added
 - "AverageMaps" plot category
@@ -36,6 +54,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - Look for an alternative TCP port if cannot use the one initially chosen
 - Some issues dealing with unavailable data
 
+
 ## [2.1.0] - 2017-10-20
 ### Added
 - Date selection for single times
@@ -66,5 +85,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - Settings tab
 - Environment variables for configuration
 
-[2.2.0]: https://git.smhi.se/foum/obsmon/compare/obsmon-2.1.0...obsmon-2.2.0-rc.1
+
+[2.3.0]: https://git.smhi.se/foum/obsmon/compare/obsmon-2.2.0...obsmon-2.3.0
+[2.2.0]: https://git.smhi.se/foum/obsmon/compare/obsmon-2.1.0...obsmon-2.2.0
 [2.1.0]: https://git.smhi.se/a002160/obsmon/compare/obsmon-2.0.0...obsmon-2.1.0
