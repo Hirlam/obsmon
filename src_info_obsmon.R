@@ -1,24 +1,21 @@
 
 # obsmonVersion is shown in the GUI and also printed along with the banner
-obsmonVersion <- "2.3.0"
+obsmonVersion <- "2.3.1"
 
 # Having the git info gathered below is useful when providing support to users
-gitCommitHash <- tryCatch(
-  system("git log --format='%H' -n 1", intern=TRUE, ignore.stderr=TRUE),
-  error=function(e) "Unknown"
-)
-gitBranch <- tryCatch(
-  system("git rev-parse --abbrev-ref HEAD", intern=TRUE, ignore.stderr=TRUE),
-  error=function(e) "Unknown"
-)
-gitTag <- tryCatch(
-  system("git describe --tags --dirty", intern=TRUE, ignore.stderr=TRUE),
-  error=function(e) "Unknown"
-)
-gitAuthorDate <- tryCatch(
-  system("git log --format='%ai' -n 1", intern=TRUE, ignore.stderr=TRUE),
-  error=function(e) "Unknown"
-)
+execGitCommand <- function(gitCommand) {
+  rtn <- tryCatch(
+    system(gitCommand, intern=TRUE, ignore.stderr=TRUE),
+    error=function(e) sprintf("Unknown (%s)", e$message),
+    warning=function(w) sprintf("Unknown (%s)", w$message)
+  )
+  return(rtn)
+}
+gitCommitHash <- execGitCommand("git log --format='%H' -n 1")
+gitBranch <- execGitCommand("git rev-parse --abbrev-ref HEAD")
+gitTag <- execGitCommand("git describe --tags --dirty")
+gitAuthorDate <- execGitCommand("git log --format='%ai' -n 1")
+
 gitInfo <- paste(
   paste("Branch:", gitBranch, sep=" "),
   paste("Tag:", gitTag, sep=" "),
