@@ -1,13 +1,28 @@
-sqliteConnect <- function(dbpath) {
+dbConnectWrapper <- function(dbpath, read_only=FALSE) {
   flog.debug("Connecting to path %s", dbpath)
-  con <- dbConnect(RSQLite::SQLite(), dbpath,
-                   flags=RSQLite::SQLITE_RO, synchronous=NULL)
-  tryCatch(dbExecute(con, "PRAGMA synchronous=off"),
-           error=function(e) {
-             flog.error("Error accessing %s: %s", dbpath, e)
-             con <- NULL
-           })
-  con
+  con <- tryCatch({
+      if(read_only) {
+          newCon<-dbConnect(RSQLite::SQLite(),dbpath,flags=RSQLite::SQLITE_RO)
+          dbExecute(newCon, "PRAGMA  journal_mode=OFF")
+          dbExecute(newCon, "PRAGMA synchronous=off")
+      } else {
+          newCon<-dbConnect(RSQLite::SQLite(),dbpath,flags=RSQLite::SQLITE_RW)
+          dbExecute(con, "PRAGMA foreign_keys=ON")
+      }
+      dbExecute(newCon, sprintf("PRAGMA  mmap_size=%s", 1024**3))
+      dbExecute(newCon, sprintf("PRAGMA  cache_size=%s", 1024**3))
+      newCon
+    },
+    error=function(e) {
+      flog.error("Error accessing %s: %s", dbpath, e$message)
+      NULL
+    },
+    warning=function(w) {
+      flog.error("Warning accessing %s: %s", dbpath, w$message)
+      NULL
+    }
+  )
+  return(con)
 }
 
 prepareConnections <- function(db) {
@@ -26,7 +41,7 @@ prepareConnections <- function(db) {
 
 makeSingleQuery <- function(query) {
   function(dbpath) {
-    con <- sqliteConnect(dbpath)
+    con <- dbConnectWrapper(dbpath, read_only=TRUE)
     res <- tryCatch(dbGetQuery(con, query),
                     error=function(e) {
                       flog.warn("Ignoring error querying %s: %s", dbpath, e)
