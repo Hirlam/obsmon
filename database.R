@@ -13,15 +13,11 @@ sqliteConnect <- function(dbpath) {
 prepareConnections <- function(db) {
   makePath <- function(dtg) {
     dbpath <- file.path(db$dir, dtg, db$file)
-    if (!file.exists(dbpath)) {
-      flog.debug("Missing file %s", dbpath)
-      NULL
-    } else if(file.info(dbpath)[[1,"size"]] == 0.) {
-      flog.debug("Empty file %s", dbpath)
-      NULL
-    } else {
-      dbpath
-    }
+#    if(file.size(dbpath) %in% c(NA, 0.)) {
+#      flog.debug("Missing or empty DB file: %s", dbpath)
+#      dbpath <- NULL
+#    } 
+    return(dbpath)
   }
   db$paths <- future_lapply(db$dtgs, makePath)
   names(db$paths) <- db$dtgs
@@ -224,7 +220,10 @@ updateCache <- function(db) {
   ingestShard <- function(dtg) {
     path <- db$paths[[dtg]]
     if (is.null(path)) return(NULL)
-    else if (file.exists(path) && file.access(path, mode=4)==0) {
+    else if (file.access(path, mode=4)!=0) {
+      flog.warn('User "%s" does NOT have read access to db file "%s"!', userName, path)
+      return(NULL)
+    } else {
       dbExecute(db$cache, sprintf("ATTACH '%s' AS 'shard'", path))
       tables <- dbGetQuery(db$cache, "SELECT name FROM shard.sqlite_master WHERE type='table'")
       if (all(c("obsmon", "usage") %in% tables$name)) {
@@ -282,9 +281,6 @@ updateCache <- function(db) {
         )
       }
       dbExecute(db$cache, "DETACH 'shard'")
-    } else if(file.access(path, mode=4)!=0) {
-      flog.warn('User "%s" does NOT have read access to db file "%s"!', userName, path)
-      return(NULL)
     }
   }
   if(length(newDtgs)>0) {
