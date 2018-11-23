@@ -458,8 +458,8 @@ createDb <- function(dir, basename, name, file) {
       "......%s: Updating %s cache db. This may take some time.",basename,name
     )
     db <- updateCache(db)
-    flog.debug("......%s: Initialising %s observation types", basename, name)
-    db <- initObtypes(db)
+    #flog.debug("......%s: Initialising %s observation types", basename, name)
+    #db <- initObtypes(db)
     flog.debug("......%s: Initialising %s stations", basename, name)
     db <- initStations(db)
     flog.debug("......%s: Updating %s dates", basename, name)

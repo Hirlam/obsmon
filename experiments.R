@@ -11,25 +11,50 @@ getDtgs <- function(path) {
   return(dtgs)
 }
 
-expCreateSqliteShardedDtg <- function(name,
-                                      baseDir, experiment) {
+expCreateSqliteShardedDtg <- function(name, baseDir, experiment) {
   flog.info("Initializing experiment %s...", name)
   x <- structure(list(), class = "sqliteShardedDtg")
   x$name <- name
-  x$dbs$ecmaSfc <- createDb(file.path(baseDir, experiment, "ecma_sfc"),
-                            name, "ecmaSfc", "ecma.db")
-  x$dbs$ccma <- createDb(file.path(baseDir, experiment, "ccma"),
-                         name, "ccma", "ccma.db")
-  x$dbs$ecma <- createDb(file.path(baseDir, experiment, "ecma"),
-                         name, "ecma", "ecma.db")
-  nullExp <- is.null(x$dbs$ecma) & is.null(x$dbs$ecmaSfc) & is.null(x$dbs$ccma)
-  if(nullExp) {
+  x$path <- file.path(baseDir, experiment)
+  x$cacheDir <- file.path(obsmonConfig$general[["cacheDir"]], slugify(name))
+  x$dbs <- list(ccma=NULL, ecma=NULL, ecma_sfc=NULL)
+  for(dbType in names(x$dbs)) {
+    availableDtgs <- getDtgs(file.path(x$path, dbType))
+    if(is.null(availableDtgs)) next
+    x$dbs[[dbType]] <- list(
+    dtgs=availableDtgs,
+    obtypes=list(
+      aircraft=list(
+        v=list(
+          levelsObsmon=c(NULL),
+          levelsUsage=c(NULL)
+        )
+      )
+    ), # TEMP
+    obnumbers <- list(aircraft=2), # TEMP
+    stations=list(aircraft=c(NULL)), # TEMP
+    cachePaths=list(
+      obsmon=file.path(x$cacheDir, sprintf('%s_obsmon.db', dbType)),
+      usage=file.path(x$cacheDir, sprintf('%s_usage.db', dbType))
+    )
+  )
+}
+
+  if(is.null(x$dbs$ecma) & is.null(x$dbs$ecma_sfc) & is.null(x$dbs$ccma)){
     flog.warn("Could not find any data for experiment %s. Skipping it.", name)
-    x <- NULL
-  } else {
-    flog.info("Finished initialization of experiment %s.", name)
+    return(NULL)
   }
-  x
+
+  for(dbType in names(x$dbs)) {
+    if(is.null(x$dbs[[dbType]])) next
+    dtgs <- x$dbs[[dbType]]$dtgs
+    # The dtgs returned by getDtgs are sorted in ascending order
+    x$dbs[[dbType]]$maxDateRange <- dtg2date(c(dtgs[1], dtgs[length(dtgs)]))
+    x$dbs[[dbType]]$cycles=c('00') # TEMP
+  }
+
+  flog.info("Finished initialization of experiment %s.", name)
+  return(x)
 }
 
 emptyExperiment <- function(name) {

@@ -149,7 +149,7 @@ shinyServer(function(input, output, session) {
       shinyjs::enable("odbBase")
       shinyjs::enable("levels")
     } else {
-      updateSelectInput(session, "odbBase", choices=list("Surface"="ecmaSfc"))
+      updateSelectInput(session, "odbBase", choices=list("Surface"="ecma_sfc"))
       shinyjs::disable("odbBase")
       shinyjs::disable("levels")
     }
@@ -260,8 +260,8 @@ shinyServer(function(input, output, session) {
     if (obtype != "satem") {
       db <- activeDb()
       var <- req(input$variable)
-      levelChoicesObsmonTable <<- db$obtypesObsmonTable[[obtype]][[var]]
-      levelChoicesUsageTable <<- db$obtypesUsageTable[[obtype]][[var]]
+      levelChoicesObsmonTable <<- db$obtypes[[obtype]][[var]]$levelsObsmon
+      levelChoicesUsageTable <<- db$obtypes[[obtype]][[var]]$levelsUsage
       levelChoices <<- unique(c(levelChoicesObsmonTable, levelChoicesUsageTable))
       updateSelection(session, "levels", levelChoices)
     }
