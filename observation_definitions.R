@@ -8,12 +8,35 @@ refHeights <- c(
   250, 500, 1000, 1500, 2000, 3000, 4000, 5000, 6000, 7000, 8000, 9000,
   10000,20000
 )
+
+joinWithDotAsSep <- function(myList) {
+  rtn <- c()
+  for(key in names(myList)) {
+    rtn <- c(rtn, paste(key, myList[[key]], sep='.'))
+  }
+  return(rtn)
+}
+sensorToSats=list(
+  amsua=c(
+    'noaa15', 'noaa16', 'noaa17', 'noaa18', 'noaa19',
+    'metop1', 'metop2'
+  ),
+  amsub=c(
+    'noaa15', 'noaa16', 'noaa17', 'noaa18', 'noaa19',
+    'metop1', 'metop2'
+  ),
+  mhs=c('noaa19', 'metop1', 'metop2'),
+  atms=c('jpss0'),
+  iasi=c('metop1', 'metop2')
+)
+
 # Registering general metadata about known observation types
 generalObsMetadata <- data.frame(
   obname=character(),
   category=character(),
   obnumber=integer(),
-  variables=character()
+  variables=character(),
+  sensors.sats=character()
 )
 registerObservation <- function(dataFrame, ...) {
   newOb <- as.data.frame(list(...))
@@ -76,7 +99,8 @@ generalObsMetadata <- registerObservation(generalObsMetadata,
   obname='satem',
   category='satem',
   obnumber=7,
-  variables=c('rad')
+  variables=c('rad'),
+  sensors.sats=joinWithDotAsSep(sensorToSats)
 )
 generalObsMetadata <- registerObservation(generalObsMetadata,
   obname='scatt',

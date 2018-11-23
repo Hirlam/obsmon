@@ -143,15 +143,15 @@ shinyServer(function(input, output, session) {
   # Update database options according to chosen category
   observe({
     category <- req(input$category)
-    if (category == "upperAir") {
+    if(category=="surface") {
+      updateSelectInput(session, "odbBase", choices=list("Surface"="ecma_sfc"))
+      shinyjs::disable("odbBase")
+      shinyjs::disable("levels")
+    } else {
       choices <- list("Screening"="ecma", "Minimization"="ccma")
       updateSelection(session, "odbBase", choices)
       shinyjs::enable("odbBase")
       shinyjs::enable("levels")
-    } else {
-      updateSelectInput(session, "odbBase", choices=list("Surface"="ecma_sfc"))
-      shinyjs::disable("odbBase")
-      shinyjs::disable("levels")
     }
   })
 
@@ -207,7 +207,12 @@ shinyServer(function(input, output, session) {
   # Update obtype with choices for given experiment and database
   observe({
     db <- activeDb()
-    updateSelection(session, "obtype", names(db$obtypes))
+    if(db$dbType=='ecma_sfc') {
+      obnames <- getAttrFromMetadata('obname', category='surface')
+    } else {
+      obnames <- getAttrFromMetadata('obname')
+    }
+    updateSelection(session, "obtype", obnames)
   })
 
   # Update sensor for satem obtype, variable else
@@ -215,9 +220,12 @@ shinyServer(function(input, output, session) {
     db <- activeDb()
     obtype <- req(input$obtype)
     if (obtype == "satem") {
-      updateSelection(session, "sensor", names(db$obtypes[[obtype]]))
+      sens.sats <- getAttrFromMetadata('sensors.sats', obname=obtype)
+      sens <- gsub('\\.{1}.*', '', sens.sats)
+      updateSelection(session, "sensor", sens)
     } else {
-      updateSelection(session, "variable", names(db$obtypes[[obtype]]))
+      variables <- getAttrFromMetadata('variables', obname=obtype)
+      updateSelection(session, "variable", variables)
     }
     updateSelection(session, "station", db$stations[[obtype]])
   })
@@ -228,7 +236,10 @@ shinyServer(function(input, output, session) {
     if (obtype == "satem") {
       db <- activeDb()
       sens <- req(input$sensor)
-      updateSelection(session, "satellite", names(db$obtypes[[obtype]][[sens]]))
+      sens.sats <- getAttrFromMetadata('sensors.sats', obname=obtype)
+      sens.sats <- sens.sats[startsWith(sens.sats, paste0(sens, '.'))]
+      sats <- gsub(paste0(sens, '.'), '', sens.sats, fixed=TRUE)
+      updateSelection(session, "satellite", sats)
     }
   })
 

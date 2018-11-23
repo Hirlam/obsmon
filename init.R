@@ -126,6 +126,7 @@ setPackageOptions <- function(config) {
 }
 
 sourceObsmonFiles <- function() {
+  source("observation_definitions.R")
   source("colors.R")
   source("utils.R")
   source("sql.R")
