@@ -1,3 +1,16 @@
+getDtgs <- function(path) {
+  dtgs <- tryCatch({
+      foundDtgs <- as.integer(dir(path=path, pattern="[0-9]{10}"))
+      foundDtgs <- sort(unique(foundDtgs))
+      foundDtgs
+    },
+    error=function(e) {flog.error(e$message); NULL},
+    warning=function(w) {flog.warn(w$message); foundDtgs}
+  )
+  if(length(dtgs)==0) dtgs <- NULL
+  return(dtgs)
+}
+
 expCreateSqliteShardedDtg <- function(name,
                                       baseDir, experiment) {
   flog.info("Initializing experiment %s...", name)
