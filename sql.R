@@ -27,10 +27,20 @@ criterion2clause <- function(name, criteria) {
   )
 }
 
+notValidCrit <- function(crit) {
+  rtn <- is.null(crit) || is.na(crit) || length(crit)==0 || crit==''
+  return(rtn)
+}
+
 buildWhereClause <- function(criteria) {
   subclauses <- list()
   criteriaNames <- names(criteria)
   crits <- lapply(criteriaNames[criteriaNames!="info"],
                   partial(criterion2clause, criteria=criteria))
+  crits <- crits[!(is.null(crits))]
+  # Removing NULL, NA or empty values from the crits list.
+  # This avoids, e.g., building invalid queries with dangling ANDs
+  # (e.g., "WHERE AND", "AND AND", etc)
+  crits[sapply(crits, notValidCrit)] <- NULL
   do.call(partial(paste, sep=" AND "), crits)
 }

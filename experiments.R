@@ -11,6 +11,17 @@ getDtgs <- function(path) {
   return(dtgs)
 }
 
+pathToDataFileForDtg <- function(dtg, db) {
+  dbpath <- tryCatch({
+      fname <- gsub('_sfc', '', paste0(db$dbType, '.db'), fixed=TRUE)
+      file.path(db$dir, dtg, fname)
+    },
+    error=function(e) NULL,
+    warning=function(w) NULL
+  )
+  return(dbpath)
+}
+
 expCreateSqliteShardedDtg <- function(name, baseDir, experiment) {
   flog.info("Initializing experiment %s...", name)
   x <- structure(list(), class = "sqliteShardedDtg")
@@ -24,22 +35,23 @@ expCreateSqliteShardedDtg <- function(name, baseDir, experiment) {
     x$dbs[[dbType]] <- list(
       dbType=dbType,
       dtgs=availableDtgs,
-      obtypes=list(
-        aircraft=list(
-          v=list(
-            levelsObsmon=c(NULL),
-            levelsUsage=c(NULL)
-          )
-        )
-      ), # TEMP
-      obnumbers <- list(aircraft=2), # TEMP
-      stations=list(aircraft=c(NULL)), # TEMP
+      dir=file.path(x$path, dbType),
+#      obtypes=list(
+#        aircraft=list(
+#          v=list(
+#            levelsObsmon=c(NULL),
+#            levelsUsage=c(NULL)
+#          )
+#        )
+#      ), # TEMP
+      #stations=list(aircraft=c(NULL)), # TEMP
+#      stations=NULL, # TEMP
       cachePaths=list(
         obsmon=file.path(x$cacheDir, sprintf('%s_obsmon.db', dbType)),
         usage=file.path(x$cacheDir, sprintf('%s_usage.db', dbType))
+      )
     )
-  )
-}
+  }
 
   if(is.null(x$dbs$ecma) & is.null(x$dbs$ecma_sfc) & is.null(x$dbs$ccma)){
     flog.warn("Could not find any data for experiment %s. Skipping it.", name)
@@ -47,11 +59,26 @@ expCreateSqliteShardedDtg <- function(name, baseDir, experiment) {
   }
 
   for(dbType in names(x$dbs)) {
+    db <- x$dbs[[dbType]]
+    if(is.null(db$dtgs)) next
+    #paths <- future_lapply(db$dtgs, partial(pathToDataFileForDtg, db=db))
+    #paths <- lapply(db$dtgs, partial(pathToDataFileForDtg, db=db))
+    paths <- c()
+    for(dtg in db$dtgs){
+      paths <- c(paths, pathToDataFileForDtg(dtg, db))
+    }
+    names(paths) <- db$dtgs
+    x$dbs[[dbType]]$paths=paths
+
+    cycles <- lapply(sort(unique(db$dtgs %% 100)), partial(sprintf, "%02d"))
+    x$dbs[[dbType]]$cycles <- cycles
+  }
+
+  for(dbType in names(x$dbs)) {
     if(is.null(x$dbs[[dbType]])) next
     dtgs <- x$dbs[[dbType]]$dtgs
     # The dtgs returned by getDtgs are sorted in ascending order
     x$dbs[[dbType]]$maxDateRange <- dtg2date(c(dtgs[1], dtgs[length(dtgs)]))
-    x$dbs[[dbType]]$cycles=c('00') # TEMP
   }
 
   flog.info("Finished initialization of experiment %s.", name)

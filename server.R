@@ -93,7 +93,7 @@ separateReadyAndCachingExpts <- function(experiments) {
         perc <- floor(mean(unlist(thisExptCachingProgress)))
         paste(exptName, ': Updating cache (', perc, "%)", sep='')
         },
-        error=function(e) paste(exptName, ': Initialising cache...', sep='')
+        error=function(e) paste(exptName, ': Loading experiment...', sep='')
       )
       stillCachingExpts[[newName]] <- emptyExperiment(newName)
     }
@@ -111,7 +111,11 @@ shinyServer(function(input, output, session) {
   })
   observe({
       newExptNames <- names(experiments())
-      if(length(newExptNames)==0) newExptNames <- c("No experiment available!")
+      if(length(newExptNames)==0) {
+        newExptNames <- c("ERROR: Could not read data from any experiment!")
+        shinyjs::disable("odbBase")
+        shinyjs::disable("category")
+      }
       if((length(newExptNames) != length(exptNames)) |
          !all(exptNames==newExptNames)) {
         selectedExpt <- tryCatch({
@@ -207,7 +211,7 @@ shinyServer(function(input, output, session) {
   # Update obtype with choices for given experiment and database
   observe({
     db <- activeDb()
-    if(db$dbType=='ecma_sfc') {
+    if(!is.null(db$dbType) && db$dbType=='ecma_sfc') {
       obnames <- getAttrFromMetadata('obname', category='surface')
     } else {
       obnames <- getAttrFromMetadata('obname')
@@ -227,7 +231,8 @@ shinyServer(function(input, output, session) {
       variables <- getAttrFromMetadata('variables', obname=obtype)
       updateSelection(session, "variable", variables)
     }
-    updateSelection(session, "station", db$stations[[obtype]])
+    stationChoices <- db$stations[[obtype]]
+    updateSelectizeInput(session, "station", stationChoices)
   })
 
   # Update satellite choices for given sensor
@@ -306,9 +311,10 @@ shinyServer(function(input, output, session) {
     res <- list()
     res$info <- list()
     obtype <- req(input$obtype)
+    res$obnumber <- getAttrFromMetadata('obnumber', obname=obtype)
     if (obtype == 'satem') {
       sensor <- req(input$sensor)
-      res$obnumber <- adb$obnumbers[[sensor]]
+      #res$obnumber <- adb$obnumbers[[sensor]]
       res$obname <- sensor
       res$satname <- req(input$satellite)
       if (!is.null(input$channels)) {
@@ -317,16 +323,18 @@ shinyServer(function(input, output, session) {
         res$levels <- channelChoices
       }
     } else {
-      res$obnumber <- adb$obnumbers[[obtype]]
+      #res$obnumber <- adb$obnumbers[[obtype]]
       res$obname <- obtype
       res$varname <- req(input$variable)
       if (!is.null(input$levels)) {
         res$levels <- input$levels
-      } else {
+      } else if (!is.null(levelChoices)) {
         res$levels <- levelChoices
+      } else {
+        res$levels <- list()
       }
     }
-    if (req(input$station) != "Any") {
+    if (!(input$station=="" | is.null(input$station) | is.na(input$station))){
       station <- input$station
       res$station <- station
       label <- exp$stationLabels[[adb$name]][[obtype]][[station]]

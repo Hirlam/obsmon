@@ -135,7 +135,7 @@ getAttrFromMetadata <- function(attr, ...) {
   } else {
     attrValues <- generalObsMetadata[, attr]
   }
-  rtn <- unique(as.vector(attrValues))
+  rtn <- sort(unique(as.vector(attrValues)))
   if(length(rtn)==0) rtn <- NA
   return(rtn)
 }
