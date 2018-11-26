@@ -73,7 +73,11 @@ separateReadyAndCachingExpts <- function(experiments) {
   # caching is ongoing. This makes it possible to access data from
   # experiments that are ready even if there are experiments that are not.
   rtn <- list()
-  resolvedStatus <- resolved(experiments)
+  # Using suppressWarnings because the "future" package started to issue
+  # loads of "cannot wait for child xxx as it does not exist" warnings
+  # after R was upgraded to v3.5. For more info, see, e.g.,
+  # <https://github.com/HenrikBengtsson/future/issues/218>
+  resolvedStatus <- suppressWarnings(resolved(experiments))
   exptNamesinConfig <- c()
   for(config in obsmonConfig$experiments) {
     exptNamesinConfig <- c(exptNamesinConfig, config$displayName)
@@ -84,7 +88,9 @@ separateReadyAndCachingExpts <- function(experiments) {
   stillCachingExpts <- list()
   for (exptName in exptNames) {
     if(resolvedStatus[[exptName]]) {
-      readyExpts[[exptName]] <- experiments[[exptName]]
+      # Using suppressWarnings to mitigate "Rv3.5 + future" issue
+      # See previous comment.
+      suppressWarnings(readyExpts[[exptName]] <- experiments[[exptName]])
     } else {
       newName <- tryCatch({
         load(exptsCacheProgLogFilePath[[exptName]])
