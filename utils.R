@@ -2,7 +2,7 @@ dtg2date <- function(dtg) {
   paste(substr(dtg, 1, 4), substr(dtg, 5, 6), substr(dtg, 7, 8), sep="-")
 }
 
-date2dtg <- function(date, cycle) {
+date2dtg <- function(date, cycle=NULL) {
   year <- substr(date, 1, 4)
   month <- substr(date, 6, 7)
   day <- substr(date, 9, 10)
