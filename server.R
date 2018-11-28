@@ -214,6 +214,43 @@ shinyServer(function(input, output, session) {
     updateCheckboxGroup(session, "cycles", db$cycles, "NONE")
   })
 
+  # Put observations in cache when a date is selected
+  observeEvent(input$date, {
+    db <- activeDb()
+    datePatt <- paste0('^',date2dtg(input$date),'{1}[0-9]{2}')
+    dtgs <- sort(grep(datePatt, db$dtgs, value=TRUE), decreasing=TRUE)
+    fPathsToCache <- db$paths[as.character(dtgs)]
+    future({
+      for(sourceDbPath in fPathsToCache) {
+        tryCatch(
+          putObservationsInCache(sourceDbPath, cacheDir=db$cacheDir),
+          warning=function(w) flog.warning(w$message),
+          error=function(e) flog.error(e$message)
+        )
+      }
+    })
+  })
+  # Put observations in cache when a date range is selected
+  observeEvent(input$dateRange, {
+    db <- activeDb()
+    startDtg <- 100 * date2dtg(input$dateRange[[1]])
+    endDtg <- 100 * date2dtg(input$dateRange[[2]]) + 24
+    dtgs <- sort(
+      db$dtgs[((startDtg <= db$dtgs) & (db$dtgs <= endDtg))],
+      decreasing=TRUE
+    )
+    fPathsToCache <- db$paths[as.character(dtgs)]
+    future({
+      for(sourceDbPath in fPathsToCache) {
+        tryCatch(
+          putObservationsInCache(sourceDbPath, cacheDir=db$cacheDir),
+          warning=function(w) flog.warning(w$message),
+          error=function(e) flog.error(e$message)
+        )
+      }
+    })
+  })
+
   # Update obtype with choices for given experiment and database
   observe({
     db <- activeDb()

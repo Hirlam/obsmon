@@ -33,6 +33,7 @@ expCreateSqliteShardedDtg <- function(name, baseDir, experiment) {
     availableDtgs <- getDtgs(file.path(x$path, dbType))
     if(is.null(availableDtgs)) next
     x$dbs[[dbType]] <- list(
+      exptName=name,
       dbType=dbType,
       dtgs=availableDtgs,
       dir=file.path(x$path, dbType),
@@ -46,6 +47,7 @@ expCreateSqliteShardedDtg <- function(name, baseDir, experiment) {
 #      ), # TEMP
       #stations=list(aircraft=c(NULL)), # TEMP
 #      stations=NULL, # TEMP
+      cacheDir=x$cacheDir,
       cachePaths=list(
         obsmon=file.path(x$cacheDir, sprintf('%s_obsmon.db', dbType)),
         usage=file.path(x$cacheDir, sprintf('%s_usage.db', dbType))
