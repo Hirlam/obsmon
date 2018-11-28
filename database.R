@@ -1,5 +1,4 @@
 dbConnectWrapper <- function(dbpath, read_only=FALSE) {
-  flog.debug("Connecting to path %s", dbpath)
   con <- tryCatch({
       if(read_only) {
           newCon<-dbConnect(RSQLite::SQLite(),dbpath,flags=RSQLite::SQLITE_RO)
@@ -7,7 +6,7 @@ dbConnectWrapper <- function(dbpath, read_only=FALSE) {
           dbExecute(newCon, "PRAGMA synchronous=off")
       } else {
           newCon<-dbConnect(RSQLite::SQLite(),dbpath,flags=RSQLite::SQLITE_RW)
-          dbExecute(con, "PRAGMA foreign_keys=ON")
+          dbExecute(newCon, "PRAGMA foreign_keys=ON")
       }
       dbExecute(newCon, sprintf("PRAGMA  mmap_size=%s", 1024**3))
       dbExecute(newCon, sprintf("PRAGMA  cache_size=%s", 1024**3))
