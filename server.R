@@ -78,11 +78,6 @@ separateReadyAndCachingExpts <- function(experiments) {
   # after R was upgraded to v3.5. For more info, see, e.g.,
   # <https://github.com/HenrikBengtsson/future/issues/218>
   resolvedStatus <- suppressWarnings(resolved(experiments))
-  exptNamesinConfig <- c()
-  for(config in obsmonConfig$experiments) {
-    exptNamesinConfig <- c(exptNamesinConfig, config$displayName)
-  }
-  exptNames <- exptNamesinConfig[exptNamesinConfig %in% ls(experiments)]
 
   readyExpts <- list()
   stillCachingExpts <- list()

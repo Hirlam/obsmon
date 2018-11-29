@@ -122,6 +122,11 @@ initExperimentsAsPromises <- function() {
   experiments
 }
 
+exptNamesinConfig <- c()
+for(config in obsmonConfig$experiments) {
+  exptNamesinConfig <- c(exptNamesinConfig, config$displayName)
+}
+
 # Creating and initialising variables that will help keep track of the caching
 # progress for each experiment
 exptsCachingProgress <- new.env(parent=globalenv())
