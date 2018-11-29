@@ -127,26 +127,4 @@ for(config in obsmonConfig$experiments) {
   exptNamesinConfig <- c(exptNamesinConfig, config$displayName)
 }
 
-# Creating and initialising variables that will help keep track of the caching
-# progress for each experiment
-exptsCachingProgress <- new.env(parent=globalenv())
-exptsCacheProgLogFilePath <- new.env(parent=globalenv())
-for(config in obsmonConfig$experiments) {
-  name <- config$displayName
-  exptsCachingProgress[[name]] <- list("ecma"=0.0, "ecmaSfc"=0.0, "ccma"=0.0)
-  exptsCacheProgLogFilePath[[name]] <- file.path(
-    obsmonConfig$general[["cacheDir"]],
-    paste('caching_status_', name, '.tmp.RData', sep='')
-  )
-  unlink(exptsCacheProgLogFilePath[[name]])
-  file.create(exptsCacheProgLogFilePath[[name]])
-}
-
-removeExptCachingStatusFiles <- function() {
-  for(config in obsmonConfig$experiments) {
-    name <- config$displayName
-    unlink(exptsCacheProgLogFilePath[[name]])
-  }
-}
-
 experimentsAsPromises <- initExperimentsAsPromises()

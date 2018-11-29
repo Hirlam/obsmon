@@ -65,13 +65,12 @@ updateCheckboxGroup <- function(session, inputId, choices, select="NORMAL") {
                              choices=choices, selected=selection, inline=TRUE)
 }
 
-
 separateReadyAndCachingExpts <- function(experiments) {
-  # Checks whether caching of each experiment has finished.
-  # Experiments for which caching is finished will be returned, and
-  # empty, placeholder experiments will be returned for those for which
-  # caching is ongoing. This makes it possible to access data from
-  # experiments that are ready even if there are experiments that are not.
+  # Checks whether experiments have been initialised
+  # Experiments which have not yet been initialised will be replaced by
+  # empty ones (placeholders).
+  # This allows using experiments that are ready even if there are others
+  # that are not.
   rtn <- list()
   # Using suppressWarnings because the "future" package started to issue
   # loads of "cannot wait for child xxx as it does not exist" warnings
@@ -81,21 +80,14 @@ separateReadyAndCachingExpts <- function(experiments) {
 
   readyExpts <- list()
   stillCachingExpts <- list()
+  exptNames <- exptNamesinConfig[exptNamesinConfig %in% ls(experiments)]
   for (exptName in exptNames) {
     if(resolvedStatus[[exptName]]) {
       # Using suppressWarnings to mitigate "Rv3.5 + future" issue
       # See previous comment.
       suppressWarnings(readyExpts[[exptName]] <- experiments[[exptName]])
     } else {
-      newName <- tryCatch({
-        load(exptsCacheProgLogFilePath[[exptName]])
-        # Using floor here to avoid showing 100% when we actually have, e.g.,
-        # cachingProgress>=99.5%. I'm sure users would not be amused by this.
-        perc <- floor(mean(unlist(thisExptCachingProgress)))
-        paste(exptName, ': Updating cache (', perc, "%)", sep='')
-        },
-        error=function(e) paste(exptName, ': Loading experiment...', sep='')
-      )
+      newName <- paste0(exptName, ': Loading experiment...')
       stillCachingExpts[[newName]] <- emptyExperiment(newName)
     }
   }

@@ -71,7 +71,6 @@ runAppHandlingBusyPort <- function(
   ...
 ) {
 
-  on.exit(removeExptCachingStatusFiles())
   exitMsg <- paste(
                "===============",
                "Exiting Obsmon.",
