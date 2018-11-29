@@ -117,12 +117,6 @@ readSynopStations <- function() {
 }
 synopStations <- readSynopStations()
 
-slugify <- function(string) {
-  normalized <- stri_trans_general(string, "nfkd; Latin-ASCII; lower")
-  slugified <- stri_replace_all_charclass(normalized, "\\p{WHITE SPACE}", "_")
-  slugified
-}
-
 setPragmas <- function(connection) {
   dbExecute(connection, "PRAGMA journal_mode=OFF")
   dbExecute(connection, "PRAGMA synchronous=OFF")

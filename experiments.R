@@ -1,3 +1,9 @@
+slugify <- function(string) {
+  normalized <- stri_trans_general(string, "nfkd; Latin-ASCII; lower")
+  slugified <- stri_replace_all_charclass(normalized, "\\p{WHITE SPACE}", "_")
+  slugified
+}
+
 getDtgs <- function(path) {
   dtgs <- tryCatch({
       foundDtgs <- as.integer(dir(path=path, pattern="[0-9]{10}"))
