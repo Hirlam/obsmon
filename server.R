@@ -226,36 +226,47 @@ shinyServer(function(input, output, session) {
   observe({
     db <- activeDb()
     if(!is.null(db$dbType) && db$dbType=='ecma_sfc') {
-      obnames <- getAttrFromMetadata('obname', category='surface')
+      obtypes <- getAttrFromMetadata('category')
     } else {
-      obnames <- getAttrFromMetadata('obname')
+      obtypes <- getAttrFromMetadata('category')
     }
-    updateSelection(session, "obtype", obnames)
+    updateSelection(session, "obtype", obtypes)
   })
 
-  # Update sensor for satem obtype, variable else
+  # Update obname with choices for given experiment and database
+  observeEvent({
+      activeDb()
+      input$obtype
+    }, {
+    db <- activeDb()
+    obsCategory <- input$obtype
+    obnames <- getAttrFromMetadata('obname', category=obsCategory)
+    updateSelection(session, "obname", obnames)
+  })
+
+  # Update sensor for satem obname, variable else
   observe({
     db <- activeDb()
-    obtype <- req(input$obtype)
-    if (obtype == "satem") {
-      sens.sats <- getAttrFromMetadata('sensors.sats', obname=obtype)
+    obname <- req(input$obname)
+    if (obname == "satem") {
+      sens.sats <- getAttrFromMetadata('sensors.sats', obname=obname)
       sens <- gsub('\\.{1}.*', '', sens.sats)
       updateSelection(session, "sensor", sens)
     } else {
-      variables <- getAttrFromMetadata('variables', obname=obtype)
+      variables <- getAttrFromMetadata('variables', obname=obname)
       updateSelection(session, "variable", variables)
     }
-    stationChoices <- db$stations[[obtype]]
+    stationChoices <- db$stations[[obname]]
     updateSelectizeInput(session, "station", stationChoices)
   })
 
   # Update satellite choices for given sensor
   observe({
-    obtype <- req(input$obtype)
-    if (obtype == "satem") {
+    obname <- req(input$obname)
+    if (obname == "satem") {
       db <- activeDb()
       sens <- req(input$sensor)
-      sens.sats <- getAttrFromMetadata('sensors.sats', obname=obtype)
+      sens.sats <- getAttrFromMetadata('sensors.sats', obname=obname)
       sens.sats <- sens.sats[startsWith(sens.sats, paste0(sens, '.'))]
       sats <- gsub(paste0(sens, '.'), '', sens.sats, fixed=TRUE)
       updateSelection(session, "satellite", sats)
@@ -264,13 +275,13 @@ shinyServer(function(input, output, session) {
 
   # Update channel choice for given satellite
   observe({
-    obtype <- req(input$obtype)
-    if (obtype == "satem") {
+    obname <- req(input$obname)
+    if (obname == "satem") {
       db <- activeDb()
       sens <- req(input$sensor)
       sat <- req(input$satellite)
-      channelChoicesObsmonTable <<- db$obtypesObsmonTable[[obtype]][[sens]][[sat]]
-      channelChoicesUsageTable <<- db$obtypesUsageTable[[obtype]][[sens]][[sat]]
+      channelChoicesObsmonTable <<- db$obnamesObsmonTable[[obname]][[sens]][[sat]]
+      channelChoicesUsageTable <<- db$obnamesUsageTable[[obname]][[sens]][[sat]]
       channelChoices <<- unique(c(channelChoicesObsmonTable, channelChoicesUsageTable))
       updateSelection(session, "channels", channelChoices)
     }
@@ -286,12 +297,12 @@ shinyServer(function(input, output, session) {
 
   # Update level choice for given variable
   observe({
-    obtype <- req(input$obtype)
-    if (obtype != "satem") {
+    obname <- req(input$obname)
+    if (obname != "satem") {
       db <- activeDb()
       var <- req(input$variable)
-      levelChoicesObsmonTable <<- db$obtypes[[obtype]][[var]]$levelsObsmon
-      levelChoicesUsageTable <<- db$obtypes[[obtype]][[var]]$levelsUsage
+      levelChoicesObsmonTable <<- db$obnames[[obname]][[var]]$levelsObsmon
+      levelChoicesUsageTable <<- db$obnames[[obname]][[var]]$levelsUsage
       levelChoices <<- unique(c(levelChoicesObsmonTable, levelChoicesUsageTable))
       updateSelection(session, "levels", levelChoices)
     }
@@ -324,9 +335,9 @@ shinyServer(function(input, output, session) {
     adb <- activeDb()
     res <- list()
     res$info <- list()
-    obtype <- req(input$obtype)
-    res$obnumber <- getAttrFromMetadata('obnumber', obname=obtype)
-    if (obtype == 'satem') {
+    obname <- req(input$obname)
+    res$obnumber <- getAttrFromMetadata('obnumber', obname=obname)
+    if (obname == 'satem') {
       sensor <- req(input$sensor)
       #res$obnumber <- adb$obnumbers[[sensor]]
       res$obname <- sensor
@@ -337,8 +348,8 @@ shinyServer(function(input, output, session) {
         res$levels <- channelChoices
       }
     } else {
-      #res$obnumber <- adb$obnumbers[[obtype]]
-      res$obname <- obtype
+      #res$obnumber <- adb$obnumbers[[obname]]
+      res$obname <- obname
       res$varname <- req(input$variable)
       if (!is.null(input$levels)) {
         res$levels <- input$levels
@@ -351,7 +362,7 @@ shinyServer(function(input, output, session) {
     if (!(input$station=="" | is.null(input$station) | is.na(input$station))){
       station <- input$station
       res$station <- station
-      label <- exp$stationLabels[[adb$name]][[obtype]][[station]]
+      label <- exp$stationLabels[[adb$name]][[obname]][[station]]
       res$info$stationLabel <- ifelse(is.null(label), as.character(station), label)
     }
     res
@@ -360,7 +371,7 @@ shinyServer(function(input, output, session) {
   # Turn criteria into reactive expression so they can trigger plottype update
   criteria <- eventReactive(
   {
-    input$obtype
+    input$obname
     input$sensor
     input$satellite
     input$channels
