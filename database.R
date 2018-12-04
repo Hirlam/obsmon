@@ -106,10 +106,28 @@ obsKeyAttributes <- list(
   unknown_type=c('statid', 'obname', 'varname', 'satname', 'level')
 )
 
+cacheFileLocks <- list()
+lockSignalingFpath <- function(fpath) sprintf("%s.lock", fpath)
+lockCacheFile <- function(fpath) {
+  cacheFileLocks[[fpath]] <<- lock(lockSignalingFpath(fpath))
+}
+unlockCacheFile <- function(fpath) {
+  unlock(cacheFileLocks[[fpath]])
+  cacheFileLocks[[fpath]] <<- NULL
+}
+cacheFileIsLocked <- function(fpath) {
+  cacheFileLock <- cacheFileLocks[[fpath]]
+  if(is.null(cacheFileLock)) isLocked <- FALSE
+  else isLocked <- is.locked(cacheFileLock)
+  return(isLocked)
+}
+
 putObservationsInCache <- function(sourceDbPath, cacheDir) {
   sourceDbPath <- normalizePath(sourceDbPath, mustWork=FALSE)
   flog.debug(sprintf("Caching file %s\n", sourceDbPath))
   anyFailedCachingAttmpt <- FALSE
+  dbConnectsCreatedHere <- c()
+  fPathsLockedHere <- c()
 
   on.exit({
       if(anyFailedCachingAttmpt) {
@@ -124,9 +142,8 @@ putObservationsInCache <- function(sourceDbPath, cacheDir) {
       } else {
         flog.debug(sprintf("Done caching file %s\n", sourceDbPath))
       }
-      dbDisconnect(con_cache)
-      dbDisconnect(con)
-      unlock(cacheDbLock)
+      for(dbCon in dbConnectsCreatedHere) dbDisconnect(dbCon)
+      for(lockedFName in fPathsLockedHere) unlockCacheFile(lockedFName)
     }
   )
 
@@ -135,6 +152,7 @@ putObservationsInCache <- function(sourceDbPath, cacheDir) {
     anyFailedCachingAttmpt <- TRUE
     return(NULL)
   }
+  dbConnectsCreatedHere <- c(dbConnectsCreatedHere, con)
   dir.create(cacheDir, recursive=TRUE, showWarnings=FALSE)
 
   db_type <- basename(dirname(dirname(sourceDbPath)))
@@ -150,15 +168,27 @@ putObservationsInCache <- function(sourceDbPath, cacheDir) {
       file.copy(cacheTemplate, cacheFilePath)
     }
 
-    # Making sure con_cache is not associated with any other file
-    # The final dbDisconnect will be handled inside the "on.exit" statements
-    tryCatch(
-      dbDisconnect(con_cache),
-      error=function(e) NULL,
-      warning=function(w) NULL
-    )
+    hadToWait <- FALSE
+    while(cacheFileIsLocked(cacheFilePath)) {
+      hadToWait <- TRUE
+      msg <- sprintf("Caching (%s): Waiting for cache file %s to be unlocked",
+        sourceDbPath, cacheFilePath
+      )
+      flog.debug(msg)
+      Sys.sleep(5)
+    }
+    if(hadToWait) {
+      msg <- sprintf("Caching (%s): Cache file %s UNLOCKED. Proceeding.",
+        sourceDbPath, cacheFilePath
+      )
+      flog.debug(msg)
+    }
+ 
+    lockCacheFile(cacheFilePath)
+    fPathsLockedHere <- c(fPathsLockedHere, cacheFilePath)
+
     con_cache <- dbConnectWrapper(cacheFilePath)
-    cacheDbLock <- lock(cacheFilePath)
+    dbConnectsCreatedHere <- c(dbConnectsCreatedHere, con_cache)
 
     # Do not attempt to cache stuff that has already been cached
     alreadyCached <- tryCatch({
