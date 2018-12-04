@@ -372,7 +372,39 @@ getObnamesFromCache <- function(db, category, dates, cycles) {
     dbDisconnect(con)
   }
   if(length(rtn)==0) rtn <- NULL
-  return(unique(sort(rtn)))
+  return(sort(unique(rtn)))
+}
+
+getObtypesFromCache <- function(db, dates, cycles) {
+  rtn <- c()
+  dates <- date2dtg(dates)
+  if(length(dates)==1) dateQueryString <- sprintf("date=%s", dates)
+  else dateQueryString <- sprintf("date IN (%s)", paste(dates, join=", "))
+  if(length(cycles)==1) cycleQueryString <- sprintf("cycle=%s", cycles)
+  else cycleQueryString <- sprintf("cycle IN (%s)", paste(cycles, join=", "))
+  
+  for(cacheFilePath in db$cachePaths) {
+    con <- dbConnectWrapper(cacheFilePath, read_only=TRUE, showWarnings=FALSE)
+    if(is.null(con)) next
+    dbTables <- dbListTables(con)
+    tryCatch({
+        for(dbTable in dbTables) {
+          if(!endsWith(dbTable, '_obs')) next
+          if(dbTable %in% rtn) next
+          queryResult <- dbGetQuery(con, sprintf(
+            "SELECT * FROM %s WHERE %s AND %s LIMIT 1",
+            dbTable, dateQueryString, cycleQueryString
+          ))
+          if(nrow(queryResult)>0) rtn <- c(rtn, gsub("_obs", "", dbTable))
+        }
+      },
+      error=function(e) NULL,
+      warning=function(w) NULL
+    )
+    dbDisconnect(con)
+  }
+  if(length(rtn)==0) rtn <- NULL
+  return(sort(unique(rtn)))
 }
 
 getObnames <- function(db, category, dates, cycles) {
@@ -384,10 +416,10 @@ getObnames <- function(db, category, dates, cycles) {
   return(rtn)
 }
 
-
 getObtypes <- function(db, dates, cycles) {
   rtn <- list(cached=NULL, general=NULL)
-  rtn$general <- getAttrFromMetadata('category')
+  rtn$cached <- getObtypesFromCache(db, dates, cycles)
+  if(is.null(rtn$cached)) rtn$general <- getAttrFromMetadata('category')
   return(rtn)
 }
 
