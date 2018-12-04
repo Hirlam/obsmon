@@ -318,3 +318,46 @@ assyncPutObsInCache <- function(sourceDbPaths, cacheDir) {
   }))
 }
 
+getObnamesFromCache <- function(db, category, dates, cycles) {
+  rtn <- c()
+  dates <- date2dtg(dates)
+  if(length(dates)==1) dateQueryString <- sprintf("date=%s", dates)
+  else dateQueryString <- sprintf("date IN (%s)", paste(dates, join=", "))
+  if(length(cycles)==1) cycleQueryString <- sprintf("cycle=%s", cycles)
+  else cycleQueryString <- sprintf("cycle IN (%s)", paste(cycles, join=", "))
+
+  for(cacheFilePath in db$cachePaths) {
+    con <- dbConnectWrapper(cacheFilePath, read_only=TRUE, showWarnings=FALSE)
+    if(is.null(con)) next
+    tryCatch({
+        queryResult <- dbGetQuery(con, sprintf(
+          "SELECT DISTINCT obname FROM %s_obs WHERE %s AND %s",
+          category, dateQueryString, cycleQueryString
+        ))
+        rtn <- c(rtn, queryResult[['obname']])
+      },
+      error=function(e) NULL,
+      warning=function(w) NULL
+    )
+    dbDisconnect(con)
+  }
+  if(length(rtn)==0) rtn <- NULL
+  return(unique(sort(rtn)))
+}
+
+getObnames <- function(db, category, dates, cycles) {
+  rtn <- list(cached=NULL, general=NULL)
+  rtn$cached <- getObnamesFromCache(db, category, dates, cycles)
+  if(is.null(rtn$cached)) {
+    rtn$general <- getAttrFromMetadata('obname', category=category)
+  }
+  return(rtn)
+}
+
+
+getObtypes <- function(db, dates, cycles) {
+  rtn <- list(cached=NULL, general=NULL)
+  rtn$general <- getAttrFromMetadata('category')
+  return(rtn)
+}
+

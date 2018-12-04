@@ -225,14 +225,15 @@ shinyServer(function(input, output, session) {
   # Update obtype with choices for given experiment and database
   observe({
     db <- activeDb()
-    if(!is.null(db$dbType) && db$dbType=='ecma_sfc') {
-      obtypes <- getAttrFromMetadata('category')
+    obtypes <- getObtypes(db, input$date, input$cycle)
+    if(is.null(obtypes$cached)) {
+      updateSelection(session, "obtype", obtypes$general)
+      updateSelectInput(session, "obtype", label="Observation Type (not cached)")
     } else {
-      obtypes <- getAttrFromMetadata('category')
+      updateSelection(session, "obtype", obtypes$cached)
+      updateSelectInput(session, "obtype", label="Observation Type (cached)")
     }
-    updateSelection(session, "obtype", obtypes)
   })
-
   # Update obname with choices for given experiment and database
   observeEvent({
       activeDb()
@@ -240,8 +241,14 @@ shinyServer(function(input, output, session) {
     }, {
     db <- activeDb()
     obsCategory <- input$obtype
-    obnames <- getAttrFromMetadata('obname', category=obsCategory)
-    updateSelection(session, "obname", obnames)
+    obnames <- getObnames(db, obsCategory, input$date, input$cycle)
+    if(is.null(obnames$cached)) {
+      updateSelection(session, "obname", obnames$general)
+      updateSelectInput(session, "obname", label="Observation Name (not cached)")
+    } else {
+      updateSelection(session, "obname", obnames$cached)
+      updateSelectInput(session, "obname", label="Observation Name (cached)")
+    }
   })
 
   # Update sensor for satem obname, variable else
