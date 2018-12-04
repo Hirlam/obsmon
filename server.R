@@ -207,15 +207,7 @@ shinyServer(function(input, output, session) {
     datePatt <- paste0('^',date2dtg(input$date),'{1}[0-9]{2}')
     dtgs <- sort(grep(datePatt, db$dtgs, value=TRUE), decreasing=TRUE)
     fPathsToCache <- db$paths[as.character(dtgs)]
-    future({
-      for(sourceDbPath in fPathsToCache) {
-        tryCatch(
-          putObservationsInCache(sourceDbPath, cacheDir=db$cacheDir),
-          warning=function(w) flog.warning(w$message),
-          error=function(e) flog.error(e$message)
-        )
-      }
-    })
+    assyncPutObsInCache(fPathsToCache, cacheDir=db$cacheDir)
   })
   # Put observations in cache when a date range is selected
   observeEvent(input$dateRange, {
@@ -227,15 +219,7 @@ shinyServer(function(input, output, session) {
       decreasing=TRUE
     )
     fPathsToCache <- db$paths[as.character(dtgs)]
-    future({
-      for(sourceDbPath in fPathsToCache) {
-        tryCatch(
-          putObservationsInCache(sourceDbPath, cacheDir=db$cacheDir),
-          warning=function(w) flog.warning(w$message),
-          error=function(e) flog.error(e$message)
-        )
-      }
-    })
+    assyncPutObsInCache(fPathsToCache, cacheDir=db$cacheDir)
   })
 
   # Update obtype with choices for given experiment and database

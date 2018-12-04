@@ -302,3 +302,19 @@ putObservationsInCache <- function(sourceDbPath, cacheDir) {
     }
   }
 }
+
+assyncPutObsInCache <- function(sourceDbPaths, cacheDir) {
+  originalNWorkers <- nbrOfWorkers()
+  plan(multiprocess, workers=originalNWorkers+1)
+  suppressWarnings(future({
+    for(sourceDbPath in sourceDbPaths) {
+      tryCatch(
+        putObservationsInCache(sourceDbPath, cacheDir=cacheDir),
+        warning=function(w) flog.warn(w$message),
+        error=function(e) flog.error(e$message)
+      )
+    }
+    plan(multiprocess, workers=originalNWorkers)
+  }))
+}
+
