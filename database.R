@@ -1,4 +1,4 @@
-dbConnectWrapper <- function(dbpath, read_only=FALSE) {
+dbConnectWrapper <- function(dbpath, read_only=FALSE, showWarnings=TRUE) {
   con <- tryCatch({
       if(read_only) {
           newCon<-dbConnect(RSQLite::SQLite(),dbpath,flags=RSQLite::SQLITE_RO)
@@ -13,11 +13,11 @@ dbConnectWrapper <- function(dbpath, read_only=FALSE) {
       newCon
     },
     error=function(e) {
-      flog.error("Error accessing %s: %s", dbpath, e$message)
+      if(showWarnings)flog.error("Error accessing %s: %s", dbpath, e$message)
       NULL
     },
     warning=function(w) {
-      flog.error("Warning accessing %s: %s", dbpath, w$message)
+      if(showWarnings)flog.error("Warning accessing %s: %s", dbpath, w$message)
       NULL
     }
   )
