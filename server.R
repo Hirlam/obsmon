@@ -137,19 +137,22 @@ shinyServer(function(input, output, session) {
     isolate(experiments()[[expName]]$dbs[[dbName]])
   })
 
-  # Update database options according to chosen category
+  # Update database options according to chosen experiment
   observe({
-    category <- req(input$category)
-    if(category=="surface") {
-      updateSelectInput(session, "odbBase", choices=list("Surface"="ecma_sfc"))
-      shinyjs::disable("odbBase")
-      shinyjs::disable("levels")
-    } else {
-      choices <- list("Screening"="ecma", "Minimization"="ccma")
-      updateSelection(session, "odbBase", choices)
-      shinyjs::enable("odbBase")
-      shinyjs::enable("levels")
+    expName <- req(input$experiment)
+    expDbs <- experiments()[[expName]]$dbs
+    dbName2DbDescription <- list(
+      "ecma"="Upper Air (3D/4D-VAR) - Screening",
+      "ccma"="Upper Air (3D/4D-VAR) - Minimization",
+      "ecma_sfc"="Surface (CANARI)"
+    )
+    choices <- list()
+    for(dbName in names(dbName2DbDescription)) {
+      if(is.null(expDbs[[dbName]])) next
+      choices[[dbName2DbDescription[[dbName]]]] <- dbName
     }
+
+    updateSelectInput(session, "odbBase", choices=choices)
   })
 
   # Enable/disable choices if activeDB is/isn't NULL
@@ -158,9 +161,9 @@ shinyServer(function(input, output, session) {
     allInputs <- names(input)
     inputsNotToDisable <- c("experiment", "category", "odbBase")
     inputsNotToEnable <- c()
-    category <- req(input$category)
-    if(category == "surface") {
-      inputsNotToEnable <- c(inputsNotToEnable, "odbBase", "levels")
+    odbBase <- req(input$odbBase)
+    if(odbBase == "ecma_sfc") {
+      inputsNotToEnable <- c(inputsNotToEnable, "levels")
     }
     if(is.null(db)) {
       inputsToDisable <- allInputs[!(allInputs %in% inputsNotToDisable)]
