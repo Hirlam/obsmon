@@ -66,7 +66,7 @@ shinyUI(
                             label="Experiment",
                             choices=c()),
                 selectInput("category",
-                            label="Category",
+                            label="Data Assimilation Category",
                             choices=list("Upper Air (3D-VAR/4D-VAR)"="upperAir",
                                          "Surface (CANARI)"="surface")),
                 selectInput("odbBase",
