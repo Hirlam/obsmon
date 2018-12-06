@@ -131,12 +131,6 @@ shinyServer(function(input, output, session) {
   channelChoicesObsmonTable <- list()
   channelChoicesUsageTable <- list()
 
-  activeDb <- reactive({
-    expName <- req(input$experiment)
-    dbName <- req(input$odbBase)
-    isolate(experiments()[[expName]]$dbs[[dbName]])
-  })
-
   # Update database options according to chosen experiment
   observe({
     expName <- req(input$experiment)
@@ -155,26 +149,10 @@ shinyServer(function(input, output, session) {
     updateSelectInput(session, "odbBase", choices=choices)
   })
 
-  # Enable/disable choices if activeDB is/isn't NULL
-  observeEvent(activeDb(), ignoreNULL=FALSE, {
-    db <- activeDb()
-    allInputs <- names(input)
-    inputsNotToDisable <- c("experiment", "category", "odbBase")
-    inputsNotToEnable <- c()
-    odbBase <- req(input$odbBase)
-    if(odbBase == "ecma_sfc") {
-      inputsNotToEnable <- c(inputsNotToEnable, "levels")
-    }
-    if(is.null(db)) {
-      inputsToDisable <- allInputs[!(allInputs %in% inputsNotToDisable)]
-      for(inp in inputsToDisable) shinyjs::disable(inp)
-      updateActionButton(session, inputId="doPlot",
-        label = "No data for selected experiment/category/database")
-    } else {
-      inputsToEnable <- allInputs[!(allInputs %in% inputsNotToEnable)]
-      for(inp in inputsToEnable) shinyjs::enable(inp)
-      updateActionButton(session, inputId="doPlot", label = "Plot")
-    }
+  activeDb <- reactive({
+    expName <- req(input$experiment)
+    dbName <- req(input$odbBase)
+    isolate(experiments()[[expName]]$dbs[[dbName]])
   })
 
   # Update date related fields dateRange, date, and cycle with new experiment
