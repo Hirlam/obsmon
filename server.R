@@ -134,7 +134,7 @@ shinyServer(function(input, output, session) {
   # Update database options according to chosen experiment
   observe({
     expName <- req(input$experiment)
-    expDbs <- experiments()[[expName]]$dbs
+    expDbs <- isolate(experiments()[[expName]]$dbs)
     dbName2DbDescription <- list(
       "ecma"="Upper Air (3D/4D-VAR) - Screening",
       "ccma"="Upper Air (3D/4D-VAR) - Minimization",
