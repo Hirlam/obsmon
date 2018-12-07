@@ -107,6 +107,15 @@ enableShinyInputs <- function(input, except=c()) {
   for(inp in inputsToEnable) shinyjs::enable(inp)
 }
 
+getCurrentDateType <- function(input) {
+  rtn <- tryCatch(
+    plotTypesFlat[[req(input$plottype)]]$dateType,
+    error=function(e) NA,
+    warning=function(w) NA
+  )
+  return(rtn)
+}
+
 shinyServer(function(input, output, session) {
   # Start GUI with all inputs disabled.
   # They will be enabled once experiments are loaded
@@ -215,17 +224,13 @@ shinyServer(function(input, output, session) {
 
   # Put observations in cache when a date/dateRange is selected
   observeEvent({
-      req(activeDb())
-      req(input$date)
-      req(input$dateRange)
+      activeDb()
+      input$date
+      input$dateRange
     }, {
       db <- activeDb()
-      dateType <- tryCatch(
-        plotTypesFlat[[req(input$plottype)]]$dateType,
-        error=function(e) "single",
-        warning=function(w) "single"
-      )
-      if(dateType=="range") {
+      dateType <- getCurrentDateType(input)
+      if(dateType %in% c("range")) {
         startDtg <- 100 * date2dtg(input$dateRange[[1]])
         endDtg <- 100 * date2dtg(input$dateRange[[2]]) + 24
         dtgs <- sort(
