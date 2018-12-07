@@ -94,6 +94,19 @@ separateReadyAndCachingExpts <- function(experiments) {
   return(c(readyExpts, stillCachingExpts))
 }
 
+disableShinyInputs <- function(input, except=c()) {
+  allInputs <- names(input)
+  if(is.null(allInputs)) allInputs <- input
+  inputsToDisable <- allInputs[!(allInputs %in% except)]
+  for(inp in inputsToDisable) shinyjs::disable(inp)
+}
+enableShinyInputs <- function(input, except=c()) {
+  allInputs <- names(input)
+  if(is.null(allInputs)) allInputs <- input
+  inputsToEnable <- allInputs[!(allInputs %in% except)]
+  for(inp in inputsToEnable) shinyjs::enable(inp)
+}
+
 shinyServer(function(input, output, session) {
   # Initial population of experiments; triggers cascade for other form fields
   exptNames <- c("")
@@ -105,11 +118,11 @@ shinyServer(function(input, output, session) {
   observe({
       newExptNames <- names(experiments())
       if(length(newExptNames)==0) {
-        shinyjs::disable("odbBase")
-        shinyjs::disable("category")
         exptPlaceholder <- "ERROR: Could not read experiment data"
+        disableShinyInputs(input)
       } else {
         exptPlaceholder <- "Please select experiment"
+        shinyjs::enable("experiment")
       }
       if((length(newExptNames) != length(exptNames)) |
          !all(exptNames==newExptNames)) {
