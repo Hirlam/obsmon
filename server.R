@@ -206,6 +206,13 @@ shinyServer(function(input, output, session) {
     updateCheckboxGroup(session, "cycles", db$cycles, "NONE")
   })
 
+  # Offer single date or dateRange input according to selected plottype
+  output$dateType <- reactive({
+    plotType <- plotTypesFlat[[req(input$plottype)]]
+    plotType$dateType
+  })
+  outputOptions(output, 'dateType', suspendWhenHidden=FALSE)
+
   # Put observations in cache when a date is selected
   observeEvent(input$date, {
     db <- activeDb()
@@ -332,13 +339,6 @@ shinyServer(function(input, output, session) {
   observeEvent(input$levelsSelectNone, {
     updateSelection(session, "levels", levelChoices, "NONE")
   })
-
-  # Offer single date or dateRange input according to selected plottype
-  output$dateType <- reactive({
-    plotType <- plotTypesFlat[[req(input$plottype)]]
-    plotType$dateType
-  })
-  outputOptions(output, 'dateType', suspendWhenHidden=FALSE)
 
   # Build named list of criteria
   buildCriteria <- function() {
