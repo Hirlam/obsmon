@@ -108,6 +108,10 @@ enableShinyInputs <- function(input, except=c()) {
 }
 
 shinyServer(function(input, output, session) {
+  # Start GUI with all inputs disabled.
+  # They will be enabled once experiments are loaded
+  isolate(disableShinyInputs(input, except="experiment"))
+
   # Initial population of experiments; triggers cascade for other form fields
   exptNames <- c("")
   experiments <- reactive ({
