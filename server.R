@@ -105,9 +105,11 @@ shinyServer(function(input, output, session) {
   observe({
       newExptNames <- names(experiments())
       if(length(newExptNames)==0) {
-        newExptNames <- c("ERROR: Could not read data from any experiment!")
         shinyjs::disable("odbBase")
         shinyjs::disable("category")
+        exptPlaceholder <- "ERROR: Could not read experiment data"
+      } else {
+        exptPlaceholder <- "Please select experiment"
       }
       if((length(newExptNames) != length(exptNames)) |
          !all(exptNames==newExptNames)) {
@@ -117,7 +119,10 @@ shinyServer(function(input, output, session) {
           },
           error=function(e) NULL
         )
-        updateSelectInput(session, "experiment", choices=newExptNames, selected=selectedExpt)
+        updateSelectizeInput(session, "experiment",
+          choices=newExptNames, selected=selectedExpt,
+          options=list(placeholder=exptPlaceholder)
+        )
         exptNames <<- newExptNames
       }
   })
@@ -146,7 +151,9 @@ shinyServer(function(input, output, session) {
       choices[[dbName2DbDescription[[dbName]]]] <- dbName
     }
 
-    updateSelectInput(session, "odbBase", choices=choices)
+    updateSelectizeInput(session, "odbBase", choices=choices)
+    if(length(choices)==0) disableShinyInputs(input, except=c("experiment"))
+    else enableShinyInputs(input)
   })
 
   activeDb <- reactive({
