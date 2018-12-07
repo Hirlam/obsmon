@@ -247,9 +247,23 @@ shinyServer(function(input, output, session) {
   })
 
   # Update obtype with choices for given experiment and database
-  observe({
+  observeEvent({
+      activeDb()
+      input$date
+      input$dateRange
+      input$cycle
+      input$cycles
+    }, {
     db <- activeDb()
-    obtypes <- getObtypes(db, input$date, input$cycle)
+    dateType <- getCurrentDateType(input)
+    if(dateType %in% c("range")) {
+      dates <- input$dateRange
+      cycles <- input$cycles
+    } else {
+      dates <- input$date
+      cycles <- input$cycle
+    }
+    obtypes <- getObtypes(db, dates, cycles)
     if(is.null(obtypes$cached)) {
       updateSelection(session, "obtype", obtypes$general)
       updateSelectInput(session, "obtype", label="Observation Type (not cached)")
@@ -258,14 +272,26 @@ shinyServer(function(input, output, session) {
       updateSelectInput(session, "obtype", label="Observation Type (cached)")
     }
   })
-  # Update obname with choices for given experiment and database
+  # Update obnames with choices for given experiment, database and obtype
   observeEvent({
       activeDb()
       input$obtype
+      input$date
+      input$dateRange
+      input$cycle
+      input$cycles
     }, {
-    db <- activeDb()
     obsCategory <- input$obtype
-    obnames <- getObnames(db, obsCategory, input$date, input$cycle)
+    db <- activeDb()
+    dateType <- getCurrentDateType(input)
+    if(dateType %in% c("range")) {
+      dates <- input$dateRange
+      cycles <- input$cycles
+    } else {
+      dates <- input$date
+      cycles <- input$cycle
+    }
+    obnames <- getObnames(db, obsCategory, dates, cycles)
     if(is.null(obnames$cached)) {
       updateSelection(session, "obname", obnames$general)
       updateSelectInput(session, "obname", label="Observation Name (not cached)")
