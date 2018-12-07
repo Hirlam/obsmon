@@ -213,25 +213,32 @@ shinyServer(function(input, output, session) {
   })
   outputOptions(output, 'dateType', suspendWhenHidden=FALSE)
 
-  # Put observations in cache when a date is selected
-  observeEvent(input$date, {
-    db <- activeDb()
-    datePatt <- paste0('^',date2dtg(input$date),'{1}[0-9]{2}')
-    dtgs <- sort(grep(datePatt, db$dtgs, value=TRUE), decreasing=TRUE)
-    fPathsToCache <- db$paths[as.character(dtgs)]
-    assyncPutObsInCache(fPathsToCache, cacheDir=db$cacheDir)
-  })
-  # Put observations in cache when a date range is selected
-  observeEvent(input$dateRange, {
-    db <- activeDb()
-    startDtg <- 100 * date2dtg(input$dateRange[[1]])
-    endDtg <- 100 * date2dtg(input$dateRange[[2]]) + 24
-    dtgs <- sort(
-      db$dtgs[((startDtg <= db$dtgs) & (db$dtgs <= endDtg))],
-      decreasing=TRUE
-    )
-    fPathsToCache <- db$paths[as.character(dtgs)]
-    assyncPutObsInCache(fPathsToCache, cacheDir=db$cacheDir)
+  # Put observations in cache when a date/dateRange is selected
+  observeEvent({
+      req(activeDb())
+      req(input$date)
+      req(input$dateRange)
+    }, {
+      db <- activeDb()
+      dateType <- tryCatch(
+        plotTypesFlat[[req(input$plottype)]]$dateType,
+        error=function(e) "single",
+        warning=function(w) "single"
+      )
+      if(dateType=="range") {
+        startDtg <- 100 * date2dtg(input$dateRange[[1]])
+        endDtg <- 100 * date2dtg(input$dateRange[[2]]) + 24
+        dtgs <- sort(
+          db$dtgs[((startDtg <= db$dtgs) & (db$dtgs <= endDtg))],
+          decreasing=TRUE
+        )
+        fPathsToCache <- db$paths[as.character(dtgs)]
+      } else {
+        datePatt <- paste0('^',date2dtg(input$date),'{1}[0-9]{2}')
+        dtgs <- sort(grep(datePatt, db$dtgs, value=TRUE), decreasing=TRUE)
+        fPathsToCache <- db$paths[as.character(dtgs)]
+      }
+      assyncPutObsInCache(fPathsToCache, cacheDir=db$cacheDir)
   })
 
   # Update obtype with choices for given experiment and database
