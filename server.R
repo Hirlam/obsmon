@@ -329,6 +329,7 @@ shinyServer(function(input, output, session) {
 
   # Update variable
   observeEvent({
+      input$obtype
       input$obname
       reloadInfoFromCache$v
     }, {
@@ -354,6 +355,8 @@ shinyServer(function(input, output, session) {
   # Update level choice for given variable
   avLevels <- list()
   observeEvent({
+    input$obtype
+    input$obname
     input$variable
     reloadInfoFromCache$v
     }, {
@@ -414,6 +417,7 @@ shinyServer(function(input, output, session) {
 
   # Update channel choice for given satellite
   observeEvent({
+    input$sensor
     input$satellite
     reloadInfoFromCache$v
     },{
