@@ -116,6 +116,18 @@ getCurrentDateType <- function(input) {
   return(rtn)
 }
 
+getCurrentDatesAndCycles <- function(input) {
+  dateType <- getCurrentDateType(input)
+  if(dateType %in% c("range")) {
+    dates <- input$dateRange
+    cycles <- input$cycles
+  } else {
+    dates <- input$date
+    cycles <- input$cycle
+  }
+  return(list(dates=dates, cycles=cycles))
+}
+
 shinyServer(function(input, output, session) {
   # Start GUI with all inputs disabled.
   # They will be enabled once experiments are loaded
@@ -255,15 +267,8 @@ shinyServer(function(input, output, session) {
       input$cycles
     }, {
     db <- activeDb()
-    dateType <- getCurrentDateType(input)
-    if(dateType %in% c("range")) {
-      dates <- input$dateRange
-      cycles <- input$cycles
-    } else {
-      dates <- input$date
-      cycles <- input$cycle
-    }
-    obtypes <- getObtypes(db, dates, cycles)
+    datesCycles <- getCurrentDatesAndCycles(input)
+    obtypes <- getObtypes(db, datesCycles$dates, datesCycles$cycles)
     if(is.null(obtypes$cached)) {
       updateSelection(session, "obtype", obtypes$general)
       updateSelectInput(session, "obtype", label="Observation Type (not cached)")
@@ -283,19 +288,12 @@ shinyServer(function(input, output, session) {
     }, {
     obsCategory <- input$obtype
     db <- activeDb()
-    dateType <- getCurrentDateType(input)
-    if(dateType %in% c("range")) {
-      dates <- input$dateRange
-      cycles <- input$cycles
-    } else {
-      dates <- input$date
-      cycles <- input$cycle
-    }
-    obnames <- getObnames(db, obsCategory, dates, cycles)
     if(is.null(obnames$cached)) {
       updateSelection(session, "obname", obnames$general)
       updateSelectInput(session, "obname", label="Observation Name (not cached)")
+    datesCycles <- getCurrentDatesAndCycles(input)
     } else {
+      obnames <- getObnames(db, obsCategory, datesCycles$dates, datesCycles$cycles)
       updateSelection(session, "obname", obnames$cached)
       updateSelectInput(session, "obname", label="Observation Name (cached)")
     }
