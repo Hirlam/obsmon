@@ -304,7 +304,7 @@ shinyServer(function(input, output, session) {
       updateSelectInput(session, "obtype", label="Observation Type (not cached)")
     } else {
       updateSelection(session, "obtype", obtypes$cached)
-      updateSelectInput(session, "obtype", label="Observation Type (cached)")
+      updateSelectInput(session, "obtype", label="Observation Type")
     }
   })
 
