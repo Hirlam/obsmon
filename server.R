@@ -286,16 +286,24 @@ shinyServer(function(input, output, session) {
       input$cycle
       input$cycles
     }, {
-    obsCategory <- input$obtype
+    obsCategory <- req(input$obtype)
     db <- activeDb()
-    if(is.null(obnames$cached)) {
-      updateSelection(session, "obname", obnames$general)
-      updateSelectInput(session, "obname", label="Observation Name (not cached)")
     datesCycles <- getCurrentDatesAndCycles(input)
+
+    if(obsCategory=="satem") {
+      sens.sats <- getAttrFromMetadata('sensors.sats', category=obsCategory)
+      sens <- gsub('\\.{1}.*', '', sens.sats)
+      updateSelection(session, "sensor", sens)
+      updateSelection(session, "obname", c("satem"))
     } else {
       obnames <- getObnames(db, obsCategory, datesCycles$dates, datesCycles$cycles)
-      updateSelection(session, "obname", obnames$cached)
-      updateSelectInput(session, "obname", label="Observation Name (cached)")
+      if(is.null(obnames$cached)) {
+        updateSelection(session, "obname", obnames$general)
+        updateSelectInput(session, "obname", label="Observation Name (not cached)")
+      } else {
+        updateSelection(session, "obname", obnames$cached)
+        updateSelectInput(session, "obname", label="Observation Name")
+      }
     }
   })
 
