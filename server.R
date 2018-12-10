@@ -341,17 +341,17 @@ shinyServer(function(input, output, session) {
   })
 
   # Update channel choice for given satellite
-  observe({
-    obname <- req(input$obname)
-    if (obname == "satem") {
-      db <- activeDb()
-      sens <- req(input$sensor)
-      sat <- req(input$satellite)
-      channelChoicesObsmonTable <<- db$obnamesObsmonTable[[obname]][[sens]][[sat]]
-      channelChoicesUsageTable <<- db$obnamesUsageTable[[obname]][[sens]][[sat]]
-      channelChoices <<- unique(c(channelChoicesObsmonTable, channelChoicesUsageTable))
-      updateSelection(session, "channels", channelChoices)
-    }
+  observeEvent({
+    input$satellite
+    },{
+    db <- activeDb()
+    sat <- req(input$satellite)
+    sens <- req(input$sensor)
+    datesCycles <- getCurrentDatesAndCycles(input)
+    channels <- getAvailableChannels(db, datesCycles$dates, datesCycles$cycles,
+      satname=sat, sensorname=sens
+    )
+    updateSelection(session, "channels", channels)
   })
 
   observeEvent(input$channelsSelectAll, {

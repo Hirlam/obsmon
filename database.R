@@ -466,3 +466,9 @@ getVariables <- function(db, dates, cycles, obname) {
   return(rtn)
 }
 
+getAvailableChannels <- function(db, dates, cycles, satname, sensorname) {
+  # TODO: Complete function body
+  rtn <- NULL
+  return(rtn)
+}
+
