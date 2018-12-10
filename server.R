@@ -279,6 +279,8 @@ shinyServer(function(input, output, session) {
     cacheFileUpdated <<- reactivePoll(5000, session, cacheMdateCheckingFunc, function() NULL)
   })
 
+  # Flagging that it's time to read info from cache
+  reloadInfoFromCache <- reactiveValues(v=0)
   observeEvent({
       activeDb()
       cacheFileUpdated()
@@ -286,6 +288,13 @@ shinyServer(function(input, output, session) {
       input$dateRange
       input$cycle
       input$cycles
+    }, {
+      reloadInfoFromCache$v <<- (reloadInfoFromCache$v + 1) %% 2
+  })
+
+  # Update obtype
+  observeEvent({
+      reloadInfoFromCache$v
     }, {
     db <- activeDb()
     datesCycles <- getCurrentDatesAndCycles(input)
@@ -298,14 +307,11 @@ shinyServer(function(input, output, session) {
       updateSelectInput(session, "obtype", label="Observation Type (cached)")
     }
   })
-  # Update obnames with choices for given experiment, database and obtype
+
+  # Update obnames
   observeEvent({
-      activeDb()
       input$obtype
-      input$date
-      input$dateRange
-      input$cycle
-      input$cycles
+      reloadInfoFromCache$v
     }, {
     obsCategory <- req(input$obtype)
     db <- activeDb()
@@ -328,8 +334,13 @@ shinyServer(function(input, output, session) {
     }
   })
 
-  # Update sensor for satem obname, variable else
-  observe({
+  # Update variable
+  observeEvent({
+      input$obname
+      reloadInfoFromCache$v
+    }, {
+    req(input$obtype!="satem")
+
     db <- activeDb()
     obname <- req(input$obname)
     datesCycles <- getCurrentDatesAndCycles(input)
@@ -379,6 +390,7 @@ shinyServer(function(input, output, session) {
   # Update satellite choices for given sensor
   observeEvent({
     input$sensor
+    reloadInfoFromCache$v
     }, {
     sens <- req(input$sensor)
     obsCategory <- req(input$obtype)
@@ -393,6 +405,7 @@ shinyServer(function(input, output, session) {
   # Update channel choice for given satellite
   observeEvent({
     input$satellite
+    reloadInfoFromCache$v
     },{
     db <- activeDb()
     sat <- req(input$satellite)
