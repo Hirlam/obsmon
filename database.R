@@ -472,3 +472,10 @@ getAvailableChannels <- function(db, dates, cycles, satname, sensorname) {
   return(rtn)
 }
 
+getAvailableLevels <- function(db, dates, cycles, varname) {
+  # TODO: Complete function body
+  rtn <- list(obsmon=NULL, usage=NULL)
+  rtn[["all"]] <- unique(c(rtn$obsmon, rtn$usage))
+  return(rtn)
+}
+

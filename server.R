@@ -363,19 +363,19 @@ shinyServer(function(input, output, session) {
   })
 
   # Update level choice for given variable
-  observe({
+  observeEvent({
+    input$variable
+    }, {
     obname <- req(input$obname)
-    if (obname != "satem") {
-      db <- activeDb()
-      var <- req(input$variable)
-      levelChoicesObsmonTable <<- db$obnames[[obname]][[var]]$levelsObsmon
-      levelChoicesUsageTable <<- db$obnames[[obname]][[var]]$levelsUsage
-      levelChoices <<- unique(c(levelChoicesObsmonTable, levelChoicesUsageTable))
-      updateSelection(session, "levels", levelChoices)
-    }
+    db <- activeDb()
+    var <- req(input$variable)
+    datesCycles <- getCurrentDatesAndCycles(input)
+    avLevels <- getAvailableLevels(db, datesCycles$dates, datesCycles$cycles, var)
+    updateSelection(session, "levels", unique(c(avLevels$obsmon, avLevels$usage)))
   })
 
   observeEvent(input$levelsSelectStandard, {
+    avLevels <- getAvailableLevels(db, datesCycles$dates, datesCycles$cycles, var)
     updateSelectInput(session, "levels",
                       choices=levelChoices, selected=levelChoicesObsmonTable)
   })
