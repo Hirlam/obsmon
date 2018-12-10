@@ -408,8 +408,8 @@ getObtypesFromCache <- function(db, dates, cycles) {
   for(cacheFilePath in db$cachePaths) {
     con <- dbConnectWrapper(cacheFilePath, read_only=TRUE, showWarnings=FALSE)
     if(is.null(con)) next
-    dbTables <- dbListTables(con)
     tryCatch({
+        dbTables <- dbListTables(con)
         for(dbTable in dbTables) {
           if(!endsWith(dbTable, '_obs')) next
           if(dbTable %in% rtn) next
@@ -443,16 +443,14 @@ getVariablesFromCache <- function(db, dates, cycles, obname) {
   for(cacheFilePath in db$cachePaths) {
     con <- dbConnectWrapper(cacheFilePath, read_only=TRUE, showWarnings=FALSE)
     if(is.null(con)) next
-
-    tableCols <- dbListFields(con, tableName)
-    query <- sprintf("SELECT DISTINCT varname FROM %s WHERE %s AND %s",
-      tableName, dateQueryString, cycleQueryString
-    )
-    if("obname" %in% tableCols) {
-      query <- sprintf("%s AND obname='%s'", query, obname)
-    }
-
     tryCatch({
+        tableCols <- dbListFields(con, tableName)
+        query <- sprintf("SELECT DISTINCT varname FROM %s WHERE %s AND %s",
+          tableName, dateQueryString, cycleQueryString
+        )
+        if("obname" %in% tableCols) {
+          query <- sprintf("%s AND obname='%s'", query, obname)
+        }
         queryResult <- dbGetQuery(con, query)
         rtn <- c(rtn, queryResult[['varname']])
       },
