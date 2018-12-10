@@ -407,6 +407,42 @@ getObtypesFromCache <- function(db, dates, cycles) {
   return(sort(unique(rtn)))
 }
 
+getVariablesFromCache <- function(db, dates, cycles, obname) {
+  rtn <- c()
+  dates <- date2dtg(dates)
+  if(length(dates)==1) dateQueryString <- sprintf("date=%s", dates)
+  else dateQueryString <- sprintf("date IN (%s)", paste(dates, join=", "))
+  if(length(cycles)==1) cycleQueryString <- sprintf("cycle=%s", cycles)
+  else cycleQueryString <- sprintf("cycle IN (%s)", paste(cycles, join=", "))
+
+  category <- getAttrFromMetadata('category', obname=obname)
+  tableName <- sprintf("%s_obs", category)
+
+  for(cacheFilePath in db$cachePaths) {
+    con <- dbConnectWrapper(cacheFilePath, read_only=TRUE, showWarnings=FALSE)
+    if(is.null(con)) next
+
+    tableCols <- dbListFields(con, tableName)
+    query <- sprintf("SELECT DISTINCT varname FROM %s WHERE %s AND %s",
+      tableName, dateQueryString, cycleQueryString
+    )
+    if("obname" %in% tableCols) {
+      query <- sprintf("%s AND obname='%s'", query, obname)
+    }
+
+    tryCatch({
+        queryResult <- dbGetQuery(con, query)
+        rtn <- c(rtn, queryResult[['varname']])
+      },
+      error=function(e) NULL,
+      warning=function(w) NULL
+    )
+    dbDisconnect(con)
+  }
+  if(length(rtn)==0) rtn <- NULL
+  return(sort(unique(rtn)))
+}
+
 getObnames <- function(db, category, dates, cycles) {
   rtn <- list(cached=NULL, general=NULL)
   rtn$cached <- getObnamesFromCache(db, category, dates, cycles)
@@ -420,6 +456,13 @@ getObtypes <- function(db, dates, cycles) {
   rtn <- list(cached=NULL, general=NULL)
   rtn$cached <- getObtypesFromCache(db, dates, cycles)
   if(is.null(rtn$cached)) rtn$general <- getAttrFromMetadata('category')
+  return(rtn)
+}
+
+getVariables <- function(db, dates, cycles, obname) {
+  rtn <- list(cached=NULL, general=NULL)
+  rtn$cached <- getVariablesFromCache(db, dates, cycles, obname)
+  if(is.null(rtn$cached)) rtn$general <- getAttrFromMetadata('variables', obname=obname)
   return(rtn)
 }
 

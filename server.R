@@ -303,14 +303,17 @@ shinyServer(function(input, output, session) {
   observe({
     db <- activeDb()
     obname <- req(input$obname)
-    if (obname == "satem") {
-      sens.sats <- getAttrFromMetadata('sensors.sats', obname=obname)
-      sens <- gsub('\\.{1}.*', '', sens.sats)
-      updateSelection(session, "sensor", sens)
+    datesCycles <- getCurrentDatesAndCycles(input)
+
+    variables <- getVariables(db,datesCycles$dates,datesCycles$cycles,obname)
+    if(is.null(variables$cached)) {
+      updateSelection(session, "variable", variables$general)
+      updateSelectInput(session, "variable", label="Variable (not cached)")
     } else {
-      variables <- getAttrFromMetadata('variables', obname=obname)
-      updateSelection(session, "variable", variables)
+      updateSelection(session, "variable", variables$cached)
+      updateSelectInput(session, "variable", label="Variable")
     }
+
     stationChoices <- db$stations[[obname]]
     updateSelectizeInput(session, "station", stationChoices)
   })
