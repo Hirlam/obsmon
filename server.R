@@ -128,6 +128,19 @@ getCurrentDatesAndCycles <- function(input) {
   return(list(dates=dates, cycles=cycles))
 }
 
+cacheFilesLatestMdate <- function(db) {
+  mtimes <- c(-1)
+  for(cacheFilePath in db$cachePaths) {
+    mtime <- tryCatch(
+      file.mtime(cacheFilePath),
+      error=function(e) NULL,
+      warning=function(w) NULL
+    )
+    mtimes <- c(mtimes, mtime)
+  }
+  return(max(mtimes))
+}
+
 shinyServer(function(input, output, session) {
   # Start GUI with all inputs disabled.
   # They will be enabled once experiments are loaded
@@ -258,9 +271,17 @@ shinyServer(function(input, output, session) {
       assyncPutObsInCache(fPathsToCache, cacheDir=db$cacheDir)
   })
 
-  # Update obtype with choices for given experiment and database
+  # Detect when the relevant cache files have been updated
+  cacheFileUpdated <- function() NULL
+  observe({
+    db <- activeDb()
+    cacheMdateCheckingFunc <<- partial(cacheFilesLatestMdate, db=db)
+    cacheFileUpdated <<- reactivePoll(5000, session, cacheMdateCheckingFunc, function() NULL)
+  })
+
   observeEvent({
       activeDb()
+      cacheFileUpdated()
       input$date
       input$dateRange
       input$cycle
