@@ -240,7 +240,7 @@ putObservationsInCache <- function(sourceDbPath, cacheDir) {
         'INSERT OR IGNORE INTO dates(date) values(%d);', date
       )),
       warning=function(w) NULL,
-      error=function(e) {print(e$message); NULL}
+      error=function(e) {flog.error(e$message); NULL}
     )
     # (ii) Cycle
     tryCatch(
@@ -248,7 +248,7 @@ putObservationsInCache <- function(sourceDbPath, cacheDir) {
         'INSERT OR IGNORE INTO cycles(date, cycle) VALUES (%d, %d)',date,cycle
       )),
       warning=function(w) NULL,
-      error=function(e) {print(e$message); NULL}
+      error=function(e) {flog.error(e$message); NULL}
     )
 
     for(obCategory in names(obsKeyAttributes)) {
