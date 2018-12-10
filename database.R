@@ -348,6 +348,28 @@ assyncPutObsInCache <- function(sourceDbPaths, cacheDir) {
   }))
 }
 
+datesAreCached <- function(db, dates) {
+  dates <- date2dtg(dates)
+  if(length(dates)==1) dateQueryString <- sprintf("date=%s", dates)
+  else dateQueryString <- sprintf("date IN (%s)", paste(dates, join=", "))
+  for(cacheFilePath in db$cachePaths) {
+    con <- dbConnectWrapper(cacheFilePath, read_only=TRUE, showWarnings=FALSE)
+    if(is.null(con)) return(FALSE)
+    cachedDates <- tryCatch({
+        queryResult <- dbGetQuery(con, sprintf(
+          "SELECT DISTINCT date FROM dates WHERE %s",
+          dateQueryString
+        ))
+        queryResult[['date']]
+      },
+      error=function(e) NULL,
+      warning=function(w) NULL
+    )
+    if(is.null(cachedDates)||length(cachedDates)!=length(dates)) return(FALSE)
+  }
+  return(TRUE)
+}
+
 getObnamesFromCache <- function(db, category, dates, cycles) {
   rtn <- c()
   dates <- date2dtg(dates)
