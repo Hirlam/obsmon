@@ -55,8 +55,14 @@ expCreateSqliteShardedDtg <- function(name, baseDir, experiment) {
 #      stations=NULL, # TEMP
       cacheDir=x$cacheDir,
       cachePaths=list(
-        obsmon=file.path(x$cacheDir, sprintf('%s_obsmon.db', dbType)),
-        usage=file.path(x$cacheDir, sprintf('%s_usage.db', dbType))
+        obsmon=normalizePath(
+          file.path(x$cacheDir, sprintf('%s_obsmon.db', dbType)),
+          mustWork=FALSE
+        ),
+        usage=normalizePath(
+          file.path(x$cacheDir, sprintf('%s_usage.db', dbType)),
+          mustWork=FALSE
+        )
       )
     )
   }
