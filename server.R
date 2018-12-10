@@ -149,7 +149,7 @@ shinyServer(function(input, output, session) {
         exptPlaceholder <- "Please select experiment"
         shinyjs::enable("experiment")
       }
-      if((length(newExptNames) != length(exptNames)) |
+      if((length(newExptNames) != length(exptNames)) ||
          !all(exptNames==newExptNames)) {
         selectedExpt <- tryCatch({
           iExpt <- which(exptNames==input$experiment)[1]
