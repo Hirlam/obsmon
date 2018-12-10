@@ -327,16 +327,17 @@ shinyServer(function(input, output, session) {
   })
 
   # Update satellite choices for given sensor
-  observe({
-    obname <- req(input$obname)
-    if (obname == "satem") {
-      db <- activeDb()
-      sens <- req(input$sensor)
-      sens.sats <- getAttrFromMetadata('sensors.sats', obname=obname)
-      sens.sats <- sens.sats[startsWith(sens.sats, paste0(sens, '.'))]
-      sats <- gsub(paste0(sens, '.'), '', sens.sats, fixed=TRUE)
-      updateSelection(session, "satellite", sats)
-    }
+  observeEvent({
+    input$sensor
+    }, {
+    sens <- req(input$sensor)
+    obsCategory <- req(input$obtype)
+    db <- activeDb()
+    # TODO: Get sen.sats from cache as well, if available
+    sens.sats <- getAttrFromMetadata('sensors.sats', category=obsCategory)
+    sens.sats <- sens.sats[startsWith(sens.sats, paste0(sens, '.'))]
+    sats <- gsub(paste0(sens, '.'), '', sens.sats, fixed=TRUE)
+    updateSelection(session, "satellite", sats)
   })
 
   # Update channel choice for given satellite
