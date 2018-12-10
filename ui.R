@@ -83,6 +83,8 @@ shinyUI(
                                 "Observation Name",
                                 choices=c())
                 ),
+                conditionalPanel(
+                    condition = "input.obtype == 'satem'",
                     selectInput("sensor",
                                 "Sensor",
                                 choices=c()),
