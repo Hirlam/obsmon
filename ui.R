@@ -109,7 +109,7 @@ shinyUI(
                                 choices=c()),
                     conditionalPanel(
                         condition = "input.odbBase != 'ecma_sfc'",
-                        selectizeInput("levels",
+                        selectInput("levels",
                                     tags$div("Levels",
                                              "(Select",
                                              actionLink("levelsSelectStandard", "standard"),
@@ -119,7 +119,7 @@ shinyUI(
                                              ),
                                     choices=c(),
                                     multiple=TRUE,
-                                    options=list(placeholder='Any'))
+                                    selectize=FALSE)
                     ),
                     selectizeInput("station",
                                 "Station",
