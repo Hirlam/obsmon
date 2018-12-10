@@ -352,32 +352,33 @@ shinyServer(function(input, output, session) {
   })
 
   # Update level choice for given variable
+  avLevels <- list()
   observeEvent({
     input$variable
     reloadInfoFromCache$v
     }, {
     req(input$obtype!="satem")
 
-    obname <- req(input$obname)
     db <- activeDb()
+    obname <- req(input$obname)
     var <- req(input$variable)
     datesCycles <- getCurrentDatesAndCycles(input)
-    avLevels <- getAvailableLevels(db, datesCycles$dates, datesCycles$cycles, var)
-    updateSelection(session, "levels", unique(c(avLevels$obsmon, avLevels$usage)))
+
+    avLevels <<- getAvailableLevels(db, datesCycles$dates, datesCycles$cycles, obname, var)
+    updateSelection(session, "levels", choices=avLevels$all)
   })
 
   observeEvent(input$levelsSelectStandard, {
-    avLevels <- getAvailableLevels(db, datesCycles$dates, datesCycles$cycles, var)
     updateSelectInput(session, "levels",
-                      choices=levelChoices, selected=levelChoicesObsmonTable)
+      choices=avLevels$all, selected=avLevels$obsmon)
   })
 
   observeEvent(input$levelsSelectAll, {
-    updateSelection(session, "levels", levelChoices, "ALL")
+    updateSelectInput(session, "levels", choices=avLevels$all, selected=avLevels$all)
   })
 
   observeEvent(input$levelsSelectNone, {
-    updateSelection(session, "levels", levelChoices, "NONE")
+    updateSelectInput(session, "levels", choices=avLevels$all, selected=NULL)
   })
 
   # Update sensornames

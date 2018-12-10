@@ -463,6 +463,45 @@ getVariablesFromCache <- function(db, dates, cycles, obname) {
   return(sort(unique(rtn)))
 }
 
+getLevelsFromCache <- function(db, dates, cycles, obname, varname) {
+  rtn <- list(obsmon=NULL, usage=NULL, all=NULL)
+
+  dates <- date2dtg(dates)
+  if(length(dates)==1) dateQueryString <- sprintf("date=%s", dates)
+  else dateQueryString <- sprintf("date IN (%s)", paste(dates, join=", "))
+  if(length(cycles)==1) cycleQueryString <- sprintf("cycle=%s", cycles)
+  else cycleQueryString <- sprintf("cycle IN (%s)", paste(cycles, join=", "))
+
+  category <- getAttrFromMetadata('category', obname=obname)
+  tableName <- sprintf("%s_obs", category)
+
+  for(odbTable in c("obsmon", "usage")) {
+    cacheFilePath <- db$cachePaths[[odbTable]]
+    con <- dbConnectWrapper(cacheFilePath, read_only=TRUE, showWarnings=FALSE)
+    if(is.null(con)) next
+    tryCatch({
+        tableCols <- dbListFields(con, tableName)
+        query <- sprintf("SELECT DISTINCT level FROM %s WHERE %s AND %s AND varname='%s'",
+          tableName, dateQueryString, cycleQueryString, varname
+        )
+        if("obname" %in% tableCols) {
+          query <- sprintf("%s AND obname='%s'", query, obname)
+        }
+        query <- sprintf("%s ORDER BY level", query)
+        queryResult <- dbGetQuery(con, query)
+        rtn[[odbTable]] <- queryResult[['level']]
+      },
+      error=function(e) NULL,
+      warning=function(w) NULL
+    )
+    dbDisconnect(con)
+  }
+
+  rtn[["all"]] <- unique(c(rtn$obsmon, rtn$usage))
+  return(rtn)
+}
+
+# Wrappers
 getObnames <- function(db, category, dates, cycles) {
   rtn <- list(cached=NULL, general=NULL)
   rtn$cached <- getObnamesFromCache(db, category, dates, cycles)
@@ -492,10 +531,8 @@ getAvailableChannels <- function(db, dates, cycles, satname, sensorname) {
   return(rtn)
 }
 
-getAvailableLevels <- function(db, dates, cycles, varname) {
-  # TODO: Complete function body
-  rtn <- list(obsmon=NULL, usage=NULL)
-  rtn[["all"]] <- unique(c(rtn$obsmon, rtn$usage))
+getAvailableLevels <- function(db, dates, cycles, obname, varname) {
+  rtn <- getLevelsFromCache(db, dates, cycles, obname, varname)
   return(rtn)
 }
 
