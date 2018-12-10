@@ -326,6 +326,35 @@ shinyServer(function(input, output, session) {
     updateSelectizeInput(session, "station", stationChoices)
   })
 
+  # Update level choice for given variable
+  observeEvent({
+    input$variable
+    reloadInfoFromCache$v
+    }, {
+    req(input$obtype!="satem")
+
+    obname <- req(input$obname)
+    db <- activeDb()
+    var <- req(input$variable)
+    datesCycles <- getCurrentDatesAndCycles(input)
+    avLevels <- getAvailableLevels(db, datesCycles$dates, datesCycles$cycles, var)
+    updateSelection(session, "levels", unique(c(avLevels$obsmon, avLevels$usage)))
+  })
+
+  observeEvent(input$levelsSelectStandard, {
+    avLevels <- getAvailableLevels(db, datesCycles$dates, datesCycles$cycles, var)
+    updateSelectInput(session, "levels",
+                      choices=levelChoices, selected=levelChoicesObsmonTable)
+  })
+
+  observeEvent(input$levelsSelectAll, {
+    updateSelection(session, "levels", levelChoices, "ALL")
+  })
+
+  observeEvent(input$levelsSelectNone, {
+    updateSelection(session, "levels", levelChoices, "NONE")
+  })
+
   # Update satellite choices for given sensor
   observeEvent({
     input$sensor
@@ -360,32 +389,6 @@ shinyServer(function(input, output, session) {
 
   observeEvent(input$channelsSelectNone, {
     updateSelection(session, "channels", channelChoices, "NONE")
-  })
-
-  # Update level choice for given variable
-  observeEvent({
-    input$variable
-    }, {
-    obname <- req(input$obname)
-    db <- activeDb()
-    var <- req(input$variable)
-    datesCycles <- getCurrentDatesAndCycles(input)
-    avLevels <- getAvailableLevels(db, datesCycles$dates, datesCycles$cycles, var)
-    updateSelection(session, "levels", unique(c(avLevels$obsmon, avLevels$usage)))
-  })
-
-  observeEvent(input$levelsSelectStandard, {
-    avLevels <- getAvailableLevels(db, datesCycles$dates, datesCycles$cycles, var)
-    updateSelectInput(session, "levels",
-                      choices=levelChoices, selected=levelChoicesObsmonTable)
-  })
-
-  observeEvent(input$levelsSelectAll, {
-    updateSelection(session, "levels", levelChoices, "ALL")
-  })
-
-  observeEvent(input$levelsSelectNone, {
-    updateSelection(session, "levels", levelChoices, "NONE")
   })
 
   # Build named list of criteria
