@@ -532,9 +532,35 @@ getChannelsFromCache <- function(db, dates, cycles, satname, sensorname) {
   return(rtn)
 }
 
-getSensornamesFromCache <- function(db, dates, cycles, sensorname) {
-  rtn <- NULL
-  return(rtn)
+getSensornamesFromCache <- function(db, dates, cycles) {
+  rtn <- c()
+
+  dates <- date2dtg(dates)
+  if(length(dates)==1) dateQueryString <- sprintf("date=%s", dates)
+  else dateQueryString <- sprintf("date IN (%s)", paste(dates, join=", "))
+  if(length(cycles)==1) cycleQueryString <- sprintf("cycle=%s", cycles)
+  else cycleQueryString <- sprintf("cycle IN (%s)", paste(cycles, join=", "))
+
+  for(odbTable in c("obsmon", "usage")) {
+    cacheFilePath <- db$cachePaths[[odbTable]]
+    con <- dbConnectWrapper(cacheFilePath, read_only=TRUE, showWarnings=FALSE)
+    if(is.null(con)) next
+    tryCatch({
+        query <- sprintf(
+          "SELECT DISTINCT obname FROM satem_obs WHERE %s AND %s
+           ORDER BY obname",
+          dateQueryString, cycleQueryString
+        )
+        queryResult <- dbGetQuery(con, query)
+        rtn <- c(rtn, queryResult[['obname']])
+      },
+      error=function(e) NULL,
+      warning=function(w) NULL
+    )
+    dbDisconnect(con)
+  }
+  if(length(rtn)==0) rtn <- NULL
+  return(sort(unique(rtn)))
 }
 
 getSatnamesFromCache <- function(db, dates, cycles, sensorname) {
