@@ -518,7 +518,7 @@ getChannelsFromCache <- function(db, dates, cycles, satname, sensorname) {
         query <- sprintf(
           "SELECT DISTINCT level FROM satem_obs WHERE
            %s AND %s AND satname='%s' AND obname='%s'
-           ORDER BY LEVEL",
+           ORDER BY level",
           dateQueryString, cycleQueryString, satname, sensorname
         )
         queryResult <- dbGetQuery(con, query)
