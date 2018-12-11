@@ -214,6 +214,9 @@ putObservationsInCache <- function(sourceDbPath, cacheDir) {
       error=function(e) NULL,
       warning=function(w) NULL
     )
+
+    # Warning user if file to be cached seems to come from a different
+    # directory than the one originally rigistered
     exptCachedDir <- tryCatch({
         exptCachedDiriQueryResult <- dbGetQuery(con_cache,
           'SELECT basedir FROM experiment ORDER BY mdate_utc DESC LIMIT 1'
@@ -224,13 +227,11 @@ putObservationsInCache <- function(sourceDbPath, cacheDir) {
       warning=function(w) NULL
     )
     if(is.null(exptCachedDir) || !(startsWith(sourceDbPath, exptCachedDir))) {
-      anyFailedCachingAttmpt <- TRUE
-      errMsg <- "putObservationsInCache: File path not consistent with cached expt dir:\n"
-      errMsg <- paste0(errMsg, '    > Cached expt path: ', exptCachedDir, '\n')
+      errMsg <- "putObservationsInCache: File path and cached exptDir differ:\n"
+      errMsg <- paste0(errMsg, '    > Cached exptDir: ', exptCachedDir, '\n')
       errMsg <- paste0(errMsg, '    > File path: ', sourceDbPath, '\n')
-      errMsg <- paste0(errMsg, ' Not caching this particular file.', '\n')
-      flog.error(errMsg)
-      return(NULL)
+      errMsg <- paste0(errMsg, ' You may want to double-check that this is OK.', '\n')
+      flog.warn(errMsg)
     }
 
     # Register date and cycle as existing, if not previously done:
