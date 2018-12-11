@@ -399,6 +399,7 @@ shinyServer(function(input, output, session) {
 
   # Update satellite choices for given sensor
   observeEvent({
+    input$obtype
     input$sensor
     reloadInfoFromCache$v
     }, {
