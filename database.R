@@ -595,6 +595,42 @@ getSatnamesFromCache <- function(db, dates, cycles, sensorname) {
   return(sort(unique(rtn)))
 }
 
+getStationsFromCache <- function(db, dates, cycles, obname, variable) {
+  rtn <- c()
+
+  dates <- date2dtg(dates)
+  if(length(dates)==1) dateQueryString <- sprintf("date=%s", dates)
+  else dateQueryString <- sprintf("date IN (%s)", paste(dates, join=", "))
+  if(length(cycles)==1) cycleQueryString <- sprintf("cycle=%s", cycles)
+  else cycleQueryString <- sprintf("cycle IN (%s)", paste(cycles, join=", "))
+
+  category <- getAttrFromMetadata('category', obname=obname)
+  tableName <- sprintf("%s_obs", category)
+
+  for(cacheFilePath in db$cachePaths) {
+    con <- dbConnectWrapper(cacheFilePath, read_only=TRUE, showWarnings=FALSE)
+    if(is.null(con)) next
+    tryCatch({
+        tableCols <- dbListFields(con, tableName)
+        query <- sprintf("SELECT DISTINCT statid FROM %s WHERE %s AND %s",
+          tableName, dateQueryString, cycleQueryString
+        )
+        if("obname" %in% tableCols) {
+          query <- sprintf("%s AND obname='%s'", query, obname)
+        }
+        query <- sprintf("%s AND varname='%s'", query, variable)
+        queryResult <- dbGetQuery(con, query)
+        rtn <- c(rtn, queryResult[['statid']])
+      },
+      error=function(e) NULL,
+      warning=function(w) NULL
+    )
+    dbDisconnect(con)
+  }
+  if(length(rtn)==0) rtn <- NULL
+  return(sort(unique(rtn)))
+}
+
 # Wrappers
 getObnames <- function(db, category, dates, cycles) {
   rtn <- list(cached=NULL, general=NULL)

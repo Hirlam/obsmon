@@ -121,10 +121,11 @@ shinyUI(
                                     multiple=TRUE,
                                     selectize=FALSE)
                     ),
-                    selectizeInput("station",
+                    selectInput("station",
                                 "Station",
-                                options=list(placeholder='Any'),
-                                choices=c())
+                                choices=c(),
+                                multiple=TRUE,
+                                selectize=FALSE)
                 ),
                 selectInput("plottype",
                             "Type of Plot",

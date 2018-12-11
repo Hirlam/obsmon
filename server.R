@@ -340,9 +340,35 @@ shinyServer(function(input, output, session) {
       updateSelection(session, "variable", variables$cached)
       updateSelectInput(session, "variable", label="Variable")
     }
+  })
 
-    stationChoices <- db$stations[[obname]]
-    updateSelectizeInput(session, "station", stationChoices)
+  # Update stations
+  observeEvent({
+      input$obtype
+      input$obname
+      input$variable
+      reloadInfoFromCache$v
+    }, {
+    req(input$obtype!="satem")
+
+    db <- activeDb()
+    obname <- req(input$obname)
+    variable <- req(input$variable)
+    datesCycles <- getCurrentDatesAndCycles(input)
+
+    stations <- getStationsFromCache(
+      db, datesCycles$dates, datesCycles$cycles,
+      obname, variable
+    )
+    stations <- c("Any"="", stations)
+    if(length(stations)==1) {
+      updateSelectInput(session, "station", label="Station (not cached)",
+        choices=stations, selected=stations
+      )
+    } else {
+      updateSelectInput(session, "station", label="Station")
+      updateSelection(session, "station", stations)
+    }
   })
 
   # Update level choice for given variable
@@ -479,9 +505,9 @@ shinyServer(function(input, output, session) {
         res$levels <- list()
       }
     }
-    if (!(input$station=="" | is.null(input$station) | is.na(input$station))){
-      station <- input$station
-      res$station <- station
+    station <- input$station
+    res$station <- station
+    if (station!=""){
       label <- exp$stationLabels[[adb$name]][[obname]][[station]]
       res$info$stationLabel <- ifelse(is.null(label), as.character(station), label)
     }
