@@ -183,7 +183,7 @@ putObservationsInCache <- function(sourceDbPath, cacheDir) {
       )
       flog.debug(msg)
     }
- 
+
     lockCacheFile(cacheFilePath)
     fPathsLockedHere <- c(fPathsLockedHere, cacheFilePath)
 
@@ -404,7 +404,7 @@ getObtypesFromCache <- function(db, dates, cycles) {
   else dateQueryString <- sprintf("date IN (%s)", paste(dates, join=", "))
   if(length(cycles)==1) cycleQueryString <- sprintf("cycle=%s", cycles)
   else cycleQueryString <- sprintf("cycle IN (%s)", paste(cycles, join=", "))
-  
+
   for(cacheFilePath in db$cachePaths) {
     con <- dbConnectWrapper(cacheFilePath, read_only=TRUE, showWarnings=FALSE)
     if(is.null(con)) next
@@ -501,6 +501,37 @@ getLevelsFromCache <- function(db, dates, cycles, obname, varname) {
   return(rtn)
 }
 
+getChannelsFromCache <- function(db, dates, cycles, satname, sensorname) {
+  rtn <- c()
+
+  dates <- date2dtg(dates)
+  if(length(dates)==1) dateQueryString <- sprintf("date=%s", dates)
+  else dateQueryString <- sprintf("date IN (%s)", paste(dates, join=", "))
+  if(length(cycles)==1) cycleQueryString <- sprintf("cycle=%s", cycles)
+  else cycleQueryString <- sprintf("cycle IN (%s)", paste(cycles, join=", "))
+
+  for(odbTable in c("obsmon", "usage")) {
+    cacheFilePath <- db$cachePaths[[odbTable]]
+    con <- dbConnectWrapper(cacheFilePath, read_only=TRUE, showWarnings=FALSE)
+    if(is.null(con)) next
+    tryCatch({
+        query <- sprintf(
+          "SELECT DISTINCT level FROM satem_obs WHERE
+           %s AND %s AND satname='%s' AND obname='%s'
+           ORDER BY LEVEL",
+          dateQueryString, cycleQueryString, satname, sensorname
+        )
+        queryResult <- dbGetQuery(con, query)
+        rtn <- c(rtn, queryResult[['level']])
+      },
+      error=function(e) NULL,
+      warning=function(w) NULL
+    )
+    dbDisconnect(con)
+  }
+  return(rtn)
+}
+
 # Wrappers
 getObnames <- function(db, category, dates, cycles) {
   rtn <- list(cached=NULL, general=NULL)
@@ -526,8 +557,7 @@ getVariables <- function(db, dates, cycles, obname) {
 }
 
 getAvailableChannels <- function(db, dates, cycles, satname, sensorname) {
-  # TODO: Complete function body
-  rtn <- NULL
+  rtn <- getChannelsFromCache(db, dates, cycles, satname, sensorname)
   return(rtn)
 }
 
