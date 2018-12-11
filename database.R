@@ -537,6 +537,11 @@ getSensornamesFromCache <- function(db, dates, cycles, sensorname) {
   return(rtn)
 }
 
+getSatnamesFromCache <- function(db, dates, cycles, sensorname) {
+  rtn <- NULL
+  return(rtn)
+}
+
 # Wrappers
 getObnames <- function(db, category, dates, cycles) {
   rtn <- list(cached=NULL, general=NULL)
@@ -581,3 +586,13 @@ getAvailableSensornames <- function(db, dates, cycles) {
   return(rtn)
 }
 
+getAvailableSatnames <- function(db, dates, cycles, sensorname) {
+  rtn <- list(cached=NULL, general=NULL)
+  rtn$cached <- getSatnamesFromCache(db, dates, cycles, sensorname)
+  if(is.null(rtn$cached)) {
+    sens.sats <- getAttrFromMetadata('sensors.sats', category="satem")
+    sens.sats <- sens.sats[startsWith(sens.sats, paste0(sensorname, '.'))]
+    rtn$general <- gsub(paste0(sensorname, '.'), '', sens.sats, fixed=TRUE)
+  }
+  return(rtn)
+}
