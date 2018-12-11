@@ -532,6 +532,11 @@ getChannelsFromCache <- function(db, dates, cycles, satname, sensorname) {
   return(rtn)
 }
 
+getSensornamesFromCache <- function(db, dates, cycles, sensorname) {
+  rtn <- NULL
+  return(rtn)
+}
+
 # Wrappers
 getObnames <- function(db, category, dates, cycles) {
   rtn <- list(cached=NULL, general=NULL)
@@ -563,6 +568,16 @@ getAvailableChannels <- function(db, dates, cycles, satname, sensorname) {
 
 getAvailableLevels <- function(db, dates, cycles, obname, varname) {
   rtn <- getLevelsFromCache(db, dates, cycles, obname, varname)
+  return(rtn)
+}
+
+getAvailableSensornames <- function(db, dates, cycles) {
+  rtn <- list(cached=NULL, general=NULL)
+  rtn$cached <- getSensornamesFromCache(db, dates, cycles)
+  if(is.null(rtn$cached)) {
+    sens.sats <- getAttrFromMetadata('sensors.sats', category="satem")
+    rtn$general <- gsub('\\.{1}.*', '', sens.sats)
+  }
   return(rtn)
 }
 

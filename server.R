@@ -383,13 +383,18 @@ shinyServer(function(input, output, session) {
       reloadInfoFromCache$v
     }, {
     req(input$obtype=="satem")
+    updateSelection(session, "obname", c("satem"))
     db <- activeDb()
     datesCycles <- getCurrentDatesAndCycles(input)
 
-    sens.sats <- getAttrFromMetadata('sensors.sats', category="satem")
-    sens <- gsub('\\.{1}.*', '', sens.sats)
-    updateSelection(session, "sensor", sens)
-    updateSelection(session, "obname", c("satem"))
+    sens <- getAvailableSensornames(db, datesCycles$dates, datesCycles$cycles)
+    if(is.null(sens$cached)) {
+      updateSelection(session, "sensor", sens$general)
+      updateSelectInput(session, "sensor", label="Sensor (not cached)")
+    } else {
+      updateSelection(session, "sensor", sens$cached)
+      updateSelectInput(session, "sensor", label="Sensor")
+    }
   })
 
   # Update satellite choices for given sensor
