@@ -180,13 +180,6 @@ shinyServer(function(input, output, session) {
   shinyjs::hide(id="loading-content", anim=TRUE, animType="fade")
   shinyjs::show("app-content")
 
-  levelChoices <- list()
-  levelChoicesObsmonTable <- list()
-  levelChoicesUsageTable <- list()
-  channelChoices <- list()
-  channelChoicesObsmonTable <- list()
-  channelChoicesUsageTable <- list()
-
   # Update database options according to chosen experiment
   observe({
     expName <- req(input$experiment)
@@ -464,7 +457,7 @@ shinyServer(function(input, output, session) {
       if (!is.null(input$channels)) {
         res$levels <- input$channels
       } else {
-        res$levels <- channelChoices
+        res$levels <- list()
       }
     } else {
       #res$obnumber <- adb$obnumbers[[obname]]
@@ -472,8 +465,6 @@ shinyServer(function(input, output, session) {
       res$varname <- req(input$variable)
       if (!is.null(input$levels)) {
         res$levels <- input$levels
-      } else if (!is.null(levelChoices)) {
-        res$levels <- levelChoices
       } else {
         res$levels <- list()
       }
