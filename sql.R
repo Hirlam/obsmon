@@ -14,16 +14,23 @@ dtgClause <- function(val) {
 criterion2clause <- function(name, criteria) {
   val <- criteria[[name]]
   switch(
-      name,
-      "dtg"=dtgClause(val),
-      "levels"=sprintf("(level in (%s))",
-                       do.call(partial(paste, sep=", "), as.list(val))),
-      "station"=sprintf("(statid like '%%%s%%')", val),
-      switch(
-          typeof(val),
-          "integer"=sprintf("(%s = %d)", name, val),
-          "character"=sprintf("(%s = '%s')", name, val)
-      )
+    name,
+    "dtg"=dtgClause(val),
+    "levels"=sprintf("(level in (%s))",
+                     do.call(partial(paste, sep=", "), as.list(val))),
+    "station"={
+      if(val=="") {
+        NULL
+      } else {
+        stationQueryStr <- paste0("statid like '%%%",val,"%%'",collapse=" OR ")
+        sprintf("(%s)", stationQueryStr)
+      }
+    },
+    switch(
+        typeof(val),
+        "integer"=sprintf("(%s = %d)", name, val),
+        "character"=sprintf("(%s = '%s')", name, val)
+    )
   )
 }
 
