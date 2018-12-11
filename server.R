@@ -416,6 +416,7 @@ shinyServer(function(input, output, session) {
   })
 
   # Update channel choice for given satellite
+  channels <- NULL
   observeEvent({
     input$sensor
     input$satellite
@@ -427,18 +428,23 @@ shinyServer(function(input, output, session) {
     sat <- req(input$satellite)
     sens <- req(input$sensor)
     datesCycles <- getCurrentDatesAndCycles(input)
-    channels <- getAvailableChannels(db, datesCycles$dates, datesCycles$cycles,
-      satname=sat, sensorname=sens
+
+    channels <<- getAvailableChannels(
+      db, datesCycles$dates, datesCycles$cycles, satname=sat, sensorname=sens
     )
     updateSelection(session, "channels", channels)
   })
 
   observeEvent(input$channelsSelectAll, {
-    updateSelection(session, "channels", channelChoices, "ALL")
+    updateSelectInput(
+      session, "channels", choices=channels, selected=channels
+    )
   })
 
   observeEvent(input$channelsSelectNone, {
-    updateSelection(session, "channels", channelChoices, "NONE")
+    updateSelectInput(
+      session, "channels", choices=channels, selected=NULL
+    )
   })
 
   # Build named list of criteria

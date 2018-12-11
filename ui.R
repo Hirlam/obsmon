@@ -91,7 +91,7 @@ shinyUI(
                     selectInput("satellite",
                                 "Satellite",
                                 choices=c()),
-                    selectizeInput("channels",
+                    selectInput("channels",
                                 tags$div("Channels",
                                          "(Select",
                                          actionLink("channelsSelectAll", "all"),
@@ -100,7 +100,7 @@ shinyUI(
                                          ),
                                 choices=c(),
                                 multiple=TRUE,
-                                options=list(placeholder='Any'))
+                                selectize=FALSE)
                 ),
                 conditionalPanel(
                     condition = "input.obname != 'satem'",
