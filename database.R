@@ -124,7 +124,6 @@ cacheFileIsLocked <- function(fpath) {
 
 putObservationsInCache <- function(sourceDbPath, cacheDir) {
   sourceDbPath <- normalizePath(sourceDbPath, mustWork=FALSE)
-  flog.debug(sprintf("Caching file %s\n", sourceDbPath))
   anyFailedCachingAttmpt <- FALSE
   dbConnectsCreatedHere <- c()
   fPathsLockedHere <- c()
@@ -140,7 +139,7 @@ putObservationsInCache <- function(sourceDbPath, cacheDir) {
           "DELETE FROM cycles WHERE date=%d AND cycle=%d", date, cycle
         ))
       } else {
-        flog.debug(sprintf("Done caching file %s\n", sourceDbPath))
+        flog.debug(sprintf("Caching: Done with file %s\n", sourceDbPath))
       }
       for(dbCon in dbConnectsCreatedHere) dbDisconnect(dbCon)
       for(lockedFName in fPathsLockedHere) unlockCacheFile(lockedFName)
@@ -149,7 +148,7 @@ putObservationsInCache <- function(sourceDbPath, cacheDir) {
 
   con <- dbConnectWrapper(sourceDbPath, read_only=TRUE)
   if(is.null(con)) {
-    anyFailedCachingAttmpt <- TRUE
+    flog.error(sprintf("Could not connect to file %s. Not caching.", sourceDbPath))
     return(NULL)
   }
   dbConnectsCreatedHere <- c(dbConnectsCreatedHere, con)
@@ -201,7 +200,12 @@ putObservationsInCache <- function(sourceDbPath, cacheDir) {
       warning=function(w) FALSE,
       error=function(e) FALSE
     )
-    if(alreadyCached) next
+    if(alreadyCached) {
+      flog.debug(sprintf("Already cached %s table of file %s\n", db_table, sourceDbPath))
+      next
+    } else {
+      flog.debug(sprintf("Caching file %s\n", sourceDbPath))
+    }
 
     # Register experiment as existing, if not previously done
     exptDir <- dirname(dirname(dirname(sourceDbPath)))
