@@ -121,7 +121,10 @@ setPackageOptions <- function(config) {
   pdf(NULL)
   flog.appender(appender.file(stderr()), 'ROOT')
   flog.threshold(parse(text=config$general$logLevel)[[1]])
-  plan(multiprocess)
+  # Options controlling parallelism
+  maxExtraParallelProcs <- Sys.getenv("OBSMON_MAX_N_EXTRA_PROCESSES")
+  if(maxExtraParallelProcs=="") maxExtraParallelProcs <- .Machine$integer.max 
+  plan(multiprocess, workers=maxExtraParallelProcs)
 }
 
 sourceObsmonFiles <- function() {

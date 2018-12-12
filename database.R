@@ -335,8 +335,6 @@ putObservationsInCache <- function(sourceDbPath, cacheDir) {
 }
 
 assyncPutObsInCache <- function(sourceDbPaths, cacheDir) {
-  originalNWorkers <- nbrOfWorkers()
-  plan(multiprocess, workers=originalNWorkers+1)
   suppressWarnings(future({
     for(sourceDbPath in sourceDbPaths) {
       tryCatch(
@@ -345,7 +343,6 @@ assyncPutObsInCache <- function(sourceDbPaths, cacheDir) {
         error=function(e) flog.error(e$message)
       )
     }
-    plan(multiprocess, workers=originalNWorkers)
   }))
 }
 

@@ -112,10 +112,6 @@ initExperimentsAsPromises <- function() {
   # Using new.env(), as lists cannot be used with %<-%
   experiments <- new.env()
   experimentChoices <- list()
-  # Making sure experiments don't block each other
-  originalNumberAvailableWorkers <- length(availableWorkers())
-  plan(multiprocess, workers=2*length(obsmonConfig$experiments))
-  on.exit(plan(multiprocess, workers=originalNumberAvailableWorkers))
   for(config in obsmonConfig$experiments) {
     name <- config$displayName
     # Using %<-% (library "future") to have experiments caching asynchronously.
