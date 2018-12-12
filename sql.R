@@ -3,7 +3,7 @@ dtgClause <- function(val) {
   if (n==1) {
     sprintf("(DTG = %d)", val)
   } else if (n==3) {
-    range <- expandDateRange(val)
+    range <- expandDtgRange(val)
     sprintf("(%d <= DTG) AND (DTG <= %d) AND (DTG %% 100 IN (%s))",
             range[[1]], range[[2]], paste(range[[3]], collapse=", "))
   } else {

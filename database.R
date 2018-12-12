@@ -47,7 +47,7 @@ performQuery <- function(db, query, dtgs=NULL, expandRange=TRUE,
       if (n==1) {
         dbpaths <- db$paths[as.character(dtgs)]
       } else if (n==3) {
-        range <- expandDateRange(dtgs)
+        range <- expandDtgRange(dtgs)
         dbpaths <- db$paths[range[[1]] <= db$dtgs & db$dtgs <= range[[2]]]
       } else {
         flog.error("Invalid combination of expandRange and dtgs.")
