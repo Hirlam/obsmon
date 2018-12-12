@@ -43,16 +43,6 @@ expCreateSqliteShardedDtg <- function(name, baseDir, experiment) {
       dbType=dbType,
       dtgs=availableDtgs,
       dir=file.path(x$path, dbType),
-#      obtypes=list(
-#        aircraft=list(
-#          v=list(
-#            levelsObsmon=c(NULL),
-#            levelsUsage=c(NULL)
-#          )
-#        )
-#      ), # TEMP
-      #stations=list(aircraft=c(NULL)), # TEMP
-#      stations=NULL, # TEMP
       cacheDir=x$cacheDir,
       cachePaths=list(
         obsmon=normalizePath(
