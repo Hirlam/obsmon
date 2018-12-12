@@ -372,7 +372,7 @@ shinyServer(function(input, output, session) {
   })
 
   # Update level choice for given variable
-  avLevels <- list()
+  avLevels <- list(obsmon=NULL, usage=NULL, all=NULL)
   observeEvent({
     input$obtype
     input$obname
