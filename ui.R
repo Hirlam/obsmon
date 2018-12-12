@@ -72,9 +72,12 @@ shinyUI(
                             multiple=FALSE,
                             options=list(placeholder='Awaiting experiment initialisation...'),
                             choices=c()),
-                selectInput("obtype",
-                            "Observation Type",
-                            choices=c()),
+                conditionalPanel(
+                    condition = "input.odbBase!='ecma_sfc'",
+                    selectInput("obtype",
+                                "Observation Type",
+                                choices=c())
+                ),
                 conditionalPanel(
                     condition = "input.obtype!='satem' &&
                                  input.obtype!='scatt' &&

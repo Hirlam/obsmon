@@ -293,14 +293,18 @@ shinyServer(function(input, output, session) {
       reloadInfoFromCache$v
     }, {
     db <- activeDb()
-    datesCycles <- getCurrentDatesAndCycles(input)
-    obtypes <- getObtypes(db, datesCycles$dates, datesCycles$cycles)
-    if(is.null(obtypes$cached)) {
-      updateSelection(session, "obtype", obtypes$general)
-      updateSelectInput(session, "obtype", label="Observation Type (not cached)")
+    if(db$dbType=="ecma_sfc") {
+      updateSelection(session, "obtype", c("surface"))
     } else {
-      updateSelection(session, "obtype", obtypes$cached)
-      updateSelectInput(session, "obtype", label="Observation Type")
+      datesCycles <- getCurrentDatesAndCycles(input)
+      obtypes <- getObtypes(db, datesCycles$dates, datesCycles$cycles)
+      if(is.null(obtypes$cached)) {
+        updateSelection(session, "obtype", obtypes$general)
+        updateSelectInput(session, "obtype", label="Observation Type (not cached)")
+      } else {
+        updateSelection(session, "obtype", obtypes$cached)
+        updateSelectInput(session, "obtype", label="Observation Type")
+      }
     }
   })
 
