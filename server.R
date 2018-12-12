@@ -119,7 +119,7 @@ getCurrentDateType <- function(input) {
 getCurrentDatesAndCycles <- function(input) {
   dateType <- getCurrentDateType(input)
   if(dateType %in% c("range")) {
-    dates <- dateRange(input$dateRange[[1]], input$dateRange[[2]])
+    dates <- expandDateRange(input$dateRange[[1]], input$dateRange[[2]])
     cycles <- input$cycles
   } else {
     dates <- input$date

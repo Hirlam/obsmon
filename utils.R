@@ -16,7 +16,7 @@ dtg2POSIXct <- function(dtg) {
   as.POSIXct(as.character(dtg), format="%Y%m%d%H")
 }
 
-dateRange <- function(start, end, format="%Y%m%d") {
+expandDateRange <- function(start, end, format="%Y%m%d") {
   start <- date2dtg(start)
   end <- date2dtg(end)
   if(start>end) {
