@@ -16,6 +16,7 @@ getUserName <- function() {
   userName <- Sys.info()[["user"]]
   if (is.null(userName) | userName == "") userName <- Sys.getenv("USER")
   if (is.null(userName) | userName == "") userName <- Sys.getenv("LOGNAME")
+  if (is.null(userName) | userName == "") userName <- "Unknown username"
   return(userName)
 }
 userName <- getUserName()
@@ -43,12 +44,11 @@ tryCatch(
     suppressPackageStartupMessages(library(shinyjs))
     suppressPackageStartupMessages(library(stringi))
     suppressPackageStartupMessages(library(V8))
-
-    flog.info(paste('Running as user "', userName, '"', sep=""))
-    flog.info(libPathsMsg[['success']])
   },
   error=function(e) stop(paste(e, libPathsMsg[['error']], sep="\n"))
 )
+flog.info(paste('Running as user "', userName, '"', sep=""))
+flog.info(libPathsMsg[['success']])
 
 # Creating some default config and cache dirs
 systemConfigDir <- file.path("", "etc", "obsmon", userName)
