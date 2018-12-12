@@ -122,7 +122,7 @@ getCurrentDatesAndCycles <- function(input) {
     dates <- expandDateRange(input$dateRange[[1]], input$dateRange[[2]])
     cycles <- input$cycles
   } else {
-    dates <- input$date
+    dates <- strftime(input$date, format="%Y%m%d")
     cycles <- input$cycle
   }
   return(list(dates=dates, cycles=cycles))
@@ -245,22 +245,25 @@ shinyServer(function(input, output, session) {
       activeDb()
       input$date
       input$dateRange
+      input$cycle
+      input$cycles
     }, {
       db <- activeDb()
-      dateType <- getCurrentDateType(input)
-      if(dateType %in% c("range")) {
-        startDtg <- 100 * date2dtg(input$dateRange[[1]])
-        endDtg <- 100 * date2dtg(input$dateRange[[2]]) + 24
-        dtgs <- sort(
-          db$dtgs[((startDtg <= db$dtgs) & (db$dtgs <= endDtg))],
-          decreasing=TRUE
-        )
-        fPathsToCache <- db$paths[as.character(dtgs)]
-      } else {
-        datePatt <- paste0('^',date2dtg(input$date),'{1}[0-9]{2}')
-        dtgs <- sort(grep(datePatt, db$dtgs, value=TRUE), decreasing=TRUE)
-        fPathsToCache <- db$paths[as.character(dtgs)]
+      datesCycles <- getCurrentDatesAndCycles(input)
+      dates <- sort(datesCycles$dates, decreasing=TRUE)
+      req(!(is.null(dates) || is.na(dates)))
+      cycles <- sort(datesCycles$cycles, decreasing=FALSE)
+      req(all(cycles!=""))
+
+      dtgs <- c()
+      for(date in dates) {
+        for(cycle in cycles) {
+          dtgs <- c(dtgs, sprintf("%s%s", date, cycle))
+        }
       }
+
+      fPathsToCache <- db$paths[dtgs]
+      fPathsToCache <- fPathsToCache[!is.na(fPathsToCache)]
       assyncPutObsInCache(fPathsToCache, cacheDir=db$cacheDir)
   })
 

@@ -347,7 +347,6 @@ assyncPutObsInCache <- function(sourceDbPaths, cacheDir) {
 }
 
 datesAreCached <- function(db, dates) {
-  dates <- date2dtg(dates)
   if(length(dates)==1) dateQueryString <- sprintf("date=%s", dates)
   else dateQueryString <- sprintf("date IN (%s)", paste(dates, join=", "))
   for(cacheFilePath in db$cachePaths) {
@@ -370,7 +369,6 @@ datesAreCached <- function(db, dates) {
 
 getObnamesFromCache <- function(db, category, dates, cycles) {
   rtn <- c()
-  dates <- date2dtg(dates)
   if(length(dates)==1) dateQueryString <- sprintf("date=%s", dates)
   else dateQueryString <- sprintf("date IN (%s)", paste(dates, join=", "))
   if(length(cycles)==1) cycleQueryString <- sprintf("cycle=%s", cycles)
@@ -397,7 +395,6 @@ getObnamesFromCache <- function(db, category, dates, cycles) {
 
 getObtypesFromCache <- function(db, dates, cycles) {
   rtn <- c()
-  dates <- date2dtg(dates)
   if(length(dates)==1) dateQueryString <- sprintf("date=%s", dates)
   else dateQueryString <- sprintf("date IN (%s)", paste(dates, join=", "))
   if(length(cycles)==1) cycleQueryString <- sprintf("cycle=%s", cycles)
@@ -429,7 +426,6 @@ getObtypesFromCache <- function(db, dates, cycles) {
 
 getVariablesFromCache <- function(db, dates, cycles, obname) {
   rtn <- c()
-  dates <- date2dtg(dates)
   if(length(dates)==1) dateQueryString <- sprintf("date=%s", dates)
   else dateQueryString <- sprintf("date IN (%s)", paste(dates, join=", "))
   if(length(cycles)==1) cycleQueryString <- sprintf("cycle=%s", cycles)
@@ -464,7 +460,6 @@ getVariablesFromCache <- function(db, dates, cycles, obname) {
 getLevelsFromCache <- function(db, dates, cycles, obname, varname) {
   rtn <- list(obsmon=NULL, usage=NULL, all=NULL)
 
-  dates <- date2dtg(dates)
   if(length(dates)==1) dateQueryString <- sprintf("date=%s", dates)
   else dateQueryString <- sprintf("date IN (%s)", paste(dates, join=", "))
   if(length(cycles)==1) cycleQueryString <- sprintf("cycle=%s", cycles)
@@ -502,7 +497,6 @@ getLevelsFromCache <- function(db, dates, cycles, obname, varname) {
 getChannelsFromCache <- function(db, dates, cycles, satname, sensorname) {
   rtn <- c()
 
-  dates <- date2dtg(dates)
   if(length(dates)==1) dateQueryString <- sprintf("date=%s", dates)
   else dateQueryString <- sprintf("date IN (%s)", paste(dates, join=", "))
   if(length(cycles)==1) cycleQueryString <- sprintf("cycle=%s", cycles)
@@ -533,7 +527,6 @@ getChannelsFromCache <- function(db, dates, cycles, satname, sensorname) {
 getSensornamesFromCache <- function(db, dates, cycles) {
   rtn <- c()
 
-  dates <- date2dtg(dates)
   if(length(dates)==1) dateQueryString <- sprintf("date=%s", dates)
   else dateQueryString <- sprintf("date IN (%s)", paste(dates, join=", "))
   if(length(cycles)==1) cycleQueryString <- sprintf("cycle=%s", cycles)
@@ -564,7 +557,6 @@ getSensornamesFromCache <- function(db, dates, cycles) {
 getSatnamesFromCache <- function(db, dates, cycles, sensorname) {
   rtn <- c()
 
-  dates <- date2dtg(dates)
   if(length(dates)==1) dateQueryString <- sprintf("date=%s", dates)
   else dateQueryString <- sprintf("date IN (%s)", paste(dates, join=", "))
   if(length(cycles)==1) cycleQueryString <- sprintf("cycle=%s", cycles)
@@ -596,7 +588,6 @@ getSatnamesFromCache <- function(db, dates, cycles, sensorname) {
 getStationsFromCache <- function(db, dates, cycles, obname, variable) {
   rtn <- c()
 
-  dates <- date2dtg(dates)
   if(length(dates)==1) dateQueryString <- sprintf("date=%s", dates)
   else dateQueryString <- sprintf("date IN (%s)", paste(dates, join=", "))
   if(length(cycles)==1) cycleQueryString <- sprintf("cycle=%s", cycles)
