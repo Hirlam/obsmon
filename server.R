@@ -506,8 +506,9 @@ shinyServer(function(input, output, session) {
       }
     }
     station <- input$station
+    if("" %in% station) station <- ""
     res$station <- station
-    if (station!=""){
+    if (all(station!="")){
       label <- exp$stationLabels[[adb$name]][[obname]][[station]]
       res$info$stationLabel <- ifelse(is.null(label), as.character(station), label)
     }

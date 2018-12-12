@@ -19,7 +19,7 @@ criterion2clause <- function(name, criteria) {
     "levels"=sprintf("(level in (%s))",
                      do.call(partial(paste, sep=", "), as.list(val))),
     "station"={
-      if(val=="") {
+      if(all(val=="")) {
         NULL
       } else {
         stationQueryStr <- paste0("statid like '%%%",val,"%%'",collapse=" OR ")
