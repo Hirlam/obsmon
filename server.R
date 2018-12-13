@@ -141,6 +141,26 @@ cacheFilesLatestMdate <- function(db) {
   return(max(mtimes))
 }
 
+getFilePathsToCache <- function(db, input) {
+  datesCycles <- getCurrentDatesAndCycles(input)
+  dates <- sort(datesCycles$dates, decreasing=TRUE)
+  cycles <- sort(datesCycles$cycles, decreasing=FALSE)
+  if(is.null(dates) || is.na(dates)) return(NULL)
+  if(all(cycles=="")) return(NULL)
+
+  dtgs <- c()
+  for(date in dates) {
+    for(cycle in cycles) {
+      dtgs <- c(dtgs, sprintf("%s%s", date, cycle))
+    }
+  }
+  fPathsToCache <- db$paths[dtgs]
+  fPathsToCache <- fPathsToCache[!is.na(fPathsToCache)]
+
+  if(length(fPathsToCache)==0) fPathsToCache <- NULL
+  return(fPathsToCache)
+}
+
 shinyServer(function(input, output, session) {
   # Start GUI with all inputs disabled.
   # They will be enabled once experiments are loaded
@@ -249,23 +269,26 @@ shinyServer(function(input, output, session) {
       input$cycles
     }, {
       db <- activeDb()
-      datesCycles <- getCurrentDatesAndCycles(input)
-      dates <- sort(datesCycles$dates, decreasing=TRUE)
-      req(!(is.null(dates) || is.na(dates)))
-      cycles <- sort(datesCycles$cycles, decreasing=FALSE)
-      req(all(cycles!=""))
-
-      dtgs <- c()
-      for(date in dates) {
-        for(cycle in cycles) {
-          dtgs <- c(dtgs, sprintf("%s%s", date, cycle))
-        }
-      }
-
-      fPathsToCache <- db$paths[dtgs]
-      fPathsToCache <- fPathsToCache[!is.na(fPathsToCache)]
+      fPathsToCache <- getFilePathsToCache(db, input)
       assyncPutObsInCache(fPathsToCache, cacheDir=db$cacheDir)
-  })
+  },
+    ignoreNULL=FALSE
+  )
+  # Re-cache observations if requested by user
+  observeEvent({
+      input$recacheCacheButtonDateRange
+      input$recacheCacheButtonDate
+    }, {
+       # Action button values are 0 at startup increase by 1 in every click
+       # I do not want to trigger this at startup
+      req(input$recacheCacheButtonDateRange>0 || input$recacheCacheButtonDate>0)
+
+      db <- activeDb()
+      fPathsToCache <- getFilePathsToCache(db, input)
+      assyncPutObsInCache(fPathsToCache, cacheDir=db$cacheDir, replaceExisting=TRUE)
+  },
+    ignoreNULL=FALSE,
+  )
 
   # Detect when the relevant cache files have been updated
   cacheFileUpdated <- function() NULL

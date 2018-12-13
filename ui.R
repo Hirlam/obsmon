@@ -140,8 +140,9 @@ shinyUI(
                     fluidRow(
                         column(8,
                                dateInput("date",
-                                 tags$div("Date",
-                                   actionButton("reloadCacheButtonDate", "Reload cache info")
+                                 label=tags$div("Date",
+                                   actionButton("reloadCacheButtonDate", "Reload cache"),
+                                   actionButton("recacheCacheButtonDate", "Re-cache")
                                  )
                                )
                                ),
@@ -153,10 +154,12 @@ shinyUI(
                 ),
                 conditionalPanel(
                     condition = "output.dateType == 'range'",
-                    dateRangeInput("dateRange",
-                                    tags$div("Date Range",
-                                      actionButton("reloadCacheButtonDateRange", "Reload cache info")
-                                    )
+                    dateRangeInput(
+                      "dateRange",
+                      tags$div("Date Range",
+                        actionButton("reloadCacheButtonDateRange", "Reload cache"),
+                        actionButton("recacheCacheButtonDateRange", "Re-cache")
+                      )
                     ),
                     checkboxGroupInput("cycles",
                                        label=tags$div("Cycles",

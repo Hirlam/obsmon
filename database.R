@@ -122,7 +122,7 @@ cacheFileIsLocked <- function(fpath) {
   return(isLocked)
 }
 
-putObservationsInCache <- function(sourceDbPath, cacheDir) {
+putObservationsInCache <- function(sourceDbPath, cacheDir, replaceExisting=FALSE) {
   sourceDbPath <- normalizePath(sourceDbPath, mustWork=FALSE)
   anyFailedCachingAttmpt <- FALSE
   dbConnectsCreatedHere <- c()
@@ -188,6 +188,30 @@ putObservationsInCache <- function(sourceDbPath, cacheDir) {
 
     con_cache <- dbConnectWrapper(cacheFilePath)
     dbConnectsCreatedHere <- c(dbConnectsCreatedHere, con_cache)
+
+    # The user may want to re-cache observation (e.g., if they think that the cached
+    # information is incomplete)
+    if(replaceExisting) {
+      flog.debug(sprintf(
+        "Recaching (%s). Removing DTG=%d%d from %s cache.",
+        sourceDbPath, date, cycle, cacheFileName
+      ))
+      removalSuccess <- tryCatch({
+          dbExecute(con_cache, sprintf(
+            "DELETE FROM cycles WHERE date=%d AND cycle=%d", date, cycle
+          ))
+          TRUE
+        },
+        error=function(e) {flog.debug(e); FALSE},
+        warning=function(w) {flog.debug(w); FALSE}
+      )
+      if(!removalSuccess) {
+        flog.debug(sprintf(
+          "Recaching warning (%s): DTG=%d%d may not have been removed from %s cache.",
+          sourceDbPath, date, cycle, cacheFileName
+        ))
+      }
+    }
 
     # Do not attempt to cache stuff that has already been cached
     alreadyCached <- tryCatch({
@@ -338,11 +362,11 @@ putObservationsInCache <- function(sourceDbPath, cacheDir) {
   }
 }
 
-assyncPutObsInCache <- function(sourceDbPaths, cacheDir) {
+assyncPutObsInCache <- function(sourceDbPaths, cacheDir, replaceExisting=FALSE) {
   suppressWarnings(future({
     for(sourceDbPath in sourceDbPaths) {
       tryCatch(
-        putObservationsInCache(sourceDbPath, cacheDir=cacheDir),
+        putObservationsInCache(sourceDbPath, cacheDir=cacheDir, replaceExisting=replaceExisting),
         warning=function(w) flog.warn(w$message),
         error=function(e) flog.error(e$message)
       )
