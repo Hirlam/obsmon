@@ -438,6 +438,7 @@ shinyServer(function(input, output, session) {
   observeEvent({
     reloadInfoFromCache$v
     input$obtype
+    input$obname
     input$sensor
     }, {
     req(input$obtype=="satem")
@@ -459,6 +460,8 @@ shinyServer(function(input, output, session) {
   channels <- NULL
   observeEvent({
     reloadInfoFromCache$v
+    input$obtype
+    input$obname
     input$sensor
     input$satellite
     },{
