@@ -64,10 +64,7 @@ shinyUI(
                 width=3,
                 selectizeInput("experiment",
                             multiple=FALSE,
-                                tags$div("Experiment",
-                                         "     ",
-                                         actionButton("reloadCacheButton", "Reload cache info")
-                                         ),
+                            "Experiment",
                             options=list(placeholder='Loading experiments...'),
                             choices=c()),
                 selectizeInput("odbBase",
@@ -142,7 +139,11 @@ shinyUI(
                     condition = "output.dateType == 'single'",
                     fluidRow(
                         column(8,
-                               dateInput("date", "Date")
+                               dateInput("date",
+                                 tags$div("Date",
+                                   actionButton("reloadCacheButtonDate", "Reload cache info")
+                                 )
+                               )
                                ),
                         column(4,
                                selectInput("cycle",
@@ -153,7 +154,10 @@ shinyUI(
                 conditionalPanel(
                     condition = "output.dateType == 'range'",
                     dateRangeInput("dateRange",
-                                   label="Date Range"),
+                                    tags$div("Date Range",
+                                      actionButton("reloadCacheButtonDateRange", "Reload cache info")
+                                    )
+                    ),
                     checkboxGroupInput("cycles",
                                        label=tags$div("Cycles",
                                                       "(Select",
