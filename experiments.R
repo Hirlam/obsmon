@@ -74,7 +74,12 @@ expCreateSqliteShardedDtg <- function(name, baseDir, experiment) {
     names(paths) <- db$dtgs
     x$dbs[[dbType]]$paths=paths
 
-    cycles <- lapply(sort(unique(db$dtgs %% 100)), partial(sprintf, "%02d"))
+    cycles <- list()
+    for(dtg in db$dtgs) {
+      date <- sprintf("%d", dtg %/% 100)
+      cycle <- sprintf("%02d", dtg %% 100)
+      cycles[[date]] <- c(cycles[[date]], cycle)
+    }
     x$dbs[[dbType]]$cycles <- cycles
   }
 
