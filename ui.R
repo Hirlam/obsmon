@@ -64,7 +64,10 @@ shinyUI(
                 width=3,
                 selectizeInput("experiment",
                             multiple=FALSE,
-                            label="Experiment",
+                                tags$div("Experiment",
+                                         "     ",
+                                         actionButton("reloadCacheButton", "Reload cache info")
+                                         ),
                             options=list(placeholder='Loading experiments...'),
                             choices=c()),
                 selectizeInput("odbBase",

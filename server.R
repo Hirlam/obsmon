@@ -278,6 +278,7 @@ shinyServer(function(input, output, session) {
   # Flagging that it's time to read info from cache
   reloadInfoFromCache <- reactiveValues(v=0)
   observeEvent({
+      input$reloadCacheButton
       activeDb()
       cacheFileUpdated()
       input$date
