@@ -300,7 +300,7 @@ shinyServer(function(input, output, session) {
       obtypes <- getObtypes(db, datesCycles$dates, datesCycles$cycles)
       if(is.null(obtypes$cached)) {
         updateSelection(session, "obtype", obtypes$general)
-        updateSelectInput(session, "obtype", label="Observation Type (not cached)")
+        updateSelectInput(session, "obtype", label="Observation Type (cache info not available)")
       } else {
         updateSelection(session, "obtype", obtypes$cached)
         updateSelectInput(session, "obtype", label="Observation Type")
@@ -320,7 +320,7 @@ shinyServer(function(input, output, session) {
     obnames <- getObnames(db, obsCategory, datesCycles$dates, datesCycles$cycles)
     if(is.null(obnames$cached)) {
       updateSelection(session, "obname", obnames$general)
-      updateSelectInput(session, "obname", label="Observation Name (not cached)")
+      updateSelectInput(session, "obname", label="Observation Name (cache info not available)")
     } else {
       updateSelection(session, "obname", obnames$cached)
       updateSelectInput(session, "obname", label="Observation Name")
@@ -342,7 +342,7 @@ shinyServer(function(input, output, session) {
     variables <- getVariables(db,datesCycles$dates,datesCycles$cycles,obname)
     if(is.null(variables$cached)) {
       updateSelection(session, "variable", variables$general)
-      updateSelectInput(session, "variable", label="Variable (not cached)")
+      updateSelectInput(session, "variable", label="Variable (cache info not available)")
     } else {
       updateSelection(session, "variable", variables$cached)
       updateSelectInput(session, "variable", label="Variable")
@@ -369,7 +369,7 @@ shinyServer(function(input, output, session) {
     )
     stations <- c("Any"="", stations)
     if(length(stations)==1) {
-      updateSelectInput(session, "station", label="Station (not cached)",
+      updateSelectInput(session, "station", label="Station (cache info not available)",
         choices=stations, selected=stations
       )
     } else {
@@ -427,7 +427,7 @@ shinyServer(function(input, output, session) {
     sens <- getAvailableSensornames(db, datesCycles$dates, datesCycles$cycles)
     if(is.null(sens$cached)) {
       updateSelection(session, "sensor", sens$general)
-      updateSelectInput(session, "sensor", label="Sensor (not cached)")
+      updateSelectInput(session, "sensor", label="Sensor (cache info not available)")
     } else {
       updateSelection(session, "sensor", sens$cached)
       updateSelectInput(session, "sensor", label="Sensor")
@@ -448,7 +448,7 @@ shinyServer(function(input, output, session) {
     sats <- getAvailableSatnames(db,datesCycles$dates,datesCycles$cycles,sens)
     if(is.null(sats$cached)) {
       updateSelection(session, "satellite", sats$general)
-      updateSelectInput(session, "satellite", label="Satellite (not cached)")
+      updateSelectInput(session, "satellite", label="Satellite (cache info not available)")
     } else {
       updateSelection(session, "satellite", sats$cached)
       updateSelectInput(session, "satellite", label="Satellite")
