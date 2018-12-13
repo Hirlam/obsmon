@@ -310,8 +310,8 @@ shinyServer(function(input, output, session) {
 
   # Update obnames
   observeEvent({
-      input$obtype
       reloadInfoFromCache$v
+      input$obtype
     }, {
     obsCategory <- req(input$obtype)
     db <- activeDb()
@@ -329,9 +329,9 @@ shinyServer(function(input, output, session) {
 
   # Update variable
   observeEvent({
+      reloadInfoFromCache$v
       input$obtype
       input$obname
-      reloadInfoFromCache$v
     }, {
     req(input$obtype!="satem")
 
@@ -351,10 +351,10 @@ shinyServer(function(input, output, session) {
 
   # Update stations
   observeEvent({
+      reloadInfoFromCache$v
       input$obtype
       input$obname
       input$variable
-      reloadInfoFromCache$v
     }, {
     req(input$obtype!="satem")
 
@@ -381,10 +381,10 @@ shinyServer(function(input, output, session) {
   # Update level choice for given variable
   avLevels <- list(obsmon=NULL, usage=NULL, all=NULL)
   observeEvent({
+    reloadInfoFromCache$v
     input$obtype
     input$obname
     input$variable
-    reloadInfoFromCache$v
     }, {
     req(input$obtype!="satem")
 
@@ -416,8 +416,8 @@ shinyServer(function(input, output, session) {
 
   # Update sensornames
   observeEvent({
-      input$obtype
       reloadInfoFromCache$v
+      input$obtype
     }, {
     req(input$obtype=="satem")
     updateSelection(session, "obname", c("satem"))
@@ -436,9 +436,9 @@ shinyServer(function(input, output, session) {
 
   # Update satellite choices for given sensor
   observeEvent({
+    reloadInfoFromCache$v
     input$obtype
     input$sensor
-    reloadInfoFromCache$v
     }, {
     req(input$obtype=="satem")
     db <- activeDb()
@@ -458,9 +458,9 @@ shinyServer(function(input, output, session) {
   # Update channel choice for given satellite
   channels <- NULL
   observeEvent({
+    reloadInfoFromCache$v
     input$sensor
     input$satellite
-    reloadInfoFromCache$v
     },{
     req(input$obtype=="satem")
 
