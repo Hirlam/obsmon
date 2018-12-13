@@ -111,7 +111,9 @@ shinyUI(
                                 "Variable",
                                 choices=c()),
                     conditionalPanel(
-                        condition = "input.odbBase != 'ecma_sfc'",
+                        condition = "input.odbBase != 'ecma_sfc' &&
+                                     input.obtype!='scatt' &&
+                                     input.obtype!='surface'",
                         selectInput("levels",
                                     tags$div("Levels",
                                              "(Select",
