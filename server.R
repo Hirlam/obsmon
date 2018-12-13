@@ -394,7 +394,11 @@ shinyServer(function(input, output, session) {
     datesCycles <- getCurrentDatesAndCycles(input)
 
     avLevels <<- getAvailableLevels(db, datesCycles$dates, datesCycles$cycles, obname, var)
-    updateSelection(session, "levels", choices=avLevels$all)
+    if(is.null(avLevels$all)) {
+      updateSelectInput(session, "levels", choices=list(), selected=list())
+    } else {
+      updateSelection(session, "levels", choices=avLevels$all)
+    }
   })
 
   observeEvent(input$levelsSelectStandard, {
@@ -407,7 +411,7 @@ shinyServer(function(input, output, session) {
   })
 
   observeEvent(input$levelsSelectNone, {
-    updateSelectInput(session, "levels", choices=avLevels$all, selected=NULL)
+    updateSelectInput(session, "levels", choices=avLevels$all, selected=c())
   })
 
   # Update sensornames
@@ -468,7 +472,11 @@ shinyServer(function(input, output, session) {
     channels <<- getAvailableChannels(
       db, datesCycles$dates, datesCycles$cycles, satname=sat, sensorname=sens
     )
-    updateSelection(session, "channels", channels)
+    if(is.null(channels)) {
+      updateSelectInput(session, "channels", choices=list(), selected=list())
+    } else {
+      updateSelection(session, "channels", channels)
+    }
   })
 
   observeEvent(input$channelsSelectAll, {
@@ -479,7 +487,7 @@ shinyServer(function(input, output, session) {
 
   observeEvent(input$channelsSelectNone, {
     updateSelectInput(
-      session, "channels", choices=channels, selected=NULL
+      session, "channels", choices=channels, selected=list()
     )
   })
 
