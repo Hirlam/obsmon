@@ -350,9 +350,24 @@ assyncPutObsInCache <- function(sourceDbPaths, cacheDir) {
   }))
 }
 
+getDateQueryString <- function(dates=NULL) {
+  if(is.null(dates)) return(NULL)
+  if(length(dates)==1) rtn <- sprintf("date=%s", dates)
+  else rtn <- sprintf("date IN (%s)", paste(dates, collapse=", "))
+  return(rtn)
+}
+
+getCycleQueryString <- function(cycles=NULL) {
+  if(is.null(cycles)) return(NULL)
+  if(length(cycles)==1) rtn <- sprintf("cycle=%s", cycles)
+  else rtn <- sprintf("cycle IN (%s)", paste(cycles, collapse=", "))
+  return(rtn)
+}
+
+
 datesAreCached <- function(db, dates) {
-  if(length(dates)==1) dateQueryString <- sprintf("date=%s", dates)
-  else dateQueryString <- sprintf("date IN (%s)", paste(dates, join=", "))
+
+  dateQueryString <- getDateQueryString(dates)
   for(cacheFilePath in db$cachePaths) {
     con <- dbConnectWrapper(cacheFilePath, read_only=TRUE, showWarnings=FALSE)
     if(is.null(con)) return(FALSE)
@@ -373,10 +388,8 @@ datesAreCached <- function(db, dates) {
 
 getObnamesFromCache <- function(db, category, dates, cycles) {
   rtn <- c()
-  if(length(dates)==1) dateQueryString <- sprintf("date=%s", dates)
-  else dateQueryString <- sprintf("date IN (%s)", paste(dates, join=", "))
-  if(length(cycles)==1) cycleQueryString <- sprintf("cycle=%s", cycles)
-  else cycleQueryString <- sprintf("cycle IN (%s)", paste(cycles, join=", "))
+  dateQueryString <- getDateQueryString(dates)
+  cycleQueryString <- getCycleQueryString(cycles)
 
   for(cacheFilePath in db$cachePaths) {
     con <- dbConnectWrapper(cacheFilePath, read_only=TRUE, showWarnings=FALSE)
@@ -399,10 +412,8 @@ getObnamesFromCache <- function(db, category, dates, cycles) {
 
 getObtypesFromCache <- function(db, dates, cycles) {
   rtn <- c()
-  if(length(dates)==1) dateQueryString <- sprintf("date=%s", dates)
-  else dateQueryString <- sprintf("date IN (%s)", paste(dates, join=", "))
-  if(length(cycles)==1) cycleQueryString <- sprintf("cycle=%s", cycles)
-  else cycleQueryString <- sprintf("cycle IN (%s)", paste(cycles, join=", "))
+  dateQueryString <- getDateQueryString(dates)
+  cycleQueryString <- getCycleQueryString(cycles)
 
   for(cacheFilePath in db$cachePaths) {
     con <- dbConnectWrapper(cacheFilePath, read_only=TRUE, showWarnings=FALSE)
@@ -430,10 +441,8 @@ getObtypesFromCache <- function(db, dates, cycles) {
 
 getVariablesFromCache <- function(db, dates, cycles, obname) {
   rtn <- c()
-  if(length(dates)==1) dateQueryString <- sprintf("date=%s", dates)
-  else dateQueryString <- sprintf("date IN (%s)", paste(dates, join=", "))
-  if(length(cycles)==1) cycleQueryString <- sprintf("cycle=%s", cycles)
-  else cycleQueryString <- sprintf("cycle IN (%s)", paste(cycles, join=", "))
+  dateQueryString <- getDateQueryString(dates)
+  cycleQueryString <- getCycleQueryString(cycles)
 
   category <- getAttrFromMetadata('category', obname=obname)
   tableName <- sprintf("%s_obs", category)
@@ -464,11 +473,8 @@ getVariablesFromCache <- function(db, dates, cycles, obname) {
 getLevelsFromCache <- function(db, dates, cycles, obname, varname) {
   rtn <- list(obsmon=NULL, usage=NULL, all=NULL)
 
-  if(length(dates)==1) dateQueryString <- sprintf("date=%s", dates)
-  else dateQueryString <- sprintf("date IN (%s)", paste(dates, join=", "))
-  if(length(cycles)==1) cycleQueryString <- sprintf("cycle=%s", cycles)
-  else cycleQueryString <- sprintf("cycle IN (%s)", paste(cycles, join=", "))
-
+  dateQueryString <- getDateQueryString(dates)
+  cycleQueryString <- getCycleQueryString(cycles)
   category <- getAttrFromMetadata('category', obname=obname)
   tableName <- sprintf("%s_obs", category)
 
@@ -501,10 +507,8 @@ getLevelsFromCache <- function(db, dates, cycles, obname, varname) {
 getChannelsFromCache <- function(db, dates, cycles, satname, sensorname) {
   rtn <- c()
 
-  if(length(dates)==1) dateQueryString <- sprintf("date=%s", dates)
-  else dateQueryString <- sprintf("date IN (%s)", paste(dates, join=", "))
-  if(length(cycles)==1) cycleQueryString <- sprintf("cycle=%s", cycles)
-  else cycleQueryString <- sprintf("cycle IN (%s)", paste(cycles, join=", "))
+  dateQueryString <- getDateQueryString(dates)
+  cycleQueryString <- getCycleQueryString(cycles)
 
   for(odbTable in c("obsmon", "usage")) {
     cacheFilePath <- db$cachePaths[[odbTable]]
@@ -531,10 +535,8 @@ getChannelsFromCache <- function(db, dates, cycles, satname, sensorname) {
 getSensornamesFromCache <- function(db, dates, cycles) {
   rtn <- c()
 
-  if(length(dates)==1) dateQueryString <- sprintf("date=%s", dates)
-  else dateQueryString <- sprintf("date IN (%s)", paste(dates, join=", "))
-  if(length(cycles)==1) cycleQueryString <- sprintf("cycle=%s", cycles)
-  else cycleQueryString <- sprintf("cycle IN (%s)", paste(cycles, join=", "))
+  dateQueryString <- getDateQueryString(dates)
+  cycleQueryString <- getCycleQueryString(cycles)
 
   for(odbTable in c("obsmon", "usage")) {
     cacheFilePath <- db$cachePaths[[odbTable]]
@@ -561,10 +563,8 @@ getSensornamesFromCache <- function(db, dates, cycles) {
 getSatnamesFromCache <- function(db, dates, cycles, sensorname) {
   rtn <- c()
 
-  if(length(dates)==1) dateQueryString <- sprintf("date=%s", dates)
-  else dateQueryString <- sprintf("date IN (%s)", paste(dates, join=", "))
-  if(length(cycles)==1) cycleQueryString <- sprintf("cycle=%s", cycles)
-  else cycleQueryString <- sprintf("cycle IN (%s)", paste(cycles, join=", "))
+  dateQueryString <- getDateQueryString(dates)
+  cycleQueryString <- getCycleQueryString(cycles)
 
   for(odbTable in c("obsmon", "usage")) {
     cacheFilePath <- db$cachePaths[[odbTable]]
@@ -592,10 +592,8 @@ getSatnamesFromCache <- function(db, dates, cycles, sensorname) {
 getStationsFromCache <- function(db, dates, cycles, obname, variable) {
   rtn <- c()
 
-  if(length(dates)==1) dateQueryString <- sprintf("date=%s", dates)
-  else dateQueryString <- sprintf("date IN (%s)", paste(dates, join=", "))
-  if(length(cycles)==1) cycleQueryString <- sprintf("cycle=%s", cycles)
-  else cycleQueryString <- sprintf("cycle IN (%s)", paste(cycles, join=", "))
+  dateQueryString <- getDateQueryString(dates)
+  cycleQueryString <- getCycleQueryString(cycles)
 
   category <- getAttrFromMetadata('category', obname=obname)
   tableName <- sprintf("%s_obs", category)
