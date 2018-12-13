@@ -106,7 +106,7 @@ shinyUI(
                                 selectize=FALSE)
                 ),
                 conditionalPanel(
-                    condition = "input.obname != 'satem'",
+                    condition = "input.obtype != 'satem'",
                     selectInput("variable",
                                 "Variable",
                                 choices=c()),
