@@ -476,7 +476,7 @@ getLevelsFromCache <- function(db, dates, cycles, obname, varname) {
     cacheFilePath <- db$cachePaths[[odbTable]]
     con <- dbConnectWrapper(cacheFilePath, read_only=TRUE, showWarnings=FALSE)
     if(is.null(con)) next
-    tryCatch({
+    rtn[[odbTable]] <- tryCatch({
         tableCols <- dbListFields(con, tableName)
         query <- sprintf("SELECT DISTINCT level FROM %s WHERE %s AND %s AND varname='%s'",
           tableName, dateQueryString, cycleQueryString, varname
@@ -486,7 +486,7 @@ getLevelsFromCache <- function(db, dates, cycles, obname, varname) {
         }
         query <- sprintf("%s ORDER BY level", query)
         queryResult <- dbGetQuery(con, query)
-        rtn[[odbTable]] <- queryResult[['level']]
+        queryResult[['level']]
       },
       error=function(e) NULL,
       warning=function(w) NULL
