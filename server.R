@@ -544,6 +544,7 @@ shinyServer(function(input, output, session) {
   # Trigger plottype update on criteria change
   observeEvent({
     reloadInfoFromCache$v
+    input$obtype
     input$obname
     input$sensor
     input$satellite
