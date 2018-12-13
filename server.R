@@ -534,23 +534,6 @@ shinyServer(function(input, output, session) {
     res
   }
 
-  # Turn criteria into reactive expression so they can trigger plottype update
-  criteria <- eventReactive(
-  {
-    input$obname
-    input$sensor
-    input$satellite
-    input$channels
-    input$variable
-    input$levels
-    input$station
-  },
-  {
-    buildCriteria()
-  })
-
-  criteriaDebounced <- criteria %>% debounce(200)
-
   # Update plottype choices with available plottypes according to criteria
   updatePlotTypes <- function() {
     criteria <- buildCriteria()
@@ -559,12 +542,20 @@ shinyServer(function(input, output, session) {
   }
 
   # Trigger plottype update on criteria change
-  observeEvent(criteriaDebounced(), {
+  observeEvent({
+    reloadInfoFromCache$v
+    input$obname
+    input$sensor
+    input$satellite
+    input$channels
+    input$variable
+    input$levels
+    input$station
+  }, {
     updatePlotTypes()
-  })
-  observeEvent(criteria(), {
-    updatePlotTypes()
-  }, once=TRUE)
+  },
+    ignoreNULL=FALSE
+  )
 
   # Perform plotting
   observeEvent(input$doPlot, {
