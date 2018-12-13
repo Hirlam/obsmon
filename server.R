@@ -239,9 +239,33 @@ shinyServer(function(input, output, session) {
                          min = db$maxDateRange[1], max = db$maxDateRange[2])
     updateDateInput(session, "date", value = single,
                     min = db$maxDateRange[1], max = db$maxDateRange[2])
-    updateSelection(session, "cycle", db$cycles)
-    updateCheckboxGroup(session, "cycles", db$cycles)
   })
+
+  dateTypeChanged <- function() NULL
+  observe({
+    dateTypeChanged <<- reactivePoll(2000, session,
+      partial(getCurrentDateType, input), function() NULL
+    )
+  })
+
+  observeEvent({
+    activeDb()
+    input$date
+    input$dateRange
+    dateTypeChanged()
+    }, {
+      db <- activeDb()
+      datesCycles <- getCurrentDatesAndCycles(input)
+      avCycles <- c()
+      dates <- as.character(datesCycles$dates)
+      dates <- dates[dates %in% names(db$cycles)]
+      for(date in dates) avCycles <- c(avCycles, db$cycles[[date]])
+      avCycles <- sort(unique(avCycles))
+      updateSelection(session, "cycle", avCycles)
+      updateCheckboxGroup(session, "cycles", avCycles) 
+  },
+    ignoreNULL=FALSE
+  )
 
   observeEvent(input$cyclesSelectAll, {
     db <- activeDb()
