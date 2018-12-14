@@ -244,7 +244,7 @@ shinyServer(function(input, output, session) {
   # React when required dateType of plot changes value
   dateTypeReqByPlotType <- reactiveVal(character(0))
   observe({
-    invalidateLater(200)
+    invalidateLater(500)
     dateTypeReqByPlotType(getReqDateType(input))
   })
   # Offer single date or dateRange input according to selected plottype
