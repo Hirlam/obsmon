@@ -248,33 +248,28 @@ shinyServer(function(input, output, session) {
     )
   })
 
-  observeEvent({
-    activeDb()
+  # Update available cycle choices when relevant fields change
+  availableCycles <- reactive({
+    db <- activeDb()
     input$date
     input$dateRange
     dateTypeChanged()
-    }, {
-      db <- activeDb()
-      datesCycles <- getCurrentDatesAndCycles(input)
-      avCycles <- c()
-      dates <- as.character(datesCycles$dates)
-      dates <- dates[dates %in% names(db$cycles)]
-      for(date in dates) avCycles <- c(avCycles, db$cycles[[date]])
-      avCycles <- sort(unique(avCycles))
-      updateSelection(session, "cycle", avCycles)
-      updateCheckboxGroup(session, "cycles", avCycles) 
-  },
-    ignoreNULL=FALSE
-  )
-
-  observeEvent(input$cyclesSelectAll, {
-    db <- activeDb()
-    updateCheckboxGroup(session, "cycles", db$cycles, "ALL")
+    datesCycles <- getCurrentDatesAndCycles(input)
+    dates <- as.character(datesCycles$dates)
+    getAvailableCycles(db, dates)
   })
 
+  observe({
+    updateSelection(session, "cycle", availableCycles())
+    updateCheckboxGroup(session, "cycles", availableCycles())
+  })
+  observeEvent(input$cyclesSelectAll, {
+    db <- activeDb()
+    updateCheckboxGroup(session, "cycles", availableCycles(), "ALL")
+  })
   observeEvent(input$cyclesSelectNone, {
     db <- activeDb()
-    updateCheckboxGroup(session, "cycles", db$cycles, "NONE")
+    updateCheckboxGroup(session, "cycles", availableCycles(), "NONE")
   })
 
   # Offer single date or dateRange input according to selected plottype

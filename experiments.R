@@ -17,6 +17,19 @@ getDtgs <- function(path) {
   return(dtgs)
 }
 
+
+getAvailableCycles <- function(db, dates) {
+  foundDtgs <- c()
+  for(date in dates) {
+    searchPattern <- sprintf("%s{1}[0-9]{2}", date)
+    newDtgs <- as.integer(dir(path=db$dir, pattern=searchPattern))
+    foundDtgs <- c(foundDtgs, newDtgs)
+  }
+  cycles <- c()
+  for(dtg in foundDtgs) cycles <- c(cycles, sprintf("%02d", dtg %% 100))
+  return(sort(unique(cycles)))
+}
+
 pathToDataFileForDtg <- function(dtg, db) {
   dbpath <- tryCatch({
       fname <- gsub('_sfc', '', paste0(db$dbType, '.db'), fixed=TRUE)
@@ -73,14 +86,6 @@ expCreateSqliteShardedDtg <- function(name, baseDir, experiment) {
     }
     names(paths) <- db$dtgs
     x$dbs[[dbType]]$paths=paths
-
-    cycles <- list()
-    for(dtg in db$dtgs) {
-      date <- sprintf("%d", dtg %/% 100)
-      cycle <- sprintf("%02d", dtg %% 100)
-      cycles[[date]] <- c(cycles[[date]], cycle)
-    }
-    x$dbs[[dbType]]$cycles <- cycles
   }
 
   for(dbType in names(x$dbs)) {
