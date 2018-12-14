@@ -1,3 +1,9 @@
+slugify <- function(string) {
+  normalized <- stri_trans_general(string, "nfkd; Latin-ASCII; lower")
+  slugified <- stri_replace_all_charclass(normalized, "\\p{WHITE SPACE}", "_")
+  slugified
+}
+
 dtg2date <- function(dtg) {
   paste(substr(dtg, 1, 4), substr(dtg, 5, 6), substr(dtg, 7, 8), sep="-")
 }
