@@ -107,7 +107,7 @@ enableShinyInputs <- function(input, except=c()) {
   for(inp in inputsToEnable) shinyjs::enable(inp)
 }
 
-getCurrentDateType <- function(input) {
+getReqDateType <- function(input) {
   rtn <- tryCatch(
     plotTypesFlat[[req(input$plottype)]]$dateType,
     error=function(e) NA,
@@ -117,7 +117,7 @@ getCurrentDateType <- function(input) {
 }
 
 getCurrentDatesAndCycles <- function(input) {
-  dateType <- getCurrentDateType(input)
+  dateType <- getReqDateType(input)
   if(dateType %in% c("range")) {
     dates <- expandDateRange(input$dateRange[[1]], input$dateRange[[2]])
     cycles <- input$cycles
@@ -241,12 +241,15 @@ shinyServer(function(input, output, session) {
                     min = db$maxDateRange[1], max = db$maxDateRange[2])
   })
 
-  dateTypeChanged <- function() NULL
+  # React when required dateType of plot changes value
+  dateTypeReqByPlotType <- reactiveVal(character(0))
   observe({
-    dateTypeChanged <<- reactivePoll(2000, session,
-      partial(getCurrentDateType, input), function() NULL
-    )
+    invalidateLater(200)
+    dateTypeReqByPlotType(getReqDateType(input))
   })
+  # Offer single date or dateRange input according to selected plottype
+  output$dateType <- reactive({dateTypeReqByPlotType()})
+  outputOptions(output, 'dateType', suspendWhenHidden=FALSE)
 
   # Update available cycle choices when relevant fields change
   availableCycles <- reactiveVal(character(0))
@@ -254,7 +257,7 @@ shinyServer(function(input, output, session) {
     db <- activeDb()
     input$date
     input$dateRange
-    dateTypeChanged()
+    dateTypeReqByPlotType()
     datesCycles <- getCurrentDatesAndCycles(isolate(input))
     dates <- as.character(datesCycles$dates)
     availableCycles(getAvailableCycles(db, dates))
@@ -273,12 +276,6 @@ shinyServer(function(input, output, session) {
     updateCheckboxGroup(session, "cycles", availableCycles(), "NONE")
   })
 
-  # Offer single date or dateRange input according to selected plottype
-  output$dateType <- reactive({
-    plotType <- plotTypesFlat[[req(input$plottype)]]
-    plotType$dateType
-  })
-  outputOptions(output, 'dateType', suspendWhenHidden=FALSE)
 
   # Put observations in cache when a date/dateRange is selected
   observeEvent({
@@ -287,6 +284,7 @@ shinyServer(function(input, output, session) {
       input$dateRange
       input$cycle
       input$cycles
+      dateTypeReqByPlotType()
     }, {
       db <- activeDb()
       fPathsToCache <- getFilePathsToCache(db, input)
