@@ -228,7 +228,7 @@ shinyServer(function(input, output, session) {
 
   # Update date related fields dateRange, date, and cycle with new experiment
   observeEvent(activeDb(), {
-    db <- activeDb()
+    db <- req(activeDb())
     min <- db$maxDateRange[1]
     max <- db$maxDateRange[2]
     start <- clamp(input$dateRange[1], min, max, min)
@@ -254,7 +254,7 @@ shinyServer(function(input, output, session) {
   # Update available cycle choices when relevant fields change
   availableCycles <- reactiveVal(character(0))
   observe({
-    db <- activeDb()
+    db <- req(activeDb())
     input$date
     input$dateRange
     dateTypeReqByPlotType()
@@ -293,7 +293,7 @@ shinyServer(function(input, output, session) {
       input$cycles
       dateTypeReqByPlotType()
     }, {
-      db <- activeDb()
+      db <- req(activeDb())
       fPathsToCache <- getFilePathsToCache(db, input)
       assyncPutObsInCache(fPathsToCache, cacheDir=db$cacheDir)
   },
@@ -308,7 +308,7 @@ shinyServer(function(input, output, session) {
        # I do not want to trigger this at startup
       req(input$recacheCacheButtonDateRange>0 || input$recacheCacheButtonDate>0)
 
-      db <- activeDb()
+      db <- req(activeDb())
       fPathsToCache <- getFilePathsToCache(db, input)
       assyncPutObsInCache(fPathsToCache, cacheDir=db$cacheDir, replaceExisting=TRUE)
   },
@@ -318,7 +318,7 @@ shinyServer(function(input, output, session) {
   # Detect when the relevant cache files have been updated
   cacheFileUpdated <- function() NULL
   observe({
-    db <- activeDb()
+    db <- req(activeDb())
     cacheMdateCheckingFunc <<- partial(cacheFilesLatestMdate, db=db)
     cacheFileUpdated <<- reactivePoll(5000, session, cacheMdateCheckingFunc, function() NULL)
   })
@@ -342,7 +342,7 @@ shinyServer(function(input, output, session) {
   observeEvent({
       reloadInfoFromCache$v
     }, {
-    db <- activeDb()
+    db <- req(activeDb())
     if(db$dbType=="ecma_sfc") {
       updateSelection(session, "obtype", c("surface"))
     } else {
@@ -364,7 +364,7 @@ shinyServer(function(input, output, session) {
       input$obtype
     }, {
     obsCategory <- req(input$obtype)
-    db <- activeDb()
+    db <- req(activeDb())
     datesCycles <- getCurrentDatesAndCycles(input)
 
     obnames <- getObnames(db, obsCategory, datesCycles$dates, datesCycles$cycles)
@@ -385,7 +385,7 @@ shinyServer(function(input, output, session) {
     }, {
     req(input$obtype!="satem")
 
-    db <- activeDb()
+    db <- req(activeDb())
     obname <- req(input$obname)
     datesCycles <- getCurrentDatesAndCycles(input)
 
@@ -408,7 +408,7 @@ shinyServer(function(input, output, session) {
     }, {
     req(input$obtype!="satem")
 
-    db <- activeDb()
+    db <- req(activeDb())
     obname <- req(input$obname)
     variable <- req(input$variable)
     datesCycles <- getCurrentDatesAndCycles(input)
@@ -438,7 +438,7 @@ shinyServer(function(input, output, session) {
     }, {
     req(input$obtype!="satem")
 
-    db <- activeDb()
+    db <- req(activeDb())
     obname <- req(input$obname)
     var <- req(input$variable)
     datesCycles <- getCurrentDatesAndCycles(input)
@@ -471,7 +471,7 @@ shinyServer(function(input, output, session) {
     }, {
     req(input$obtype=="satem")
     updateSelection(session, "obname", c("satem"))
-    db <- activeDb()
+    db <- req(activeDb())
     datesCycles <- getCurrentDatesAndCycles(input)
 
     sens <- getAvailableSensornames(db, datesCycles$dates, datesCycles$cycles)
@@ -492,7 +492,7 @@ shinyServer(function(input, output, session) {
     input$sensor
     }, {
     req(input$obtype=="satem")
-    db <- activeDb()
+    db <- req(activeDb())
     sens <- req(input$sensor)
     datesCycles <- getCurrentDatesAndCycles(input)
 
@@ -517,7 +517,7 @@ shinyServer(function(input, output, session) {
     },{
     req(input$obtype=="satem")
 
-    db <- activeDb()
+    db <- req(activeDb())
     sat <- req(input$satellite)
     sens <- req(input$sensor)
     datesCycles <- getCurrentDatesAndCycles(input)
@@ -548,7 +548,7 @@ shinyServer(function(input, output, session) {
   buildCriteria <- function() {
     exp <- isolate(experiments()[[req(input$experiment)]])
     db <- req(input$odbBase)
-    adb <- activeDb()
+    adb <- req(activeDb())
     res <- list()
     res$info <- list()
     obname <- req(input$obname)
@@ -613,7 +613,7 @@ shinyServer(function(input, output, session) {
     plotRequest <- list()
     plotter <- plotTypesFlat[[req(input$plottype)]]
     plotRequest$expName <- req(input$experiment)
-    db <- activeDb()
+    db <- req(activeDb())
     plotRequest$dbName <- db$name
     plotRequest$criteria <- buildCriteria()
     plotRequest$criteria$dtg <-
