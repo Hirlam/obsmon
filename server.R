@@ -264,16 +264,23 @@ shinyServer(function(input, output, session) {
   })
 
   observe({
-    updateSelection(session, "cycle", availableCycles())
-    updateCheckboxGroup(session, "cycles", availableCycles())
+    cycles <- availableCycles()
+    updateSelection(session, "cycle", cycles)
+    updateCheckboxGroup(session, "cycles", cycles)
   })
+
   observeEvent(input$cyclesSelectAll, {
-    db <- activeDb()
-    updateCheckboxGroup(session, "cycles", availableCycles(), "ALL")
+    cycles <- isolate(availableCycles())
+    updateCheckboxGroupInput(session, "cycles",
+      choices=cycles, selected=cycles, inline=TRUE
+    )
   })
+
   observeEvent(input$cyclesSelectNone, {
-    db <- activeDb()
-    updateCheckboxGroup(session, "cycles", availableCycles(), "NONE")
+    cycles <- isolate(availableCycles())
+    updateCheckboxGroupInput(session, "cycles",
+      choices=cycles, selected=character(0), inline=TRUE
+    )
   })
 
 
