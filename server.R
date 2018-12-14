@@ -249,14 +249,15 @@ shinyServer(function(input, output, session) {
   })
 
   # Update available cycle choices when relevant fields change
-  availableCycles <- reactive({
+  availableCycles <- reactiveVal(character(0))
+  observe({
     db <- activeDb()
     input$date
     input$dateRange
     dateTypeChanged()
-    datesCycles <- getCurrentDatesAndCycles(input)
+    datesCycles <- getCurrentDatesAndCycles(isolate(input))
     dates <- as.character(datesCycles$dates)
-    getAvailableCycles(db, dates)
+    availableCycles(getAvailableCycles(db, dates))
   })
 
   observe({
