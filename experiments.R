@@ -10,8 +10,8 @@ getDtgs <- function(path) {
       foundDtgs <- sort(unique(foundDtgs))
       foundDtgs
     },
-    error=function(e) {flog.error(e$message); NULL},
-    warning=function(w) {flog.warn(w$message); foundDtgs}
+    error=function(e) {flog.error(e); NULL},
+    warning=function(w) {flog.warn(w); foundDtgs}
   )
   if(length(dtgs)==0) dtgs <- NULL
   return(dtgs)
@@ -33,10 +33,11 @@ getAvailableCycles <- function(db, dates) {
 pathToDataFileForDtg <- function(dtg, db) {
   dbpath <- tryCatch({
       fname <- gsub('_sfc', '', paste0(db$dbType, '.db'), fixed=TRUE)
-      file.path(db$dir, dtg, fname)
+      fpath <- file.path(db$dir, dtg, fname)
+      fpath
     },
-    error=function(e) NULL,
-    warning=function(w) NULL
+    error=function(e) {flog.error(e); NULL},
+    warning=function(w) {flog.warn(w); fpath}
   )
   return(dbpath)
 }
