@@ -350,9 +350,11 @@ shinyServer(function(input, output, session) {
     if(db$dbType=="ecma_sfc") {
       updateSelection(session, "obtype", c("surface"))
     } else {
-      datesCycles <- getCurrentDatesAndCycles(input)
+      dtgs <- req(getSelectedDtgs(isolate(input)))
+      datesCycles <- getCurrentDatesAndCycles(isolate(input))
       obtypes <- getObtypes(db, datesCycles$dates, datesCycles$cycles)
-      if(is.null(obtypes$cached)) {
+
+      if(is.null(obtypes$cached) || !dtgsAreCached(db, dtgs)) {
         updateSelection(session, "obtype", obtypes$general)
         updateSelectInput(session, "obtype", label="Observation Type (cache info not available)")
       } else {
@@ -369,10 +371,11 @@ shinyServer(function(input, output, session) {
     }, {
     obsCategory <- req(input$obtype)
     db <- req(activeDb())
-    datesCycles <- getCurrentDatesAndCycles(input)
+    dtgs <- req(getSelectedDtgs(isolate(input)))
+    datesCycles <- getCurrentDatesAndCycles(isolate(input))
 
     obnames <- getObnames(db, obsCategory, datesCycles$dates, datesCycles$cycles)
-    if(is.null(obnames$cached)) {
+    if(is.null(obnames$cached) || !dtgsAreCached(db, dtgs)) {
       updateSelection(session, "obname", obnames$general)
       updateSelectInput(session, "obname", label="Observation Name (cache info not available)")
     } else {
@@ -391,10 +394,11 @@ shinyServer(function(input, output, session) {
 
     db <- req(activeDb())
     obname <- req(input$obname)
-    datesCycles <- getCurrentDatesAndCycles(input)
+    dtgs <- req(getSelectedDtgs(isolate(input)))
+    datesCycles <- getCurrentDatesAndCycles(isolate(input))
 
     variables <- getVariables(db,datesCycles$dates,datesCycles$cycles,obname)
-    if(is.null(variables$cached)) {
+    if(is.null(variables$cached) || !dtgsAreCached(db, dtgs)) {
       updateSelection(session, "variable", variables$general)
       updateSelectInput(session, "variable", label="Variable (cache info not available)")
     } else {
@@ -415,14 +419,15 @@ shinyServer(function(input, output, session) {
     db <- req(activeDb())
     obname <- req(input$obname)
     variable <- req(input$variable)
-    datesCycles <- getCurrentDatesAndCycles(input)
+    dtgs <- req(getSelectedDtgs(isolate(input)))
+    datesCycles <- getCurrentDatesAndCycles(isolate(input))
 
     stations <- getStationsFromCache(
       db, datesCycles$dates, datesCycles$cycles,
       obname, variable
     )
     stations <- c("Any"="", stations)
-    if(length(stations)==1) {
+    if(length(stations)==1 || !dtgsAreCached(db, dtgs)) {
       updateSelectInput(session, "station", label="Station (cache info not available)",
         choices=stations, selected=stations
       )
@@ -476,10 +481,11 @@ shinyServer(function(input, output, session) {
     req(input$obtype=="satem")
     updateSelection(session, "obname", c("satem"))
     db <- req(activeDb())
-    datesCycles <- getCurrentDatesAndCycles(input)
+    dtgs <- req(getSelectedDtgs(isolate(input)))
+    datesCycles <- getCurrentDatesAndCycles(isolate(input))
 
     sens <- getAvailableSensornames(db, datesCycles$dates, datesCycles$cycles)
-    if(is.null(sens$cached)) {
+    if(is.null(sens$cached) || !dtgsAreCached(db, dtgs)) {
       updateSelection(session, "sensor", sens$general)
       updateSelectInput(session, "sensor", label="Sensor (cache info not available)")
     } else {
@@ -498,10 +504,11 @@ shinyServer(function(input, output, session) {
     req(input$obtype=="satem")
     db <- req(activeDb())
     sens <- req(input$sensor)
-    datesCycles <- getCurrentDatesAndCycles(input)
+    dtgs <- req(getSelectedDtgs(isolate(input)))
+    datesCycles <- getCurrentDatesAndCycles(isolate(input))
 
     sats <- getAvailableSatnames(db,datesCycles$dates,datesCycles$cycles,sens)
-    if(is.null(sats$cached)) {
+    if(is.null(sats$cached) || !dtgsAreCached(db, dtgs)) {
       updateSelection(session, "satellite", sats$general)
       updateSelectInput(session, "satellite", label="Satellite (cache info not available)")
     } else {
