@@ -164,13 +164,19 @@ shinyUI(
                     tags$b("Cache-related actions for selected DTG(s)"),
                     br(),
                     tags$div(
-                      actionButton("reloadCacheButton", "Reload cache info"),
-                      actionButton("recacheCacheButton", "Update cache file")
+                      actionButton("reloadCacheButton", "Reload cache info",
+                        icon("repeat", lib="glyphicon")
+                      ),
+                      actionButton("recacheCacheButton", "Update cache file",
+                        icon("refresh", lib="glyphicon")
+                      )
                     ),
                     br()
                   )
                 ),
-                actionButton("doPlot", "Plot", width="100%")
+                actionButton("doPlot", "Plot", width="100%",
+                  icon("ok", lib="glyphicon")
+                )
             ),
             mainPanel(
                 width=9,
