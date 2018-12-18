@@ -138,28 +138,16 @@ shinyUI(
                 conditionalPanel(
                     condition = "output.dateType == 'single'",
                     fluidRow(
-                        column(8,
-                               dateInput("date",
-                                 label=tags$div("Date",
-                                   actionButton("reloadCacheButtonDate", "Reload cache"),
-                                   actionButton("recacheCacheButtonDate", "Re-cache")
-                                 )
-                               )
-                               ),
+                        column(8, dateInput("date", "Date")),
                         column(4,
-                               selectInput("cycle",
-                                           label="Cycle",
-                                           choices=c()))
+                          selectInput("cycle", label="Cycle", choices=c())
+                        )
                     )
                 ),
                 conditionalPanel(
                     condition = "output.dateType == 'range'",
                     dateRangeInput(
-                      "dateRange",
-                      tags$div("Date Range",
-                        actionButton("reloadCacheButtonDateRange", "Reload cache"),
-                        actionButton("recacheCacheButtonDateRange", "Re-cache")
-                      )
+                      "dateRange", "Date Range"
                     ),
                     checkboxGroupInput("cycles",
                                        label=tags$div("Cycles",
@@ -170,6 +158,17 @@ shinyUI(
                                                       ),
                                        inline=TRUE,
                                        choices=c())
+                ),
+                fluidRow(
+                  column(12,
+                    tags$b("Cache-related actions for selected DTG(s)"),
+                    br(),
+                    tags$div(
+                      actionButton("reloadCacheButton", "Reload cache info"),
+                      actionButton("recacheCacheButton", "Update cache file")
+                    ),
+                    br()
+                  )
                 ),
                 actionButton("doPlot", "Plot", width="100%")
             ),

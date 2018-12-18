@@ -301,12 +301,11 @@ shinyServer(function(input, output, session) {
   )
   # Re-cache observations if requested by user
   observeEvent({
-      input$recacheCacheButtonDateRange
-      input$recacheCacheButtonDate
+      input$recacheCacheButton
     }, {
        # Action button values are 0 at startup increase by 1 in every click
        # I do not want to trigger this at startup
-      req(input$recacheCacheButtonDateRange>0 || input$recacheCacheButtonDate>0)
+      req(input$recacheCacheButton>0)
 
       db <- req(activeDb())
       fPathsToCache <- getFilePathsToCache(db, input)
@@ -326,8 +325,7 @@ shinyServer(function(input, output, session) {
   # Flagging that it's time to read info from cache
   reloadInfoFromCache <- reactiveValues(v=0)
   observeEvent({
-      input$reloadCacheButtonDate
-      input$reloadCacheButtonDateRange
+      input$reloadCacheButton
       activeDb()
       cacheFileUpdated()
       input$date
