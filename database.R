@@ -403,12 +403,13 @@ dtgsAreCached <- function(db, dtgs) {
       error=function(e) NULL,
       warning=function(w) NULL
     )
-    if(is.null(newCachedDtgs)) return(FALSE)
     if(is.null(cachedDtgs)) {
       cachedDtgs <- newCachedDtgs
     } else {
       cachedDtgs <- intersect(cachedDtgs, newCachedDtgs)
     }
+    dbDisconnect(con)
+    if(is.null(newCachedDtgs)) break
   }
   if(is.null(cachedDtgs) || ncol(cachedDtgs)==0) return(FALSE)
 
@@ -420,7 +421,10 @@ dtgsAreCached <- function(db, dtgs) {
 
   cachedDtgsAsInt <- sort(unique(cachedDtgsAsInt))
   dtgs <- sort(unique(as.integer(dtgs)))
-  return(isTRUE(all.equal(cachedDtgsAsInt , dtgs)))
+  for(dtg in dtgs) {
+    if(!(dtg %in% cachedDtgsAsInt)) return(FALSE)
+  }
+  return(TRUE)
 }
 
 getObnamesFromCache <- function(db, category, dates, cycles) {
