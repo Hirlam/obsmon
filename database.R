@@ -193,7 +193,7 @@ putObservationsInCache <- function(sourceDbPath, cacheDir, replaceExisting=FALSE
     # information is incomplete)
     if(replaceExisting) {
       flog.debug(sprintf(
-        "Recaching (%s). Removing DTG=%d%d from %s cache.",
+        "Recaching (%s). Removing DTG=%d%02d from %s cache.",
         sourceDbPath, date, cycle, cacheFileName
       ))
       removalSuccess <- tryCatch({
@@ -207,7 +207,7 @@ putObservationsInCache <- function(sourceDbPath, cacheDir, replaceExisting=FALSE
       )
       if(!removalSuccess) {
         flog.debug(sprintf(
-          "Recaching warning (%s): DTG=%d%d may not have been removed from %s cache.",
+          "Recaching warning (%s): DTG=%d%02d may not have been removed from %s cache.",
           sourceDbPath, date, cycle, cacheFileName
         ))
       }
