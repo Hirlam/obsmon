@@ -128,6 +128,19 @@ getCurrentDatesAndCycles <- function(input) {
   return(list(dates=dates, cycles=cycles))
 }
 
+cacheFilesLatestMdate <- function(db) {
+  mtimes <- c(-1)
+  for(cacheFilePath in db$cachePaths) {
+    mtime <- tryCatch(
+      file.mtime(cacheFilePath),
+      error=function(e) NULL,
+      warning=function(w) NULL
+    )
+    mtimes <- c(mtimes, mtime)
+  }
+  return(max(mtimes))
+}
+
 getSelectedDtgs <- function(input) {
   datesCycles <- getCurrentDatesAndCycles(input)
   dates <- sort(datesCycles$dates, decreasing=TRUE)
@@ -143,19 +156,6 @@ getSelectedDtgs <- function(input) {
   }
 
   return(dtgs)
-}
-
-cacheFilesLatestMdate <- function(db) {
-  mtimes <- c(-1)
-  for(cacheFilePath in db$cachePaths) {
-    mtime <- tryCatch(
-      file.mtime(cacheFilePath),
-      error=function(e) NULL,
-      warning=function(w) NULL
-    )
-    mtimes <- c(mtimes, mtime)
-  }
-  return(max(mtimes))
 }
 
 getFilePathsToCache <- function(db, input) {
