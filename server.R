@@ -128,6 +128,23 @@ getCurrentDatesAndCycles <- function(input) {
   return(list(dates=dates, cycles=cycles))
 }
 
+getSelectedDtgs <- function(input) {
+  datesCycles <- getCurrentDatesAndCycles(input)
+  dates <- sort(datesCycles$dates, decreasing=TRUE)
+  cycles <- sort(datesCycles$cycles, decreasing=FALSE)
+  if(is.null(dates) || is.na(dates)) return(NULL)
+  if(all(cycles=="")) return(NULL)
+
+  dtgs <- c()
+  for(date in dates) {
+    for(cycle in cycles) {
+      dtgs <- c(dtgs, sprintf("%s%s", date, cycle))
+    }
+  }
+
+  return(dtgs)
+}
+
 cacheFilesLatestMdate <- function(db) {
   mtimes <- c(-1)
   for(cacheFilePath in db$cachePaths) {
@@ -142,18 +159,7 @@ cacheFilesLatestMdate <- function(db) {
 }
 
 getFilePathsToCache <- function(db, input) {
-  datesCycles <- getCurrentDatesAndCycles(input)
-  dates <- sort(datesCycles$dates, decreasing=TRUE)
-  cycles <- sort(datesCycles$cycles, decreasing=FALSE)
-  if(is.null(dates) || is.na(dates)) return(NULL)
-  if(all(cycles=="")) return(NULL)
-
-  dtgs <- c()
-  for(date in dates) {
-    for(cycle in cycles) {
-      dtgs <- c(dtgs, sprintf("%s%s", date, cycle))
-    }
-  }
+  dtgs <- getSelectedDtgs(input)
   fPathsToCache <- db$paths[dtgs]
   fPathsToCache <- fPathsToCache[!is.na(fPathsToCache)]
 
