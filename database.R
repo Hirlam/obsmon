@@ -389,25 +389,38 @@ getCycleQueryString <- function(cycles=NULL) {
 }
 
 
-datesAreCached <- function(db, dates) {
-
-  dateQueryString <- getDateQueryString(dates)
+dtgsAreCached <- function(db, dtgs) {
+  # Get all cached DTGs
+  cachedDtgs <- NULL
   for(cacheFilePath in db$cachePaths) {
     con <- dbConnectWrapper(cacheFilePath, read_only=TRUE, showWarnings=FALSE)
     if(is.null(con)) return(FALSE)
-    cachedDates <- tryCatch({
-        queryResult <- dbGetQuery(con, sprintf(
-          "SELECT DISTINCT date FROM dates WHERE %s",
-          dateQueryString
-        ))
-        queryResult[['date']]
+    newCachedDtgs <- tryCatch({
+        dbGetQuery(con,
+          "SELECT DISTINCT date, cycle FROM cycles"
+        )
       },
       error=function(e) NULL,
       warning=function(w) NULL
     )
-    if(is.null(cachedDates)||length(cachedDates)!=length(dates)) return(FALSE)
+    if(is.null(newCachedDtgs)) return(FALSE)
+    if(is.null(cachedDtgs)) {
+      cachedDtgs <- newCachedDtgs
+    } else {
+      cachedDtgs <- intersect(cachedDtgs, newCachedDtgs)
+    }
   }
-  return(TRUE)
+  if(is.null(cachedDtgs) || ncol(cachedDtgs)==0) return(FALSE)
+
+  cachedDtgsAsInt <- c()
+  for(iRow in seq_len(nrow(cachedDtgs))) {
+    dtg <- sprintf("%d%02d",cachedDtgs[iRow,"date"],cachedDtgs[iRow,"cycle"])
+    cachedDtgsAsInt <- c(cachedDtgsAsInt, as.integer(dtg))
+  }
+
+  cachedDtgsAsInt <- sort(unique(cachedDtgsAsInt))
+  dtgs <- sort(unique(as.integer(dtgs)))
+  return(isTRUE(all.equal(cachedDtgsAsInt , dtgs)))
 }
 
 getObnamesFromCache <- function(db, category, dates, cycles) {
