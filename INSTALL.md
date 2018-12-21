@@ -26,11 +26,6 @@ To get obsmon up and running quickly, follow the instructions given below:
    * NB: This only works if the browser is running on the same machine as obsmon. Otherwise you will need to use X forwarding or SSH port forwarding to connect to the server.
 5. Alternatively, if you want the browser to open automatically, you can run obsmon as: `./obsmon --launch`.
 
-If all went well, you should now see some output on the console about the
-initialization of the experiments you configured. Particularly for the first
-start after the configuration of a new experiment, this can take some time
-because obsmon needs to build up its cache. Please be patient.
-
 ### Installing Obsmon to run in a Shiny Server
 If you want to offer obsmon to a larger number of users, you probably want to
 run it inside the Shiny Server. Its installation is beyond the scope of this
@@ -43,9 +38,7 @@ document. You can find more information about this at, e.g., the [RStudio Shiny 
    `shiny-server.conf` the location of your log files. If you do not do so, the log will most likely end up somewhere such as `/var/log/shiny-server/obsmon-*.log`, although this cannot be guaranteed.
 2. Install the R package dependencies into your system-wide R library or, if you prefer, into any of the directories listed at the beginning of this file.
 3. Copy `config.toml.example` to `/etc/obsmon/config.toml` and adapt it to your needs.
-4. Run your Shiny Server and connect to it with your browser. At that moment
-   obsmon will start to build its cache, which can take considerable amounts of
-   time for a freshly configured experiment. The progress is shown in the GUI on the browser.
+4. Run your Shiny Server and connect to it with your browser.
 
 ### System dependencies
 Below is a list of system dependencies for R packages used in obsmon. The method used to obtain the list was rather brute-force: Attempting to install obsmon on a clean system installation (CentOS 7, minimal) and keeping note of the system packages that needed to be installed in order to fix the errors that appeared along the way. That means, among other things, that the list is not exhaustive, in the sense that many other packages are installed automatically as "dependencies of dependencies", being thus omitted here.
