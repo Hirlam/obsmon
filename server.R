@@ -448,8 +448,19 @@ shinyServer(function(input, output, session) {
         choices=stations, selected=stations
       )
     } else {
+      stationsForGUI <- stations
+      if(obname=="synop") {
+        stationLabels <- c()
+        for(statID in stations) {
+          if(statID=="") label <- "Any"
+          else label <- synopStations[statID]
+          if(is.null(label) || is.na(label)) label <- statID
+          stationLabels <- c(stationLabels, label)
+        }
+        names(stationsForGUI) <- stationLabels
+      }
       updateSelectInput(session, "station", label="Station")
-      updateSelection(session, "station", stations)
+      updateSelection(session, "station", stationsForGUI)
     }
   })
 
@@ -607,6 +618,7 @@ shinyServer(function(input, output, session) {
     if("" %in% station) station <- ""
     res$station <- station
     if (all(station!="")){
+      # TODO: Fix synop station labels
       label <- exp$stationLabels[[adb$name]][[obname]][[station]]
       res$info$stationLabel <- ifelse(is.null(label), as.character(station), label)
     }
