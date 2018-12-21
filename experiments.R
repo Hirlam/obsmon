@@ -23,16 +23,31 @@ getAvailableCycles <- function(db, dates) {
   return(sort(unique(cycles)))
 }
 
-pathToDataFileForDtg <- function(exptDir, dtg, dbType) {
+pathToDataFileForDtg <- function(exptDir, dbType, dtg) {
   dbpath <- tryCatch({
       fname <- gsub('_sfc', '', paste0(dbType, '.db'), fixed=TRUE)
-      fpath <- file.path(exptDir, dtg, fname)
+      fpath <- file.path(exptDir, dbType, dtg, fname)
       fpath
     },
     error=function(e) {flog.error(e); NULL},
     warning=function(w) {flog.warn(w); fpath}
   )
   return(dbpath)
+}
+
+getDataFilePaths <- function(exptDir, dbType, assertExists=FALSE) {
+  dtgs <- getDtgs(file.path(exptDir, dbType))
+  fPaths <- NULL
+  validDtgs <- NULL
+  for(dtg in dtgs) {
+    fPath <- pathToDataFileForDtg(exptDir, dbType, dtg)
+    if(is.null(fPath)) next
+    if(assertExists && !file.exists(fPath)) next
+    fPaths <- c(fPaths, fPath)
+    validDtgs <- c(validDtgs, dtg)
+  }
+  if(is.null(fPaths)) return(NULL)
+  else return(as.list(structure(fPaths, names=validDtgs)))
 }
 
 emptyExperiment <- function(name) {
@@ -44,7 +59,7 @@ emptyExperiment <- function(name) {
   x
 }
 
-initExperiment <- function(name, baseDir, experiment) {
+initExperiment <- function(name, baseDir, experiment, checkFilesExist) {
 
   flog.debug("Initializing experiment %s...", name)
   x <- list()
@@ -53,22 +68,18 @@ initExperiment <- function(name, baseDir, experiment) {
   x$cacheDir <- file.path(obsmonConfig$general[["cacheDir"]], slugify(name))
   x$dbs <- list(ccma=NULL, ecma=NULL, ecma_sfc=NULL)
   for(dbType in names(x$dbs)) {
-    # The dtgs returned by getDtgs are sorted in ascending order
-    dtgs <- getDtgs(file.path(x$path, dbType))
+    # Making sure to only store dtgs that correspond to existing data files
+    dataFilePaths<-getDataFilePaths(x$path,dbType,assertExists=checkFilesExist)
+    dtgs <- sort(names(dataFilePaths))
     if(is.null(dtgs)) next
-    exptDir <- file.path(x$path, dbType)
-    # Set paths to experiment data files
     x$dbs[[dbType]] <- list(
       exptName=name,
       dbType=dbType,
+      dir=file.path(x$path, dbType),
       dtgs=dtgs,
       maxDateRange=dtg2date(c(dtgs[1], dtgs[length(dtgs)])),
-      dir=file.path(x$path, dbType),
-      # Set dirs where obsmon expects to find experiment data for each dtg
-      paths=structure(
-        lapply(dtgs, partial(pathToDataFileForDtg, exptDir=exptDir, dbType=dbType)),
-        names=dtgs
-      ),
+      # Set paths where obsmon expects to find experiment data for each dtg
+      paths=dataFilePaths,
       # Paths related to caching
       cacheDir=x$cacheDir,
       cachePaths=list(
@@ -80,10 +91,10 @@ initExperiment <- function(name, baseDir, experiment) {
 
   if(is.null(x$dbs$ecma) & is.null(x$dbs$ecma_sfc) & is.null(x$dbs$ccma)){
     flog.warn("Could not find data for experiment %s. Skipping.", name)
-    return(NULL)
+    x <- NULL
+  } else {
+    flog.debug("Finished initialization of experiment %s.", name)
   }
-  flog.debug("Finished initialization of experiment %s.", name)
-
   return(x)
 }
 
@@ -94,7 +105,9 @@ initExperimentsAsPromises <- function() {
     name <- config$displayName
     # Using %<-% (library "future") to init experiments asynchronously
     experiments[[name]] %<-%
-      initExperiment(name, config$baseDir, config$experiment)
+      initExperiment(name, config$baseDir, config$experiment,
+        checkFilesExist=obsmonConfig$general[["initCheckDataExists"]]
+      )
   }
   experiments
 }

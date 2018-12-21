@@ -57,8 +57,9 @@ performQuery <- function(db, query, dtgs=NULL, expandRange=TRUE,
     }
   }
   dbpaths[sapply(dbpaths, is.null)] <- NULL
+  dbpaths[sapply(dbpaths,function(fPath){return(!file.exists(fPath))})]<-NULL
   if (length(dbpaths)==0) {
-    flog.warn("No usable database found.")
+    flog.error("performQuery: No usable database found. Please check paths.")
     return(NULL)
   }
   singleQuery <- makeSingleQuery(query)
@@ -228,7 +229,7 @@ putObservationsInCache <- function(sourceDbPath, cacheDir, replaceExisting=FALSE
       flog.debug(sprintf("Already cached %s table of file %s\n", db_table, sourceDbPath))
       next
     } else {
-      flog.debug(sprintf("Caching file %s\n", sourceDbPath))
+      flog.debug(sprintf("Caching %s table of file %s\n", db_table, sourceDbPath))
     }
 
     # Register experiment as existing, if not previously done

@@ -173,6 +173,7 @@ getSuitableCacheDirDefault <- function() {
 fillInDefaults <- function(config) {
   config <- fillInDefault(config, "cacheDir", getSuitableCacheDirDefault())
   config <- fillInDefault(config, "logLevel", "WARN")
+  config <- fillInDefault(config, "initCheckDataExists", FALSE)
   config
 }
 
