@@ -15,11 +15,11 @@ dbConnectWrapper <- function(dbpath, read_only=FALSE, showWarnings=TRUE) {
       newCon
     },
     error=function(e) {
-      if(showWarnings)flog.error("Error accessing %s: %s", dbpath, e$message)
+      if(showWarnings) flog.error("dbConnectWrapper (file %s): %s", dbpath, e)
       NULL
     },
     warning=function(w) {
-      if(showWarnings)flog.error("Warning accessing %s: %s", dbpath, w$message)
+      if(showWarnings) flog.error("dbConnectWrapper (file %s): %s", dbpath, w)
       NULL
     }
   )
