@@ -4,6 +4,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
+## [Unreleased]
+### Added
+- Option "maxExtraParallelProcs" in config file
+    - To control max number of parallel tasks
+    - Should be set under "general"
+- Icon added to "plot" action button
+### Changed
+- Changes in the GUI to hide/show only needed selection tools
+- Obsmon can now work even if observations are not cached
+- Auto-discovery cache is now performed only for selected date(s) and cycle(s)
+    - Caching starts automatically when a new DTG, experiment or database is selected
+    - While cache is not finished, the fields in the GUI are populated with all possible
+      values they may have
+    - When cache finishes, the GUI is refreshed as to only show values for which there is
+      data available
+    - Action buttons "Reload cache info" and "Update cache info" have been added in case
+      automatic refreshing of data fails for whatever reason.
+
 ## [2.3.0] 2018-10-26
 ### Added
 - Option to select only standard levels/channels
