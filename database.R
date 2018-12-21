@@ -10,6 +10,8 @@ dbConnectWrapper <- function(dbpath, read_only=FALSE, showWarnings=TRUE) {
       }
       dbExecute(newCon, sprintf("PRAGMA  mmap_size=%s", 1024**3))
       dbExecute(newCon, sprintf("PRAGMA  cache_size=%s", 1024**3))
+      # Time in milliseconds to wait before signalling that a DB is busy
+      dbExecute(newCon, "PRAGMA  busy_timeout=1000")
       newCon
     },
     error=function(e) {
