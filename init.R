@@ -122,8 +122,14 @@ setPackageOptions <- function(config) {
   flog.appender(appender.file(stderr()), 'ROOT')
   flog.threshold(parse(text=config$general$logLevel)[[1]])
   # Options controlling parallelism
-  maxExtraParallelProcs <- Sys.getenv("OBSMON_MAX_N_EXTRA_PROCESSES")
-  if(maxExtraParallelProcs=="") maxExtraParallelProcs <- .Machine$integer.max 
+  maxExtraParallelProcs <- as.integer(config$general$maxExtraParallelProcs)
+  if(is.na(maxExtraParallelProcs) || maxExtraParallelProcs<0) {
+    maxExtraParallelProcs <- .Machine$integer.max
+  } else {
+    flog.info(sprintf("Limiting maxExtraParallelProcs to %s",
+      maxExtraParallelProcs
+    ))
+  }
   plan(multiprocess, workers=maxExtraParallelProcs)
 }
 
@@ -174,6 +180,9 @@ fillInDefaults <- function(config) {
   config <- fillInDefault(config, "cacheDir", getSuitableCacheDirDefault())
   config <- fillInDefault(config, "logLevel", "WARN")
   config <- fillInDefault(config, "initCheckDataExists", FALSE)
+  config <- fillInDefault(config, "maxExtraParallelProcs",
+    Sys.getenv("OBSMON_MAX_N_EXTRA_PROCESSES")
+  )
   config
 }
 

@@ -33,6 +33,15 @@ consist of
   documentation](http://docs.rstudio.com/shiny-server/#logging-and-analytics).
   Valid values are `TRACE`, `DEBUG`, `INFO`, `WARN`, `ERROR`, `FATAL`, with
   `TRACE` giving the greatest amount of details.
+- `maxExtraParallelProcs` specifies the max number of extra parallel tasks that obsmon
+  may execute in an asynchronous manner at any time. You can also control this by setting
+  the environment variable "OBSMON_MAX_N_EXTRA_PROCESSES", but the valued set via config
+  file takes precedence. Asynchronous/parallel tasks are used,
+  e.g., to be able to load/cache experiments without blocking the GUI. This parameter
+  may be set to any number greater or equal to zero. If it has an invalid value or is not
+  set, then the max number of allowed tasks will be unlimited. These extra tasks are
+  short-lived and are not typically computationally intensive, so we advise you not to
+  set this option unless you have good reasons to do so.
 
 ### Experiments
 Experiments are configured by adding one `[[experiments]]` section per
