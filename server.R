@@ -327,8 +327,8 @@ shinyServer(function(input, output, session) {
   cacheFileUpdated <- function() NULL
   observe({
     db <- req(activeDb())
-    cacheMdateCheckingFunc <<- partial(cacheFilesLatestMdate, db=db)
-    cacheFileUpdated <<- reactivePoll(5000, session, cacheMdateCheckingFunc, function() NULL)
+    cacheFileUpdated <<- reactivePoll(5000, session,
+      partial(cacheFilesLatestMdate, db=db), function() NULL)
   })
 
   # Flagging that it's time to read info from cache
