@@ -126,23 +126,27 @@ cacheFileIsLocked <- function(fpath) {
 putObservationsInCache <- function(sourceDbPath, cacheDir, replaceExisting=FALSE) {
   sourceDbPath <- normalizePath(sourceDbPath, mustWork=FALSE)
   anyFailedCachingAttmpt <- FALSE
-  dbConnectsCreatedHere <- c()
+  cacheDbConsCreatedHere <- c()
+  allDbConsCreatedHere <- c()
   fPathsLockedHere <- c()
 
   on.exit({
       if(anyFailedCachingAttmpt) {
         errMsg <- sprintf("Problems caching file %s\n", sourceDbPath)
         errMsg <- paste(errMsg, "  > Removing incomplete cache entries\n")
-        flog.error(errMsg)
-        # The foreign key contraints+triggers in con_cache will make sure all
-        # eventual data cached for this (date, cycle) combination is removed
-        dbExecute(con_cache, sprintf(
-          "DELETE FROM cycles WHERE date=%d AND cycle=%d", date, cycle
-        ))
+        flog.warn(errMsg)
+        for(con_cache in cacheDbConsCreatedHere) {
+          # The foreign key contraints+triggers in con_cache will make sure all
+          # eventual data cached for this (date, cycle) combination is removed
+          dbExecute(con_cache, sprintf(
+            "DELETE FROM cycles WHERE date=%d AND cycle=%d", date, cycle
+          ))
+        }
       } else {
         flog.debug(sprintf("Caching: Done with file %s\n", sourceDbPath))
       }
-      for(dbCon in dbConnectsCreatedHere) dbDisconnect(dbCon)
+      allDbConsCreatedHere <- c(allDbConsCreatedHere, cacheDbConsCreatedHere)
+      for(dbCon in allDbConsCreatedHere) dbDisconnect(dbCon)
       for(lockedFName in fPathsLockedHere) unlockCacheFile(lockedFName)
     }
   )
@@ -152,7 +156,7 @@ putObservationsInCache <- function(sourceDbPath, cacheDir, replaceExisting=FALSE
     flog.error(sprintf("Could not connect to file %s. Not caching.", sourceDbPath))
     return(NULL)
   }
-  dbConnectsCreatedHere <- c(dbConnectsCreatedHere, con)
+  allDbConsCreatedHere <- c(allDbConsCreatedHere, con)
   dir.create(cacheDir, recursive=TRUE, showWarnings=FALSE)
 
   db_type <- basename(dirname(dirname(sourceDbPath)))
@@ -188,7 +192,7 @@ putObservationsInCache <- function(sourceDbPath, cacheDir, replaceExisting=FALSE
     fPathsLockedHere <- c(fPathsLockedHere, cacheFilePath)
 
     con_cache <- dbConnectWrapper(cacheFilePath)
-    dbConnectsCreatedHere <- c(dbConnectsCreatedHere, con_cache)
+    cacheDbConsCreatedHere <- c(cacheDbConsCreatedHere, con_cache)
 
     # The user may want to re-cache observation (e.g., if they think that the cached
     # information is incomplete)
@@ -336,28 +340,31 @@ putObservationsInCache <- function(sourceDbPath, cacheDir, replaceExisting=FALSE
         rowsToAdd <- anti_join(newObs, cachedObs, by=colnames(newObs))
       }
       if(nrow(rowsToAdd)>0) {
-        tryCatch({
+        cacheSuccess <- tryCatch({
             newColNames <- c('date', 'cycle', colnames(rowsToAdd))
             rowsToAdd$date <- date
             rowsToAdd$cycle <- cycle
             rowsToAdd <- rowsToAdd[newColNames]
             dbWriteTable(con_cache, cache_table, rowsToAdd, append=TRUE)
+            TRUE
           },
           warning=function(w) {
-            anyFailedCachingAttmpt <- TRUE
-            errMsg <- paste0(w$message, '\n',' > Not caching ', sourceDbPath)
+            errMsg <- paste0(w, '\n',' > Not caching ', sourceDbPath)
             errMsg <- paste0(errMsg, '\n')
-            flog.error(errMsg)
-            return(NULL)
+            flog.warn(errMsg)
+            return(FALSE)
           },
           error=function(e) {
-            anyFailedCachingAttmpt <- TRUE
-            errMsg <- paste0(e$message, '\n',' > Not caching ', sourceDbPath)
+            errMsg <- paste0(e, '\n',' > Not caching ', sourceDbPath)
             errMsg <- paste0(errMsg, '\n')
-            flog.error(errMsg)
-            return(NULL)
+            flog.warn(errMsg)
+            return(FALSE)
           }
         )
+        if(!cacheSuccess) {
+          anyFailedCachingAttmpt <- TRUE
+          return(-1)
+        }
       }
     }
   }
