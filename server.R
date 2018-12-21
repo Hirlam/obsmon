@@ -309,15 +309,12 @@ shinyServer(function(input, output, session) {
   observeEvent({
       input$recacheCacheButton
     }, {
-       # Action button values are 0 at startup increase by 1 in every click
-       # I do not want to trigger this at startup
-      req(input$recacheCacheButton>0)
-
       db <- req(activeDb())
       fPathsToCache <- getFilePathsToCache(db, input)
       assyncPutObsInCache(fPathsToCache, cacheDir=db$cacheDir, replaceExisting=TRUE)
   },
     ignoreNULL=FALSE,
+    ignoreInit=TRUE
   )
 
   # Detect when the relevant cache files have been updated
