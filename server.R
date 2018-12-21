@@ -311,9 +311,7 @@ shinyServer(function(input, output, session) {
       dtgs <- req(selectedDtgs())
       fPathsToCache <- getFilePathsToCache(db, input)
       assyncPutObsInCache(fPathsToCache, cacheDir=db$cacheDir)
-  },
-    ignoreNULL=FALSE
-  )
+  })
   # Re-cache observations if requested by user
   observeEvent({
       input$recacheCacheButton
@@ -322,7 +320,6 @@ shinyServer(function(input, output, session) {
       fPathsToCache <- getFilePathsToCache(db, input)
       assyncPutObsInCache(fPathsToCache, cacheDir=db$cacheDir, replaceExisting=TRUE)
   },
-    ignoreNULL=FALSE,
     ignoreInit=TRUE
   )
 
