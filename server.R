@@ -327,22 +327,21 @@ shinyServer(function(input, output, session) {
   })
 
   # Flagging that it's time to read info from cache
-  reloadInfoFromCache <- reactiveValues(v=0)
+  reloadInfoFromCache <- reactiveVal(0)
   observeEvent({
       input$reloadCacheButton
       activeDb()
       cacheFileUpdated()
-      input$date
-      input$dateRange
-      input$cycle
-      input$cycles
+      selectedDtgs()
     }, {
-      reloadInfoFromCache$v <<- (reloadInfoFromCache$v + 1) %% 2
-  })
+      reloadInfoFromCache((reloadInfoFromCache() + 1) %% 2)
+  },
+    ignoreNULL=TRUE
+  )
 
   # Update obtype
   observeEvent({
-      reloadInfoFromCache$v
+      reloadInfoFromCache()
     }, {
     db <- req(activeDb())
     if(db$dbType=="ecma_sfc") {
@@ -364,7 +363,7 @@ shinyServer(function(input, output, session) {
 
   # Update obnames
   observeEvent({
-      reloadInfoFromCache$v
+      reloadInfoFromCache()
       input$obtype
     }, {
     obsCategory <- req(input$obtype)
@@ -384,7 +383,7 @@ shinyServer(function(input, output, session) {
 
   # Update variable
   observeEvent({
-      reloadInfoFromCache$v
+      reloadInfoFromCache()
       input$obtype
       input$obname
     }, {
@@ -407,7 +406,7 @@ shinyServer(function(input, output, session) {
 
   # Update stations
   observeEvent({
-      reloadInfoFromCache$v
+      reloadInfoFromCache()
       input$obtype
       input$obname
       input$variable
@@ -438,7 +437,7 @@ shinyServer(function(input, output, session) {
   # Update level choice for given variable
   avLevels <- list(obsmon=NULL, usage=NULL, all=NULL)
   observeEvent({
-    reloadInfoFromCache$v
+    reloadInfoFromCache()
     input$obtype
     input$obname
     input$variable
@@ -473,7 +472,7 @@ shinyServer(function(input, output, session) {
 
   # Update sensornames
   observeEvent({
-      reloadInfoFromCache$v
+      reloadInfoFromCache()
       input$obtype
     }, {
     req(input$obtype=="satem")
@@ -494,7 +493,7 @@ shinyServer(function(input, output, session) {
 
   # Update satellite choices for given sensor
   observeEvent({
-    reloadInfoFromCache$v
+    reloadInfoFromCache()
     input$obtype
     input$obname
     input$sensor
@@ -518,7 +517,7 @@ shinyServer(function(input, output, session) {
   # Update channel choice for given satellite
   channels <- NULL
   observeEvent({
-    reloadInfoFromCache$v
+    reloadInfoFromCache()
     input$obtype
     input$obname
     input$sensor
@@ -601,7 +600,7 @@ shinyServer(function(input, output, session) {
 
   # Trigger plottype update on criteria change
   observeEvent({
-    reloadInfoFromCache$v
+    reloadInfoFromCache()
     input$obtype
     input$obname
     input$sensor
