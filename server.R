@@ -290,9 +290,8 @@ shinyServer(function(input, output, session) {
     )
   })
 
-
-  # Put observations in cache when a date/dateRange is selected
-  observeEvent({
+  # Keep track of selected DTGs
+  selectedDtgs <- eventReactive({
       activeDb()
       input$date
       input$dateRange
@@ -300,7 +299,16 @@ shinyServer(function(input, output, session) {
       input$cycles
       dateTypeReqByPlotType()
     }, {
+      getSelectedDtgs(req(input))
+  })
+
+  # Put observations in cache when dB and/or DTG selection are modified
+  observeEvent({
+      activeDb()
+      selectedDtgs()
+    }, {
       db <- req(activeDb())
+      dtgs <- req(selectedDtgs())
       fPathsToCache <- getFilePathsToCache(db, input)
       assyncPutObsInCache(fPathsToCache, cacheDir=db$cacheDir)
   },
@@ -347,7 +355,7 @@ shinyServer(function(input, output, session) {
     if(db$dbType=="ecma_sfc") {
       updateSelection(session, "obtype", c("surface"))
     } else {
-      dtgs <- req(getSelectedDtgs(isolate(input)))
+      dtgs <- req(selectedDtgs())
       datesCycles <- getCurrentDatesAndCycles(isolate(input))
       obtypes <- getObtypes(db, datesCycles$dates, datesCycles$cycles)
 
@@ -368,7 +376,7 @@ shinyServer(function(input, output, session) {
     }, {
     obsCategory <- req(input$obtype)
     db <- req(activeDb())
-    dtgs <- req(getSelectedDtgs(isolate(input)))
+    dtgs <- req(selectedDtgs())
     datesCycles <- getCurrentDatesAndCycles(isolate(input))
 
     obnames <- getObnames(db, obsCategory, datesCycles$dates, datesCycles$cycles)
@@ -391,7 +399,7 @@ shinyServer(function(input, output, session) {
 
     db <- req(activeDb())
     obname <- req(input$obname)
-    dtgs <- req(getSelectedDtgs(isolate(input)))
+    dtgs <- req(selectedDtgs())
     datesCycles <- getCurrentDatesAndCycles(isolate(input))
 
     variables <- getVariables(db,datesCycles$dates,datesCycles$cycles,obname)
@@ -416,7 +424,7 @@ shinyServer(function(input, output, session) {
     db <- req(activeDb())
     obname <- req(input$obname)
     variable <- req(input$variable)
-    dtgs <- req(getSelectedDtgs(isolate(input)))
+    dtgs <- req(selectedDtgs())
     datesCycles <- getCurrentDatesAndCycles(isolate(input))
 
     stations <- getStationsFromCache(
@@ -478,7 +486,7 @@ shinyServer(function(input, output, session) {
     req(input$obtype=="satem")
     updateSelection(session, "obname", c("satem"))
     db <- req(activeDb())
-    dtgs <- req(getSelectedDtgs(isolate(input)))
+    dtgs <- req(selectedDtgs())
     datesCycles <- getCurrentDatesAndCycles(isolate(input))
 
     sens <- getAvailableSensornames(db, datesCycles$dates, datesCycles$cycles)
@@ -501,7 +509,7 @@ shinyServer(function(input, output, session) {
     req(input$obtype=="satem")
     db <- req(activeDb())
     sens <- req(input$sensor)
-    dtgs <- req(getSelectedDtgs(isolate(input)))
+    dtgs <- req(selectedDtgs())
     datesCycles <- getCurrentDatesAndCycles(isolate(input))
 
     sats <- getAvailableSatnames(db,datesCycles$dates,datesCycles$cycles,sens)
