@@ -424,7 +424,7 @@ shinyServer(function(input, output, session) {
   })
 
   # Update stations
-  observeEvent({
+  stationsAlongWithLabels <- eventReactive({
       reloadInfoFromCache()
       selectedDtgsAreCached()
       input$obtype
@@ -443,26 +443,34 @@ shinyServer(function(input, output, session) {
       db, datesCycles$dates, datesCycles$cycles,
       obname, variable
     )
-    stations <- c("Any"="", stations)
-    if(length(stations)==1 || !selectedDtgsAreCached()) {
-      updateSelectInput(session, "station", label="Station (cache info not available)",
-        choices=stations, selected=stations
-      )
-    } else {
-      stationsForGUI <- stations
+    if(length(stations)>1) {
       if(obname=="synop") {
         stationLabels <- c()
         for(statID in stations) {
-          if(statID=="") label <- "Any"
-          else label <- synopStations[statID]
+          label <- synopStations[statID]
           if(is.null(label) || is.na(label)) label <- statID
           stationLabels <- c(stationLabels, label)
         }
-        names(stationsForGUI) <- stationLabels
+        names(stations) <- stationLabels
+      } else {
+        names(stations) <- stations
       }
-      updateSelectInput(session, "station", label="Station")
-      updateSelection(session, "station", stationsForGUI)
     }
+    stations <- c("Any"="", stations)
+    stations
+  })
+  observeEvent({
+      stationsAlongWithLabels()
+    }, {
+      stations <- stationsAlongWithLabels()
+      if(length(stations)==1 || !selectedDtgsAreCached()) {
+        updateSelectInput(session, "station", label="Station (cache info not available)",
+          choices=stations, selected=stations
+        )
+      } else {
+        updateSelectInput(session, "station", label="Station")
+        updateSelection(session, "station", stations)
+      }
   })
 
   # Update level choice for given variable
