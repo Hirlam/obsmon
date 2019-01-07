@@ -210,15 +210,15 @@ shinyServer(function(input, output, session) {
   observe({
     expName <- req(input$experiment)
     expDbs <- isolate(experiments()[[expName]]$dbs)
-    dbName2DbDescription <- list(
+    dbType2DbDescription <- list(
       "ecma"="Upper Air (3D/4D-VAR) - Screening",
       "ccma"="Upper Air (3D/4D-VAR) - Minimization",
       "ecma_sfc"="Surface (CANARI)"
     )
     choices <- list()
-    for(dbName in names(dbName2DbDescription)) {
-      if(is.null(expDbs[[dbName]])) next
-      choices[[dbName2DbDescription[[dbName]]]] <- dbName
+    for(dbType in names(dbType2DbDescription)) {
+      if(is.null(expDbs[[dbType]])) next
+      choices[[dbType2DbDescription[[dbType]]]] <- dbType
     }
 
     updateSelectizeInput(session, "odbBase", choices=choices)
@@ -228,8 +228,8 @@ shinyServer(function(input, output, session) {
 
   activeDb <- reactive({
     expName <- req(input$experiment)
-    dbName <- req(input$odbBase)
-    isolate(experiments()[[expName]]$dbs[[dbName]])
+    dbType <- req(input$odbBase)
+    isolate(experiments()[[expName]]$dbs[[dbType]])
   })
 
   # Update date related fields dateRange, date, and cycle with new experiment
@@ -656,7 +656,7 @@ shinyServer(function(input, output, session) {
     plotter <- plotTypesFlat[[req(input$plottype)]]
     plotRequest$expName <- req(input$experiment)
     db <- req(activeDb())
-    plotRequest$dbName <- db$dbType
+    plotRequest$dbType <- db$dbType
     plotRequest$criteria <- buildCriteria()
     plotRequest$criteria$dtg <-
       switch(plotter$dateType,
