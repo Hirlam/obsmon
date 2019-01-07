@@ -656,7 +656,7 @@ shinyServer(function(input, output, session) {
     plotter <- plotTypesFlat[[req(input$plottype)]]
     plotRequest$expName <- req(input$experiment)
     db <- req(activeDb())
-    plotRequest$dbName <- db$name
+    plotRequest$dbName <- db$dbType
     plotRequest$criteria <- buildCriteria()
     plotRequest$criteria$dtg <-
       switch(plotter$dateType,

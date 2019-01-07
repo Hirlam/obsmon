@@ -49,7 +49,7 @@ doPlot.plotDiagnostic <- function(p, plotRequest, plotData) {
   compDf <- data.frame("Date"=dtg,
                        "obs"=obs,
                        "fg"=obs-fgDep)
-  hasMinimization <- plotRequest$dbName %in% c("ecmaSfc", "ccma")
+  hasMinimization <- plotRequest$dbName %in% c("ecma_sfc", "ccma")
   if (hasMinimization) {
     compDf["an"] <- obs-anDep
   }
