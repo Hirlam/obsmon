@@ -613,15 +613,14 @@ shinyServer(function(input, output, session) {
       res$obname <- obname
       res$varname <- req(input$variable)
       if (!is.null(input$levels)) res$levels <- input$levels
+
+      station <- input$station
+      if("" %in% station) station <- ""
+      allStations <- isolate(stationsAlongWithLabels())
+      res$info$stationLabel <- names(allStations)[allStations==station]
+      res$station <- station
     }
-    station <- input$station
-    if("" %in% station) station <- ""
-    res$station <- station
-    if (all(station!="")){
-      # TODO: Fix synop station labels
-      label <- exp$stationLabels[[adb$name]][[obname]][[station]]
-      res$info$stationLabel <- ifelse(is.null(label), as.character(station), label)
-    }
+
     res
   }
 
