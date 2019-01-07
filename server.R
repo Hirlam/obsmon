@@ -383,6 +383,7 @@ shinyServer(function(input, output, session) {
       selectedDtgsAreCached()
       input$obtype
     }, {
+    req(input$obtype!="satem")
     obsCategory <- req(input$obtype)
     db <- req(activeDb())
     dtgs <- req(selectedDtgs())
@@ -596,7 +597,6 @@ shinyServer(function(input, output, session) {
     res$obnumber <- getAttrFromMetadata('obnumber', obname=obname)
     if (obname == 'satem') {
       sensor <- req(input$sensor)
-      #res$obnumber <- adb$obnumbers[[sensor]]
       res$obname <- sensor
       res$satname <- req(input$satellite)
       if (!is.null(input$channels)) {
@@ -605,7 +605,6 @@ shinyServer(function(input, output, session) {
         res$levels <- list()
       }
     } else {
-      #res$obnumber <- adb$obnumbers[[obname]]
       res$obname <- obname
       res$varname <- req(input$variable)
       if (!is.null(input$levels)) {
