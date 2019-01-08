@@ -393,10 +393,28 @@ shinyServer(function(input, output, session) {
     }
   })
 
+  # Decide whether to allow users to select stations
+  allowChoosingStation <- eventReactive({
+    input$plottype
+  }, {
+    infoAboutSelectedPlotType <- plotTypesFlat[[req(input$plottype)]]
+    query <- infoAboutSelectedPlotType$queryStub
+    # StationIDs are not stored in the "obsmon" table, only in "usage"
+    queryFromUsage <- grepl("FROM{1}[[:space:]]+usage",query,ignore.case=TRUE)
+    queryFromUsage
+  })
+  observeEvent({
+    allowChoosingStation()
+    }, {
+      shinyjs::toggleState("station", condition=allowChoosingStation())
+      shinyjs::toggleElement("station", condition=allowChoosingStation())
+  })
+
   # Update stations
   stationsAlongWithLabels <- eventReactive({
       reloadInfoFromCache()
       selectedDtgsAreCached()
+      allowChoosingStation()
       input$obtype
       input$obname
       input$variable
@@ -409,10 +427,14 @@ shinyServer(function(input, output, session) {
     dtgs <- req(selectedDtgs())
     datesCycles <- getCurrentDatesAndCycles(isolate(input))
 
-    stations <- getStationsFromCache(
-      db, datesCycles$dates, datesCycles$cycles,
-      obname, variable
-    )
+    stations <- c()
+    if(isolate(allowChoosingStation())==TRUE) {
+      stations <- getStationsFromCache(
+        db, datesCycles$dates, datesCycles$cycles,
+        obname, variable
+      )
+    }
+
     if(length(stations)>0) {
       if(obname=="synop") {
         stationLabels <- c()
