@@ -316,13 +316,12 @@ shinyServer(function(input, output, session) {
   )
 
   # Keep track of whether selected DTGs are cached or not
-  selectedDtgsAreCached <- reactiveVal(FALSE)
-  observeEvent({
+  selectedDtgsAreCached <- eventReactive({
       reloadInfoFromCache()
     }, {
     db <- req(activeDb())
     dtgs <- req(selectedDtgs())
-    selectedDtgsAreCached(dtgsAreCached(db, dtgs))
+    dtgsAreCached(db, dtgs)
   })
 
   # Update obtype
