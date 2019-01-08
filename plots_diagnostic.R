@@ -24,7 +24,7 @@ plotTitle.plotDiagnostic <- function(p, plotRequest, plotData) {
   expName <- plotRequest$expName
   obtype <- plotRequest$criteria$obname
   station <- plotRequest$criteria$station
-  stationLabel <- plotRequest$criteria$info$stationLabel
+  stationLabel <- plotData$statLabel
   title <- sprintf("%s: %s %s %s",
                    expName, p$name, stationLabel, dtg)
   title

@@ -616,8 +616,6 @@ shinyServer(function(input, output, session) {
 
       station <- input$station
       if("" %in% station) station <- ""
-      allStations <- isolate(stationsAlongWithLabels())
-      res$info$stationLabel <- names(allStations)[allStations==station]
       res$station <- station
     }
 
@@ -687,6 +685,20 @@ shinyServer(function(input, output, session) {
       # picked date range.
       plotData <- postProcessQueriedPlotData(plotter, plotData)
     }
+    if(!is.null(plotData) && nrow(plotData)>0) {
+      statLabels <- c()
+      allStations <- isolate(stationsAlongWithLabels())
+      for(statid in plotData$statid) {
+        statid <- gsub(" ", "", gsub("'", "", statid))
+        statLabels <- c(statLabels, names(allStations)[allStations==statid])
+      }
+      if(nrow(plotData)==length(statLabels)) {
+        plotData$statLabel <- statLabels
+      } else {
+        plotData$statLabel <- plotData$statid
+      }
+    }
+
     output$dataTable <- renderDataTable(plotData,
                                         options=list(pageLength=100))
     res <- plotGenerate(plotter, plotRequest, plotData, t)
