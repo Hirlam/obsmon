@@ -165,14 +165,31 @@ shinyUI(
                 fluidRow(
                   column(12,
                     tags$b("Cache-related actions for selected DTG(s)"),
+                      HTML('&emsp;'), shiny::icon("info")
+                      %>%
+                      bs_embed_tooltip(
+                        title = paste('Use these buttons if',
+                          '"cache info not available" is shown for more than',
+                          '10 seconds in any of the menus above'),
+                        placement="right"
+                      ),
                     br(),
                     tags$div(
                       actionButton("reloadCacheButton", "Reload cache info",
                         icon("repeat", lib="glyphicon")
-                      ),
+                      ) %>%
+                        bs_embed_tooltip(
+                          title = "Reload info available in the cache file",
+                          placement="above"
+                        ),
                       actionButton("recacheCacheButton", "Update cache file",
                         icon("refresh", lib="glyphicon")
-                      )
+                      ) %>%
+                        bs_embed_tooltip(
+                          title = paste("Refresh cache information available",
+                            "for the selected DTG(s)"),
+                          placement="above"
+                        )
                     ),
                     br()
                   )
