@@ -65,13 +65,12 @@ updateCheckboxGroup <- function(session, inputId, choices, select="NORMAL") {
                              choices=choices, selected=selection, inline=TRUE)
 }
 
-separateReadyAndCachingExpts <- function(experiments) {
-  # Checks whether experiments have been initialised
-  # Experiments which have not yet been initialised will be replaced by
-  # empty ones (placeholders).
+flagNotReadyExpts <- function(experiments) {
+  # Checks whether experiments have been initialised. Those that are still
+  # initialising will be flagged and replaced by empty ones (placeholders).
   # This allows using experiments that are ready even if there are others
   # that are not.
-  rtn <- list()
+
   # Using suppressWarnings because the "future" package started to issue
   # loads of "cannot wait for child xxx as it does not exist" warnings
   # after R was upgraded to v3.5. For more info, see, e.g.,
@@ -79,7 +78,7 @@ separateReadyAndCachingExpts <- function(experiments) {
   resolvedStatus <- suppressWarnings(resolved(experiments))
 
   readyExpts <- list()
-  stillCachingExpts <- list()
+  notReadyExpts <- list()
   exptNames <- exptNamesinConfig[exptNamesinConfig %in% ls(experiments)]
   for (exptName in exptNames) {
     if(resolvedStatus[[exptName]]) {
@@ -88,10 +87,10 @@ separateReadyAndCachingExpts <- function(experiments) {
       suppressWarnings(readyExpts[[exptName]] <- experiments[[exptName]])
     } else {
       newName <- paste0(exptName, ': Loading experiment...')
-      stillCachingExpts[[newName]] <- emptyExperiment(newName)
+      notReadyExpts[[newName]] <- emptyExperiment(newName)
     }
   }
-  return(c(readyExpts, stillCachingExpts))
+  return(c(readyExpts, notReadyExpts))
 }
 
 disableShinyInputs <- function(input, except=c()) {
@@ -175,9 +174,9 @@ shinyServer(function(input, output, session) {
   # Initial population of experiments; triggers cascade for other form fields
   exptNames <- c("")
   experiments <- reactive ({
-    # Keep checking for updates in the experiments. Useful when chaching.
+    # Keep checking if experiments finished initialisation
     invalidateLater(5000, session)
-    separateReadyAndCachingExpts(experimentsAsPromises)
+    flagNotReadyExpts(experimentsAsPromises)
   })
   observe({
       newExptNames <- names(experiments())
