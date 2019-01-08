@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
     - Should be set under "general"
 - Icon added to "plot" action button
 ### Changed
+- Allow selection of multiple stations
 - Changes in the GUI to hide/show only needed selection tools
 - Obsmon can now work even if observations are not cached
 - Auto-discovery cache is now performed only for selected date(s) and cycle(s)
