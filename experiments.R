@@ -112,6 +112,34 @@ initExperimentsAsPromises <- function() {
   experiments
 }
 
+flagNotReadyExpts <- function(experiments) {
+  # Checks whether experiments have been initialised. Those that are still
+  # initialising will be flagged and replaced by empty ones (placeholders).
+  # This allows using experiments that are ready even if there are others
+  # that are not.
+
+  # Using suppressWarnings because the "future" package started to issue
+  # loads of "cannot wait for child xxx as it does not exist" warnings
+  # after R was upgraded to v3.5. For more info, see, e.g.,
+  # <https://github.com/HenrikBengtsson/future/issues/218>
+  resolvedStatus <- suppressWarnings(resolved(experiments))
+
+  readyExpts <- list()
+  notReadyExpts <- list()
+  exptNames <- exptNamesinConfig[exptNamesinConfig %in% ls(experiments)]
+  for (exptName in exptNames) {
+    if(resolvedStatus[[exptName]]) {
+      # Using suppressWarnings to mitigate "Rv3.5 + future" issue
+      # See previous comment.
+      suppressWarnings(readyExpts[[exptName]] <- experiments[[exptName]])
+    } else {
+      newName <- paste0(exptName, ': Loading experiment...')
+      notReadyExpts[[newName]] <- emptyExperiment(newName)
+    }
+  }
+  return(c(readyExpts, notReadyExpts))
+}
+
 exptNamesinConfig <- c()
 for(config in obsmonConfig$experiments) {
   exptNamesinConfig <- c(exptNamesinConfig, config$displayName)
