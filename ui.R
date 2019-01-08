@@ -125,16 +125,19 @@ shinyUI(
                                     choices=c(),
                                     multiple=TRUE,
                                     selectize=FALSE)
-                    ),
+                    )
+                ),
+                selectInput("plottype",
+                            "Type of Plot",
+                            choices=c()),
+                conditionalPanel(
+                    condition = "input.obtype != 'satem'",
                     selectInput("station",
                                 "Station",
                                 choices=c(),
                                 multiple=TRUE,
                                 selectize=FALSE)
                 ),
-                selectInput("plottype",
-                            "Type of Plot",
-                            choices=c()),
                 conditionalPanel(
                     condition = "output.dateType == 'single'",
                     fluidRow(
