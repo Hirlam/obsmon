@@ -443,7 +443,7 @@ shinyServer(function(input, output, session) {
       db, datesCycles$dates, datesCycles$cycles,
       obname, variable
     )
-    if(length(stations)>1) {
+    if(length(stations)>0) {
       if(obname=="synop") {
         stationLabels <- c()
         for(statID in stations) {
