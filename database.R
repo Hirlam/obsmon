@@ -677,23 +677,21 @@ getStationsFromCache <- function(db, dates, cycles, obname, variable) {
 getObnames <- function(db, category, dates, cycles) {
   rtn <- list(cached=NULL, general=NULL)
   rtn$cached <- getObnamesFromCache(db, category, dates, cycles)
-  if(is.null(rtn$cached)) {
-    rtn$general <- getAttrFromMetadata('obname', category=category)
-  }
+  rtn$general <- getAttrFromMetadata('obname', category=category)
   return(rtn)
 }
 
 getObtypes <- function(db, dates, cycles) {
   rtn <- list(cached=NULL, general=NULL)
   rtn$cached <- getObtypesFromCache(db, dates, cycles)
-  if(is.null(rtn$cached)) rtn$general <- getAttrFromMetadata('category')
+  rtn$general <- getAttrFromMetadata('category')
   return(rtn)
 }
 
 getVariables <- function(db, dates, cycles, obname) {
   rtn <- list(cached=NULL, general=NULL)
   rtn$cached <- getVariablesFromCache(db, dates, cycles, obname)
-  if(is.null(rtn$cached)) rtn$general <- getAttrFromMetadata('variables', obname=obname)
+  rtn$general <- getAttrFromMetadata('variables', obname=obname)
   return(rtn)
 }
 
@@ -710,20 +708,16 @@ getAvailableLevels <- function(db, dates, cycles, obname, varname) {
 getAvailableSensornames <- function(db, dates, cycles) {
   rtn <- list(cached=NULL, general=NULL)
   rtn$cached <- getSensornamesFromCache(db, dates, cycles)
-  if(is.null(rtn$cached)) {
-    sens.sats <- getAttrFromMetadata('sensors.sats', category="satem")
-    rtn$general <- gsub('\\.{1}.*', '', sens.sats)
-  }
+  sens.sats <- getAttrFromMetadata('sensors.sats', category="satem")
+  rtn$general <- gsub('\\.{1}.*', '', sens.sats)
   return(rtn)
 }
 
 getAvailableSatnames <- function(db, dates, cycles, sensorname) {
   rtn <- list(cached=NULL, general=NULL)
   rtn$cached <- getSatnamesFromCache(db, dates, cycles, sensorname)
-  if(is.null(rtn$cached)) {
-    sens.sats <- getAttrFromMetadata('sensors.sats', category="satem")
-    sens.sats <- sens.sats[startsWith(sens.sats, paste0(sensorname, '.'))]
-    rtn$general <- gsub(paste0(sensorname, '.'), '', sens.sats, fixed=TRUE)
-  }
+  sens.sats <- getAttrFromMetadata('sensors.sats', category="satem")
+  sens.sats <- sens.sats[startsWith(sens.sats, paste0(sensorname, '.'))]
+  rtn$general <- gsub(paste0(sensorname, '.'), '', sens.sats, fixed=TRUE)
   return(rtn)
 }
