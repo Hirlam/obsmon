@@ -299,31 +299,30 @@ shinyServer(function(input, output, session) {
   })
 
   # Flagging that it's time to read info from cache
-  reloadInfoFromCache <- reactiveVal(0)
-  observeEvent({
+  latestTriggerReadCache <- reactiveVal(0)
+  triggerReadCache <- function() latestTriggerReadCache(Sys.time())
+  reloadInfoFromCache <- eventReactive({
+      latestTriggerReadCache()
       input$reloadCacheButton
       activeDb()
       cacheFileUpdated()
       selectedDtgs()
     }, {
-      reloadInfoFromCache((reloadInfoFromCache() + 1) %% 2)
+    character(0)
   },
     ignoreNULL=TRUE
-  )
+  ) %>% throttle(5000)
 
   # Keep track of whether selected DTGs are cached or not
   selectedDtgsAreCached <- eventReactive({
       reloadInfoFromCache()
     }, {
-    db <- req(activeDb())
-    dtgs <- req(selectedDtgs())
-    dtgsAreCached(db, dtgs)
+      dtgsAreCached(req(activeDb()), req(selectedDtgs()))
   })
 
   # Update obtype
   observeEvent({
       reloadInfoFromCache()
-      selectedDtgsAreCached()
     }, {
     db <- req(activeDb())
     if(db$dbType=="ecma_sfc") {
@@ -336,6 +335,7 @@ shinyServer(function(input, output, session) {
       if(is.null(obtypes$cached) || !selectedDtgsAreCached()) {
         updateSelection(session, "obtype", obtypes$general)
         updateSelectInput(session, "obtype", label="Observation Type (cache info not available)")
+        delay(5000, triggerReadCache())
       } else {
         updateSelection(session, "obtype", obtypes$cached)
         updateSelectInput(session, "obtype", label="Observation Type")
@@ -346,7 +346,6 @@ shinyServer(function(input, output, session) {
   # Update obnames
   observeEvent({
       reloadInfoFromCache()
-      selectedDtgsAreCached()
       input$obtype
     }, {
     req(input$obtype!="satem")
@@ -359,6 +358,11 @@ shinyServer(function(input, output, session) {
     if(is.null(obnames$cached) || !selectedDtgsAreCached()) {
       updateSelection(session, "obname", obnames$general)
       updateSelectInput(session, "obname", label="Observation Name (cache info not available)")
+      if(!(obsCategory %in% c("radar", "scatt"))) {
+        # In these cases obnames$cached will always be NULL, since
+        # obname=obsCategory and this info is therefore not stored in cache
+        delay(5000, triggerReadCache())
+      }
     } else {
       updateSelection(session, "obname", obnames$cached)
       updateSelectInput(session, "obname", label="Observation Name")
@@ -368,7 +372,6 @@ shinyServer(function(input, output, session) {
   # Update variable
   observeEvent({
       reloadInfoFromCache()
-      selectedDtgsAreCached()
       input$obtype
       input$obname
     }, {
@@ -383,6 +386,7 @@ shinyServer(function(input, output, session) {
     if(is.null(variables$cached) || !selectedDtgsAreCached()) {
       updateSelection(session, "variable", variables$general)
       updateSelectInput(session, "variable", label="Variable (cache info not available)")
+      delay(5000, triggerReadCache())
     } else {
       updateSelection(session, "variable", variables$cached)
       updateSelectInput(session, "variable", label="Variable")
@@ -409,7 +413,6 @@ shinyServer(function(input, output, session) {
   # Update stations
   stationsAlongWithLabels <- eventReactive({
       reloadInfoFromCache()
-      selectedDtgsAreCached()
       allowChoosingStation()
       input$obtype
       input$obname
@@ -452,13 +455,12 @@ shinyServer(function(input, output, session) {
     }, {
       stations <- stationsAlongWithLabels()
       if(length(stations)==1 || !selectedDtgsAreCached()) {
-        updateSelectInput(session, "station", label="Station (cache info not available)",
-          choices=stations, selected=stations
-        )
+        updateSelectInput(session, "station", label="Station (cache info not available)")
+        if(allowChoosingStation()==TRUE) delay(5000, triggerReadCache())
       } else {
         updateSelectInput(session, "station", label="Station")
-        updateSelection(session, "station", stations)
       }
+      updateSelection(session, "station", stations)
   })
 
   # Update level choice for given variable
@@ -500,7 +502,6 @@ shinyServer(function(input, output, session) {
   # Update sensornames
   observeEvent({
       reloadInfoFromCache()
-      selectedDtgsAreCached()
       input$obtype
     }, {
     req(input$obtype=="satem")
@@ -513,6 +514,7 @@ shinyServer(function(input, output, session) {
     if(is.null(sens$cached) || !selectedDtgsAreCached()) {
       updateSelection(session, "sensor", sens$general)
       updateSelectInput(session, "sensor", label="Sensor (cache info not available)")
+      delay(5000, triggerReadCache())
     } else {
       updateSelection(session, "sensor", sens$cached)
       updateSelectInput(session, "sensor", label="Sensor")
@@ -522,7 +524,6 @@ shinyServer(function(input, output, session) {
   # Update satellite choices for given sensor
   observeEvent({
     reloadInfoFromCache()
-    selectedDtgsAreCached()
     input$obtype
     input$obname
     input$sensor
@@ -537,6 +538,7 @@ shinyServer(function(input, output, session) {
     if(is.null(sats$cached) || !selectedDtgsAreCached()) {
       updateSelection(session, "satellite", sats$general)
       updateSelectInput(session, "satellite", label="Satellite (cache info not available)")
+      delay(5000, triggerReadCache())
     } else {
       updateSelection(session, "satellite", sats$cached)
       updateSelectInput(session, "satellite", label="Satellite")
@@ -547,7 +549,6 @@ shinyServer(function(input, output, session) {
   channels <- NULL
   observeEvent({
     reloadInfoFromCache()
-    selectedDtgsAreCached()
     input$obtype
     input$obname
     input$sensor
