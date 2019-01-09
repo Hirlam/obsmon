@@ -274,22 +274,20 @@ shinyServer(function(input, output, session) {
   })
 
   # Put observations in cache when dB and/or DTG selection are modified
-  observeEvent({
-      activeDb()
-      selectedDtgs()
-    }, {
-      db <- req(activeDb())
-      dtgs <- req(selectedDtgs())
-      fPathsToCache <- getFilePathsToCache(db, input)
-      assyncPutObsInCache(fPathsToCache, cacheDir=db$cacheDir)
+  fPathsToCache <- eventReactive({
+    activeDb()
+    selectedDtgs()
+  }, {
+    getFilePathsToCache(req(activeDb()), input)
+  })
+  observeEvent({fPathsToCache()}, {
+    db <- req(activeDb())
+    assyncPutObsInCache(fPathsToCache(), cacheDir=db$cacheDir)
   })
   # Re-cache observations if requested by user
-  observeEvent({
-      input$recacheCacheButton
-    }, {
-      db <- req(activeDb())
-      fPathsToCache <- getFilePathsToCache(db, input)
-      assyncPutObsInCache(fPathsToCache, cacheDir=db$cacheDir, replaceExisting=TRUE)
+  observeEvent({input$recacheCacheButton}, {
+    db <- req(activeDb())
+    assyncPutObsInCache(fPathsToCache(), cacheDir=db$cacheDir, replaceExisting=TRUE)
   },
     ignoreInit=TRUE
   )
