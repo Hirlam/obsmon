@@ -38,6 +38,15 @@ css <- "
 }
 "
 
+cacheButtonsGeneralTolltipMsg <- paste(
+  'Use the buttons below if the message "cache info not available"',
+  "does not disappear from any of the menus above.\n",
+  "NB.: You can produce plots even if the aforementioned message is shown.",
+  "The choices you get in this case correspond to all possibilities for the",
+  'particular menu. That only means that you may get "No data" responses to',
+  "some plot requests"
+)
+
 shinyUI(
     fluidPage(
         tags$head(tags$script(HTML("
@@ -168,9 +177,7 @@ shinyUI(
                       HTML('&emsp;'), shiny::icon("info")
                       %>%
                       bs_embed_tooltip(
-                        title = paste('Use these buttons if',
-                          '"cache info not available" is shown for more than',
-                          '10 seconds in any of the menus above'),
+                        title=cacheButtonsGeneralTolltipMsg,
                         placement="right"
                       ),
                     br(),
