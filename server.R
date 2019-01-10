@@ -679,73 +679,96 @@ shinyServer(function(input, output, session) {
 
   # Perform plotting
   observeEvent(input$doPlot, {
-    t <- createShinyProgressTracker()
-    plotRequest <- list()
     plotter <- plotTypesFlat[[req(input$plottype)]]
-    plotRequest$expName <- req(input$experiment)
     db <- req(activeDb())
+    stationsWithLabels <- stationsAlongWithLabels()
+    plotRequest <- list()
+    plotRequest$expName <- req(input$experiment)
     plotRequest$dbType <- db$dbType
     plotRequest$criteria <- buildCriteria()
-    plotRequest$criteria$dtg <-
-      switch(plotter$dateType,
-             "single"={
-               cycle <- req(input$cycle)
-               date2dtg(req(input$date), cycle)
-             },
-             "range"={
-                   dateRange <- req(input$dateRange)
-                   cycles <- input$cycles
-                   if (is.null(cycles)) {
-                     signalError("Please select at least one cycle.")
-                     return(NULL)
-                   }
-                   list(dateRange[1], dateRange[2], cycles)
-             })
-    isWindspeed <- "varname" %in% names(plotRequest$criteria) &&
-      plotRequest$criteria$varname %in% c("ff", "ff10m")
-    if (isWindspeed) {
-      plotData <- buildFfData(db, plotter, plotRequest)
-    } else {
-      query <- plotBuildQuery(plotter, plotRequest)
-      output$queryUsed <- renderText(query)
-      t <- addTask(t, "Querying database")
-      plotData <- performQuery(db, query, plotRequest$criteria$dtg,
-                               progressTracker=t)
-      # Postprocessing plotData returned by performQuery.
-      # This may be useful, e.g., if performing averages over a
-      # picked date range.
-      plotData <- postProcessQueriedPlotData(plotter, plotData)
-    }
-    if(!is.null(plotData) && nrow(plotData)>0) {
-      statLabels <- c()
-      allStations <- isolate(stationsAlongWithLabels())
-      for(statid in plotData$statid) {
-        statid <- gsub(" ", "", gsub("'", "", statid))
-        statLabels <- c(statLabels, names(allStations)[allStations==statid])
+    plotRequest$criteria$dtg <- switch(plotter$dateType,
+      "single"={
+        cycle <- req(input$cycle)
+        date2dtg(req(input$date), cycle)
+      },
+      "range"={
+            dateRange <- req(input$dateRange)
+            cycles <- input$cycles
+            if (is.null(cycles)) {
+              signalError("Please select at least one cycle.")
+              return(NULL)
+            }
+            list(dateRange[1], dateRange[2], cycles)
       }
-      if(nrow(plotData)==length(statLabels)) {
-        plotData$statLabel <- statLabels
+    )
+    futurePlot <- suppressWarnings(future({
+      t <- createShinyProgressTracker()
+      isWindspeed <- "varname" %in% names(plotRequest$criteria) &&
+        plotRequest$criteria$varname %in% c("ff", "ff10m")
+      if (isWindspeed) {
+        plotData <- buildFfData(db, plotter, plotRequest)
       } else {
-        plotData$statLabel <- plotData$statid
+        query <- plotBuildQuery(plotter, plotRequest)
+        outputQueryUsed <- renderText(query)
+        t <- addTask(t, "Querying database")
+        plotData <- performQuery(db, query, plotRequest$criteria$dtg,
+                                 progressTracker=t)
+        # Postprocessing plotData returned by performQuery.
+        # This may be useful, e.g., if performing averages over a
+        # picked date range.
+        plotData <- postProcessQueriedPlotData(plotter, plotData)
       }
-    }
+      if(!is.null(plotData) && nrow(plotData)>0) {
+        statLabels <- c()
+        allStations <- stationsWithLabels
+        for(statid in plotData$statid) {
+          statid <- gsub(" ", "", gsub("'", "", statid))
+          statLabels <- c(statLabels, names(allStations)[allStations==statid])
+        }
+        if(nrow(plotData)==length(statLabels)) {
+          plotData$statLabel <- statLabels
+        } else {
+          plotData$statLabel <- plotData$statid
+        }
+      }
 
-    output$dataTable <- renderDataTable(plotData,
-                                        options=list(pageLength=100))
-    res <- plotGenerate(plotter, plotRequest, plotData, t)
-    output$plot <- renderPlot(grid.arrange(res$obplot,
-                                           top=textGrob(res$title)),
-                              res=96, pointsize=18)
-    if (is.null(res$obmap)) {
-      js$disableTab("mapTab")
-      if (input$mainArea == "mapTab") {
+      outputDataTable <- renderDataTable(plotData,
+                                          options=list(pageLength=100))
+      res <- plotGenerate(plotter, plotRequest, plotData, t)
+      outputPlot <- renderPlot(grid.arrange(res$obplot,
+                                             top=textGrob(res$title)),
+                                res=96, pointsize=18)
+      rtn <- list(
+        queryUsed=outputQueryUsed,
+        dataTable=outputDataTable,
+        plot=outputPlot,
+        tracker=t
+      )
+      if(!is.null(res$obmap)) {
+        rtn$outputMap <- renderLeaflet(res$obmap)
+        rtn$outputMapTitle <- renderText(res$title)
+      }
+      rtn
+    }))
+    while(suppressWarnings(!resolved(futurePlot))) {
+      print(futurePlot$job$pid)
+      Sys.sleep(1)
+    }
+    plot <- suppressWarnings(value(futurePlot))
+
+    output$queryUsed <- plot$queryUsed
+    output$dataTable <- plot$dataTable
+    output$plot <- plot$plot
+    if(is.null(plot$map)) {
+      if(input$mainArea=="mapTab") {
         updateTabsetPanel(session, "mainArea", "plotTab")
       }
+      js$disableTab("mapTab")
     } else {
-      output$map <- renderLeaflet(res$obmap)
-      output$mapTitle <- renderText(res$title)
+      output$map <- plot$map
+      output$mapTitle <- plot$mapTitle
       js$enableTab("mapTab")
     }
-    closeTracker(t)
+    closeTracker(plot$tracker)
   })
 })
