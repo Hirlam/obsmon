@@ -73,18 +73,18 @@ shinyUI(
                 width=3,
                 selectizeInput("experiment",
                             multiple=FALSE,
-                            "Experiment",
-                            options=list(placeholder='Loading experiments...'),
+                            label=allMenuLabels[["experiment"]],
+                            options=allMenuChoices[["experiment"]],
                             choices=c()),
                 selectizeInput("odbBase",
-                            label="Data Assimilation Category/Database",
+                            label=allMenuLabels[["odbBase"]],
+                            options=allMenuChoices[["odbBase"]],
                             multiple=FALSE,
-                            options=list(placeholder='Awaiting experiment initialisation...'),
                             choices=c()),
                 conditionalPanel(
                     condition = "input.odbBase!='ecma_sfc'",
                     selectInput("obtype",
-                                "Observation Type",
+                                label=allMenuLabels[["obtype"]],
                                 choices=c())
                 ),
                 conditionalPanel(
@@ -92,19 +92,19 @@ shinyUI(
                                  input.obtype!='scatt' &&
                                  input.obtype!='radar'",
                     selectInput("obname",
-                                "Observation Name",
+                                label=allMenuLabels[["obname"]],
                                 choices=c())
                 ),
                 conditionalPanel(
                     condition = "input.obtype == 'satem'",
                     selectInput("sensor",
-                                "Sensor",
+                                label=allMenuLabels[["sensor"]],
                                 choices=c()),
                     selectInput("satellite",
-                                "Satellite",
+                                label=allMenuLabels[["satellite"]],
                                 choices=c()),
                     selectInput("channels",
-                                tags$div("Channels",
+                                tags$div(allMenuLabels[["channels"]],
                                          "(Select",
                                          actionLink("channelsSelectAll", "all"),
                                          actionLink("channelsSelectNone", "none"),
@@ -117,14 +117,14 @@ shinyUI(
                 conditionalPanel(
                     condition = "input.obtype != 'satem'",
                     selectInput("variable",
-                                "Variable",
+                                label=allMenuLabels[["variable"]],
                                 choices=c()),
                     conditionalPanel(
                         condition = "input.odbBase != 'ecma_sfc' &&
                                      input.obtype!='scatt' &&
                                      input.obtype!='surface'",
                         selectInput("levels",
-                                    tags$div("Levels",
+                                    tags$div(allMenuLabels[["levels"]],
                                              "(Select",
                                              actionLink("levelsSelectStandard", "standard"),
                                              actionLink("levelsSelectAll", "all"),
@@ -137,12 +137,12 @@ shinyUI(
                     )
                 ),
                 selectInput("plottype",
-                            "Type of Plot",
+                            label=allMenuLabels[["plottype"]],
                             choices=c()),
                 conditionalPanel(
                     condition = "input.obtype != 'satem'",
                     selectInput("station",
-                                "Station",
+                                label=allMenuLabels[["station"]],
                                 choices=c(),
                                 multiple=TRUE,
                                 selectize=FALSE)
