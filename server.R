@@ -47,14 +47,38 @@ getSelection <- function(session, inputId, choices, select=c("NORMAL", "ALL", "N
 #
 # Updates a selectInput, preserving the selected
 # option(s) if available
-updateSelection <- function(session, inputId, choices, select="NORMAL") {
-    if (is.null(choices)) {
-      return(NULL)
-    }
-    selection <- getSelection(session, inputId, choices, select)
-    updateSelectInput(session, inputId,
-                      choices=choices, selected=selection)
+updateSelectInputWrapper <- function(
+  session, inputId, label=NULL, choices=NULL, selected=NULL,
+  choicesFoundIncache=TRUE, ...
+){
+  currentLabel <- allMenuLabels[[inputId]]
+  if(is.null(currentLabel)) currentLabel <- ""
+  if(is.null(label)) label <- currentLabel
+
+  notCachedLabelMsg <- "(cache info not available)"
+  label <- gsub(notCachedLabelMsg, "", label, fixed=TRUE)
+  if(!choicesFoundIncache) label <- paste(label, notCachedLabelMsg)
+  if(label!=currentLabel) {
+    updateSelectInput(session, inputId, label=label)
+    allMenuLabels[[inputId]] <<- label
+  }
+
+  currentChoices <- allMenuChoices[[inputId]]
+  if(is.null(choices)) return(NULL)
+
+  validUpdate <- !is.null(choices) && (is.null(currentChoices) ||
+    length(unlist(currentChoices)) != length(unlist(choices)) ||
+    !all(sort(unlist(currentChoices))==sort(unlist(choices)))
+  )
+  if(!validUpdate) return(NULL)
+
+  selection <- getSelection(session, inputId, choices)
+  updateSelectInput(
+    session, inputId, choices=choices, selected=selection, label=label, ...
+  )
+  allMenuChoices[[inputId]] <<- choices
 }
+
 
 updateCheckboxGroup <- function(session, inputId, choices, select="NORMAL") {
     if (is.null(choices)) {
@@ -243,7 +267,7 @@ shinyServer(function(input, output, session) {
 
   observe({
     cycles <- availableCycles()
-    updateSelection(session, "cycle", cycles)
+    updateSelectInputWrapper(session, "cycle", choices=cycles)
     updateCheckboxGroup(session, "cycles", cycles)
   })
 
@@ -326,20 +350,22 @@ shinyServer(function(input, output, session) {
     }, {
     db <- req(activeDb())
     if(db$dbType=="ecma_sfc") {
-      updateSelection(session, "obtype", c("surface"))
+      updateSelectInputWrapper(session, "obtype", choices=c("surface"))
     } else {
       dtgs <- req(selectedDtgs())
       datesCycles <- getCurrentDatesAndCycles(isolate(input))
       obtypes <- getObtypes(db, datesCycles$dates, datesCycles$cycles)
 
-      if(is.null(obtypes$cached) || !selectedDtgsAreCached()) {
-        updateSelection(session, "obtype", obtypes$general)
-        updateSelectInput(session, "obtype", label="Observation Type (cache info not available)")
-        delay(5000, triggerReadCache())
+      isCached <- selectedDtgsAreCached() && !is.null(obtypes$cached)
+      if(isCached) {
+        newChoices <- obtypes$cached
       } else {
-        updateSelection(session, "obtype", obtypes$cached)
-        updateSelectInput(session, "obtype", label="Observation Type")
+        newChoices <- obtypes$general
+        delay(5000, triggerReadCache())
       }
+      updateSelectInputWrapper(
+        session, "obtype", choices=newChoices, choicesFoundIncache=isCached
+      )
     }
   })
 
@@ -355,18 +381,20 @@ shinyServer(function(input, output, session) {
     datesCycles <- getCurrentDatesAndCycles(isolate(input))
 
     obnames <- getObnames(db, obsCategory, datesCycles$dates, datesCycles$cycles)
-    if(is.null(obnames$cached) || !selectedDtgsAreCached()) {
-      updateSelection(session, "obname", obnames$general)
-      updateSelectInput(session, "obname", label="Observation Name (cache info not available)")
+    isCached <- selectedDtgsAreCached() && !is.null(obnames$cached)
+    if(isCached) {
+      newChoices <- obnames$cached
+    } else {
+      newChoices <- obnames$general
       if(!(obsCategory %in% c("radar", "scatt"))) {
         # In these cases obnames$cached will always be NULL, since
         # obname=obsCategory and this info is therefore not stored in cache
         delay(5000, triggerReadCache())
       }
-    } else {
-      updateSelection(session, "obname", obnames$cached)
-      updateSelectInput(session, "obname", label="Observation Name")
     }
+    updateSelectInputWrapper(
+      session, "obname", choices=newChoices, choicesFoundIncache=isCached
+    )
   })
 
   # Update variable
@@ -383,14 +411,16 @@ shinyServer(function(input, output, session) {
     datesCycles <- getCurrentDatesAndCycles(isolate(input))
 
     variables <- getVariables(db,datesCycles$dates,datesCycles$cycles,obname)
-    if(is.null(variables$cached) || !selectedDtgsAreCached()) {
-      updateSelection(session, "variable", variables$general)
-      updateSelectInput(session, "variable", label="Variable (cache info not available)")
-      delay(5000, triggerReadCache())
+    isCached <- selectedDtgsAreCached() && !is.null(variables$cached)
+    if(isCached) {
+      newChoices <- variables$cached
     } else {
-      updateSelection(session, "variable", variables$cached)
-      updateSelectInput(session, "variable", label="Variable")
+      newChoices <- variables$general
+      delay(5000, triggerReadCache())
     }
+    updateSelectInputWrapper(
+      session, "variable", choices=newChoices, choicesFoundIncache=isCached
+    )
   })
 
   # Decide whether to allow users to select stations
@@ -454,13 +484,14 @@ shinyServer(function(input, output, session) {
       stationsAlongWithLabels()
     }, {
       stations <- stationsAlongWithLabels()
-      if(length(stations)==1 || !selectedDtgsAreCached()) {
-        updateSelectInput(session, "station", label="Station (cache info not available)")
-        if(allowChoosingStation()==TRUE) delay(5000, triggerReadCache())
-      } else {
-        updateSelectInput(session, "station", label="Station")
+      isCached <- selectedDtgsAreCached() && length(stations)>1
+      if(!isCached && allowChoosingStation()==TRUE) {
+        stations <- c("Any"="")
+        delay(5000, triggerReadCache())
       }
-      updateSelection(session, "station", stations)
+      updateSelectInputWrapper(
+        session, "station", choices=stations, choicesFoundIncache=isCached
+      )
   })
 
   # Update level choice for given variable
@@ -478,11 +509,14 @@ shinyServer(function(input, output, session) {
     var <- req(input$variable)
     datesCycles <- getCurrentDatesAndCycles(input)
 
-    avLevels <<- getAvailableLevels(db, datesCycles$dates, datesCycles$cycles, obname, var)
+    avLevels <<- list(obsmon=NULL, usage=NULL, all=NULL)
+    if(selectedDtgsAreCached()) {
+      avLevels <<- getAvailableLevels(db, datesCycles$dates, datesCycles$cycles, obname, var)
+    }
     if(is.null(avLevels$all)) {
-      updateSelectInput(session, "levels", choices=list(), selected=list())
+      updateSelectInputWrapper(session,"levels",choices=list(),selected=list())
     } else {
-      updateSelection(session, "levels", choices=avLevels$all)
+      updateSelectInputWrapper(session, "levels", choices=avLevels$all)
     }
   })
 
@@ -505,20 +539,22 @@ shinyServer(function(input, output, session) {
       input$obtype
     }, {
     req(input$obtype=="satem")
-    updateSelection(session, "obname", c("satem"))
+    updateSelectInputWrapper(session, "obname", choices=c("satem"))
     db <- req(activeDb())
     dtgs <- req(selectedDtgs())
     datesCycles <- getCurrentDatesAndCycles(isolate(input))
 
     sens <- getAvailableSensornames(db, datesCycles$dates, datesCycles$cycles)
-    if(is.null(sens$cached) || !selectedDtgsAreCached()) {
-      updateSelection(session, "sensor", sens$general)
-      updateSelectInput(session, "sensor", label="Sensor (cache info not available)")
-      delay(5000, triggerReadCache())
+    isCached <- selectedDtgsAreCached() && !is.null(sens$cached)
+    if(isCached) {
+      newChoices <- sens$cached
     } else {
-      updateSelection(session, "sensor", sens$cached)
-      updateSelectInput(session, "sensor", label="Sensor")
+      newChoices <- sens$general
+      delay(5000, triggerReadCache())
     }
+    updateSelectInputWrapper(
+      session, "sensor", choices=newChoices, choicesFoundIncache=isCached
+    )
   })
 
   # Update satellite choices for given sensor
@@ -535,14 +571,16 @@ shinyServer(function(input, output, session) {
     datesCycles <- getCurrentDatesAndCycles(isolate(input))
 
     sats <- getAvailableSatnames(db,datesCycles$dates,datesCycles$cycles,sens)
-    if(is.null(sats$cached) || !selectedDtgsAreCached()) {
-      updateSelection(session, "satellite", sats$general)
-      updateSelectInput(session, "satellite", label="Satellite (cache info not available)")
-      delay(5000, triggerReadCache())
+    isCached <- selectedDtgsAreCached() && !is.null(sats$cached)
+    if(isCached) {
+      newChoices <- sats$cached
     } else {
-      updateSelection(session, "satellite", sats$cached)
-      updateSelectInput(session, "satellite", label="Satellite")
+      newChoices <- sats$general
+      delay(5000, triggerReadCache())
     }
+    updateSelectInputWrapper(
+      session, "satellite", choices=newChoices, choicesFoundIncache=isCached
+    )
   })
 
   # Update channel choice for given satellite
@@ -561,13 +599,17 @@ shinyServer(function(input, output, session) {
     sens <- req(input$sensor)
     datesCycles <- getCurrentDatesAndCycles(input)
 
-    channels <<- getAvailableChannels(
-      db, datesCycles$dates, datesCycles$cycles, satname=sat, sensorname=sens
-    )
+    channels <<- NULL
+    if(selectedDtgsAreCached()) {
+      channels <<- getAvailableChannels(
+        db, datesCycles$dates, datesCycles$cycles, satname=sat, sensorname=sens
+      )
+    }
+
     if(is.null(channels)) {
-      updateSelectInput(session, "channels", choices=list(), selected=list())
+      updateSelectInputWrapper(session,"channels",choices=list(),selected=list())
     } else {
-      updateSelection(session, "channels", channels)
+      updateSelectInputWrapper(session, "channels", choices=channels)
     }
   })
 
@@ -615,7 +657,7 @@ shinyServer(function(input, output, session) {
   updatePlotTypes <- function() {
     criteria <- buildCriteria()
     choices <- applicablePlots(criteria)
-    updateSelection(session, "plottype", choices)
+    updateSelectInputWrapper(session, "plottype", choices=choices)
   }
 
   # Trigger plottype update on criteria change
