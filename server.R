@@ -678,10 +678,55 @@ shinyServer(function(input, output, session) {
   )
 
   # Perform plotting
+  renderPlots <- function(plotter, plotRequest, db, stations, tracker) {
+    isWindspeed <- "varname" %in% names(plotRequest$criteria) &&
+      plotRequest$criteria$varname %in% c("ff", "ff10m")
+    if (isWindspeed) {
+      plotData <- buildFfData(db, plotter, plotRequest)
+    } else {
+      query <- plotBuildQuery(plotter, plotRequest)
+      outputQueryUsed <- renderText(query)
+      plotData <- performQuery(db, query, plotRequest$criteria$dtg,
+                               progressTracker=tracker)
+      # Postprocessing plotData returned by performQuery.
+      # This may be useful, e.g., if performing averages over a
+      # picked date range.
+      plotData <- postProcessQueriedPlotData(plotter, plotData)
+    }
+    if(!is.null(plotData) && nrow(plotData)>0) {
+      statLabels <- c()
+      for(statid in plotData$statid) {
+        statid <- gsub(" ", "", gsub("'", "", statid))
+        statLabels <- c(statLabels, names(stations)[stations==statid])
+      }
+      if(nrow(plotData)==length(statLabels)) {
+        plotData$statLabel <- statLabels
+      } else {
+        plotData$statLabel <- plotData$statid
+      }
+    }
+
+    outputDataTable <- renderDataTable(plotData,
+                                        options=list(pageLength=100))
+    res <- plotGenerate(plotter, plotRequest, plotData, tracker)
+    outputPlot <- renderPlot(grid.arrange(res$obplot,
+                                           top=textGrob(res$title)),
+                              res=96, pointsize=18)
+    rtn <- list(
+      queryUsed=outputQueryUsed,
+      dataTable=outputDataTable,
+      plot=outputPlot
+    )
+    if(!is.null(res$obmap)) {
+      rtn$outputMap <- renderLeaflet(res$obmap)
+      rtn$outputMapTitle <- renderText(res$title)
+    }
+    return(rtn)
+  }
   observeEvent(input$doPlot, {
     plotter <- plotTypesFlat[[req(input$plottype)]]
     db <- req(activeDb())
-    stationsWithLabels <- stationsAlongWithLabels()
+    stations <- stationsAlongWithLabels()
     plotRequest <- list()
     plotRequest$expName <- req(input$experiment)
     plotRequest$dbType <- db$dbType
@@ -701,60 +746,25 @@ shinyServer(function(input, output, session) {
             list(dateRange[1], dateRange[2], cycles)
       }
     )
-    futurePlot <- suppressWarnings(future({
-      t <- createShinyProgressTracker()
-      isWindspeed <- "varname" %in% names(plotRequest$criteria) &&
-        plotRequest$criteria$varname %in% c("ff", "ff10m")
-      if (isWindspeed) {
-        plotData <- buildFfData(db, plotter, plotRequest)
-      } else {
-        query <- plotBuildQuery(plotter, plotRequest)
-        outputQueryUsed <- renderText(query)
-        t <- addTask(t, "Querying database")
-        plotData <- performQuery(db, query, plotRequest$criteria$dtg,
-                                 progressTracker=t)
-        # Postprocessing plotData returned by performQuery.
-        # This may be useful, e.g., if performing averages over a
-        # picked date range.
-        plotData <- postProcessQueriedPlotData(plotter, plotData)
-      }
-      if(!is.null(plotData) && nrow(plotData)>0) {
-        statLabels <- c()
-        allStations <- stationsWithLabels
-        for(statid in plotData$statid) {
-          statid <- gsub(" ", "", gsub("'", "", statid))
-          statLabels <- c(statLabels, names(allStations)[allStations==statid])
-        }
-        if(nrow(plotData)==length(statLabels)) {
-          plotData$statLabel <- statLabels
-        } else {
-          plotData$statLabel <- plotData$statid
-        }
-      }
 
-      outputDataTable <- renderDataTable(plotData,
-                                          options=list(pageLength=100))
-      res <- plotGenerate(plotter, plotRequest, plotData, t)
-      outputPlot <- renderPlot(grid.arrange(res$obplot,
-                                             top=textGrob(res$title)),
-                                res=96, pointsize=18)
-      rtn <- list(
-        queryUsed=outputQueryUsed,
-        dataTable=outputDataTable,
-        plot=outputPlot,
-        tracker=t
+    tracker <- createShinyProgressTracker()
+    tracker <- addTask(tracker, "Querying database")
+    futurePlot <- suppressWarnings(future({
+      tryCatch(
+        renderPlots(plotter, plotRequest, db, stations, tracker),
+        error=function(e) {flog.error(e); NULL}
       )
-      if(!is.null(res$obmap)) {
-        rtn$outputMap <- renderLeaflet(res$obmap)
-        rtn$outputMapTitle <- renderText(res$title)
-      }
-      rtn
     }))
     while(suppressWarnings(!resolved(futurePlot))) {
-      print(futurePlot$job$pid)
+      plotPid <- futurePlot$job$pid
+      print(sprintf("Producing plot in child process %d", plotPid))
       Sys.sleep(1)
+      #tools::pskill(futurePlot$job$pid)
     }
     plot <- suppressWarnings(value(futurePlot))
+    closeTracker(tracker)
+    if(is.null(plot)) flog.error("renderPlots: Could not produce plot")
+    req(!is.null(plot))
 
     output$queryUsed <- plot$queryUsed
     output$dataTable <- plot$dataTable
@@ -769,6 +779,5 @@ shinyServer(function(input, output, session) {
       output$mapTitle <- plot$mapTitle
       js$enableTab("mapTab")
     }
-    closeTracker(plot$tracker)
   })
 })
