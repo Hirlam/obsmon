@@ -766,22 +766,6 @@ shinyServer(function(input, output, session) {
       invalidateLater(1000)
     }
   })
-  observeEvent(readyPlot(), {
-      on.exit({
-        shinyjs::hide("cancelPlot")
-        shinyjs::show("doPlot")
-        enableShinyInputs(input)
-      })
-
-      if(is.null(readyPlot()$obmap)) {
-        if(input$mainArea=="mapTab") {
-          updateTabsetPanel(session, "mainArea", "plotTab")
-        }
-        js$disableTab("mapTab")
-      } else {
-        js$enableTab("mapTab")
-      }
-  })
 
   output$dataTable <- renderDataTable({
     req(!is.null(readyPlot()))
@@ -806,5 +790,22 @@ shinyServer(function(input, output, session) {
   output$mapTitle <- renderText({
     req(!is.null(readyPlot()))
     readyPlot()$title
+  })
+
+  observeEvent(readyPlot(), {
+      on.exit({
+        shinyjs::hide("cancelPlot")
+        shinyjs::show("doPlot")
+        enableShinyInputs(input)
+      })
+
+      if(is.null(readyPlot()$obmap)) {
+        if(input$mainArea=="mapTab") {
+          updateTabsetPanel(session, "mainArea", "plotTab")
+        }
+        js$disableTab("mapTab")
+      } else {
+        js$enableTab("mapTab")
+      }
   })
 })
