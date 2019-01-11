@@ -679,7 +679,7 @@ shinyServer(function(input, output, session) {
   )
 
   # Perform plotting
-  renderPlots <- function(plotter, plotRequest, db, stations) {
+  preparePlots <- function(plotter, plotRequest, db, stations) {
     isWindspeed <- "varname" %in% names(plotRequest$criteria) &&
       plotRequest$criteria$varname %in% c("ff", "ff10m")
     query <- NULL
@@ -750,7 +750,7 @@ shinyServer(function(input, output, session) {
 
     rtn <- suppressWarnings(future({
       tryCatch(
-        renderPlots(plotter, plotRequest, db, stations),
+        preparePlots(plotter, plotRequest, db, stations),
         error=function(e) {flog.error(e); NULL}
       )
     }))
@@ -766,7 +766,7 @@ shinyServer(function(input, output, session) {
   })
   observeEvent(readyPlot(), {
       myPlot <- readyPlot()
-      if(is.null(myPlot)) flog.error("renderPlots: Could not produce plot")
+      if(is.null(myPlot)) flog.error("preparePlots: Could not produce plot")
       req(!is.null(myPlot))
 
       shinyjs::disable("cancelPlot")
