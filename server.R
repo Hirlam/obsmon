@@ -759,16 +759,13 @@ shinyServer(function(input, output, session) {
   })
 
   readyPlot <- reactive({
-    if(!suppressWarnings(resolved(futurePlot()))) invalidateLater(1000)
-    req(suppressWarnings(resolved(futurePlot())))
-    myPlot <- suppressWarnings(value(futurePlot()))
-    myPlot
+    if(suppressWarnings(resolved(futurePlot()))) {
+      suppressWarnings(value(futurePlot()))
+    } else {
+      invalidateLater(1000)
+    }
   })
   observeEvent(readyPlot(), {
-      myPlot <- readyPlot()
-      if(is.null(myPlot)) flog.error("preparePlots: Could not produce plot")
-      req(!is.null(myPlot))
-
       shinyjs::disable("cancelPlot")
       on.exit({
         shinyjs::hide("cancelPlot")
@@ -776,7 +773,7 @@ shinyServer(function(input, output, session) {
         enableShinyInputs(input)
       })
 
-      if(is.null(myPlot$obmap)) {
+      if(is.null(readyPlot()$obmap)) {
         if(input$mainArea=="mapTab") {
           updateTabsetPanel(session, "mainArea", "plotTab")
         }
@@ -784,9 +781,7 @@ shinyServer(function(input, output, session) {
       } else {
         js$enableTab("mapTab")
       }
-  },
-    ignoreNULL=FALSE
-  )
+  })
 
   output$dataTable <- renderDataTable({
     req(!is.null(readyPlot()))
