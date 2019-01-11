@@ -203,7 +203,10 @@ shinyUI(
                 ),
                 actionButton("doPlot", "Plot", width="100%",
                   icon("ok", lib="glyphicon")
-                )
+                ),
+                shinyjs::hidden(actionButton("cancelPlot", "Cancel plot", width="100%",
+                  icon("X", lib="glyphicon")
+                ))
             ),
             mainPanel(
                 width=9,

@@ -725,22 +725,16 @@ shinyServer(function(input, output, session) {
 
   currentPlotPid <- reactiveVal(-1)
   onclick("cancelPlot", {
-    print(paste("TEST", currentPlotPid()))
     tools::pskill(currentPlotPid())
+    shinyjs::hide("cancelPlot")
+    shinyjs::show("doPlot")
+    enableShinyInputs(input)
   })
-  TEST <- observeEvent(input$doPlot, {
+  futurePlot <- eventReactive(input$doPlot, {
     disableShinyInputs(input)
     shinyjs::hide("doPlot")
     shinyjs::show("cancelPlot")
     shinyjs::enable("cancelPlot")
-    on.exit({
-      shinyjs::hide("cancelPlot")
-      shinyjs::show("doPlot")
-      enableShinyInputs(input)
-    })
-    progress <- shiny::Progress$new()
-    on.exit(progress$close(), add=TRUE)
-    progress$set(message = "Making plot", value = 0)    
 
     plotter <- plotTypesFlat[[req(input$plottype)]]
     db <- req(activeDb())
@@ -765,33 +759,47 @@ shinyServer(function(input, output, session) {
       }
     )
 
-    futurePlot <- suppressWarnings(future({
+    rtn <- suppressWarnings(future({
       tryCatch(
         renderPlots(plotter, plotRequest, db, stations),
         error=function(e) {flog.error(e); NULL}
       )
     }))
-    currentPlotPid(futurePlot$job$pid)
-    while(suppressWarnings(!resolved(futurePlot))) {
-      print(sprintf("Producing plot in child process %d", currentPlotPid()))
-      Sys.sleep(1)
-    }
-    plot <- suppressWarnings(value(futurePlot))
-    if(is.null(plot)) flog.error("renderPlots: Could not produce plot")
-    req(!is.null(plot))
-
-    output$queryUsed <- plot$queryUsed
-    output$dataTable <- plot$dataTable
-    output$plot <- plot$plot
-    if(is.null(plot$map)) {
-      if(input$mainArea=="mapTab") {
-        updateTabsetPanel(session, "mainArea", "plotTab")
-      }
-      js$disableTab("mapTab")
-    } else {
-      output$map <- plot$map
-      output$mapTitle <- plot$mapTitle
-      js$enableTab("mapTab")
-    }
+    currentPlotPid(rtn$job$pid)
+    rtn
   })
+
+  observeEvent({
+      if(!suppressWarnings(resolved(futurePlot()))) invalidateLater(1000)
+    }, {
+      req(currentPlotPid()>0)
+      req(suppressWarnings(resolved(futurePlot())))
+      currentPlotPid(-1)
+      shinyjs::disable("cancelPlot")
+      on.exit({
+        shinyjs::hide("cancelPlot")
+        shinyjs::show("doPlot")
+        enableShinyInputs(input)
+      })
+
+      plot <- suppressWarnings(value(futurePlot()))
+      if(is.null(plot)) flog.error("renderPlots: Could not produce plot")
+      req(!is.null(plot))
+
+      output$queryUsed <- plot$queryUsed
+      output$dataTable <- plot$dataTable
+      output$plot <- plot$plot
+      if(is.null(plot$map)) {
+        if(input$mainArea=="mapTab") {
+          updateTabsetPanel(session, "mainArea", "plotTab")
+        }
+        js$disableTab("mapTab")
+      } else {
+        output$map <- plot$map
+        output$mapTitle <- plot$mapTitle
+        js$enableTab("mapTab")
+      }
+  },
+    ignoreNULL=FALSE
+  )
 })
