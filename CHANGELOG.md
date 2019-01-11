@@ -6,10 +6,13 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 ### Added
+- Icon added to "plot" action button
+- "Cancel plot" button that allows cancelling plot requests
+    - Useful if users change their minds and plotting is taking too long
+    - The button appears only after clicking "Plot"
 - Option "maxExtraParallelProcs" in config file
     - To control max number of parallel tasks
     - Should be set under "general"
-- Icon added to "plot" action button
 ### Changed
 - Allow selection of multiple stations
 - Changes in the GUI to hide/show only needed selection tools

@@ -681,11 +681,11 @@ shinyServer(function(input, output, session) {
   renderPlots <- function(plotter, plotRequest, db, stations) {
     isWindspeed <- "varname" %in% names(plotRequest$criteria) &&
       plotRequest$criteria$varname %in% c("ff", "ff10m")
+    query <- NULL
     if (isWindspeed) {
       plotData <- buildFfData(db, plotter, plotRequest)
     } else {
       query <- plotBuildQuery(plotter, plotRequest)
-      outputQueryUsed <- renderText(query)
       plotData <- performQuery(db, query, plotRequest$criteria$dtg)
       # Postprocessing plotData returned by performQuery.
       # This may be useful, e.g., if performing averages over a
@@ -705,22 +705,10 @@ shinyServer(function(input, output, session) {
       }
     }
 
-    outputDataTable <- renderDataTable(plotData,
-                                        options=list(pageLength=100))
     res <- plotGenerate(plotter, plotRequest, plotData)
-    outputPlot <- renderPlot(grid.arrange(res$obplot,
-                                           top=textGrob(res$title)),
-                              res=96, pointsize=18)
-    rtn <- list(
-      queryUsed=outputQueryUsed,
-      dataTable=outputDataTable,
-      plot=outputPlot
-    )
-    if(!is.null(res$obmap)) {
-      rtn$outputMap <- renderLeaflet(res$obmap)
-      rtn$outputMapTitle <- renderText(res$title)
-    }
-    return(rtn)
+    res[["queryUsed"]] <- query
+    res[["plotData"]] <- plotData
+    return(res)
   }
 
   currentPlotPid <- reactiveVal(-1)
@@ -786,20 +774,50 @@ shinyServer(function(input, output, session) {
       if(is.null(plot)) flog.error("renderPlots: Could not produce plot")
       req(!is.null(plot))
 
-      output$queryUsed <- plot$queryUsed
-      output$dataTable <- plot$dataTable
-      output$plot <- plot$plot
       if(is.null(plot$map)) {
         if(input$mainArea=="mapTab") {
           updateTabsetPanel(session, "mainArea", "plotTab")
         }
         js$disableTab("mapTab")
       } else {
-        output$map <- plot$map
-        output$mapTitle <- plot$mapTitle
         js$enableTab("mapTab")
       }
   },
     ignoreNULL=FALSE
   )
+
+  output$dataTable <- renderDataTable({
+    if(!suppressWarnings(resolved(futurePlot()))) invalidateLater(1000)
+    req(suppressWarnings(resolved(futurePlot())))
+    plot <- suppressWarnings(value(futurePlot()))
+    plot$plotData
+    },
+    options=list(pageLength=100)
+  )
+  output$queryUsed <- renderText({
+    if(!suppressWarnings(resolved(futurePlot()))) invalidateLater(1000)
+    req(suppressWarnings(resolved(futurePlot())))
+    plot <- suppressWarnings(value(futurePlot()))
+    plot$queryUsed
+  })
+  output$plot <- renderPlot({
+    if(!suppressWarnings(resolved(futurePlot()))) invalidateLater(1000)
+    req(suppressWarnings(resolved(futurePlot())))
+    plot <- suppressWarnings(value(futurePlot()))
+    grid.arrange(plot$obplot, top=textGrob(plot$title))
+  },
+    res=96, pointsize=18
+  )
+  output$map <- renderText({
+    if(!suppressWarnings(resolved(futurePlot()))) invalidateLater(1000)
+    req(suppressWarnings(resolved(futurePlot())))
+    plot <- suppressWarnings(value(futurePlot()))
+    plot$map
+  })
+  output$mapTitle <- renderText({
+    if(!suppressWarnings(resolved(futurePlot()))) invalidateLater(1000)
+    req(suppressWarnings(resolved(futurePlot())))
+    plot <- suppressWarnings(value(futurePlot()))
+    plot$mapTitle
+  })
 })
