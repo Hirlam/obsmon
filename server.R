@@ -678,7 +678,7 @@ shinyServer(function(input, output, session) {
   )
 
   # Perform plotting
-  renderPlots <- function(plotter, plotRequest, db, stations, tracker) {
+  renderPlots <- function(plotter, plotRequest, db, stations) {
     isWindspeed <- "varname" %in% names(plotRequest$criteria) &&
       plotRequest$criteria$varname %in% c("ff", "ff10m")
     if (isWindspeed) {
@@ -686,8 +686,7 @@ shinyServer(function(input, output, session) {
     } else {
       query <- plotBuildQuery(plotter, plotRequest)
       outputQueryUsed <- renderText(query)
-      plotData <- performQuery(db, query, plotRequest$criteria$dtg,
-                               progressTracker=tracker)
+      plotData <- performQuery(db, query, plotRequest$criteria$dtg)
       # Postprocessing plotData returned by performQuery.
       # This may be useful, e.g., if performing averages over a
       # picked date range.
@@ -708,7 +707,7 @@ shinyServer(function(input, output, session) {
 
     outputDataTable <- renderDataTable(plotData,
                                         options=list(pageLength=100))
-    res <- plotGenerate(plotter, plotRequest, plotData, tracker)
+    res <- plotGenerate(plotter, plotRequest, plotData)
     outputPlot <- renderPlot(grid.arrange(res$obplot,
                                            top=textGrob(res$title)),
                               res=96, pointsize=18)
@@ -723,7 +722,26 @@ shinyServer(function(input, output, session) {
     }
     return(rtn)
   }
-  observeEvent(input$doPlot, {
+
+  currentPlotPid <- reactiveVal(-1)
+  onclick("cancelPlot", {
+    print(paste("TEST", currentPlotPid()))
+    tools::pskill(currentPlotPid())
+  })
+  TEST <- observeEvent(input$doPlot, {
+    disableShinyInputs(input)
+    shinyjs::hide("doPlot")
+    shinyjs::show("cancelPlot")
+    shinyjs::enable("cancelPlot")
+    on.exit({
+      shinyjs::hide("cancelPlot")
+      shinyjs::show("doPlot")
+      enableShinyInputs(input)
+    })
+    progress <- shiny::Progress$new()
+    on.exit(progress$close(), add=TRUE)
+    progress$set(message = "Making plot", value = 0)    
+
     plotter <- plotTypesFlat[[req(input$plottype)]]
     db <- req(activeDb())
     stations <- stationsAlongWithLabels()
@@ -747,22 +765,18 @@ shinyServer(function(input, output, session) {
       }
     )
 
-    tracker <- createShinyProgressTracker()
-    tracker <- addTask(tracker, "Querying database")
     futurePlot <- suppressWarnings(future({
       tryCatch(
-        renderPlots(plotter, plotRequest, db, stations, tracker),
+        renderPlots(plotter, plotRequest, db, stations),
         error=function(e) {flog.error(e); NULL}
       )
     }))
+    currentPlotPid(futurePlot$job$pid)
     while(suppressWarnings(!resolved(futurePlot))) {
-      plotPid <- futurePlot$job$pid
-      print(sprintf("Producing plot in child process %d", plotPid))
+      print(sprintf("Producing plot in child process %d", currentPlotPid()))
       Sys.sleep(1)
-      #tools::pskill(futurePlot$job$pid)
     }
     plot <- suppressWarnings(value(futurePlot))
-    closeTracker(tracker)
     if(is.null(plot)) flog.error("renderPlots: Could not produce plot")
     req(!is.null(plot))
 
