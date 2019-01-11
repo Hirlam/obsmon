@@ -760,13 +760,13 @@ shinyServer(function(input, output, session) {
 
   readyPlot <- reactive({
     if(suppressWarnings(resolved(futurePlot()))) {
+      shinyjs::disable("cancelPlot")
       suppressWarnings(value(futurePlot()))
     } else {
       invalidateLater(1000)
     }
   })
   observeEvent(readyPlot(), {
-      shinyjs::disable("cancelPlot")
       on.exit({
         shinyjs::hide("cancelPlot")
         shinyjs::show("doPlot")
