@@ -758,12 +758,17 @@ shinyServer(function(input, output, session) {
     rtn
   })
 
-  observeEvent({
-      if(!suppressWarnings(resolved(futurePlot()))) invalidateLater(1000)
-    }, {
-      req(currentPlotPid()>0)
-      req(suppressWarnings(resolved(futurePlot())))
-      currentPlotPid(-1)
+  readyPlot <- reactive({
+    if(!suppressWarnings(resolved(futurePlot()))) invalidateLater(1000)
+    req(suppressWarnings(resolved(futurePlot())))
+    myPlot <- suppressWarnings(value(futurePlot()))
+    myPlot
+  })
+  observeEvent(readyPlot(), {
+      myPlot <- readyPlot()
+      if(is.null(myPlot)) flog.error("renderPlots: Could not produce plot")
+      req(!is.null(myPlot))
+
       shinyjs::disable("cancelPlot")
       on.exit({
         shinyjs::hide("cancelPlot")
@@ -771,11 +776,7 @@ shinyServer(function(input, output, session) {
         enableShinyInputs(input)
       })
 
-      plot <- suppressWarnings(value(futurePlot()))
-      if(is.null(plot)) flog.error("renderPlots: Could not produce plot")
-      req(!is.null(plot))
-
-      if(is.null(plot$obmap)) {
+      if(is.null(myPlot$obmap)) {
         if(input$mainArea=="mapTab") {
           updateTabsetPanel(session, "mainArea", "plotTab")
         }
@@ -788,37 +789,27 @@ shinyServer(function(input, output, session) {
   )
 
   output$dataTable <- renderDataTable({
-    if(!suppressWarnings(resolved(futurePlot()))) invalidateLater(1000)
-    req(suppressWarnings(resolved(futurePlot())))
-    plot <- suppressWarnings(value(futurePlot()))
-    plot$plotData
+    req(!is.null(readyPlot()))
+    readyPlot()$plotData
     },
     options=list(pageLength=100)
   )
   output$queryUsed <- renderText({
-    if(!suppressWarnings(resolved(futurePlot()))) invalidateLater(1000)
-    req(suppressWarnings(resolved(futurePlot())))
-    plot <- suppressWarnings(value(futurePlot()))
-    plot$queryUsed
+    req(!is.null(readyPlot()))
+    readyPlot()$queryUsed
   })
   output$plot <- renderPlot({
-    if(!suppressWarnings(resolved(futurePlot()))) invalidateLater(1000)
-    req(suppressWarnings(resolved(futurePlot())))
-    plot <- suppressWarnings(value(futurePlot()))
-    grid.arrange(plot$obplot, top=textGrob(plot$title))
+    req(!is.null(readyPlot()))
+    grid.arrange(readyPlot()$obplot, top=textGrob(readyPlot()$title))
   },
     res=96, pointsize=18
   )
   output$map <- renderLeaflet({
-    if(!suppressWarnings(resolved(futurePlot()))) invalidateLater(1000)
-    req(suppressWarnings(resolved(futurePlot())))
-    plot <- suppressWarnings(value(futurePlot()))
-    plot$obmap
+    req(!is.null(readyPlot()))
+    readyPlot()$obmap
   })
   output$mapTitle <- renderText({
-    if(!suppressWarnings(resolved(futurePlot()))) invalidateLater(1000)
-    req(suppressWarnings(resolved(futurePlot())))
-    plot <- suppressWarnings(value(futurePlot()))
-    plot$title
+    req(!is.null(readyPlot()))
+    readyPlot()$title
   })
 })
