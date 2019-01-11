@@ -468,8 +468,9 @@ shinyServer(function(input, output, session) {
       if(obname=="synop") {
         stationLabels <- c()
         for(statID in stations) {
-          label <- synopStations[statID]
-          if(is.null(label) || is.na(label)) label <- statID
+          statName <- synopStations[statID]
+          label <- statID
+          if(is.character(statName)) label<-sprintf("%s (%s)",statID,statName)
           stationLabels <- c(stationLabels, label)
         }
         names(stations) <- stationLabels
