@@ -775,7 +775,7 @@ shinyServer(function(input, output, session) {
       if(is.null(plot)) flog.error("renderPlots: Could not produce plot")
       req(!is.null(plot))
 
-      if(is.null(plot$map)) {
+      if(is.null(plot$obmap)) {
         if(input$mainArea=="mapTab") {
           updateTabsetPanel(session, "mainArea", "plotTab")
         }
@@ -809,16 +809,16 @@ shinyServer(function(input, output, session) {
   },
     res=96, pointsize=18
   )
-  output$map <- renderText({
+  output$map <- renderLeaflet({
     if(!suppressWarnings(resolved(futurePlot()))) invalidateLater(1000)
     req(suppressWarnings(resolved(futurePlot())))
     plot <- suppressWarnings(value(futurePlot()))
-    plot$map
+    plot$obmap
   })
   output$mapTitle <- renderText({
     if(!suppressWarnings(resolved(futurePlot()))) invalidateLater(1000)
     req(suppressWarnings(resolved(futurePlot())))
     plot <- suppressWarnings(value(futurePlot()))
-    plot$mapTitle
+    plot$title
   })
 })
