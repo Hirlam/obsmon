@@ -767,30 +767,16 @@ shinyServer(function(input, output, session) {
     }
   })
 
-  output$dataTable <- renderDataTable({
-    req(!is.null(readyPlot()))
-    readyPlot()$plotData
-    },
-    options=list(pageLength=100)
-  )
-  output$queryUsed <- renderText({
-    req(!is.null(readyPlot()))
-    readyPlot()$queryUsed
-  })
-  output$plot <- renderPlot({
-    req(!is.null(readyPlot()))
-    grid.arrange(readyPlot()$obplot, top=textGrob(readyPlot()$title))
-  },
+  output$plot <- renderPlot(
+    grid.arrange(req(readyPlot()$obplot),top=textGrob(req(readyPlot()$title))),
     res=96, pointsize=18
   )
-  output$map <- renderLeaflet({
-    req(!is.null(readyPlot()))
-    readyPlot()$obmap
-  })
-  output$mapTitle <- renderText({
-    req(!is.null(readyPlot()))
-    readyPlot()$title
-  })
+  output$dataTable <- renderDataTable(
+    req(readyPlot()$plotData), options=list(pageLength=100)
+  )
+  output$queryUsed <- renderText(req(readyPlot()$queryUsed))
+  output$map <- renderLeaflet(req(readyPlot()$obmap))
+  output$mapTitle <- renderText(req(readyPlot()$title))
 
   observeEvent(readyPlot(), {
       on.exit({
