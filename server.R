@@ -216,7 +216,7 @@ shinyServer(function(input, output, session) {
       choices[[dbType2DbDescription[[dbType]]]] <- dbType
     }
 
-    updateSelectizeInput(session, "odbBase", choices=choices)
+    updateSelectInputWrapper(session, "odbBase", choices=choices)
     if(length(choices)==0) disableShinyInputs(input, except=c("experiment"))
     else enableShinyInputs(input)
   })
