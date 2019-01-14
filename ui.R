@@ -218,7 +218,7 @@ shinyUI(
                         fluidRow(
                             column(12, align="center",
                                    tags$head(tags$style("#plot{height:80vh !important;}")),
-                                   plotOutput(outputId="plot", height="auto", width="auto"),
+                                   plotOutput(outputId="plot"),
                                    tags$style(type="text/css", "body { overflow-y: scroll; }")
                                    )
                         )
