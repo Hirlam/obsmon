@@ -748,12 +748,12 @@ shinyServer(function(input, output, session) {
       }
     )
 
-    rtn <- suppressWarnings(future({
+    rtn <- future({
       tryCatch(
         preparePlots(plotter, plotRequest, db, stations),
         error=function(e) {flog.error(e); NULL}
       )
-    }))
+    })
     currentPlotPid(rtn$job$pid)
     rtn
   })
@@ -761,11 +761,11 @@ shinyServer(function(input, output, session) {
   readyPlot <- reactive({
     myFutPlot <- futurePlot()
     req(!is.null(myFutPlot), cancelOutput=TRUE)
-    isReady <- suppressWarnings(resolved(myFutPlot))
+    isReady <- resolved(myFutPlot)
     if(!isReady) invalidateLater(1000)
     req(isReady, cancelOutput=TRUE)
     shinyjs::disable("cancelPlot")
-    myPlot <- suppressWarnings(value(myFutPlot))
+    myPlot <- value(myFutPlot)
     myPlot
   })
 
