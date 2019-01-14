@@ -727,7 +727,11 @@ shinyServer(function(input, output, session) {
 
     plotter <- plotTypesFlat[[req(input$plottype)]]
     db <- req(activeDb())
-    stations <- stationsAlongWithLabels()
+    if(input$obtype=="satem") {
+      stations <- NULL
+    } else {
+      stations <- stationsAlongWithLabels()
+    }
     plotRequest <- list()
     plotRequest$expName <- req(input$experiment)
     plotRequest$dbType <- db$dbType
@@ -767,7 +771,7 @@ shinyServer(function(input, output, session) {
     shinyjs::disable("cancelPlot")
     myPlot <- tryCatch(
       value(myFutPlot),
-      error=function(e) NULL
+      error=function(e) {flog.debug(e); NULL}
     )
     myPlot
   })
