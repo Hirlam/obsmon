@@ -26,6 +26,9 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
       data available
     - Action buttons "Reload cache info" and "Update cache info" have been added in case
       automatic refreshing of data fails for whatever reason.
+### Removed
+- Progress bars from standard output
+
 
 ## [2.3.0] 2018-10-26
 ### Added

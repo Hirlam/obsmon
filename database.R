@@ -66,7 +66,7 @@ performQuery <- function(
     return(NULL)
   }
   singleQuery <- makeSingleQuery(query)
-  res <- pblapply(dbpaths, singleQuery)
+  res <- lapply(dbpaths, singleQuery)
   res <- do.call(rbind, res)
   if(convertDTG & "DTG" %in% names(res)) {
     res$DTG <- as.POSIXct(as.character(res$DTG), format="%Y%m%d%H")

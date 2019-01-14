@@ -35,7 +35,6 @@ tryCatch(
     suppressPackageStartupMessages(library(gridExtra))
     suppressPackageStartupMessages(library(leaflet))
     suppressPackageStartupMessages(library(methods))
-    suppressPackageStartupMessages(library(pbapply))
     suppressPackageStartupMessages(library(png))
     suppressPackageStartupMessages(library(pryr))
     suppressPackageStartupMessages(library(RcppTOML))
@@ -119,7 +118,6 @@ runAppHandlingBusyPort <- function(
 
 setPackageOptions <- function(config) {
   options(shiny.usecairo=TRUE)
-  pboptions(type="timer")
   pdf(NULL)
   flog.appender(appender.file(stderr()), 'ROOT')
   flog.threshold(parse(text=config$general$logLevel)[[1]])
