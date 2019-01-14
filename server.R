@@ -759,12 +759,15 @@ shinyServer(function(input, output, session) {
   })
 
   readyPlot <- reactive({
-    if(suppressWarnings(resolved(futurePlot()))) {
-      shinyjs::disable("cancelPlot")
-      suppressWarnings(value(futurePlot()))
-    } else {
-      invalidateLater(1000)
-    }
+    myFutPlot <- futurePlot()
+    req(!is.null(myFutPlot))
+    isReady <- suppressWarnings(resolved(myFutPlot))
+    if(!isReady) invalidateLater(1000)
+    req(isReady)
+    shinyjs::disable("cancelPlot")
+    myPlot <- suppressWarnings(value(myFutPlot))
+    req(!is.null(myPlot))
+    myPlot
   })
 
   output$plot <- renderPlot(
