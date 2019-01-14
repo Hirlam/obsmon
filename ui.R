@@ -205,7 +205,8 @@ shinyUI(
                   icon("ok", lib="glyphicon")
                 ),
                 shinyjs::hidden(actionButton("cancelPlot", "Cancel plot", width="100%",
-                  icon("X", lib="glyphicon")
+                  icon("remove", lib="glyphicon"),
+                  style="color: #fff; background-color: #FFA500; border-color: #2e6da4"
                 ))
             ),
             mainPanel(
