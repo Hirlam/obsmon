@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
     - To control max number of parallel tasks
     - Should be set under "general"
 ### Changed
+- Show a spinner instead of a progress bar when an output is being prepared
 - Allow selection of multiple stations
 - Changes in the GUI to hide/show only needed selection tools
 - Obsmon can now work even if observations are not cached

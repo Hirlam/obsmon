@@ -218,7 +218,7 @@ shinyUI(
                         fluidRow(
                             column(12, align="center",
                                    tags$head(tags$style("#plot{height:80vh !important;}")),
-                                   plotOutput(outputId="plot"),
+                                   plotOutput(outputId="plot") %>% withSpinner(color="#0dc5c1"),
                                    tags$style(type="text/css", "body { overflow-y: scroll; }")
                                    )
                         )
@@ -235,7 +235,8 @@ shinyUI(
                         fluidRow(
                             column(12, align="center",
                                    tags$head(tags$style("#map{height:80vh !important;}")),
-                                   leafletOutput(outputId="map", height="auto", width="auto"),
+                                   leafletOutput(outputId="map", height="auto", width="auto")
+                                     %>% withSpinner(color="#0dc5c1"),
                                    tags$style(type="text/css", "body { overflow-y: scroll; }")
                                    )
                         )
@@ -247,7 +248,7 @@ shinyUI(
                                   textOutput("queryUsed")
                                   ),
                         h5("Data:"),
-                        dataTableOutput("dataTable")
+                        dataTableOutput("dataTable") %>% withSpinner(color="#0dc5c1")
                     )
                 )
             )

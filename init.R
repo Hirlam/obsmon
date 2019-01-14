@@ -42,6 +42,7 @@ tryCatch(
     suppressPackageStartupMessages(library(reshape2))
     suppressPackageStartupMessages(library(shiny))
     suppressPackageStartupMessages(library(shinyjs))
+    suppressPackageStartupMessages(library(shinycssloaders))
     suppressPackageStartupMessages(library(stringi))
     suppressPackageStartupMessages(library(bsplus))
     suppressPackageStartupMessages(library(V8))
