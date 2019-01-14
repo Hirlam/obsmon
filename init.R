@@ -147,7 +147,6 @@ sourceObsmonFiles <- function() {
   source("plots_timeseries.R")
   source("plots_maps.R")
   source("plots_diagnostic.R")
-  source("progress.R")
   source("windspeed.R")
 }
 

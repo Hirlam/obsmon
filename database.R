@@ -39,8 +39,9 @@ makeSingleQuery <- function(query) {
   }
 }
 
-performQuery <- function(db, query, dtgs=NULL, expandRange=TRUE,
-                         convertDTG=TRUE, progressTracker=NULL) {
+performQuery <- function(
+  db, query, dtgs=NULL, expandRange=TRUE, convertDTG=TRUE)
+{
   if (is.null(dtgs)) {
     dbpaths <- db$paths
   } else {
@@ -65,19 +66,7 @@ performQuery <- function(db, query, dtgs=NULL, expandRange=TRUE,
     return(NULL)
   }
   singleQuery <- makeSingleQuery(query)
-  if (is.null(progressTracker)) {
-    res <- pblapply(dbpaths, singleQuery)
-  } else {
-    nout <- 100
-    split <- splitpb(length(dbpaths), 1L, nout)
-    b <- length(split)
-    res <- vector("list", b)
-    for (i in seq_len(b)) {
-      res[i] <- list(lapply(dbpaths[split[[i]]], singleQuery))
-      updateTask(progressTracker, "Querying database", i/b)
-    }
-    res <- do.call(c, res, quote=TRUE)
-  }
+  res <- pblapply(dbpaths, singleQuery)
   res <- do.call(rbind, res)
   if(convertDTG & "DTG" %in% names(res)) {
     res$DTG <- as.POSIXct(as.character(res$DTG), format="%Y%m%d%H")

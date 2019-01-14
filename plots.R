@@ -39,8 +39,7 @@ applicablePlots <- function(criteria) {
 
 # Define generics
 plotBuildQuery <- function(p, plotRequest) UseMethod ("plotBuildQuery")
-plotGenerate <- function(p, plotRequest,
-                         plotData, progressTracker) UseMethod("plotGenerate")
+plotGenerate <- function(p, plotRequest, plotData) UseMethod("plotGenerate")
 plotIsApplicable <- function(p, criteria) UseMethod("plotIsApplicable")
 plotTitle <- function(p, plotRequest, plotData) UseMethod("plotTitle")
 doMap <- function(p, plotRequest, plotData) UseMethod("doMap")
@@ -51,7 +50,7 @@ plotBuildQuery.default <- function(p, plotRequest) {
   sprintf(p$queryStub, buildWhereClause(plotRequest$criteria))
 }
 
-plotGenerate.default <- function(p, plotRequest, plotData, progressTracker) {
+plotGenerate.default <- function(p, plotRequest, plotData) {
   result <- list()
   if (is.null(plotData) || nrow(plotData)==0) {
     image <- readPNG("./nodata.png")
