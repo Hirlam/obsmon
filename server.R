@@ -765,7 +765,10 @@ shinyServer(function(input, output, session) {
     if(!isReady) invalidateLater(1000)
     req(isReady, cancelOutput=TRUE)
     shinyjs::disable("cancelPlot")
-    myPlot <- value(myFutPlot)
+    myPlot <- tryCatch(
+      value(myFutPlot),
+      error=function(e) NULL
+    )
     myPlot
   })
 
