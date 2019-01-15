@@ -1,5 +1,7 @@
 if(!exists("initFileSourced")) source("init.R")
 
+# To keep track of all menu labels currently in use
+allMenuLabels <- list()
 # To keep track of all choices currently made in the menus
 allMenuChoices <- list()
 
@@ -54,25 +56,29 @@ updateSelectInputWrapper <- function(
   session, inputId, label=NULL, choices=NULL, selected=NULL,
   choicesFoundIncache=TRUE, ...
 ){
-  currentLabel <- allMenuLabels[[inputId]]
-  if(is.null(currentLabel)) currentLabel <- ""
-  if(is.null(label)) label <- currentLabel
 
+  # First, update label
   notCachedLabelMsg <- "(cache info not available)"
-  label <- gsub(notCachedLabelMsg, "", label, fixed=TRUE)
-  if(!choicesFoundIncache) label <- paste(label, notCachedLabelMsg)
-  if(label==currentLabel) {
-    # Preventing update in this case to, e.g., avoid destroying HTML tag info
-    # This is useful for levels and channels (see their definitions in ui.R)
-    label <- NULL
-  } else {
+  currentLabel <- allMenuLabels[[inputId]]
+  if(is.null(currentLabel)) currentLabel <- getDefLabel(inputId)
+
+  currLabelFlaggedAsNotCached <- grepl(notCachedLabelMsg,currentLabel)==TRUE
+  needsLabelChange <- {
+    (!is.null(label) && label!=currentLabel) ||
+    (choicesFoundIncache && currLabelFlaggedAsNotCached) ||
+    (!choicesFoundIncache && !currLabelFlaggedAsNotCached)
+  }
+
+  if(needsLabelChange) {
+    if(is.null(label)) label <- currentLabel
+    label <- gsub(notCachedLabelMsg, "", label, fixed=TRUE)
+    if(!choicesFoundIncache) label <- paste(label, notCachedLabelMsg)
     updateSelectInput(session, inputId, label=label)
     allMenuLabels[[inputId]] <<- label
   }
 
+  # Now, update items and choices
   currentChoices <- allMenuChoices[[inputId]]
-  if(is.null(choices)) return(NULL)
-
   validUpdate <- !is.null(choices) && (is.null(currentChoices) ||
     length(unlist(currentChoices)) != length(unlist(choices)) ||
     !all(sort(unlist(currentChoices))==sort(unlist(choices)))
@@ -81,7 +87,7 @@ updateSelectInputWrapper <- function(
 
   selection <- getSelection(session, inputId, choices)
   updateSelectInput(
-    session, inputId, choices=choices, selected=selection, label=label, ...
+    session, inputId, choices=choices, selected=selection, label=NULL, ...
   )
   allMenuChoices[[inputId]] <<- choices
 }
@@ -170,7 +176,8 @@ getFilePathsToCache <- function(db, input) {
 }
 
 shinyServer(function(input, output, session) {
-  # Make sure allMenuChoices is empty when the server starts
+  # Make sure all menu choices and labels are reset when server starts
+  allMenuLabels <- list()
   allMenuChoices <<- list()
   # Start GUI with all inputs disabled.
   # They will be enabled once experiments are loaded
