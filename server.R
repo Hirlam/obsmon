@@ -724,7 +724,10 @@ shinyServer(function(input, output, session) {
   }
 
   currentPlotPid <- reactiveVal(-1)
+  plotStartedNotifId <- reactiveVal(-1)
   onclick("cancelPlot", {
+    removeNotification(plotStartedNotifId())
+    showNotification("Cancelling plot", type="warning", duration=1)
     tools::pskill(currentPlotPid())
     shinyjs::hide("cancelPlot")
     shinyjs::show("doPlot")
@@ -769,7 +772,10 @@ shinyServer(function(input, output, session) {
         error=function(e) {flog.error(e); NULL}
       )
     })
-    currentPlotPid(rtn$job$pid)
+    if(!is.null(rtn)) {
+      currentPlotPid(rtn$job$pid)
+      plotStartedNotifId(showNotification("Plot initiated", type="message"))
+    }
     rtn
   })
 
@@ -787,6 +793,20 @@ shinyServer(function(input, output, session) {
     myPlot
   })
 
+  # Notify the if plot went successfully or not
+  observeEvent({readyPlot()}, {
+    plotData <- readyPlot()$plotData
+    if(is.null(plotData) || nrow(plotData)==0) {
+      if(is.null(plotData)) msg<-"A problem occurred. Please check the logs."
+      else msg <- "Query returned no data."
+      signalError(title="Could not produce plot", message=msg)
+    } else {
+      removeNotification(plotStartedNotifId())
+      showNotification("Redering plot", duration=1, type="message")
+    }
+  })
+
+  # Finally, producing the output
   output$plot <- renderPlot(
     grid.arrange(req(readyPlot()$obplot),top=textGrob(req(readyPlot()$title))),
     res=96, pointsize=18
