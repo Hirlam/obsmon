@@ -500,8 +500,7 @@ shinyServer(function(input, output, session) {
   })
 
   # Update level choice for given variable
-  avLevels <- list(obsmon=NULL, usage=NULL, all=NULL)
-  observeEvent({
+  availableLevels <- eventReactive({
     reloadInfoFromCache()
     input$obtype
     input$obname
@@ -514,28 +513,31 @@ shinyServer(function(input, output, session) {
     var <- req(input$variable)
     datesCycles <- getCurrentDatesAndCycles(input)
 
-    avLevels <<- list(obsmon=NULL, usage=NULL, all=NULL)
     if(selectedDtgsAreCached()) {
-      avLevels <<- getAvailableLevels(db, datesCycles$dates, datesCycles$cycles, obname, var)
+      getAvailableLevels(db,datesCycles$dates,datesCycles$cycles,obname,var)
+    } else {
+      list(obsmon=NULL, usage=NULL, all=NULL)
     }
-    if(is.null(avLevels$all)) {
+  })
+  observeEvent({availableLevels()}, {
+    if(is.null(availableLevels()$all)) {
       updateSelectInputWrapper(session,"levels",choices=list(),selected=list())
     } else {
-      updateSelectInputWrapper(session, "levels", choices=avLevels$all)
+      updateSelectInputWrapper(session,"levels",choices=availableLevels()$all)
     }
   })
 
   observeEvent(input$levelsSelectStandard, {
     updateSelectInput(session, "levels",
-      choices=avLevels$all, selected=avLevels$obsmon)
+      choices=availableLevels()$all, selected=availableLevels()$obsmon)
   })
-
   observeEvent(input$levelsSelectAll, {
-    updateSelectInput(session, "levels", choices=avLevels$all, selected=avLevels$all)
+    updateSelectInput(session, "levels",
+      choices=availableLevels()$all, selected=availableLevels()$all)
   })
-
   observeEvent(input$levelsSelectNone, {
-    updateSelectInput(session, "levels", choices=avLevels$all, selected=c())
+    updateSelectInput(session, "levels",
+      choices=availableLevels()$all, selected=c())
   })
 
   # Update sensornames
