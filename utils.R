@@ -56,7 +56,7 @@ expandDtgRange <- function(dateRange) {
 formatDtg <- function(dtg) {
   n = length(dtg)
   if (n==1) {
-    strftime(dtg2POSIXct(dtg), format="%Y-%m-%d %HZ")
+    strftime(dtg2POSIXct(dtg), format="%Y-%m-%d %H %Z")
   } else if (n==3) {
     if (dtg[[1]] == dtg[[2]]) {
       sprintf("[%s, (%s)]", dtg[[1]], paste(dtg[[3]], collapse=", "))
