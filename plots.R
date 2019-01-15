@@ -51,13 +51,8 @@ plotBuildQuery.default <- function(p, plotRequest) {
 }
 
 plotGenerate.default <- function(p, plotRequest, plotData) {
-  result <- list()
-  if (is.null(plotData) || nrow(plotData)==0) {
-    image <- readPNG("./nodata.png")
-    result$obplot <- rasterGrob(image)
-    result$obmap <- NULL
-    result$title <- NULL
-  } else {
+  result <- list(obplot=NULL, obmap=NULL, title=NULL)
+  if (!(is.null(plotData) || nrow(plotData)==0)) {
     if (plotRequest$criteria$obnumber == 7
         && "level" %in% colnames(plotData)) {
       plotData <- rename(plotData, channel=level)
