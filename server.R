@@ -788,7 +788,7 @@ shinyServer(function(input, output, session) {
     shinyjs::disable("cancelPlot")
     myPlot <- tryCatch(
       value(myFutPlot),
-      error=function(e) {flog.debug(e); NULL}
+      error=function(e) {flog.error(e); NULL}
     )
     myPlot
   })
