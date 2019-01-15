@@ -351,7 +351,7 @@ shinyServer(function(input, output, session) {
     character(0)
   },
     ignoreNULL=TRUE
-  ) %>% throttle(5000)
+  ) %>% throttle(1000)
 
   # Keep track of whether selected DTGs are cached or not
   selectedDtgsAreCached <- eventReactive({
