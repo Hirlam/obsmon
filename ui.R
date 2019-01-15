@@ -74,11 +74,11 @@ shinyUI(
                 selectizeInput("experiment",
                             multiple=FALSE,
                             label=allMenuLabels[["experiment"]],
-                            options=allMenuChoices[["experiment"]],
+                            options=list(placeholder='Loading experiments...'),
                             choices=c()),
                 selectizeInput("odbBase",
                             label=allMenuLabels[["odbBase"]],
-                            options=allMenuChoices[["odbBase"]],
+                            options=list(placeholder='Awaiting experiment initialisation...'),
                             multiple=FALSE,
                             choices=c()),
                 conditionalPanel(

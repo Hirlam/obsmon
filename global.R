@@ -12,8 +12,3 @@ allMenuLabels <- list(
   plottype="Type of Plot",
   station="Station"
 )
-
-allMenuChoices <- list(
-  experiment=list(placeholder='Loading experiments...'),
-  odbBase=list(placeholder='Awaiting experiment initialisation...')
-)

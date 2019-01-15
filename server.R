@@ -1,5 +1,8 @@
 if(!exists("initFileSourced")) source("init.R")
 
+# To keep track of all choices currently made in the menus
+allMenuChoices <- list()
+
 clamp <- function(value, min, max, default=max) {
   if (is.null(value)) {
     default
@@ -167,6 +170,8 @@ getFilePathsToCache <- function(db, input) {
 }
 
 shinyServer(function(input, output, session) {
+  # Make sure allMenuChoices is empty when the server starts
+  allMenuChoices <<- list()
   # Start GUI with all inputs disabled.
   # They will be enabled once experiments are loaded
   isolate(disableShinyInputs(input, except="experiment"))
