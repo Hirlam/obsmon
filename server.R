@@ -527,6 +527,7 @@ shinyServer(function(input, output, session) {
     if(is.null(availableLevels()$all)) {
       updateSelectInputWrapper(session,"levels",
         choices=c("Any (cache info not available)"=""), selected=character(0))
+      delay(5000, triggerReadCache())
     } else {
       updateSelectInputWrapper(session,"levels",choices=availableLevels()$all)
     }
