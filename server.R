@@ -521,7 +521,8 @@ shinyServer(function(input, output, session) {
   })
   observeEvent({availableLevels()}, {
     if(is.null(availableLevels()$all)) {
-      updateSelectInputWrapper(session,"levels",choices=list(),selected=list())
+      updateSelectInputWrapper(session,"levels",
+        choices=c("Any (cache info not available)"=""), selected=character(0))
     } else {
       updateSelectInputWrapper(session,"levels",choices=availableLevels()$all)
     }
@@ -611,7 +612,7 @@ shinyServer(function(input, output, session) {
         db,datesCycles$dates,datesCycles$cycles,satname=sat,sensorname=sens
       )
     }
-    if(is.null(newChannels)) newChannels <- list()
+    if(is.null(newChannels))newChannels<-c("Any (cache info not available)"="")
     newChannels
   })
   observeEvent({channels()}, {
@@ -625,7 +626,7 @@ shinyServer(function(input, output, session) {
   })
   observeEvent(input$channelsSelectNone, {
     updateSelectInput(
-      session, "channels", choices=channels(), selected=list()
+      session, "channels", choices=channels(), selected=character(0)
     )
   })
 
