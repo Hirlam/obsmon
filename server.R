@@ -466,20 +466,22 @@ shinyServer(function(input, output, session) {
     }, {
     req(input$obtype!="satem")
 
+    if(!allowChoosingStation()) return(c("Any"=""))
+    if(!selectedDtgsAreCached()) {
+      delay(5000, triggerReadCache())
+      return(c("Any (cache info not available)"=""))
+    }
+
     db <- req(activeDb())
     obname <- req(input$obname)
     variable <- req(input$variable)
     dtgs <- req(selectedDtgs())
     datesCycles <- getCurrentDatesAndCycles(isolate(input))
 
-    stations <- c()
-    if(isolate(allowChoosingStation())==TRUE) {
-      stations <- getStationsFromCache(
-        db, datesCycles$dates, datesCycles$cycles,
-        obname, variable
-      )
-    }
-
+    stations <- getStationsFromCache(
+      db, datesCycles$dates, datesCycles$cycles,
+      obname, variable
+    )
     if(length(stations)>0) {
       if(obname=="synop") {
         stationLabels <- c()
@@ -494,21 +496,11 @@ shinyServer(function(input, output, session) {
         names(stations) <- stations
       }
     }
-    stations <- c("Any"="", stations)
-    stations
+    return(c("Any"="", stations))
   })
-  observeEvent({
-      stationsAlongWithLabels()
-    }, {
-      stations <- stationsAlongWithLabels()
-      isCached <- selectedDtgsAreCached() && length(stations)>1
-      if(!isCached && allowChoosingStation()==TRUE) {
-        stations <- c("Any"="")
-        delay(5000, triggerReadCache())
-      }
-      updateSelectInputWrapper(
-        session, "station", choices=stations, choicesFoundIncache=isCached
-      )
+  observeEvent({stationsAlongWithLabels()}, {
+    stations <- stationsAlongWithLabels()
+    updateSelectInputWrapper(session, "station", choices=stations)
   })
 
   # Update level choice for given variable
