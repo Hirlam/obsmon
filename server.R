@@ -658,14 +658,7 @@ shinyServer(function(input, output, session) {
     res
   }
 
-  # Update plottype choices with available plottypes according to criteria
-  updatePlotTypes <- function() {
-    criteria <- buildCriteria()
-    choices <- applicablePlots(criteria)
-    updateSelectInputWrapper(session, "plottype", choices=choices)
-  }
-
-  # Trigger plottype update on criteria change
+  # Update plottype choices according to criteria
   observeEvent({
     reloadInfoFromCache()
     input$obtype
@@ -677,7 +670,8 @@ shinyServer(function(input, output, session) {
     input$levels
     input$station
   }, {
-    updatePlotTypes()
+    choices <- applicablePlots(req(buildCriteria()))
+    updateSelectInputWrapper(session, "plottype", choices=choices)
   },
     ignoreNULL=FALSE
   )
