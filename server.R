@@ -639,21 +639,22 @@ shinyServer(function(input, output, session) {
     res$info <- list()
     obname <- req(input$obname)
     res$obnumber <- getAttrFromMetadata('obnumber', obname=obname)
-    res$levels <- list()
     if (obname == 'satem') {
       sensor <- req(input$sensor)
       res$obname <- sensor
       res$satname <- req(input$satellite)
-      if (!is.null(input$channels)) res$levels <- input$channels
+      levels <- input$channels
     } else {
       res$obname <- obname
       res$varname <- req(input$variable)
-      if (!is.null(input$levels)) res$levels <- input$levels
+      levels <- input$levels
 
       station <- input$station
       if("" %in% station) station <- ""
       res$station <- station
     }
+    res$levels <- list()
+    if(length(levels)>0 && levels!="") res$levels <- levels
 
     res
   }
