@@ -175,7 +175,7 @@ shinyServer(function(input, output, session) {
   exptNames <- c("")
   experiments <- reactive ({
     # Keep checking if experiments finished initialisation
-    invalidateLater(5000, session)
+    if(!all(resolved(experimentsAsPromises))) invalidateLater(5000, session)
     flagNotReadyExpts(experimentsAsPromises)
   })
   observe({
