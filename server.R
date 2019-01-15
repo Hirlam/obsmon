@@ -58,7 +58,11 @@ updateSelectInputWrapper <- function(
   notCachedLabelMsg <- "(cache info not available)"
   label <- gsub(notCachedLabelMsg, "", label, fixed=TRUE)
   if(!choicesFoundIncache) label <- paste(label, notCachedLabelMsg)
-  if(label!=currentLabel) {
+  if(label==currentLabel) {
+    # Preventing update in this case to, e.g., avoid destroying HTML tag info
+    # This is useful for levels and channels (see their definitions in ui.R)
+    label <- NULL
+  } else {
     updateSelectInput(session, inputId, label=label)
     allMenuLabels[[inputId]] <<- label
   }
