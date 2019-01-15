@@ -591,8 +591,7 @@ shinyServer(function(input, output, session) {
   })
 
   # Update channel choice for given satellite
-  channels <- NULL
-  observeEvent({
+  channels <- eventReactive({
     reloadInfoFromCache()
     input$obtype
     input$obname
@@ -606,29 +605,27 @@ shinyServer(function(input, output, session) {
     sens <- req(input$sensor)
     datesCycles <- getCurrentDatesAndCycles(input)
 
-    channels <<- NULL
+    newChannels <- NULL
     if(selectedDtgsAreCached()) {
-      channels <<- getAvailableChannels(
-        db, datesCycles$dates, datesCycles$cycles, satname=sat, sensorname=sens
+      newChannels <- getAvailableChannels(
+        db,datesCycles$dates,datesCycles$cycles,satname=sat,sensorname=sens
       )
     }
-
-    if(is.null(channels)) {
-      updateSelectInputWrapper(session,"channels",choices=list(),selected=list())
-    } else {
-      updateSelectInputWrapper(session, "channels", choices=channels)
-    }
+    if(is.null(newChannels)) newChannels <- list()
+    newChannels
+  })
+  observeEvent({channels()}, {
+    updateSelectInputWrapper(session, "channels", choices=channels())
   })
 
   observeEvent(input$channelsSelectAll, {
     updateSelectInput(
-      session, "channels", choices=channels, selected=channels
+      session, "channels", choices=channels(), selected=channels()
     )
   })
-
   observeEvent(input$channelsSelectNone, {
     updateSelectInput(
-      session, "channels", choices=channels, selected=list()
+      session, "channels", choices=channels(), selected=list()
     )
   })
 
