@@ -795,13 +795,13 @@ shinyServer(function(input, output, session) {
 
   # Notify the if plot went successfully or not
   observeEvent({readyPlot()}, {
+    removeNotification(plotStartedNotifId())
     plotData <- readyPlot()$plotData
     if(is.null(plotData) || nrow(plotData)==0) {
       if(is.null(plotData)) msg<-"A problem occurred. Please check the logs."
       else msg <- "Query returned no data."
       signalError(title="Could not produce plot", message=msg)
     } else {
-      removeNotification(plotStartedNotifId())
       showNotification("Redering plot", duration=1, type="message")
     }
   })
