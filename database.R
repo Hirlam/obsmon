@@ -145,7 +145,7 @@ putObservationsInCache <- function(sourceDbPath, cacheDir, replaceExisting=FALSE
   con <- dbConnectWrapper(sourceDbPath, read_only=TRUE)
   if(is.null(con)) {
     flog.error(sprintf("Could not connect to file %s. Not caching.", sourceDbPath))
-    return(NULL)
+    return(-1)
   }
   allDbConsCreatedHere <- c(allDbConsCreatedHere, con)
   dir.create(cacheDir, recursive=TRUE, showWarnings=FALSE)
@@ -359,6 +359,7 @@ putObservationsInCache <- function(sourceDbPath, cacheDir, replaceExisting=FALSE
       }
     }
   }
+  return(0)
 }
 
 assyncPutObsInCache <- function(sourceDbPaths, cacheDir, replaceExisting=FALSE) {
