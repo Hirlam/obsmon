@@ -314,15 +314,28 @@ shinyServer(function(input, output, session) {
   })
 
   # Put observations in cache when dB and/or DTG selection are modified
+  assyncCachingProcs <- reactiveValues()
   fPathsToCache <- eventReactive({
     activeDb()
     selectedDtgs()
   }, {
-    getFilePathsToCache(req(activeDb()), input)
+    allFiles <- getFilePathsToCache(req(activeDb()), input)
+    # We don't want to schedule caching if file is already being cached
+    # resolved(arg) returns TRUE unless arg is a non-resolved future
+    rtn <- c()
+    for(fPath in allFiles) {
+      if(resolved(assyncCachingProcs[[fPath]])) {
+        rtn <- c(rtn, fPath)
+        assyncCachingProcs[[fPath]] <- NULL
+      }
+    }
+    return(rtn)
   })
   observeEvent({fPathsToCache()}, {
     db <- req(activeDb())
-    assyncPutObsInCache(fPathsToCache(), cacheDir=db$cacheDir)
+    fPaths <- req(fPathsToCache())
+    cacheProc <- assyncPutObsInCache(fPaths, cacheDir=db$cacheDir)
+    for(fPath in fPaths) assyncCachingProcs[[fPath]] <- cacheProc
   })
   # Re-cache observations if requested by user
   observeEvent({input$recacheCacheButton}, {

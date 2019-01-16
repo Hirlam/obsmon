@@ -362,7 +362,7 @@ putObservationsInCache <- function(sourceDbPath, cacheDir, replaceExisting=FALSE
 }
 
 assyncPutObsInCache <- function(sourceDbPaths, cacheDir, replaceExisting=FALSE) {
-  future({
+  return(future({
     for(sourceDbPath in sourceDbPaths) {
       tryCatch(
         putObservationsInCache(sourceDbPath, cacheDir=cacheDir, replaceExisting=replaceExisting),
@@ -370,7 +370,7 @@ assyncPutObsInCache <- function(sourceDbPaths, cacheDir, replaceExisting=FALSE) 
         error=function(e) flog.error(e$message)
       )
     }
-  })
+  }))
 }
 
 getDateQueryString <- function(dates=NULL) {
