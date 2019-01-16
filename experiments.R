@@ -47,7 +47,7 @@ getDataFilePaths <- function(exptDir, dbType, assertExists=FALSE) {
     validDtgs <- c(validDtgs, dtg)
   }
   if(is.null(fPaths)) return(NULL)
-  else return(as.list(structure(fPaths, names=validDtgs)))
+  else return(structure(fPaths, names=validDtgs))
 }
 
 emptyExperiment <- function(name) {
