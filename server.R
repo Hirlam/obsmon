@@ -168,9 +168,16 @@ getSelectedDtgs <- function(input) {
 
 getFilePathsToCache <- function(db, input) {
   dtgs <- getSelectedDtgs(input)
-  fPathsToCache <- db$paths[dtgs]
-  fPathsToCache <- fPathsToCache[!is.na(fPathsToCache)]
-
+  validDtgs <- NULL
+  for(dtg in dtgs) {
+    fPath <- db$paths[dtg]
+    if(is.null(fPath) || is.na(fPath) || length(fPath)==0) next
+    validDtgs <- c(validDtgs, dtg)
+  }
+  fPathsToCache <- tryCatch(
+    db$paths[validDtgs],
+    error=function(e) {flog.error(e); NULL}
+  )
   if(length(fPathsToCache)==0) fPathsToCache <- NULL
   return(fPathsToCache)
 }
