@@ -379,6 +379,25 @@ shinyServer(function(input, output, session) {
     }, {
       dtgsAreCached(req(activeDb()), req(selectedDtgs()))
   })
+  # Attempt to cache DTGs if they remain uncached even after
+  # the processes responsible for caching them have finished
+  # This is useful to retry caching if former attempts fail
+  observeEvent({if(!selectedDtgsAreCached()) invalidateLater(5000)}, {
+    req(!selectedDtgsAreCached())
+    db <- req(activeDb())
+    fPaths <- c()
+    for(fPath in fPathsToCache()) {
+      if(resolved(assyncCachingProcs[[fPath]])) fPaths <- c(fPaths, fPath)
+    }
+    req(length(fPaths)>0)
+    # Here we end up with files for which the caching process has finished
+    # but the corresponding DTGs stil remain uncached
+    showNotification("Attempting to recache", type="warning", duration=1)
+    cacheProc <- assyncPutObsInCache(fPaths, cacheDir=db$cacheDir, replaceExisting=TRUE)
+    for(fPath in fPaths) assyncCachingProcs[[fPath]] <- cacheProc
+  },
+    ignoreInit=TRUE
+  )
 
   # Update obtype
   observeEvent({
