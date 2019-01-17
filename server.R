@@ -79,11 +79,7 @@ updateSelectInputWrapper <- function(
 
   # Now, update items and choices
   currentChoices <- allMenuChoices[[inputId]]
-  validUpdate <- !is.null(choices) && (is.null(currentChoices) ||
-    length(unlist(currentChoices)) != length(unlist(choices)) ||
-    !all(sort(unlist(currentChoices))==sort(unlist(choices)))
-  )
-  if(!validUpdate) return(NULL)
+  if(is.null(choices) || isTRUE(all.equal(choices,currentChoices)))return(NULL)
 
   selection <- getSelection(session, inputId, choices)
   updateSelectInput(
