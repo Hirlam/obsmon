@@ -59,8 +59,8 @@ performQuery <- function(
       dbpaths <- db$paths[as.character(dtgs)]
     }
   }
-  dbpaths[sapply(dbpaths, is.null)] <- NULL
-  dbpaths[sapply(dbpaths,function(fPath){return(!file.exists(fPath))})]<-NULL
+  dbpaths <- dbpaths[!is.null(dbpaths)]
+  dbpaths <- dbpaths[file.exists(dbpaths)]
   if (length(dbpaths)==0) {
     flog.error("performQuery: No usable database found. Please check paths.")
     return(NULL)
