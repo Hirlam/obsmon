@@ -304,9 +304,24 @@ shinyServer(function(input, output, session) {
     )
   })
 
+  # Caching is performed assyncronously. "assyncCachingProcs" will keep
+  # track of the processes responsible for caching the various data files.
+  # These processes are "Future" objects (from R pkg "future"), and their
+  # statuses can be checked using the function "resolved"
+  assyncCachingProcs <- reactiveValues()
+  observe({
+    # Periodic cleanup of assyncCachingProcs
+    procs <- assyncCachingProcs
+    stillAciveProcs <- list()
+    for(fPath in names(procs)) {
+      proc <- procs[[fPath]]
+      if(!resolved(proc)) stillAciveProcs[[fPath]] <- proc
+    }
+    isolate(assyncCachingProcs <- stillAciveProcs)
+    if(length(stillAciveProcs)>0) invalidateLater(300000)
+  })
 
   # Put observations in cache when dB and/or DTG selection are modified
-  assyncCachingProcs <- reactiveValues()
   fPathsToCache <- eventReactive({
     activeDb()
     selectedDtgs()
@@ -316,10 +331,7 @@ shinyServer(function(input, output, session) {
     # resolved(arg) returns TRUE unless arg is a non-resolved future
     rtn <- c()
     for(fPath in allFiles) {
-      if(resolved(assyncCachingProcs[[fPath]])) {
-        rtn <- c(rtn, fPath)
-        assyncCachingProcs[[fPath]] <- NULL
-      }
+      if(resolved(assyncCachingProcs[[fPath]])) rtn <- c(rtn, fPath)
     }
     return(rtn)
   })
