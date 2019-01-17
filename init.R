@@ -120,7 +120,9 @@ setPackageOptions <- function(config) {
   options(shiny.usecairo=TRUE)
   pdf(NULL)
   flog.appender(appender.file(stderr()), 'ROOT')
-  flog.threshold(parse(text=config$general$logLevel)[[1]])
+  logLevel <- parse(text=config$general$logLevel)[[1]]
+  if(exists("args") && isTRUE(args$debug)) logLevel <- DEBUG
+  flog.threshold(logLevel)
   # Options controlling parallelism
   maxExtraParallelProcs <- as.integer(config$general$maxExtraParallelProcs)
   if(is.na(maxExtraParallelProcs) || maxExtraParallelProcs<0) {
