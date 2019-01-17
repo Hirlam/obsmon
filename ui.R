@@ -147,29 +147,24 @@ shinyUI(
                                 multiple=TRUE,
                                 selectize=FALSE)
                 ),
-                conditionalPanel(
-                    condition = "output.dateType == 'single'",
-                    fluidRow(
-                        column(8, dateInput("date", "Date")),
-                        column(4,
-                          selectInput("cycle", label="Cycle", choices=c())
-                        )
+                fluidRow(
+                    column(8, dateInput("date", "Date")),
+                    column(4,
+                      selectInput("cycle", label="Cycle", choices=c())
                     )
                 ),
-                conditionalPanel(
-                    condition = "output.dateType == 'range'",
-                    dateRangeInput(
-                      "dateRange", "Date Range"
-                    ),
-                    checkboxGroupInput("cycles",
-                                       label=tags$div("Cycles",
-                                                      "(Select",
-                                                      actionLink("cyclesSelectAll", "all"),
-                                                      actionLink("cyclesSelectNone", "none"),
-                                                      ")"
-                                                      ),
-                                       inline=TRUE,
-                                       choices=c())
+                dateRangeInput(
+                  "dateRange", "Date Range"
+                ),
+                checkboxGroupInput("cycles",
+                                   label=tags$div("Cycles",
+                                                  "(Select",
+                                                  actionLink("cyclesSelectAll", "all"),
+                                                  actionLink("cyclesSelectNone", "none"),
+                                                  ")"
+                                                  ),
+                                   inline=TRUE,
+                                   choices=c()
                 ),
                 fluidRow(
                   column(12,

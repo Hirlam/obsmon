@@ -231,9 +231,15 @@ shinyServer(function(input, output, session) {
     )
     dateTypeReqByPlotType(dateType)
   })
+
   # Offer single date or dateRange input according to selected plottype
-  output$dateType <- reactive({dateTypeReqByPlotType()})
-  outputOptions(output, 'dateType', suspendWhenHidden=FALSE)
+  # Used to be done via conditionalPanel in ui.R, but that was slow
+  observeEvent({dateTypeReqByPlotType()}, {
+    shinyjs::toggle("date", condition=dateTypeReqByPlotType()=="single")
+    shinyjs::toggle("dateRange", condition=dateTypeReqByPlotType()=="range")
+    shinyjs::toggle("cycle", condition=dateTypeReqByPlotType()=="single")
+    shinyjs::toggle("cycles", condition=dateTypeReqByPlotType()=="range")
+  })
 
   # Keep track of date(s), cycle(s) and consequently DTG(s) selected in the UI
   # and store them in a convenient order and format
