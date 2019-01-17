@@ -115,27 +115,6 @@ enableShinyInputs <- function(input, except=c()) {
   for(inp in inputsToEnable) shinyjs::enable(inp)
 }
 
-getReqDateType <- function(input) {
-  rtn <- tryCatch(
-    plotTypesFlat[[req(input$plottype)]]$dateType,
-    error=function(e) NA,
-    warning=function(w) NA
-  )
-  return(rtn)
-}
-
-getCurrentDatesAndCycles <- function(input) {
-  dateType <- getReqDateType(input)
-  if(dateType %in% c("range")) {
-    dates <- expandDateRange(input$dateRange[[1]], input$dateRange[[2]])
-    cycles <- input$cycles
-  } else {
-    dates <- strftime(input$date, format="%Y%m%d")
-    cycles <- input$cycle
-  }
-  return(list(dates=dates, cycles=cycles))
-}
-
 cacheFilesLatestMdate <- function(db) {
   mtimes <- c(-1)
   for(cacheFilePath in db$cachePaths) {
@@ -149,25 +128,7 @@ cacheFilesLatestMdate <- function(db) {
   return(max(mtimes))
 }
 
-getSelectedDtgs <- function(input) {
-  datesCycles <- getCurrentDatesAndCycles(input)
-  dates <- sort(datesCycles$dates, decreasing=TRUE)
-  cycles <- sort(datesCycles$cycles, decreasing=FALSE)
-  if(is.null(dates) || is.na(dates)) return(NULL)
-  if(all(cycles=="")) return(NULL)
-
-  dtgs <- c()
-  for(date in dates) {
-    for(cycle in cycles) {
-      dtgs <- c(dtgs, sprintf("%s%s", date, cycle))
-    }
-  }
-
-  return(dtgs)
-}
-
-getFilePathsToCache <- function(db, input) {
-  dtgs <- getSelectedDtgs(input)
+getFilePathsToCache <- function(db, dtgs) {
   validDtgs <- NULL
   for(dtg in dtgs) {
     fPath <- db$paths[dtg]
@@ -250,7 +211,7 @@ shinyServer(function(input, output, session) {
     isolate(experiments()[[expName]]$dbs[[dbType]])
   })
 
-  # Update date related fields dateRange, date, and cycle with new experiment
+  # Update available choices of dates when changing active database
   observeEvent(activeDb(), {
     db <- req(activeDb())
     min <- db$maxDateRange[1]
@@ -265,60 +226,84 @@ shinyServer(function(input, output, session) {
                     min = db$maxDateRange[1], max = db$maxDateRange[2])
   })
 
-  # React when required dateType of plot changes value
-  dateTypeReqByPlotType <- reactiveVal(character(0))
-  observe({
-    invalidateLater(500)
-    dateTypeReqByPlotType(getReqDateType(input))
+  # Signal when required dateType of plot changes value
+  dateTypeReqByPlotType <- reactiveVal()
+  observeEvent({input$plottype}, {
+    dateType <- tryCatch(
+      plotTypesFlat[[req(input$plottype)]]$dateType,
+      error=function(e) {"single"}
+    )
+    dateTypeReqByPlotType(dateType)
   })
   # Offer single date or dateRange input according to selected plottype
   output$dateType <- reactive({dateTypeReqByPlotType()})
   outputOptions(output, 'dateType', suspendWhenHidden=FALSE)
 
-  # Update available cycle choices when relevant fields change
-  availableCycles <- eventReactive({
-      activeDb()
+  # Keep track of date(s), cycle(s) and consequently DTG(s) selected in the UI
+  # and store them in a convenient order and format
+  selectedDates <- reactiveVal()
+  observeEvent({
       input$date
       input$dateRange
       dateTypeReqByPlotType()
     }, {
-      db <- req(activeDb())
-      datesCycles <- getCurrentDatesAndCycles(req(input))
-      dates <- as.character(datesCycles$dates)
-      getAvailableCycles(db, dates)
+      if(dateTypeReqByPlotType() %in% c("range")) {
+        dates <- expandDateRange(input$dateRange[[1]], input$dateRange[[2]])
+      } else {
+        dates <- strftime(input$date, format="%Y%m%d")
+      }
+      selectedDates(sort(dates, decreasing=TRUE))
+  })
+  selectedCycles <- reactiveVal()
+  observeEvent({
+      input$cycle
+      input$cycles
+      dateTypeReqByPlotType()
+    }, {
+      if(dateTypeReqByPlotType() %in% c("range")) {
+        cycles <- input$cycles
+      } else {
+        cycles <- input$cycle
+      }
+      selectedCycles(sort(cycles, decreasing=FALSE))
+  })
+  selectedDtgs <- reactiveVal()
+  observeEvent({
+      selectedDates()
+      selectedCycles()
+    }, {
+      dtgs <- c()
+      for(date in req(selectedDates())) {
+        for(cycle in req(selectedCycles())) {
+          dtgs <- c(dtgs, sprintf("%s%s", date, cycle))
+        }
+      }
+      selectedDtgs(dtgs)
   })
 
+  # Update available cycle choices when relevant fields change
+  availableCycles <- reactiveVal()
   observe({
-    cycles <- availableCycles()
-    updateSelectInputWrapper(session, "cycle", choices=cycles)
-    updateCheckboxGroup(session, "cycles", cycles)
+    availableCycles(getAvailableCycles(req(activeDb()), req(selectedDates())))
+  })
+  observeEvent({availableCycles()}, {
+    updateSelectInputWrapper(session, "cycle", choices=req(availableCycles()))
+    updateCheckboxGroup(session, "cycles", req(availableCycles()))
   })
 
   observeEvent(input$cyclesSelectAll, {
-    cycles <- isolate(availableCycles())
+    cycles <- req(availableCycles())
     updateCheckboxGroupInput(session, "cycles",
       choices=cycles, selected=cycles, inline=TRUE
     )
   })
-
   observeEvent(input$cyclesSelectNone, {
-    cycles <- isolate(availableCycles())
+    cycles <- req(availableCycles())
     updateCheckboxGroupInput(session, "cycles",
       choices=cycles, selected=character(0), inline=TRUE
     )
   })
 
-  # Keep track of selected DTGs
-  selectedDtgs <- eventReactive({
-      activeDb()
-      input$date
-      input$dateRange
-      input$cycle
-      input$cycles
-      dateTypeReqByPlotType()
-    }, {
-      getSelectedDtgs(req(input))
-  })
 
   # Put observations in cache when dB and/or DTG selection are modified
   assyncCachingProcs <- reactiveValues()
@@ -326,7 +311,7 @@ shinyServer(function(input, output, session) {
     activeDb()
     selectedDtgs()
   }, {
-    allFiles <- getFilePathsToCache(req(activeDb()), input)
+    allFiles <- getFilePathsToCache(req(activeDb()), req(selectedDtgs()))
     # We don't want to schedule caching if file is already being cached
     # resolved(arg) returns TRUE unless arg is a non-resolved future
     rtn <- c()
@@ -408,8 +393,7 @@ shinyServer(function(input, output, session) {
       updateSelectInputWrapper(session, "obtype", choices=c("surface"))
     } else {
       dtgs <- req(selectedDtgs())
-      datesCycles <- getCurrentDatesAndCycles(isolate(input))
-      obtypes <- getObtypes(db, datesCycles$dates, datesCycles$cycles)
+      obtypes <- getObtypes(db, selectedDates(), selectedCycles())
 
       isCached <- selectedDtgsAreCached() && !is.null(obtypes$cached)
       if(isCached) {
@@ -433,9 +417,8 @@ shinyServer(function(input, output, session) {
     obsCategory <- req(input$obtype)
     db <- req(activeDb())
     dtgs <- req(selectedDtgs())
-    datesCycles <- getCurrentDatesAndCycles(isolate(input))
 
-    obnames <- getObnames(db, obsCategory, datesCycles$dates, datesCycles$cycles)
+    obnames <- getObnames(db, obsCategory, selectedDates(), selectedCycles())
     isCached <- selectedDtgsAreCached() && !is.null(obnames$cached)
     if(isCached) {
       newChoices <- obnames$cached
@@ -463,9 +446,8 @@ shinyServer(function(input, output, session) {
     db <- req(activeDb())
     obname <- req(input$obname)
     dtgs <- req(selectedDtgs())
-    datesCycles <- getCurrentDatesAndCycles(isolate(input))
 
-    variables <- getVariables(db,datesCycles$dates,datesCycles$cycles,obname)
+    variables <- getVariables(db, selectedDates(), selectedCycles(), obname)
     isCached <- selectedDtgsAreCached() && !is.null(variables$cached)
     if(isCached) {
       newChoices <- variables$cached
@@ -515,12 +497,10 @@ shinyServer(function(input, output, session) {
     obname <- req(input$obname)
     variable <- req(input$variable)
     dtgs <- req(selectedDtgs())
-    datesCycles <- getCurrentDatesAndCycles(isolate(input))
+    dates <- req(selectedDates())
+    cycles <- req(selectedCycles())
 
-    stations <- getStationsFromCache(
-      db, datesCycles$dates, datesCycles$cycles,
-      obname, variable
-    )
+    stations <- getStationsFromCache(db, dates, cycles, obname, variable)
     if(length(stations)>0) {
       if(obname=="synop") {
         stationLabels <- c()
@@ -554,10 +534,9 @@ shinyServer(function(input, output, session) {
     db <- req(activeDb())
     obname <- req(input$obname)
     var <- req(input$variable)
-    datesCycles <- getCurrentDatesAndCycles(input)
 
     if(selectedDtgsAreCached()) {
-      getAvailableLevels(db,datesCycles$dates,datesCycles$cycles,obname,var)
+      getAvailableLevels(db, selectedDates(), selectedCycles(), obname, var)
     } else {
       list(obsmon=NULL, usage=NULL, all=NULL)
     }
@@ -594,9 +573,8 @@ shinyServer(function(input, output, session) {
     updateSelectInputWrapper(session, "obname", choices=c("satem"))
     db <- req(activeDb())
     dtgs <- req(selectedDtgs())
-    datesCycles <- getCurrentDatesAndCycles(isolate(input))
 
-    sens <- getAvailableSensornames(db, datesCycles$dates, datesCycles$cycles)
+    sens <- getAvailableSensornames(db, selectedDates(), selectedCycles())
     isCached <- selectedDtgsAreCached() && !is.null(sens$cached)
     if(isCached) {
       newChoices <- sens$cached
@@ -620,9 +598,8 @@ shinyServer(function(input, output, session) {
     db <- req(activeDb())
     sens <- req(input$sensor)
     dtgs <- req(selectedDtgs())
-    datesCycles <- getCurrentDatesAndCycles(isolate(input))
 
-    sats <- getAvailableSatnames(db,datesCycles$dates,datesCycles$cycles,sens)
+    sats <- getAvailableSatnames(db, selectedDates(), selectedCycles(), sens)
     isCached <- selectedDtgsAreCached() && !is.null(sats$cached)
     if(isCached) {
       newChoices <- sats$cached
@@ -648,12 +625,13 @@ shinyServer(function(input, output, session) {
     db <- req(activeDb())
     sat <- req(input$satellite)
     sens <- req(input$sensor)
-    datesCycles <- getCurrentDatesAndCycles(input)
+    dates <- req(selectedDates())
+    cycles <- req(selectedCycles())
 
     newChannels <- NULL
     if(selectedDtgsAreCached()) {
       newChannels <- getAvailableChannels(
-        db,datesCycles$dates,datesCycles$cycles,satname=sat,sensorname=sens
+        db, dates, cycles, satname=sat, sensorname=sens
       )
     }
     if(is.null(newChannels))newChannels<-c("Any (cache info not available)"="")
