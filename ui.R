@@ -177,13 +177,6 @@ shinyUI(
                       ),
                     br(),
                     tags$div(
-                      actionButton("reloadCacheButton", "Reload cache info",
-                        icon("repeat", lib="glyphicon")
-                      ) %>%
-                        bs_embed_tooltip(
-                          title = "Reload info available in the cache file",
-                          placement="above"
-                        ),
                       actionButton("recacheCacheButton", "Update cache file",
                         icon("refresh", lib="glyphicon")
                       ) %>%

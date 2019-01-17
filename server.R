@@ -261,7 +261,6 @@ shinyServer(function(input, output, session) {
   triggerReadCache <- function() latestTriggerReadCache(Sys.time())
   reloadInfoFromCache <- eventReactive({
       latestTriggerReadCache()
-      input$reloadCacheButton
       activeDb()
       cacheFileUpdated()
       selectedDtgs()
