@@ -489,26 +489,22 @@ shinyServer(function(input, output, session) {
   })
 
   # Update stations
-  stationsAlongWithLabels <- eventReactive({
-      reloadInfoFromCache()
+  stationsAlongWithLabels <- reactiveVal(c("Any"=""))
+  observeEvent({
       allowChoosingStation()
+      reloadInfoFromCache()
       input$obtype
       input$obname
       input$variable
     }, {
-    req(input$obtype!="satem")
-
-    if(!allowChoosingStation()) return(c("Any"=""))
-    if(!selectedDtgsAreCached()) {
-      delay(5000, triggerReadCache())
-      return(c("Any (cache info not available)"=""))
-    }
+    if(allowChoosingStation()) stationsAlongWithLabels(c("Any"=""))
+    req(allowChoosingStation())
 
     db <- req(activeDb())
-    obname <- req(input$obname)
-    variable <- req(input$variable)
     dates <- req(selectedDates())
     cycles <- req(selectedCycles())
+    obname <- req(input$obname)
+    variable <- req(input$variable)
 
     stations <- getStationsFromCache(db, dates, cycles, obname, variable)
     if(length(stations)>0) {
@@ -525,11 +521,19 @@ shinyServer(function(input, output, session) {
         names(stations) <- stations
       }
     }
-    return(c("Any"="", stations))
-  })
-  observeEvent({stationsAlongWithLabels()}, {
-    stations <- stationsAlongWithLabels()
-    updateSelectInputWrapper(session, "station", choices=stations)
+    if(selectedDtgsAreCached()) {
+      stationsAlongWithLabels(c("Any"="", stations))
+    } else {
+      if(length(stations)==0) {
+        stationsAlongWithLabels(c("Any (cache info not available)"=""))
+      } else {
+        stationsAlongWithLabels(c("Any (cache info incomplete)"="", stations))
+      }
+      delay(5000, triggerReadCache())
+    }
+  }, ignoreNULL=TRUE)
+  observe({
+    updateSelectInputWrapper(session, "station", choices=stationsAlongWithLabels())
   })
 
   # Update level choice for given variable
@@ -757,13 +761,10 @@ shinyServer(function(input, output, session) {
     shinyjs::show("cancelPlot")
     shinyjs::enable("cancelPlot")
 
-    plotter <- plotTypesFlat[[req(input$plottype)]]
     db <- req(activeDb())
-    if(input$obtype=="satem") {
-      stations <- NULL
-    } else {
-      stations <- stationsAlongWithLabels()
-    }
+    stations <- stationsAlongWithLabels()
+
+    plotter <- plotTypesFlat[[req(input$plottype)]]
     plotRequest <- list()
     plotRequest$expName <- req(input$experiment)
     plotRequest$dbType <- db$dbType
