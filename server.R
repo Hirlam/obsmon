@@ -750,7 +750,7 @@ shinyServer(function(input, output, session) {
   onclick("cancelPlot", {
     removeNotification(plotStartedNotifId())
     showNotification("Cancelling plot", type="warning", duration=1)
-    tools::pskill(currentPlotPid())
+    tools::pskill(currentPlotPid(), tools::SIGINT)
     shinyjs::hide("cancelPlot")
     shinyjs::show("doPlot")
     enableShinyInputs(input)
@@ -807,7 +807,7 @@ shinyServer(function(input, output, session) {
     shinyjs::disable("cancelPlot")
     myPlot <- tryCatch(
       value(myFutPlot),
-      error=function(e) {flog.error(e); NULL}
+      error=function(e) {NULL}
     )
     myPlot
   })
