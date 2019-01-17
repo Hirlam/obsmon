@@ -1,10 +1,5 @@
 if(!exists("initFileSourced")) source("init.R")
 
-# To keep track of all menu labels currently in use
-allMenuLabels <- list()
-# To keep track of all choices currently made in the menus
-allMenuChoices <- list()
-
 clamp <- function(value, min, max, default=max) {
   if (is.null(value)) {
     default
@@ -15,100 +10,6 @@ clamp <- function(value, min, max, default=max) {
   } else {
     value
   }
-}
-
-signalError <- function(message, title="Error") {
-  showModal(modalDialog(
-      title=title,
-      message,
-      easyClose=TRUE
-  ))
-}
-
-getSelection <- function(session, inputId, choices, select=c("NORMAL", "ALL", "NONE")) {
-  select <- match.arg(select)
-  switch(select,
-         "NORMAL"={
-           oldSelection <- isolate(session$input[[inputId]])
-           validChoices <- unlist(choices, use.names=FALSE)
-           validSelections <- oldSelection %in% validChoices
-           if (is.null(oldSelection)) {
-             choices
-           } else if (any(validSelections)) {
-             oldSelection[validSelections]
-           } else {
-             NULL
-           }
-         },
-         "ALL"={
-           choices
-         },
-         "NONE"={
-           c()
-         })
-}
-
-# Updates choices for selection
-#
-# Updates a selectInput, preserving the selected
-# option(s) if available
-updateSelectInputWrapper <- function(
-  session, inputId, label=NULL, choices=NULL, selected=NULL,
-  choicesFoundIncache=TRUE, ...
-){
-
-  # First, update label
-  notCachedLabelMsg <- "(cache info not available)"
-  currentLabel <- allMenuLabels[[inputId]]
-  if(is.null(currentLabel)) currentLabel <- getDefLabel(inputId)
-
-  currLabelFlaggedAsNotCached <- grepl(notCachedLabelMsg,currentLabel)==TRUE
-  needsLabelChange <- {
-    (!is.null(label) && label!=currentLabel) ||
-    (choicesFoundIncache && currLabelFlaggedAsNotCached) ||
-    (!choicesFoundIncache && !currLabelFlaggedAsNotCached)
-  }
-
-  if(needsLabelChange) {
-    if(is.null(label)) label <- currentLabel
-    label <- gsub(notCachedLabelMsg, "", label, fixed=TRUE)
-    if(!choicesFoundIncache) label <- paste(label, notCachedLabelMsg)
-    updateSelectInput(session, inputId, label=label)
-    allMenuLabels[[inputId]] <<- label
-  }
-
-  # Now, update items and choices
-  currentChoices <- allMenuChoices[[inputId]]
-  if(is.null(choices) || isTRUE(all.equal(choices,currentChoices)))return(NULL)
-
-  selection <- getSelection(session, inputId, choices)
-  updateSelectInput(
-    session, inputId, choices=choices, selected=selection, label=NULL, ...
-  )
-  allMenuChoices[[inputId]] <<- choices
-}
-
-
-updateCheckboxGroup <- function(session, inputId, choices, select="NORMAL") {
-    if (is.null(choices)) {
-      return(NULL)
-    }
-    selection <- getSelection(session, inputId, choices, select)
-    updateCheckboxGroupInput(session, inputId,
-                             choices=choices, selected=selection, inline=TRUE)
-}
-
-disableShinyInputs <- function(input, except=c()) {
-  allInputs <- names(input)
-  if(is.null(allInputs)) allInputs <- input
-  inputsToDisable <- allInputs[!(allInputs %in% except)]
-  for(inp in inputsToDisable) shinyjs::disable(inp)
-}
-enableShinyInputs <- function(input, except=c()) {
-  allInputs <- names(input)
-  if(is.null(allInputs)) allInputs <- input
-  inputsToEnable <- allInputs[!(allInputs %in% except)]
-  for(inp in inputsToEnable) shinyjs::enable(inp)
 }
 
 cacheFilesLatestMdate <- function(db) {
@@ -140,9 +41,7 @@ getFilePathsToCache <- function(db, dtgs) {
 }
 
 shinyServer(function(input, output, session) {
-  # Make sure all menu choices and labels are reset when server starts
-  allMenuLabels <- list()
-  allMenuChoices <<- list()
+  source("shiny_wrappers.R")
   # Start GUI with all inputs disabled.
   # They will be enabled once experiments are loaded
   isolate(disableShinyInputs(input, except="experiment"))
