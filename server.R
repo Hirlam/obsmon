@@ -400,7 +400,6 @@ shinyServer(function(input, output, session) {
     if(db$dbType=="ecma_sfc") {
       updateSelectInputWrapper(session, "obtype", choices=c("surface"))
     } else {
-      dtgs <- req(selectedDtgs())
       obtypes <- getObtypes(db, selectedDates(), selectedCycles())
 
       isCached <- selectedDtgsAreCached() && !is.null(obtypes$cached)
@@ -424,7 +423,6 @@ shinyServer(function(input, output, session) {
     req(input$obtype!="satem")
     obsCategory <- req(input$obtype)
     db <- req(activeDb())
-    dtgs <- req(selectedDtgs())
 
     obnames <- getObnames(db, obsCategory, selectedDates(), selectedCycles())
     isCached <- selectedDtgsAreCached() && !is.null(obnames$cached)
@@ -453,7 +451,6 @@ shinyServer(function(input, output, session) {
 
     db <- req(activeDb())
     obname <- req(input$obname)
-    dtgs <- req(selectedDtgs())
 
     variables <- getVariables(db, selectedDates(), selectedCycles(), obname)
     isCached <- selectedDtgsAreCached() && !is.null(variables$cached)
@@ -504,7 +501,6 @@ shinyServer(function(input, output, session) {
     db <- req(activeDb())
     obname <- req(input$obname)
     variable <- req(input$variable)
-    dtgs <- req(selectedDtgs())
     dates <- req(selectedDates())
     cycles <- req(selectedCycles())
 
@@ -580,7 +576,6 @@ shinyServer(function(input, output, session) {
     req(input$obtype=="satem")
     updateSelectInputWrapper(session, "obname", choices=c("satem"))
     db <- req(activeDb())
-    dtgs <- req(selectedDtgs())
 
     sens <- getAvailableSensornames(db, selectedDates(), selectedCycles())
     isCached <- selectedDtgsAreCached() && !is.null(sens$cached)
@@ -605,7 +600,6 @@ shinyServer(function(input, output, session) {
     req(input$obtype=="satem")
     db <- req(activeDb())
     sens <- req(input$sensor)
-    dtgs <- req(selectedDtgs())
 
     sats <- getAvailableSatnames(db, selectedDates(), selectedCycles(), sens)
     isCached <- selectedDtgsAreCached() && !is.null(sats$cached)
