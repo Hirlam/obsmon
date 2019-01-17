@@ -537,7 +537,8 @@ shinyServer(function(input, output, session) {
   })
 
   # Update level choice for given variable
-  availableLevels <- eventReactive({
+  availableLevels <- reactiveVal(list(obsmon=NULL, usage=NULL, all=NULL))
+  observeEvent({
     reloadInfoFromCache()
     input$obtype
     input$obname
@@ -549,20 +550,19 @@ shinyServer(function(input, output, session) {
     obname <- req(input$obname)
     var <- req(input$variable)
 
-    if(selectedDtgsAreCached()) {
-      getAvailableLevels(db, selectedDates(), selectedCycles(), obname, var)
-    } else {
-      list(obsmon=NULL, usage=NULL, all=NULL)
-    }
-  })
-  observeEvent({availableLevels()}, {
-    if(is.null(availableLevels()$all)) {
-      updateSelectInputWrapper(session,"levels",
-        choices=c("Any (cache info not available)"=""), selected=character(0))
+    levels <- getAvailableLevels(db, selectedDates(), selectedCycles(), obname, var)
+    if(!selectedDtgsAreCached()) {
+      if(length(levels$all)==0) {
+        levels$all <- c("Any (cache info not available)"="")
+      } else {
+        levels$all <- c("Any (cache info incomplete)"="", levels$all)
+      }
       delay(5000, triggerReadCache())
-    } else {
-      updateSelectInputWrapper(session,"levels",choices=availableLevels()$all)
     }
+    availableLevels(levels)
+  })
+  observe({
+    updateSelectInputWrapper(session,"levels",choices=availableLevels()$all)
   })
 
   observeEvent(input$levelsSelectStandard, {
