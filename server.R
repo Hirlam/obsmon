@@ -466,14 +466,20 @@ shinyServer(function(input, output, session) {
   })
 
   # Decide whether to allow users to select stations
-  allowChoosingStation <- eventReactive({
+  allowChoosingStation <- reactiveVal(TRUE)
+  observeEvent({
+    input$obtype
     input$plottype
   }, {
-    infoAboutSelectedPlotType <- plotTypesFlat[[req(input$plottype)]]
-    query <- infoAboutSelectedPlotType$queryStub
-    # StationIDs are not stored in the "obsmon" table, only in "usage"
-    queryFromUsage <- grepl("FROM{1}[[:space:]]+usage",query,ignore.case=TRUE)
-    queryFromUsage
+    if(input$obtype=="satem") {
+      allowChoosingStation(FALSE)
+    } else {
+      infoAboutSelectedPlotType <- plotTypesFlat[[req(input$plottype)]]
+      query <- infoAboutSelectedPlotType$queryStub
+      # StationIDs are not stored in the "obsmon" table, only in "usage"
+      queryFromUsage<-grepl("FROM{1}[[:space:]]+usage",query,ignore.case=TRUE)
+      allowChoosingStation(queryFromUsage)
+    }
   })
   observeEvent({
     allowChoosingStation()
