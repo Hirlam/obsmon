@@ -50,12 +50,13 @@ getDataFilePaths <- function(exptDir, dbType, assertExists=FALSE) {
   else return(structure(fPaths, names=validDtgs))
 }
 
+dbTypesRecognised <- c("ccma", "ecma", "ecma_sfc")
+
 emptyExperiment <- function(name) {
   x <- list()
   x$name <- name
-  x$dbs$ecma <- NULL
-  x$dbs$ecmaSfc <- NULL
-  x$dbs$ccma <- NULL
+  x$dbs <- list()
+  for(dbType in dbTypesRecognised) x$dbs[[dbType]] <- NULL
   x
 }
 
@@ -66,8 +67,9 @@ initExperiment <- function(name, baseDir, experiment, checkFilesExist) {
   x$name <- name
   x$path <- file.path(baseDir, experiment)
   x$cacheDir <- file.path(obsmonConfig$general[["cacheDir"]], slugify(name))
-  x$dbs <- list(ccma=NULL, ecma=NULL, ecma_sfc=NULL)
-  for(dbType in names(x$dbs)) {
+  x$dbs <- list()
+  for(dbType in dbTypesRecognised) {
+    x$dbs[[dbType]] <- NULL
     # Making sure to only store dtgs that correspond to existing data files
     dataFilePaths<-getDataFilePaths(x$path,dbType,assertExists=checkFilesExist)
     dtgs <- sort(names(dataFilePaths))
