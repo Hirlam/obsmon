@@ -245,10 +245,38 @@ shinyServer(function(input, output, session) {
   # Re-cache observations if requested by user
   observeEvent({input$recacheCacheButton}, {
     db <- req(activeDb())
+    showNotification("Recaching selected DTG(s)", type="warning", duration=1)
     assyncPutObsInCache(fPathsToCache(), cacheDir=db$cacheDir, replaceExisting=TRUE)
   },
     ignoreInit=TRUE
   )
+  # Reset cache if requested by user
+  # Doing this in two steps to require confirmation
+  observeEvent(input$resetCacheButton, {
+    showConfirmationDialog(
+      inputId="resetCacheConfirmationButton",
+      title="Are you sure?",
+      msg=HTML(sprintf(paste(
+          "Please confirm that you want to RESET all cached information ",
+          "available for experiment %s%s%s",
+          "This action cannot be undone!"
+        ), "<br><br>", req(input$experiment), "<br><br>")
+      )
+    )
+  },
+    ignoreInit=TRUE
+  )
+  observeEvent(input$resetCacheConfirmationButton, {
+    status <- createCacheFiles(cacheDir=req(activeDb()$cacheDir), reset=TRUE)
+    removeModal()
+    if(status==0) {
+      showModal(
+        modalDialog("The experiment cache has been reset", easyClose=TRUE)
+      )
+    } else {
+        signalError("Problems resetting experiment cache. Please check logs.")
+    }
+  })
 
   # Detect when the relevant cache files have been updated
   cacheFileUpdated <- eventReactive({activeDb()}, {

@@ -38,13 +38,31 @@ css <- "
 }
 "
 
-cacheButtonsGeneralTolltipMsg <- paste(
-  'Use the buttons below if the message "cache info not available"',
-  "does not disappear from any of the menus above.\n",
-  "NB.: You can produce plots even if the aforementioned message is shown.",
-  "The choices you get in this case correspond to all possibilities for the",
-  'particular menu. That only means that you may get "No data" responses to',
-  "some plot requests"
+cacheButtonsGeneralTooltipMsg <- paste0(
+  "Use the buttons below only if you really need to make changes to the ",
+  "information stored in the cache files.\n",
+  "\n",
+  "NB.: You can produce plots even if cache information is incomplete or ",
+  "unavailable. Obsmon uses caching only to populate the GUI choices with ",
+  "values that are present in the actual data files corresponding to the ",
+  "selected experiment/database/DTG(s) combination."
+)
+recacheCacheButtonTooltipMsg <- paste0(
+  "Refresh cache information available for the selected ",
+  "experiment/database/DTG(s) combination.\n",
+  "\n",
+  "Usage case:\n",
+  "  * The corresponding cached information becomes out-of-date"
+)
+resetCacheButtonTooltipMsg <- paste0(
+  "Erase cache files belonging to the selected experiment and restart ",
+  "caching from scratch.\n",
+  "\n",
+  "The (rare) usage cases include situations when:\n",
+  "  * The cached information becomes completely out-of-date\n",
+  "  * The cache files become inaccessible (e.g., corrupted)\n",
+  "\n",
+  "NB.: This action cannot be undone!"
 )
 
 shinyUI(
@@ -168,21 +186,29 @@ shinyUI(
                 ),
                 fluidRow(
                   column(12,
-                    tags$b("Cache-related actions for selected DTG(s)"),
+                    tags$b("Cache-related actions"),
                       HTML('&emsp;'), shiny::icon("info")
                       %>%
                       bs_embed_tooltip(
-                        title=cacheButtonsGeneralTolltipMsg,
+                        title=cacheButtonsGeneralTooltipMsg,
                         placement="right"
                       ),
                     br(),
                     tags$div(
-                      actionButton("recacheCacheButton", "Update cache file",
+                      actionButton("recacheCacheButton",
+                        "Recache DTG(s)",
                         icon("refresh", lib="glyphicon")
                       ) %>%
                         bs_embed_tooltip(
-                          title = paste("Refresh cache information available",
-                            "for the selected DTG(s)"),
+                          title=recacheCacheButtonTooltipMsg,
+                          placement="above"
+                        ),
+                      actionButton("resetCacheButton", "Reset cache files",
+                        icon("remove", lib="glyphicon"),
+                        style="color: #fff; background-color: #FF0000; border-color: #2e6da4"
+                      ) %>%
+                        bs_embed_tooltip(
+                          title=resetCacheButtonTooltipMsg,
                           placement="above"
                         )
                     ),

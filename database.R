@@ -117,9 +117,9 @@ cacheFileIsLocked <- function(fpath) {
 createCacheFiles <- function(cacheDir, dbType=dbTypesRecognised, reset=FALSE){
   rtn <- tryCatch({
       if(reset) {
-        flog.warn(paste("createCacheFiles: Cache reset requested.",
-          sprintf("Removing cache directory\n%s\n", cacheDir),
-          "and all files in that directory!"
+        flog.warn(paste0("createCacheFiles: Cache reset requested. ",
+          sprintf("Recursively removing cache directory\n%s\n", cacheDir),
+          "The directory will be recreated and cache files will be restarted."
         ))
         unlink(cacheDir, recursive=TRUE)
       }
