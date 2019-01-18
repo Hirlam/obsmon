@@ -114,6 +114,30 @@ cacheFileIsLocked <- function(fpath) {
   return(isLocked)
 }
 
+createCacheFiles <- function(cacheDir, dbType=dbTypesRecognised, reset=FALSE){
+  rtn <- tryCatch({
+      if(reset) {
+        flog.warn(paste("createCacheFiles: Cache reset requested.",
+          sprintf("Removing cache directory\n%s\n", cacheDir),
+          "and all files in that directory!"
+        ))
+        unlink(cacheDir, recursive=TRUE)
+      }
+      dir.create(cacheDir, recursive=TRUE, showWarnings=FALSE)
+
+      cacheTemplate <- file.path('sqlite', 'cache_db_template.db')
+      dbTables <- c('obsmon', 'usage')
+      cacheFilePaths <- file.path(cacheDir, sprintf("%s.db",
+        apply(expand.grid(dbType,dbTables),1,function(x)paste(x,collapse="_"))
+      ))
+      file.copy(cacheTemplate, cacheFilePaths, overwrite=FALSE)
+      0
+    },
+    error=function(e) {flog.error(e); -1}
+  )
+  return(rtn)
+}
+
 putObservationsInCache <- function(sourceDbPath, cacheDir, replaceExisting=FALSE) {
   sourceDbPath <- normalizePath(sourceDbPath, mustWork=FALSE)
   anyFailedCachingAttmpt <- FALSE
@@ -148,20 +172,24 @@ putObservationsInCache <- function(sourceDbPath, cacheDir, replaceExisting=FALSE
     return(-1)
   }
   allDbConsCreatedHere <- c(allDbConsCreatedHere, con)
-  dir.create(cacheDir, recursive=TRUE, showWarnings=FALSE)
 
   db_type <- basename(dirname(dirname(sourceDbPath)))
   dtg <- basename(dirname(sourceDbPath))
   date <- as.integer(substr(dtg, start=1, stop=8))
   cycle <- as.integer(substr(dtg, start=9, stop=10))
 
+  createCacheStatus <- createCacheFiles(cacheDir, db_type)
+  if(createCacheStatus!=0) {
+    flog.error(paste0(
+      sprintf("Problems creating %s cache in dir %s.\n", db_type, cacheDir),
+      "Not caching"
+    ))
+    return(-1)
+  }
+
   for(db_table in c('obsmon', 'usage')) {
     cacheFileName <- sprintf('%s_%s.db', db_type, db_table)
     cacheFilePath <- file.path(cacheDir, cacheFileName)
-    if(!file.exists(cacheFilePath)) {
-      cacheTemplate <- file.path('sqlite', 'cache_db_template.db')
-      file.copy(cacheTemplate, cacheFilePath)
-    }
 
     hadToWait <- FALSE
     while(cacheFileIsLocked(cacheFilePath)) {
