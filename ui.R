@@ -184,35 +184,39 @@ shinyUI(
                                    inline=TRUE,
                                    choices=c()
                 ),
-                fluidRow(
-                  column(12,
-                    tags$b("Cache-related actions"),
-                      HTML('&emsp;'), shiny::icon("info")
-                      %>%
-                      bs_embed_tooltip(
-                        title=cacheButtonsGeneralTooltipMsg,
-                        placement="right"
-                      ),
-                    br(),
-                    tags$div(
-                      actionButton("recacheCacheButton",
-                        "Recache DTG(s)",
-                        icon("refresh", lib="glyphicon")
-                      ) %>%
+                conditionalPanel(
+                  condition = 'output[["showCacheOptions"]]=="TRUE"',
+                  fluidRow(
+                    column(12,
+                      shiny::icon("exclamation-triangle"),
+                      tags$b("Advanced cache-related actions"),
+                        HTML('&emsp;'), shiny::icon("info")
+                        %>%
                         bs_embed_tooltip(
-                          title=recacheCacheButtonTooltipMsg,
-                          placement="above"
+                          title=cacheButtonsGeneralTooltipMsg,
+                          placement="right"
                         ),
-                      actionButton("resetCacheButton", "Reset cache files",
-                        icon("remove", lib="glyphicon"),
-                        style="color: #fff; background-color: #FF0000; border-color: #2e6da4"
-                      ) %>%
-                        bs_embed_tooltip(
-                          title=resetCacheButtonTooltipMsg,
-                          placement="above"
-                        )
-                    ),
-                    br()
+                      br(),
+                      tags$div(
+                        actionButton("recacheCacheButton",
+                          "Recache DTG(s)",
+                          icon("refresh", lib="glyphicon")
+                        ) %>%
+                          bs_embed_tooltip(
+                            title=recacheCacheButtonTooltipMsg,
+                            placement="above"
+                          ),
+                        actionButton("resetCacheButton", "Reset cache files",
+                          icon("remove", lib="glyphicon"),
+                          style="color: #fff; background-color: #FF0000; border-color: #2e6da4"
+                        ) %>%
+                          bs_embed_tooltip(
+                            title=resetCacheButtonTooltipMsg,
+                            placement="above"
+                          )
+                      ),
+                      br()
+                    )
                   )
                 ),
                 actionButton("doPlot", "Plot", width="100%",

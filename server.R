@@ -41,10 +41,26 @@ getFilePathsToCache <- function(db, dtgs) {
 }
 
 shinyServer(function(input, output, session) {
+  # Source some useful shiny-related helper functions and wrappers
   source("shiny_wrappers.R")
   # Start GUI with all inputs disabled.
   # They will be enabled once experiments are loaded
   isolate(disableShinyInputs(input, except="experiment"))
+
+  # Deciding whether to show or hide cache-related options.
+  # It is advisable not to show them by default -- especially when running on
+  # a web server for multiple users, as these options cause changes in the
+  # shared cache files for a given experiment.
+  #
+  # Mind that the cache options will always be shown if a file named
+  # ".obsmon_show_cache_options" exists in the obsmon directory. This was
+  # designed as a simple way to allow changing this configuration without
+  # having to restart obsmon (useful when running on servers)
+  output$showCacheOptions <- renderText({
+    file.exists(".obsmon_show_cache_options") ||
+    obsmonConfig$general[["showCacheOptions"]]
+  })
+  outputOptions(output, "showCacheOptions", suspendWhenHidden = FALSE)
 
   # Initial population of experiments; triggers cascade for other form fields
   exptNames <- c("")
