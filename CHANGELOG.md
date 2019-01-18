@@ -6,26 +6,32 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 ### Added
-- Icon added to "plot" action button
-- "Cancel plot" button that allows cancelling plot requests
-    - Useful if users change their minds and plotting is taking too long
-    - The button appears only after clicking "Plot"
-- Option "maxExtraParallelProcs" in config file
-    - To control max number of parallel tasks
-    - Should be set under "general"
+- "Cancel plot" button (appears only after clicking in "Plot")
+- New config options supported (to be set under the "general" section)
+    - initCheckDataExists (true/false, default: false)
+      - Assert, at initialisation time,  weather or not all data files for all experiments exist
+    - showCacheOptions (true/false, default: false): to show/hide advanced cache-related options
+        - Options can also be shown by creating a file named ".obsmon_show_cache_options"
+          in the obsmon directory
+    - maxExtraParallelProcs: control max number of parallel tasks
+        - Can also be set via env var OBSMON_MAX_N_EXTRA_PROCESSES
+
+### Fixed
+- Show timezone in dates at the end of plot titles instead of "Z"
+- Station labels in maps are now consistent with the ones shown in the UI
+
 ### Changed
+- Obsmon can now work even if observations are not cached
+    - Auto-discovery cache is now performed only for selected date(s) and cycle(s)
+        - Caching starts automatically when a new DTG, experiment or database is selected
+        - While cache is not finished, the fields in the GUI are populated with all possible
+          values they may have
+        - The GUI is refreshed once cache finishes as to only show choices available according
+          to the relevant data files
+- Some UI redesign
 - Show a spinner instead of a progress bar when an output is being prepared
 - Allow selection of multiple stations
-- Changes in the GUI to hide/show only needed selection tools
-- Obsmon can now work even if observations are not cached
-- Auto-discovery cache is now performed only for selected date(s) and cycle(s)
-    - Caching starts automatically when a new DTG, experiment or database is selected
-    - While cache is not finished, the fields in the GUI are populated with all possible
-      values they may have
-    - When cache finishes, the GUI is refreshed as to only show values for which there is
-      data available
-    - Action buttons "Reload cache info" and "Update cache info" have been added in case
-      automatic refreshing of data fails for whatever reason.
+
 ### Removed
 - Progress bars from standard output
 
