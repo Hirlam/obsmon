@@ -1,4 +1,5 @@
 
+# Showing messages in the UI
 signalError <- function(message, title="Error") {
   showModal(modalDialog(
       title=title,
@@ -6,7 +7,26 @@ signalError <- function(message, title="Error") {
       easyClose=TRUE
   ))
 }
+confirmationModal <- function(title, msg, inputId) {
+  modalDialog(
+    span(msg),
+    title=title,
+    footer = tagList(
+      modalButton("Cancel"),
+      actionButton(inputId, "Delete")
+    ),
+    easyClose=TRUE
+  )
+}
+showConfirmationDialog <- function(
+  title="Please confirm action",
+  msg="Are you sure?",
+  inputId="confirmationDialog"
+) {
+  showModal(confirmationModal(title, msg, inputId))
+}
 
+# Helpers to update and keep track of UI choices and seletions
 getSelection <- function(session, inputId, choices, select=c("NORMAL", "ALL", "NONE")) {
   select <- match.arg(select)
   switch(select,
@@ -29,7 +49,6 @@ getSelection <- function(session, inputId, choices, select=c("NORMAL", "ALL", "N
            c()
          })
 }
-
 # allMenuLabels and allMenuChoices will keep track of the current
 # labels and choices in the UI menus. It seems shiny doesn't have
 # a method to return those.
@@ -83,6 +102,7 @@ updateCheckboxGroup <- function(session, inputId, choices, select="NORMAL") {
                              choices=choices, selected=selection, inline=TRUE)
 }
 
+# Enabling/disabling UI elements
 disableShinyInputs <- function(input, except=c()) {
   allInputs <- names(input)
   if(is.null(allInputs)) allInputs <- input
