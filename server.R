@@ -12,107 +12,73 @@ clamp <- function(value, min, max, default=max) {
   }
 }
 
-signalError <- function(message, title="Error") {
-  showModal(modalDialog(
-      title=title,
-      message,
-      easyClose=TRUE
-  ))
-}
-
-getSelection <- function(session, inputId, choices, select=c("NORMAL", "ALL", "NONE")) {
-  select <- match.arg(select)
-  switch(select,
-         "NORMAL"={
-           oldSelection <- isolate(session$input[[inputId]])
-           validChoices <- unlist(choices, use.names=FALSE)
-           validSelections <- oldSelection %in% validChoices
-           if (is.null(oldSelection)) {
-             choices
-           } else if (any(validSelections)) {
-             oldSelection[validSelections]
-           } else {
-             NULL
-           }
-         },
-         "ALL"={
-           choices
-         },
-         "NONE"={
-           c()
-         })
-}
-
-# Updates choices for selection
-#
-# Updates a selectInput, preserving the selected
-# option(s) if available
-updateSelection <- function(session, inputId, choices, select="NORMAL") {
-    if (is.null(choices)) {
-      return(NULL)
-    }
-    selection <- getSelection(session, inputId, choices, select)
-    updateSelectInput(session, inputId,
-                      choices=choices, selected=selection)
-}
-
-updateCheckboxGroup <- function(session, inputId, choices, select="NORMAL") {
-    if (is.null(choices)) {
-      return(NULL)
-    }
-    selection <- getSelection(session, inputId, choices, select)
-    updateCheckboxGroupInput(session, inputId,
-                             choices=choices, selected=selection, inline=TRUE)
-}
-
-
-separateReadyAndCachingExpts <- function(experiments) {
-  # Checks whether caching of each experiment has finished.
-  # Experiments for which caching is finished will be returned, and
-  # empty, placeholder experiments will be returned for those for which
-  # caching is ongoing. This makes it possible to access data from
-  # experiments that are ready even if there are experiments that are not.
-  rtn <- list()
-  resolvedStatus <- resolved(experiments)
-  exptNamesinConfig <- c()
-  for(config in obsmonConfig$experiments) {
-    exptNamesinConfig <- c(exptNamesinConfig, config$displayName)
+cacheFilesLatestMdate <- function(db) {
+  mtimes <- c(-1)
+  for(cacheFilePath in db$cachePaths) {
+    mtime <- tryCatch(
+      file.mtime(cacheFilePath),
+      error=function(e) NULL,
+      warning=function(w) NULL
+    )
+    mtimes <- c(mtimes, mtime)
   }
-  exptNames <- exptNamesinConfig[exptNamesinConfig %in% ls(experiments)]
+  return(max(mtimes))
+}
 
-  readyExpts <- list()
-  stillCachingExpts <- list()
-  for (exptName in exptNames) {
-    if(resolvedStatus[[exptName]]) {
-      readyExpts[[exptName]] <- experiments[[exptName]]
-    } else {
-      newName <- tryCatch({
-        load(exptsCacheProgLogFilePath[[exptName]])
-        # Using floor here to avoid showing 100% when we actually have, e.g.,
-        # cachingProgress>=99.5%. I'm sure users would not be amused by this.
-        perc <- floor(mean(unlist(thisExptCachingProgress)))
-        paste(exptName, ': Updating cache (', perc, "%)", sep='')
-        },
-        error=function(e) paste(exptName, ': Initialising cache...', sep='')
-      )
-      stillCachingExpts[[newName]] <- emptyExperiment(newName)
-    }
+getFilePathsToCache <- function(db, dtgs) {
+  validDtgs <- NULL
+  for(dtg in dtgs) {
+    fPath <- db$paths[dtg]
+    if(is.null(fPath) || is.na(fPath) || length(fPath)==0) next
+    validDtgs <- c(validDtgs, dtg)
   }
-  return(c(readyExpts, stillCachingExpts))
+  fPathsToCache <- tryCatch(
+    db$paths[validDtgs],
+    error=function(e) {flog.error(e); NULL}
+  )
+  if(length(fPathsToCache)==0) fPathsToCache <- NULL
+  return(fPathsToCache)
 }
 
 shinyServer(function(input, output, session) {
+  # Source some useful shiny-related helper functions and wrappers
+  source("shiny_wrappers.R")
+  # Start GUI with all inputs disabled.
+  # They will be enabled once experiments are loaded
+  isolate(disableShinyInputs(input, except="experiment"))
+
+  # Deciding whether to show or hide cache-related options.
+  # It is advisable not to show them by default -- especially when running on
+  # a web server for multiple users, as these options cause changes in the
+  # shared cache files for a given experiment.
+  #
+  # Mind that the cache options will always be shown if a file named
+  # ".obsmon_show_cache_options" exists in the obsmon directory. This was
+  # designed as a simple way to allow changing this configuration without
+  # having to restart obsmon (useful when running on servers)
+  output$showCacheOptions <- renderText({
+    file.exists(".obsmon_show_cache_options") ||
+    obsmonConfig$general[["showCacheOptions"]]
+  })
+  outputOptions(output, "showCacheOptions", suspendWhenHidden = FALSE)
+
   # Initial population of experiments; triggers cascade for other form fields
   exptNames <- c("")
   experiments <- reactive ({
-    # Keep checking for updates in the experiments. Useful when chaching.
-    invalidateLater(5000, session)
-    separateReadyAndCachingExpts(experimentsAsPromises)
+    # Keep checking if experiments finished initialisation
+    if(!all(resolved(experimentsAsPromises))) invalidateLater(5000, session)
+    flagNotReadyExpts(experimentsAsPromises)
   })
   observe({
       newExptNames <- names(experiments())
-      if(length(newExptNames)==0) newExptNames <- c("No experiment available!")
-      if((length(newExptNames) != length(exptNames)) |
+      if(length(newExptNames)==0) {
+        exptPlaceholder <- "ERROR: Could not read experiment data"
+        disableShinyInputs(input)
+      } else {
+        exptPlaceholder <- "Please select experiment"
+        shinyjs::enable("experiment")
+      }
+      if((length(newExptNames) != length(exptNames)) ||
          !all(exptNames==newExptNames)) {
         selectedExpt <- tryCatch({
           iExpt <- which(exptNames==input$experiment)[1]
@@ -120,66 +86,45 @@ shinyServer(function(input, output, session) {
           },
           error=function(e) NULL
         )
-        updateSelectInput(session, "experiment", choices=newExptNames, selected=selectedExpt)
+        updateSelectizeInput(session, "experiment",
+          choices=newExptNames, selected=selectedExpt,
+          options=list(placeholder=exptPlaceholder)
+        )
         exptNames <<- newExptNames
       }
   })
   shinyjs::hide(id="loading-content", anim=TRUE, animType="fade")
   shinyjs::show("app-content")
 
-  levelChoices <- list()
-  levelChoicesObsmonTable <- list()
-  levelChoicesUsageTable <- list()
-  channelChoices <- list()
-  channelChoicesObsmonTable <- list()
-  channelChoicesUsageTable <- list()
+  # Update database options according to chosen experiment
+  observe({
+    expName <- req(input$experiment)
+    expDbs <- isolate(experiments()[[expName]]$dbs)
+    dbType2DbDescription <- list(
+      "ecma"="Upper Air (3D/4D-VAR) - Screening",
+      "ccma"="Upper Air (3D/4D-VAR) - Minimization",
+      "ecma_sfc"="Surface (CANARI)"
+    )
+    choices <- list()
+    for(dbType in names(dbType2DbDescription)) {
+      if(is.null(expDbs[[dbType]])) next
+      choices[[dbType2DbDescription[[dbType]]]] <- dbType
+    }
+
+    updateSelectInputWrapper(session, "odbBase", choices=choices)
+    if(length(choices)==0) disableShinyInputs(input, except=c("experiment"))
+    else enableShinyInputs(input)
+  })
 
   activeDb <- reactive({
     expName <- req(input$experiment)
-    dbName <- req(input$odbBase)
-    isolate(experiments()[[expName]]$dbs[[dbName]])
+    dbType <- req(input$odbBase)
+    isolate(experiments()[[expName]]$dbs[[dbType]])
   })
 
-  # Update database options according to chosen category
-  observe({
-    category <- req(input$category)
-    if (category == "upperAir") {
-      choices <- list("Screening"="ecma", "Minimization"="ccma")
-      updateSelection(session, "odbBase", choices)
-      shinyjs::enable("odbBase")
-      shinyjs::enable("levels")
-    } else {
-      updateSelectInput(session, "odbBase", choices=list("Surface"="ecmaSfc"))
-      shinyjs::disable("odbBase")
-      shinyjs::disable("levels")
-    }
-  })
-
-  # Enable/disable choices if activeDB is/isn't NULL
-  observeEvent(activeDb(), ignoreNULL=FALSE, {
-    db <- activeDb()
-    allInputs <- names(input)
-    inputsNotToDisable <- c("experiment", "category", "odbBase")
-    inputsNotToEnable <- c()
-    category <- req(input$category)
-    if(category == "surface") {
-      inputsNotToEnable <- c(inputsNotToEnable, "odbBase", "levels")
-    }
-    if(is.null(db)) {
-      inputsToDisable <- allInputs[!(allInputs %in% inputsNotToDisable)]
-      for(inp in inputsToDisable) shinyjs::disable(inp)
-      updateActionButton(session, inputId="doPlot",
-        label = "No data for selected experiment/category/database")
-    } else {
-      inputsToEnable <- allInputs[!(allInputs %in% inputsNotToEnable)]
-      for(inp in inputsToEnable) shinyjs::enable(inp)
-      updateActionButton(session, inputId="doPlot", label = "Plot")
-    }
-  })
-
-  # Update date related fields dateRange, date, and cycle with new experiment
+  # Update available choices of dates when changing active database
   observeEvent(activeDb(), {
-    db <- activeDb()
+    db <- req(activeDb())
     min <- db$maxDateRange[1]
     max <- db$maxDateRange[2]
     start <- clamp(input$dateRange[1], min, max, min)
@@ -190,227 +135,670 @@ shinyServer(function(input, output, session) {
                          min = db$maxDateRange[1], max = db$maxDateRange[2])
     updateDateInput(session, "date", value = single,
                     min = db$maxDateRange[1], max = db$maxDateRange[2])
-    updateSelection(session, "cycle", db$cycles)
-    updateCheckboxGroup(session, "cycles", db$cycles)
+  })
+
+  # Signal when required dateType of plot changes value
+  dateTypeReqByPlotType <- reactiveVal()
+  observeEvent({input$plottype}, {
+    dateType <- tryCatch(
+      plotTypesFlat[[req(input$plottype)]]$dateType,
+      error=function(e) {"single"}
+    )
+    dateTypeReqByPlotType(dateType)
+  })
+
+  # Offer single date or dateRange input according to selected plottype
+  # Used to be done via conditionalPanel in ui.R, but that was slow
+  observeEvent({dateTypeReqByPlotType()}, {
+    shinyjs::toggle("date", condition=dateTypeReqByPlotType()=="single")
+    shinyjs::toggle("dateRange", condition=dateTypeReqByPlotType()=="range")
+    shinyjs::toggle("cycle", condition=dateTypeReqByPlotType()=="single")
+    shinyjs::toggle("cycles", condition=dateTypeReqByPlotType()=="range")
+  })
+
+  # Keep track of date(s), cycle(s) and consequently DTG(s) selected in the UI
+  # and store them in a convenient order and format
+  selectedDates <- reactiveVal()
+  observeEvent({
+      input$date
+      input$dateRange
+      dateTypeReqByPlotType()
+    }, {
+      if(dateTypeReqByPlotType() %in% c("range")) {
+        dates <- expandDateRange(input$dateRange[[1]], input$dateRange[[2]])
+      } else {
+        dates <- strftime(input$date, format="%Y%m%d")
+      }
+      selectedDates(sort(dates, decreasing=TRUE))
+  })
+  selectedCycles <- reactiveVal()
+  observeEvent({
+      input$cycle
+      input$cycles
+      dateTypeReqByPlotType()
+    }, {
+      if(dateTypeReqByPlotType() %in% c("range")) {
+        cycles <- input$cycles
+      } else {
+        cycles <- input$cycle
+      }
+      selectedCycles(sort(cycles, decreasing=FALSE))
+  })
+  selectedDtgs <- reactiveVal()
+  observeEvent({
+      selectedDates()
+      selectedCycles()
+    }, {
+      dtgs <- c()
+      for(date in req(selectedDates())) {
+        for(cycle in req(selectedCycles())) {
+          dtgs <- c(dtgs, sprintf("%s%s", date, cycle))
+        }
+      }
+      selectedDtgs(dtgs)
+  })
+
+  # Update available cycle choices when relevant fields change
+  availableCycles <- reactiveVal()
+  observe({
+    availableCycles(getAvailableCycles(req(activeDb()), req(selectedDates())))
+  })
+  observeEvent({availableCycles()}, {
+    updateSelectInputWrapper(session, "cycle", choices=req(availableCycles()))
+    updateCheckboxGroup(session, "cycles", req(availableCycles()))
   })
 
   observeEvent(input$cyclesSelectAll, {
-    db <- activeDb()
-    updateCheckboxGroup(session, "cycles", db$cycles, "ALL")
+    cycles <- req(availableCycles())
+    updateCheckboxGroupInput(session, "cycles",
+      choices=cycles, selected=cycles, inline=TRUE
+    )
   })
-
   observeEvent(input$cyclesSelectNone, {
-    db <- activeDb()
-    updateCheckboxGroup(session, "cycles", db$cycles, "NONE")
+    cycles <- req(availableCycles())
+    updateCheckboxGroupInput(session, "cycles",
+      choices=cycles, selected=character(0), inline=TRUE
+    )
   })
 
-  # Update obtype with choices for given experiment and database
+  # Caching is performed assyncronously. "assyncCachingProcs" will keep
+  # track of the processes responsible for caching the various data files.
+  # These processes are "Future" objects (from R pkg "future"), and their
+  # statuses can be checked using the function "resolved"
+  assyncCachingProcs <- reactiveValues()
   observe({
-    db <- activeDb()
-    updateSelection(session, "obtype", names(db$obtypes))
+    # Periodic cleanup of assyncCachingProcs
+    procs <- assyncCachingProcs
+    stillAciveProcs <- list()
+    for(fPath in names(procs)) {
+      proc <- procs[[fPath]]
+      if(!resolved(proc)) stillAciveProcs[[fPath]] <- proc
+    }
+    isolate(assyncCachingProcs <- stillAciveProcs)
+    if(length(stillAciveProcs)>0) invalidateLater(300000)
   })
 
-  # Update sensor for satem obtype, variable else
-  observe({
-    db <- activeDb()
-    obtype <- req(input$obtype)
-    if (obtype == "satem") {
-      updateSelection(session, "sensor", names(db$obtypes[[obtype]]))
+  # Put observations in cache when dB and/or DTG selection are modified
+  fPathsToCache <- eventReactive({
+    activeDb()
+    selectedDtgs()
+  }, {
+    allFiles <- getFilePathsToCache(req(activeDb()), req(selectedDtgs()))
+    # We don't want to schedule caching if file is already being cached
+    # resolved(arg) returns TRUE unless arg is a non-resolved future
+    rtn <- c()
+    for(fPath in allFiles) {
+      if(resolved(assyncCachingProcs[[fPath]])) rtn <- c(rtn, fPath)
+    }
+    return(rtn)
+  })
+  observeEvent({fPathsToCache()}, {
+    db <- req(activeDb())
+    fPaths <- req(fPathsToCache())
+    cacheProc <- assyncPutObsInCache(fPaths, cacheDir=db$cacheDir)
+    for(fPath in fPaths) assyncCachingProcs[[fPath]] <- cacheProc
+  })
+  # Re-cache observations if requested by user
+  observeEvent({input$recacheCacheButton}, {
+    db <- req(activeDb())
+    showNotification("Recaching selected DTG(s)", type="warning", duration=1)
+    assyncPutObsInCache(fPathsToCache(), cacheDir=db$cacheDir, replaceExisting=TRUE)
+  },
+    ignoreInit=TRUE
+  )
+  # Reset cache if requested by user
+  # Doing this in two steps to require confirmation
+  observeEvent(input$resetCacheButton, {
+    showConfirmationDialog(
+      inputId="resetCacheConfirmationButton",
+      title="Are you sure?",
+      msg=HTML(sprintf(paste(
+          "Please confirm that you want to RESET all cached information ",
+          "available for experiment %s%s%s",
+          "This action cannot be undone!"
+        ), "<br><br>", req(input$experiment), "<br><br>")
+      )
+    )
+  },
+    ignoreInit=TRUE
+  )
+  observeEvent(input$resetCacheConfirmationButton, {
+    status <- createCacheFiles(cacheDir=req(activeDb()$cacheDir), reset=TRUE)
+    removeModal()
+    if(status==0) {
+      showModal(
+        modalDialog("The experiment cache has been reset", easyClose=TRUE)
+      )
     } else {
-      updateSelection(session, "variable", names(db$obtypes[[obtype]]))
+        signalError("Problems resetting experiment cache. Please check logs.")
     }
-    updateSelection(session, "station", db$stations[[obtype]])
   })
 
-  # Update satellite choices for given sensor
+  # Detect when the relevant cache files have been updated
+  cacheFileUpdated <- eventReactive({activeDb()}, {
+    reactivePoll(5000, session,
+      partial(cacheFilesLatestMdate, db=req(activeDb())), function() NULL)
+  })
+
+  # Flagging that it's time to read info from cache
+  latestTriggerReadCache <- reactiveVal(0)
+  triggerReadCache <- function() latestTriggerReadCache(Sys.time())
+  reloadInfoFromCache <- eventReactive({
+      latestTriggerReadCache()
+      activeDb()
+      cacheFileUpdated()
+      selectedDtgs()
+    }, {
+    character(0)
+  },
+    ignoreNULL=TRUE
+  ) %>% throttle(1000)
+
+  # Keep track of whether selected DTGs are cached or not
+  selectedDtgsAreCached <- eventReactive({
+      reloadInfoFromCache()
+    }, {
+      dtgsAreCached(req(activeDb()), req(selectedDtgs()))
+  })
+  # Attempt to cache DTGs if they remain uncached even after
+  # the processes responsible for caching them have finished
+  # This is useful to retry caching if former attempts fail
+  observeEvent({if(!selectedDtgsAreCached()) invalidateLater(5000)}, {
+    req(!selectedDtgsAreCached())
+    db <- req(activeDb())
+    fPaths <- c()
+    for(fPath in fPathsToCache()) {
+      if(resolved(assyncCachingProcs[[fPath]])) fPaths <- c(fPaths, fPath)
+    }
+    req(length(fPaths)>0)
+    # Here we end up with files for which the caching process has finished
+    # but the corresponding DTGs stil remain uncached
+    showNotification("Attempting to recache", type="warning", duration=1)
+    cacheProc <- assyncPutObsInCache(fPaths, cacheDir=db$cacheDir, replaceExisting=TRUE)
+    for(fPath in fPaths) assyncCachingProcs[[fPath]] <- cacheProc
+  },
+    ignoreInit=TRUE
+  )
+
+  # Update obtype
+  observeEvent({
+      reloadInfoFromCache()
+    }, {
+    db <- req(activeDb())
+    if(db$dbType=="ecma_sfc") {
+      updateSelectInputWrapper(session, "obtype", choices=c("surface"))
+    } else {
+      obtypes <- getObtypes(db, selectedDates(), selectedCycles())
+
+      isCached <- selectedDtgsAreCached() && !is.null(obtypes$cached)
+      if(isCached) {
+        newChoices <- obtypes$cached
+      } else {
+        newChoices <- obtypes$general
+        delay(5000, triggerReadCache())
+      }
+      updateSelectInputWrapper(
+        session, "obtype", choices=newChoices, choicesFoundIncache=isCached
+      )
+    }
+  })
+
+  # Update obnames
+  observeEvent({
+      reloadInfoFromCache()
+      input$obtype
+    }, {
+    req(input$obtype!="satem")
+    obsCategory <- req(input$obtype)
+    db <- req(activeDb())
+
+    obnames <- getObnames(db, obsCategory, selectedDates(), selectedCycles())
+    isCached <- selectedDtgsAreCached() && !is.null(obnames$cached)
+    if(isCached) {
+      newChoices <- obnames$cached
+    } else {
+      newChoices <- obnames$general
+      if(!(obsCategory %in% c("radar", "scatt"))) {
+        # In these cases obnames$cached will always be NULL, since
+        # obname=obsCategory and this info is therefore not stored in cache
+        delay(5000, triggerReadCache())
+      }
+    }
+    updateSelectInputWrapper(
+      session, "obname", choices=newChoices, choicesFoundIncache=isCached
+    )
+  })
+
+  # Update variable
+  observeEvent({
+      reloadInfoFromCache()
+      input$obtype
+      input$obname
+    }, {
+    req(input$obtype!="satem")
+
+    db <- req(activeDb())
+    obname <- req(input$obname)
+
+    variables <- getVariables(db, selectedDates(), selectedCycles(), obname)
+    isCached <- selectedDtgsAreCached() && !is.null(variables$cached)
+    if(isCached) {
+      newChoices <- variables$cached
+    } else {
+      newChoices <- variables$general
+      delay(5000, triggerReadCache())
+    }
+    updateSelectInputWrapper(
+      session, "variable", choices=newChoices, choicesFoundIncache=isCached
+    )
+  })
+
+  # Decide whether to allow users to select stations
+  allowChoosingStation <- reactiveVal(TRUE)
+  observeEvent({
+    input$obtype
+    input$plottype
+  }, {
+    if(input$obtype=="satem") {
+      allowChoosingStation(FALSE)
+    } else {
+      infoAboutSelectedPlotType <- plotTypesFlat[[req(input$plottype)]]
+      query <- infoAboutSelectedPlotType$queryStub
+      # StationIDs are not stored in the "obsmon" table, only in "usage"
+      queryFromUsage<-grepl("FROM{1}[[:space:]]+usage",query,ignore.case=TRUE)
+      allowChoosingStation(queryFromUsage)
+    }
+  })
+  observeEvent({
+    allowChoosingStation()
+    }, {
+      shinyjs::toggleState("station", condition=allowChoosingStation())
+      shinyjs::toggleElement("station", condition=allowChoosingStation())
+  })
+
+  # Update stations
+  stationsAlongWithLabels <- reactiveVal(c("Any"=""))
+  observeEvent({
+      allowChoosingStation()
+      reloadInfoFromCache()
+      input$obtype
+      input$obname
+      input$variable
+    }, {
+    if(allowChoosingStation()) stationsAlongWithLabels(c("Any"=""))
+    req(allowChoosingStation())
+
+    db <- req(activeDb())
+    dates <- req(selectedDates())
+    cycles <- req(selectedCycles())
+    obname <- req(input$obname)
+    variable <- req(input$variable)
+
+    stations <- getStationsFromCache(db, dates, cycles, obname, variable)
+    if(length(stations)>0) {
+      if(obname=="synop") {
+        stationLabels <- c()
+        for(statID in stations) {
+          statName <- synopStations[statID]
+          label <- statID
+          if(is.character(statName)) label<-sprintf("%s (%s)",statID,statName)
+          stationLabels <- c(stationLabels, label)
+        }
+        names(stations) <- stationLabels
+      } else {
+        names(stations) <- stations
+      }
+    }
+    if(selectedDtgsAreCached()) {
+      stationsAlongWithLabels(c("Any"="", stations))
+    } else {
+      if(length(stations)==0) {
+        stationsAlongWithLabels(c("Any (cache info not available)"=""))
+      } else {
+        stationsAlongWithLabels(c("Any (cache info incomplete)"="", stations))
+      }
+      delay(5000, triggerReadCache())
+    }
+  }, ignoreNULL=TRUE)
   observe({
-    obtype <- req(input$obtype)
-    if (obtype == "satem") {
-      db <- activeDb()
-      sens <- req(input$sensor)
-      updateSelection(session, "satellite", names(db$obtypes[[obtype]][[sens]]))
-    }
-  })
-
-  # Update channel choice for given satellite
-  observe({
-    obtype <- req(input$obtype)
-    if (obtype == "satem") {
-      db <- activeDb()
-      sens <- req(input$sensor)
-      sat <- req(input$satellite)
-      channelChoicesObsmonTable <<- db$obtypesObsmonTable[[obtype]][[sens]][[sat]]
-      channelChoicesUsageTable <<- db$obtypesUsageTable[[obtype]][[sens]][[sat]]
-      channelChoices <<- unique(c(channelChoicesObsmonTable, channelChoicesUsageTable))
-      updateSelection(session, "channels", channelChoices)
-    }
-  })
-
-  observeEvent(input$channelsSelectAll, {
-    updateSelection(session, "channels", channelChoices, "ALL")
-  })
-
-  observeEvent(input$channelsSelectNone, {
-    updateSelection(session, "channels", channelChoices, "NONE")
+    updateSelectInputWrapper(session, "station", choices=stationsAlongWithLabels())
   })
 
   # Update level choice for given variable
-  observe({
-    obtype <- req(input$obtype)
-    if (obtype != "satem") {
-      db <- activeDb()
-      var <- req(input$variable)
-      levelChoicesObsmonTable <<- db$obtypesObsmonTable[[obtype]][[var]]
-      levelChoicesUsageTable <<- db$obtypesUsageTable[[obtype]][[var]]
-      levelChoices <<- unique(c(levelChoicesObsmonTable, levelChoicesUsageTable))
-      updateSelection(session, "levels", levelChoices)
+  availableLevels <- reactiveVal(list(obsmon=NULL, usage=NULL, all=NULL))
+  observeEvent({
+    reloadInfoFromCache()
+    input$obtype
+    input$obname
+    input$variable
+    }, {
+    req(input$obtype!="satem")
+
+    db <- req(activeDb())
+    obname <- req(input$obname)
+    var <- req(input$variable)
+
+    levels <- getAvailableLevels(db, selectedDates(), selectedCycles(), obname, var)
+    if(!selectedDtgsAreCached()) {
+      if(length(levels$all)==0) {
+        levels$all <- c("Any (cache info not available)"="")
+      } else {
+        levels$all <- c("Any (cache info incomplete)"="", levels$all)
+      }
+      delay(5000, triggerReadCache())
     }
+    availableLevels(levels)
+  })
+  observe({
+    updateSelectInputWrapper(session,"levels",choices=availableLevels()$all)
   })
 
   observeEvent(input$levelsSelectStandard, {
     updateSelectInput(session, "levels",
-                      choices=levelChoices, selected=levelChoicesObsmonTable)
+      choices=availableLevels()$all, selected=availableLevels()$obsmon)
   })
-
   observeEvent(input$levelsSelectAll, {
-    updateSelection(session, "levels", levelChoices, "ALL")
+    updateSelectInput(session, "levels",
+      choices=availableLevels()$all, selected=availableLevels()$all)
   })
-
   observeEvent(input$levelsSelectNone, {
-    updateSelection(session, "levels", levelChoices, "NONE")
+    updateSelectInput(session, "levels",
+      choices=availableLevels()$all, selected=c())
   })
 
-  # Offer single date or dateRange input according to selected plottype
-  output$dateType <- reactive({
-    plotType <- plotTypesFlat[[req(input$plottype)]]
-    plotType$dateType
+  # Update sensornames
+  observeEvent({
+      reloadInfoFromCache()
+      input$obtype
+    }, {
+    req(input$obtype=="satem")
+    updateSelectInputWrapper(session, "obname", choices=c("satem"))
+    db <- req(activeDb())
+
+    sens <- getAvailableSensornames(db, selectedDates(), selectedCycles())
+    isCached <- selectedDtgsAreCached() && !is.null(sens$cached)
+    if(isCached) {
+      newChoices <- sens$cached
+    } else {
+      newChoices <- sens$general
+      delay(5000, triggerReadCache())
+    }
+    updateSelectInputWrapper(
+      session, "sensor", choices=newChoices, choicesFoundIncache=isCached
+    )
   })
-  outputOptions(output, 'dateType', suspendWhenHidden=FALSE)
+
+  # Update satellite choices for given sensor
+  observeEvent({
+    reloadInfoFromCache()
+    input$obtype
+    input$obname
+    input$sensor
+    }, {
+    req(input$obtype=="satem")
+    db <- req(activeDb())
+    sens <- req(input$sensor)
+
+    sats <- getAvailableSatnames(db, selectedDates(), selectedCycles(), sens)
+    isCached <- selectedDtgsAreCached() && !is.null(sats$cached)
+    if(isCached) {
+      newChoices <- sats$cached
+    } else {
+      newChoices <- sats$general
+      delay(5000, triggerReadCache())
+    }
+    updateSelectInputWrapper(
+      session, "satellite", choices=newChoices, choicesFoundIncache=isCached
+    )
+  })
+
+  # Update channel choice for given satellite
+  channels <- eventReactive({
+    reloadInfoFromCache()
+    input$obtype
+    input$obname
+    input$sensor
+    input$satellite
+    },{
+    req(input$obtype=="satem")
+
+    db <- req(activeDb())
+    sat <- req(input$satellite)
+    sens <- req(input$sensor)
+    dates <- req(selectedDates())
+    cycles <- req(selectedCycles())
+
+    newChannels <- NULL
+    if(selectedDtgsAreCached()) {
+      newChannels <- getAvailableChannels(
+        db, dates, cycles, satname=sat, sensorname=sens
+      )
+    }
+    if(is.null(newChannels))newChannels<-c("Any (cache info not available)"="")
+    newChannels
+  })
+  observeEvent({channels()}, {
+    updateSelectInputWrapper(session, "channels", choices=channels())
+  })
+
+  observeEvent(input$channelsSelectAll, {
+    updateSelectInput(
+      session, "channels", choices=channels(), selected=channels()
+    )
+  })
+  observeEvent(input$channelsSelectNone, {
+    updateSelectInput(
+      session, "channels", choices=channels(), selected=character(0)
+    )
+  })
 
   # Build named list of criteria
   buildCriteria <- function() {
     exp <- isolate(experiments()[[req(input$experiment)]])
     db <- req(input$odbBase)
-    adb <- activeDb()
+    adb <- req(activeDb())
     res <- list()
     res$info <- list()
-    obtype <- req(input$obtype)
-    if (obtype == 'satem') {
+    obname <- req(input$obname)
+    res$obnumber <- getAttrFromMetadata('obnumber', obname=obname)
+    if (obname == 'satem') {
       sensor <- req(input$sensor)
-      res$obnumber <- adb$obnumbers[[sensor]]
       res$obname <- sensor
       res$satname <- req(input$satellite)
-      if (!is.null(input$channels)) {
-        res$levels <- input$channels
-      } else {
-        res$levels <- channelChoices
-      }
+      levels <- input$channels
     } else {
-      res$obnumber <- adb$obnumbers[[obtype]]
-      res$obname <- obtype
+      res$obname <- obname
       res$varname <- req(input$variable)
-      if (!is.null(input$levels)) {
-        res$levels <- input$levels
-      } else {
-        res$levels <- levelChoices
-      }
-    }
-    if (req(input$station) != "Any") {
+      levels <- input$levels
+
       station <- input$station
+      if("" %in% station) station <- ""
       res$station <- station
-      label <- exp$stationLabels[[adb$name]][[obtype]][[station]]
-      res$info$stationLabel <- ifelse(is.null(label), as.character(station), label)
     }
+    res$levels <- list()
+    if(length(levels)>0 && levels!="") res$levels <- levels
+
     res
   }
 
-  # Turn criteria into reactive expression so they can trigger plottype update
-  criteria <- eventReactive(
-  {
+  # Update plottype choices according to criteria
+  observeEvent({
+    reloadInfoFromCache()
     input$obtype
+    input$obname
     input$sensor
     input$satellite
     input$channels
     input$variable
     input$levels
     input$station
+  }, {
+    choices <- applicablePlots(req(buildCriteria()))
+    updateSelectInputWrapper(session, "plottype", choices=choices)
   },
-  {
-    buildCriteria()
-  })
-
-  criteriaDebounced <- criteria %>% debounce(200)
-
-  # Update plottype choices with available plottypes according to criteria
-  updatePlotTypes <- function() {
-    criteria <- buildCriteria()
-    choices <- applicablePlots(criteria)
-    updateSelection(session, "plottype", choices)
-  }
-
-  # Trigger plottype update on criteria change
-  observeEvent(criteriaDebounced(), {
-    updatePlotTypes()
-  })
-  observeEvent(criteria(), {
-    updatePlotTypes()
-  }, once=TRUE)
+    ignoreNULL=FALSE
+  )
 
   # Perform plotting
-  observeEvent(input$doPlot, {
-    t <- createShinyProgressTracker()
-    plotRequest <- list()
-    plotter <- plotTypesFlat[[req(input$plottype)]]
-    plotRequest$expName <- req(input$experiment)
-    db <- activeDb()
-    plotRequest$dbName <- db$name
-    plotRequest$criteria <- buildCriteria()
-    plotRequest$criteria$dtg <-
-      switch(plotter$dateType,
-             "single"={
-               cycle <- req(input$cycle)
-               date2dtg(req(input$date), cycle)
-             },
-             "range"={
-                   dateRange <- req(input$dateRange)
-                   cycles <- input$cycles
-                   if (is.null(cycles)) {
-                     signalError("Please select at least one cycle.")
-                     return(NULL)
-                   }
-                   list(dateRange[1], dateRange[2], cycles)
-             })
+  preparePlots <- function(plotter, plotRequest, db, stations) {
     isWindspeed <- "varname" %in% names(plotRequest$criteria) &&
       plotRequest$criteria$varname %in% c("ff", "ff10m")
+    query <- NULL
     if (isWindspeed) {
       plotData <- buildFfData(db, plotter, plotRequest)
     } else {
       query <- plotBuildQuery(plotter, plotRequest)
-      output$queryUsed <- renderText(query)
-      t <- addTask(t, "Querying database")
-      plotData <- performQuery(db, query, plotRequest$criteria$dtg,
-                               progressTracker=t)
+      plotData <- performQuery(db, query, plotRequest$criteria$dtg)
       # Postprocessing plotData returned by performQuery.
       # This may be useful, e.g., if performing averages over a
       # picked date range.
       plotData <- postProcessQueriedPlotData(plotter, plotData)
     }
-    output$dataTable <- renderDataTable(plotData,
-                                        options=list(pageLength=100))
-    res <- plotGenerate(plotter, plotRequest, plotData, t)
-    output$plot <- renderPlot(grid.arrange(res$obplot,
-                                           top=textGrob(res$title)),
-                              res=96, pointsize=18)
-    if (is.null(res$obmap)) {
-      js$disableTab("mapTab")
-      if (input$mainArea == "mapTab") {
-        updateTabsetPanel(session, "mainArea", "plotTab")
+    if(!is.null(plotData) && nrow(plotData)>0) {
+      statLabels <- c()
+      for(statid in plotData$statid) {
+        statid <- gsub(" ", "", gsub("'", "", statid))
+        statLabels <- c(statLabels, names(stations)[stations==statid])
       }
-    } else {
-      output$map <- renderLeaflet(res$obmap)
-      output$mapTitle <- renderText(res$title)
-      js$enableTab("mapTab")
+      if(nrow(plotData)==length(statLabels)) {
+        plotData$statLabel <- statLabels
+      } else {
+        plotData$statLabel <- plotData$statid
+      }
     }
-    closeTracker(t)
+
+    res <- plotGenerate(plotter, plotRequest, plotData)
+    res[["queryUsed"]] <- query
+    res[["plotData"]] <- plotData
+    return(res)
+  }
+
+  currentPlotPid <- reactiveVal(-1)
+  plotStartedNotifId <- reactiveVal(-1)
+  onclick("cancelPlot", {
+    removeNotification(plotStartedNotifId())
+    showNotification("Cancelling plot", type="warning", duration=1)
+    tools::pskill(currentPlotPid(), tools::SIGINT)
+    shinyjs::hide("cancelPlot")
+    shinyjs::show("doPlot")
+    enableShinyInputs(input)
+  })
+  futurePlot <- eventReactive(input$doPlot, {
+    disableShinyInputs(input)
+    shinyjs::hide("doPlot")
+    shinyjs::show("cancelPlot")
+    shinyjs::enable("cancelPlot")
+
+    db <- req(activeDb())
+    stations <- stationsAlongWithLabels()
+
+    plotter <- plotTypesFlat[[req(input$plottype)]]
+    plotRequest <- list()
+    plotRequest$expName <- req(input$experiment)
+    plotRequest$dbType <- db$dbType
+    plotRequest$criteria <- buildCriteria()
+    plotRequest$criteria$dtg <- switch(plotter$dateType,
+      "single"={
+        cycle <- req(input$cycle)
+        date2dtg(req(input$date), cycle)
+      },
+      "range"={
+            dateRange <- req(input$dateRange)
+            cycles <- input$cycles
+            if (is.null(cycles)) {
+              signalError("Please select at least one cycle.")
+              return(NULL)
+            }
+            list(dateRange[1], dateRange[2], cycles)
+      }
+    )
+
+    rtn <- future({
+      tryCatch(
+        preparePlots(plotter, plotRequest, db, stations),
+        error=function(e) {flog.error(e); NULL}
+      )
+    })
+    if(!is.null(rtn)) {
+      currentPlotPid(rtn$job$pid)
+      plotStartedNotifId(showNotification("Plot initiated", type="message"))
+    }
+    rtn
+  })
+
+  readyPlot <- reactive({
+    myFutPlot <- futurePlot()
+    req(!is.null(myFutPlot), cancelOutput=TRUE)
+    isReady <- resolved(myFutPlot)
+    if(!isReady) invalidateLater(1000)
+    req(isReady, cancelOutput=TRUE)
+    shinyjs::disable("cancelPlot")
+    myPlot <- tryCatch(
+      value(myFutPlot),
+      error=function(e) {NULL}
+    )
+    myPlot
+  })
+
+  # Notify the if plot went successfully or not
+  observeEvent({readyPlot()}, {
+    removeNotification(plotStartedNotifId())
+    plotData <- readyPlot()$plotData
+    if(is.null(plotData) || nrow(plotData)==0) {
+      if(is.null(plotData)) msg<-"A problem occurred. Please check the logs."
+      else msg <- "Query returned no data."
+      signalError(title="Could not produce plot", message=msg)
+    } else {
+      showNotification("Redering plot", duration=1, type="message")
+    }
+  })
+
+  # Finally, producing the output
+  output$plot <- renderPlot(
+    grid.arrange(req(readyPlot()$obplot),top=textGrob(req(readyPlot()$title))),
+    res=96, pointsize=18
+  )
+  output$dataTable <- renderDataTable(
+    req(readyPlot()$plotData), options=list(pageLength=100)
+  )
+  output$queryUsed <- renderText(req(readyPlot()$queryUsed))
+  output$map <- renderLeaflet(req(readyPlot()$obmap))
+  output$mapTitle <- renderText(req(readyPlot()$title))
+
+  observeEvent(readyPlot(), {
+      on.exit({
+        shinyjs::hide("cancelPlot")
+        shinyjs::show("doPlot")
+        enableShinyInputs(input)
+      })
+
+      if(is.null(readyPlot()$obmap)) {
+        if(input$mainArea=="mapTab") {
+          updateTabsetPanel(session, "mainArea", "plotTab")
+        }
+        js$disableTab("mapTab")
+      } else {
+        js$enableTab("mapTab")
+      }
   })
 })

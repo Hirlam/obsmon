@@ -1,73 +1,143 @@
-expCreateSqliteShardedDtg <- function(name,
-                                      baseDir, experiment) {
-  flog.info("Initializing experiment %s...", name)
-  x <- structure(list(), class = "sqliteShardedDtg")
-  x$name <- name
-  x$dbs$ecmaSfc <- createDb(file.path(baseDir, experiment, "ecma_sfc"),
-                            name, "ecmaSfc", "ecma.db")
-  x$dbs$ccma <- createDb(file.path(baseDir, experiment, "ccma"),
-                         name, "ccma", "ccma.db")
-  x$dbs$ecma <- createDb(file.path(baseDir, experiment, "ecma"),
-                         name, "ecma", "ecma.db")
-  nullExp <- is.null(x$dbs$ecma) & is.null(x$dbs$ecmaSfc) & is.null(x$dbs$ccma)
-  if(nullExp) {
-    flog.warn("Could not find any data for experiment %s. Skipping it.", name)
-    x <- NULL
-  } else {
-    flog.info("Finished initialization of experiment %s.", name)
+getDtgs <- function(path) {
+  dtgs <- tryCatch({
+      foundDtgs <- as.integer(dir(path=path, pattern="[0-9]{10}"))
+      foundDtgs <- sort(unique(foundDtgs))
+      foundDtgs
+    },
+    error=function(e) {flog.error(e); NULL},
+    warning=function(w) {flog.warn(w); foundDtgs}
+  )
+  if(length(dtgs)==0) dtgs <- NULL
+  return(dtgs)
+}
+
+getAvailableCycles <- function(db, dates) {
+  foundDtgs <- c()
+  for(date in dates) {
+    searchPattern <- sprintf("%s{1}[0-9]{2}", date)
+    newDtgs <- as.integer(dir(path=db$dir, pattern=searchPattern))
+    foundDtgs <- c(foundDtgs, newDtgs)
   }
+  cycles <- c()
+  for(dtg in foundDtgs) cycles <- c(cycles, sprintf("%02d", dtg %% 100))
+  return(sort(unique(cycles)))
+}
+
+pathToDataFileForDtg <- function(exptDir, dbType, dtg) {
+  dbpath <- tryCatch({
+      fname <- gsub('_sfc', '', paste0(dbType, '.db'), fixed=TRUE)
+      fpath <- file.path(exptDir, dbType, dtg, fname)
+      fpath
+    },
+    error=function(e) {flog.error(e); NULL},
+    warning=function(w) {flog.warn(w); fpath}
+  )
+  return(dbpath)
+}
+
+getDataFilePaths <- function(exptDir, dbType, assertExists=FALSE) {
+  dtgs <- getDtgs(file.path(exptDir, dbType))
+  fPaths <- NULL
+  validDtgs <- NULL
+  for(dtg in dtgs) {
+    fPath <- pathToDataFileForDtg(exptDir, dbType, dtg)
+    if(is.null(fPath)) next
+    if(assertExists && !file.exists(fPath)) next
+    fPaths <- c(fPaths, fPath)
+    validDtgs <- c(validDtgs, dtg)
+  }
+  if(is.null(fPaths)) return(NULL)
+  else return(structure(fPaths, names=validDtgs))
+}
+
+dbTypesRecognised <- c("ccma", "ecma", "ecma_sfc")
+
+emptyExperiment <- function(name) {
+  x <- list()
+  x$name <- name
+  x$dbs <- list()
+  for(dbType in dbTypesRecognised) x$dbs[[dbType]] <- NULL
   x
 }
 
-emptyExperiment <- function(name) {
-  x <- structure(new.env(), class = "sqliteShardedDtg")
+initExperiment <- function(name, baseDir, experiment, checkFilesExist) {
+
+  flog.debug("Initializing experiment %s...", name)
+  x <- list()
   x$name <- name
-  x$dbs$ecma <- NULL
-  x$dbs$ecmaSfc <- NULL
-  x$dbs$ccma <- NULL
-  x
+  x$path <- file.path(baseDir, experiment)
+  x$cacheDir <- file.path(obsmonConfig$general[["cacheDir"]], slugify(name))
+  x$dbs <- list()
+  for(dbType in dbTypesRecognised) {
+    x$dbs[[dbType]] <- NULL
+    # Making sure to only store dtgs that correspond to existing data files
+    dataFilePaths<-getDataFilePaths(x$path,dbType,assertExists=checkFilesExist)
+    dtgs <- sort(names(dataFilePaths))
+    if(is.null(dtgs)) next
+    x$dbs[[dbType]] <- list(
+      exptName=name,
+      dbType=dbType,
+      dir=file.path(x$path, dbType),
+      dtgs=dtgs,
+      maxDateRange=dtg2date(c(dtgs[1], dtgs[length(dtgs)])),
+      # Set paths where obsmon expects to find experiment data for each dtg
+      paths=dataFilePaths,
+      # Paths related to caching
+      cacheDir=x$cacheDir,
+      cachePaths=list(
+        obsmon=file.path(x$cacheDir, sprintf('%s_obsmon.db', dbType)),
+        usage=file.path(x$cacheDir, sprintf('%s_usage.db', dbType))
+      )
+    )
+  }
+
+  if(is.null(x$dbs$ecma) & is.null(x$dbs$ecma_sfc) & is.null(x$dbs$ccma)){
+    flog.warn("Could not find data for experiment %s. Skipping.", name)
+    x <- NULL
+  } else {
+    flog.debug("Finished initialization of experiment %s.", name)
+  }
+  return(x)
 }
 
 initExperimentsAsPromises <- function() {
   # Using new.env(), as lists cannot be used with %<-%
   experiments <- new.env()
-  experimentChoices <- list()
-  # Making sure experiments don't block each other
-  originalNumberAvailableWorkers <- length(availableWorkers())
-  plan(multiprocess, workers=2*length(obsmonConfig$experiments))
-  on.exit(plan(multiprocess, workers=originalNumberAvailableWorkers))
   for(config in obsmonConfig$experiments) {
     name <- config$displayName
-    # Using %<-% (library "future") to have experiments caching asynchronously.
-    # This makes it possible to start working with experiments as soon as they
-    # are cached, without having to wait for the others to finish.
+    # Using %<-% (library "future") to init experiments asynchronously
     experiments[[name]] %<-%
-      expCreateSqliteShardedDtg(name, config$baseDir, config$experiment)
-    experimentChoices <- append(experimentChoices, name)
+      initExperiment(name, config$baseDir, config$experiment,
+        checkFilesExist=obsmonConfig$general[["initCheckDataExists"]]
+      )
   }
   experiments
 }
 
-# Creating and initialising variables that will help keep track of the caching
-# progress for each experiment
-exptsCachingProgress <- new.env(parent=globalenv())
-exptsCacheProgLogFilePath <- new.env(parent=globalenv())
-for(config in obsmonConfig$experiments) {
-  name <- config$displayName
-  exptsCachingProgress[[name]] <- list("ecma"=0.0, "ecmaSfc"=0.0, "ccma"=0.0)
-  exptsCacheProgLogFilePath[[name]] <- file.path(
-    obsmonConfig$general[["cacheDir"]],
-    paste('caching_status_', name, '.tmp.RData', sep='')
-  )
-  unlink(exptsCacheProgLogFilePath[[name]])
-  file.create(exptsCacheProgLogFilePath[[name]])
+flagNotReadyExpts <- function(experiments) {
+  # Checks whether experiments have been initialised. Those that are still
+  # initialising will be flagged and replaced by empty ones (placeholders).
+  # This allows using experiments that are ready even if there are others
+  # that are not.
+  resolvedStatus <- resolved(experiments)
+
+  readyExpts <- list()
+  notReadyExpts <- list()
+  exptNames <- exptNamesinConfig[exptNamesinConfig %in% ls(experiments)]
+  for (exptName in exptNames) {
+    if(resolvedStatus[[exptName]]) {
+      readyExpts[[exptName]] <- experiments[[exptName]]
+    } else {
+      newName <- paste0(exptName, ': Loading experiment...')
+      notReadyExpts[[newName]] <- emptyExperiment(newName)
+    }
+  }
+  return(c(readyExpts, notReadyExpts))
 }
 
-removeExptCachingStatusFiles <- function() {
-  for(config in obsmonConfig$experiments) {
-    name <- config$displayName
-    unlink(exptsCacheProgLogFilePath[[name]])
-  }
+exptNamesinConfig <- c()
+for(config in obsmonConfig$experiments) {
+  exptNamesinConfig <- c(exptNamesinConfig, config$displayName)
 }
 
 experimentsAsPromises <- initExperimentsAsPromises()

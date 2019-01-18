@@ -1,36 +1,34 @@
-sqliteConnect <- function(dbpath) {
-  flog.debug("Connecting to path %s", dbpath)
-  con <- dbConnect(RSQLite::SQLite(), dbpath,
-                   flags=RSQLite::SQLITE_RO, synchronous=NULL)
-  tryCatch(dbExecute(con, "PRAGMA synchronous=off"),
-           error=function(e) {
-             flog.error("Error accessing %s: %s", dbpath, e)
-             con <- NULL
-           })
-  con
-}
-
-prepareConnections <- function(db) {
-  makePath <- function(dtg) {
-    dbpath <- file.path(db$dir, dtg, db$file)
-    if (!file.exists(dbpath)) {
-      flog.debug("Missing file %s", dbpath)
+dbConnectWrapper <- function(dbpath, read_only=FALSE, showWarnings=TRUE) {
+  con <- tryCatch({
+      if(read_only) {
+          newCon<-dbConnect(RSQLite::SQLite(),dbpath,flags=RSQLite::SQLITE_RO)
+          dbExecute(newCon, "PRAGMA  journal_mode=OFF")
+          dbExecute(newCon, "PRAGMA synchronous=off")
+      } else {
+          newCon<-dbConnect(RSQLite::SQLite(),dbpath,flags=RSQLite::SQLITE_RW)
+          dbExecute(newCon, "PRAGMA foreign_keys=ON")
+      }
+      dbExecute(newCon, sprintf("PRAGMA  mmap_size=%s", 1024**3))
+      dbExecute(newCon, sprintf("PRAGMA  cache_size=%s", 1024**3))
+      # Time in milliseconds to wait before signalling that a DB is busy
+      dbExecute(newCon, "PRAGMA  busy_timeout=1000")
+      newCon
+    },
+    error=function(e) {
+      if(showWarnings) flog.error("dbConnectWrapper (file %s): %s", dbpath, e)
       NULL
-    } else if(file.info(dbpath)[[1,"size"]] == 0.) {
-      flog.debug("Empty file %s", dbpath)
+    },
+    warning=function(w) {
+      if(showWarnings) flog.error("dbConnectWrapper (file %s): %s", dbpath, w)
       NULL
-    } else {
-      dbpath
     }
-  }
-  db$paths <- future_lapply(db$dtgs, makePath)
-  names(db$paths) <- db$dtgs
-  db
+  )
+  return(con)
 }
 
 makeSingleQuery <- function(query) {
   function(dbpath) {
-    con <- sqliteConnect(dbpath)
+    con <- dbConnectWrapper(dbpath, read_only=TRUE)
     res <- tryCatch(dbGetQuery(con, query),
                     error=function(e) {
                       flog.warn("Ignoring error querying %s: %s", dbpath, e)
@@ -41,8 +39,9 @@ makeSingleQuery <- function(query) {
   }
 }
 
-performQuery <- function(db, query, dtgs=NULL, expandRange=TRUE,
-                         convertDTG=TRUE, progressTracker=NULL) {
+performQuery <- function(
+  db, query, dtgs=NULL, expandRange=TRUE, convertDTG=TRUE)
+{
   if (is.null(dtgs)) {
     dbpaths <- db$paths
   } else {
@@ -51,7 +50,7 @@ performQuery <- function(db, query, dtgs=NULL, expandRange=TRUE,
       if (n==1) {
         dbpaths <- db$paths[as.character(dtgs)]
       } else if (n==3) {
-        range <- expandDateRange(dtgs)
+        range <- expandDtgRange(dtgs)
         dbpaths <- db$paths[range[[1]] <= db$dtgs & db$dtgs <= range[[2]]]
       } else {
         flog.error("Invalid combination of expandRange and dtgs.")
@@ -60,40 +59,19 @@ performQuery <- function(db, query, dtgs=NULL, expandRange=TRUE,
       dbpaths <- db$paths[as.character(dtgs)]
     }
   }
-  dbpaths[sapply(dbpaths, is.null)] <- NULL
+  dbpaths <- dbpaths[!is.null(dbpaths)]
+  dbpaths <- dbpaths[file.exists(dbpaths)]
   if (length(dbpaths)==0) {
-    flog.warn("No usable database found.")
+    flog.error("performQuery: No usable database found. Please check paths.")
     return(NULL)
   }
   singleQuery <- makeSingleQuery(query)
-  if (is.null(progressTracker)) {
-    res <- pblapply(dbpaths, singleQuery)
-  } else {
-    nout <- 100
-    split <- splitpb(length(dbpaths), 1L, nout)
-    b <- length(split)
-    res <- vector("list", b)
-    for (i in seq_len(b)) {
-      res[i] <- list(lapply(dbpaths[split[[i]]], singleQuery))
-      updateTask(progressTracker, "Querying database", i/b)
-    }
-    res <- do.call(c, res, quote=TRUE)
-  }
+  res <- lapply(dbpaths, singleQuery)
   res <- do.call(rbind, res)
   if(convertDTG & "DTG" %in% names(res)) {
     res$DTG <- as.POSIXct(as.character(res$DTG), format="%Y%m%d%H")
   }
   res
-}
-
-updateDates <- function(db) {
-  earliestDtg <- head(db$dtgs, 1)
-  latestDtg <- tail(db$dtgs, 1)
-  maxDateRange <- c(dtg2date(earliestDtg),
-                    dtg2date(latestDtg))
-  db$maxDateRange <- maxDateRange
-  db$cycles <- lapply(sort(unique(db$dtgs %% 100)), partial(sprintf, "%02d"))
-  db
 }
 
 readSynopStations <- function() {
@@ -107,354 +85,657 @@ readSynopStations <- function() {
 }
 synopStations <- readSynopStations()
 
-slugify <- function(string) {
-  normalized <- stri_trans_general(string, "nfkd; Latin-ASCII; lower")
-  slugified <- stri_replace_all_charclass(normalized, "\\p{WHITE SPACE}", "_")
-  slugified
+### New caching stuff starts here ####
+#
+# These are attributes that will be cached and which will be used, along with
+# a DTG, to identify the observations
+obsKeyAttributes <- list(
+  upper_air=c('statid', 'obname', 'varname', 'level'),
+  surface=c('statid', 'obname', 'varname'),
+  satem=c('satname', 'obname', 'level'),
+  scatt=c('statid', 'varname'),
+  radar=c('statid', 'varname', 'level'),
+  unknown_type=c('statid', 'obname', 'varname', 'satname', 'level')
+)
+
+cacheFileLocks <- list()
+lockSignalingFpath <- function(fpath) sprintf("%s.lock", fpath)
+lockCacheFile <- function(fpath) {
+  cacheFileLocks[[fpath]] <<- lock(lockSignalingFpath(fpath))
+}
+unlockCacheFile <- function(fpath) {
+  unlock(cacheFileLocks[[fpath]])
+  cacheFileLocks[[fpath]] <<- NULL
+}
+cacheFileIsLocked <- function(fpath) {
+  cacheFileLock <- cacheFileLocks[[fpath]]
+  if(is.null(cacheFileLock)) isLocked <- FALSE
+  else isLocked <- is.locked(cacheFileLock)
+  return(isLocked)
 }
 
-setPragmas <- function(connection) {
-  dbExecute(connection, "PRAGMA journal_mode=OFF")
-  dbExecute(connection, "PRAGMA synchronous=OFF")
-  dbExecute(connection, "PRAGMA foreign_keys=ON")
-}
+createCacheFiles <- function(cacheDir, dbType=dbTypesRecognised, reset=FALSE){
+  rtn <- tryCatch({
+      if(reset) {
+        flog.warn(paste0("createCacheFiles: Cache reset requested. ",
+          sprintf("Recursively removing cache directory\n%s\n", cacheDir),
+          "The directory will be recreated and cache files will be restarted."
+        ))
+        unlink(cacheDir, recursive=TRUE)
+      }
+      dir.create(cacheDir, recursive=TRUE, showWarnings=FALSE)
 
-initNewCache <- function(cachePath) {
-  dbLock <- lock(cachePath)
-  # dbConnect will create the DB file if it doesn't yet exist, but the
-  # directory must exist
-  if(!dir.exists(dirname(cachePath))) {
-    dir.create(dirname(cachePath), recursive = TRUE)
-  }
-  # Making sure we are dealing with a new file
-  cacheFileDelStatus <- unlink(cachePath)
-  if(cacheFileDelStatus==1 && file.exists(cachePath)) {
-    flog.error(sprintf("Could not initialise cache on file %s", cachePath))
-    unlock(dbLock)
-    return(NULL)
-  }
-
-  cache <- dbConnect(RSQLite::SQLite(), cachePath)
-  setPragmas(cache)
-  dbExecute(cache, paste("CREATE TABLE obtype (",
-                         "  obtype_id INTEGER PRIMARY KEY,",
-                         "  obnumber INTEGER NOT NULL,",
-                         "  obtype VARCHAR(20) NOT NULL,",
-                         "  variable VARCHAR(20),",
-                         "  sensor VARCHAR(20),",
-                         "  satellite VARCHAR(20),",
-                         "  division INTEGER NOT NULL,",
-                         "  fromDbTable VARCHAR(20) NOT NULL,",
-                         "  UNIQUE(obnumber, obtype, variable, division, fromDbTable),",
-                         "  UNIQUE(obnumber, obtype, sensor, satellite, division, fromDbTable)",
-                         ")", sep=""))
-  dbExecute(cache, paste("CREATE TABLE dtg (",
-                         "  dtg INTEGER PRIMARY KEY",
-                         ")", sep=""))
-  dbExecute(cache, paste("CREATE TABLE dtg_obtype (",
-                         "  dtg INTEGER NOT NULL REFERENCES dtg(dtg),",
-                         "  obtype_id INTEGER NOT NULL REFERENCES obtype(obtype_id)",
-                         ")", sep=""))
-  dbExecute(cache, "CREATE INDEX dtg_obtype_dtg_idx ON dtg_obtype(dtg)")
-  dbExecute(cache, paste("CREATE TABLE station (",
-                         "  station_id INTEGER PRIMARY KEY,",
-                         "  obname VARCHAR(20) NOT NULL,",
-                         "  statid VARCHAR(20) NOT NULL,",
-                         "  label VARCHAR(20),",
-                         "  UNIQUE(obname, statid)",
-                         ")", sep=""))
-  unlock(dbLock)
-  cache
-}
-
-openCache <- function(db) {
-  if (file.exists(db$cachePath)) {
-    flog.debug('Cache path "%s" exists. Connecting.', db$cachePath)
-    cache <- dbConnect(RSQLite::SQLite(), db$cachePath)
-    setPragmas(cache)
-    if(!("obtype" %in% dbListTables(cache)) ||
-       !("fromDbTable" %in% dbListFields(cache, "obtype"))) {
-      # Fixing obsmon cache files created before the "missing data" bugfix.
-      # Before that bugfix, only data from the "obsmon" table was not taken
-      # into account when building the cache, and "usage" was ignored.
-      # The "fromDbTable" field was then introduced in the cache's obtype table
-      # so that one knows which table the cached data was extracted from.
-      backup_fname <- paste(
-        db$cachePath, '.auto_backup_missing_data_bugfix_', Sys.Date(),
-        sep=""
-      )
-      warnMsg <- paste(
-        "The cache file",
-        paste("  >>>", db$cachePath),
-        'was generated prior to "missing data" bugfix and will be reset.',
-        "This may cause caching to take longer than usual this time,",
-        "but part of the available data may become unselectable otherwise.",
-        'A backup of the old file will be created as:',
-        paste("  >>>", backup_fname),
-        sep="\n"
-      )
-      flog.warn(warnMsg)
-      dbDisconnect(cache)
-      file.copy(db$cachePath, backup_fname)
-      cache <- initNewCache(db$cachePath)
-    }
-  } else {
-    flog.debug('Cache path "%s" does not exist. Initialising.', db$cachePath)
-    cache <- initNewCache(db$cachePath)
-  }
-  cache
-}
-
-updateCachingStatusFile <- function(db, exptsCachingProgress) {
-  thisExptCachingProgress <- exptsCachingProgress[[db$basename]]
-  save(
-    'thisExptCachingProgress',
-    file=exptsCacheProgLogFilePath[[db$basename]]
+      cacheTemplate <- file.path('sqlite', 'cache_db_template.db')
+      dbTables <- c('obsmon', 'usage')
+      cacheFilePaths <- file.path(cacheDir, sprintf("%s.db",
+        apply(expand.grid(dbType,dbTables),1,function(x)paste(x,collapse="_"))
+      ))
+      file.copy(cacheTemplate, cacheFilePaths, overwrite=FALSE)
+      0
+    },
+    error=function(e) {flog.error(e); -1}
   )
+  return(rtn)
 }
 
-updateCache <- function(db) {
-  cachedDtgs <- dbGetQuery(db$cache, "SELECT dtg FROM dtg")[["dtg"]]
-  oldDtgIdx <- db$dtgs %in% cachedDtgs
-  if (!setequal(db$dtgs[oldDtgIdx], cachedDtgs)) {
-    flog.warn(paste("Some old dtgs are no longer available.",
-                    "If desired, purge cache manually."))
+putObservationsInCache <- function(sourceDbPath, cacheDir, replaceExisting=FALSE) {
+  sourceDbPath <- normalizePath(sourceDbPath, mustWork=FALSE)
+  anyFailedCachingAttmpt <- FALSE
+  cacheDbConsCreatedHere <- c()
+  allDbConsCreatedHere <- c()
+  fPathsLockedHere <- c()
+
+  on.exit({
+      if(anyFailedCachingAttmpt) {
+        errMsg <- sprintf("Problems caching file %s\n", sourceDbPath)
+        errMsg <- paste(errMsg, "  > Removing incomplete cache entries\n")
+        flog.warn(errMsg)
+        for(con_cache in cacheDbConsCreatedHere) {
+          # The foreign key contraints+triggers in con_cache will make sure all
+          # eventual data cached for this (date, cycle) combination is removed
+          dbExecute(con_cache, sprintf(
+            "DELETE FROM cycles WHERE date=%d AND cycle=%d", date, cycle
+          ))
+        }
+      } else {
+        flog.debug(sprintf("Caching: Done with file %s\n", sourceDbPath))
+      }
+      allDbConsCreatedHere <- c(allDbConsCreatedHere, cacheDbConsCreatedHere)
+      for(dbCon in allDbConsCreatedHere) dbDisconnect(dbCon)
+      for(lockedFName in fPathsLockedHere) unlockCacheFile(lockedFName)
+    }
+  )
+
+  con <- dbConnectWrapper(sourceDbPath, read_only=TRUE)
+  if(is.null(con)) {
+    flog.error(sprintf("Could not connect to file %s. Not caching.", sourceDbPath))
+    return(-1)
   }
-  newDtgs <- db$dtgs[!oldDtgIdx]
-  ingestShard <- function(dtg) {
-    path <- db$paths[[dtg]]
-    if (is.null(path)) return(NULL)
-    else if (file.exists(path) && file.access(path, mode=4)==0) {
-      dbExecute(db$cache, sprintf("ATTACH '%s' AS 'shard'", path))
-      tables <- dbGetQuery(db$cache, "SELECT name FROM shard.sqlite_master WHERE type='table'")
-      if (all(c("obsmon", "usage") %in% tables$name)) {
-        dbWithTransaction(
-            db$cache,
-            {
-              dbExecute(db$cache, sprintf("INSERT INTO dtg VALUES(%s)", dtg))
-              dbExecute(db$cache, paste("CREATE TEMP TABLE temp.obtype (",
-                                        "  obnumber INTEGER NOT NULL,",
-                                        "  obtype VARCHAR(20) NOT NULL,",
-                                        "  variable VARCHAR(20),",
-                                        "  sensor VARCHAR(20),",
-                                        "  satellite VARCHAR(20),",
-                                        "  division INTEGER NOT NULL,",
-                                        "  fromDbTable VARCHAR(20) NOT NULL,",
-                                        "  UNIQUE(obnumber, obtype, variable, division, fromDbTable),",
-                                        "  UNIQUE(obnumber, obtype, sensor, satellite, division, fromDbTable)",
-                                        ")", sep=""))
-              dbExecute(db$cache, paste("INSERT INTO temp.obtype ",
-                                        "  (obnumber, obtype, variable, division, fromDbTable)",
-                                        "  SELECT DISTINCT obnumber, obname, varname, level, 'obsmon' ",
-                                        "FROM shard.obsmon WHERE obnumber!=7 ",
-                                        "UNION ",
-                                        "  SELECT DISTINCT obnumber, obname, varname, level, 'usage' ",
-                                        "FROM shard.usage WHERE obnumber!=7 ",
-                                        sep=""))
-              dbExecute(db$cache, paste("INSERT INTO temp.obtype ",
-                                        "  (obnumber, obtype, sensor, satellite, division, fromDbTable)",
-                                        "  SELECT DISTINCT obnumber, 'satem', obname, satname, level, 'obsmon' ",
-                                        "FROM shard.obsmon WHERE obnumber==7 ",
-                                        "UNION ",
-                                        "  SELECT DISTINCT obnumber, 'satem', obname, satname, level, 'usage' ",
-                                        "FROM shard.usage WHERE obnumber==7 ",
-                                        sep=""))
-              dbExecute(db$cache, paste("INSERT OR IGNORE INTO main.obtype (",
-                                        "  obnumber, obtype, variable, sensor, satellite, division, fromDbTable",
-                                        ") SELECT * FROM temp.obtype"))
-              dbExecute(db$cache, paste(sprintf("INSERT INTO main.dtg_obtype SELECT %s, ", dtg),
-                                        "m.obtype_id FROM main.obtype m ",
-                                        "JOIN temp.obtype t ",
-                                        "USING (obnumber, obtype, variable, division, fromDbTable) ",
-                                        "WHERE t.variable IS NOT NULL",
-                                        sep=""))
-              dbExecute(db$cache, paste(sprintf("INSERT INTO main.dtg_obtype SELECT %s, ", dtg),
-                                        "m.obtype_id FROM main.obtype m ",
-                                        "JOIN temp.obtype t ",
-                                        "USING (obnumber, obtype, sensor, satellite, division, fromDbTable) ",
-                                        "WHERE t.variable IS NULL",
-                                        sep=""))
-              dbExecute(db$cache, "DROP TABLE temp.obtype")
-              dbExecute(db$cache, paste("INSERT OR IGNORE INTO station (obname, statid)",
-                                        " SELECT DISTINCT obname, trim(statid, \"' \") statid",
-                                        " FROM shard.usage WHERE obnumber!=7", sep=""))
-            }
+  allDbConsCreatedHere <- c(allDbConsCreatedHere, con)
+
+  db_type <- basename(dirname(dirname(sourceDbPath)))
+  dtg <- basename(dirname(sourceDbPath))
+  date <- as.integer(substr(dtg, start=1, stop=8))
+  cycle <- as.integer(substr(dtg, start=9, stop=10))
+
+  createCacheStatus <- createCacheFiles(cacheDir, db_type)
+  if(createCacheStatus!=0) {
+    flog.error(paste0(
+      sprintf("Problems creating %s cache in dir %s.\n", db_type, cacheDir),
+      "Not caching"
+    ))
+    return(-1)
+  }
+
+  for(db_table in c('obsmon', 'usage')) {
+    cacheFileName <- sprintf('%s_%s.db', db_type, db_table)
+    cacheFilePath <- file.path(cacheDir, cacheFileName)
+
+    hadToWait <- FALSE
+    while(cacheFileIsLocked(cacheFilePath)) {
+      hadToWait <- TRUE
+      msg <- sprintf("Caching (%s): Waiting for cache file %s to be unlocked",
+        sourceDbPath, cacheFilePath
+      )
+      flog.debug(msg)
+      Sys.sleep(5)
+    }
+    if(hadToWait) {
+      msg <- sprintf("Caching (%s): Cache file %s UNLOCKED. Proceeding.",
+        sourceDbPath, cacheFilePath
+      )
+      flog.debug(msg)
+    }
+
+    lockCacheFile(cacheFilePath)
+    fPathsLockedHere <- c(fPathsLockedHere, cacheFilePath)
+
+    con_cache <- dbConnectWrapper(cacheFilePath)
+    cacheDbConsCreatedHere <- c(cacheDbConsCreatedHere, con_cache)
+
+    # The user may want to re-cache observation (e.g., if they think that the cached
+    # information is incomplete)
+    if(replaceExisting) {
+      flog.debug(sprintf(
+        "Recaching (%s). Removing DTG=%d%02d from %s cache.",
+        sourceDbPath, date, cycle, cacheFileName
+      ))
+      removalSuccess <- tryCatch({
+          dbExecute(con_cache, sprintf(
+            "DELETE FROM cycles WHERE date=%d AND cycle=%d", date, cycle
+          ))
+          TRUE
+        },
+        error=function(e) {flog.debug(e); FALSE},
+        warning=function(w) {flog.debug(w); FALSE}
+      )
+      if(!removalSuccess) {
+        flog.debug(sprintf(
+          "Recaching warning (%s): DTG=%d%02d may not have been removed from %s cache.",
+          sourceDbPath, date, cycle, cacheFileName
+        ))
+      }
+    }
+
+    # Do not attempt to cache stuff that has already been cached
+    alreadyCached <- tryCatch({
+        nOccurenciesThisDTG <- dbGetQuery(con_cache,
+          paste('SELECT count(1) as nOcc FROM cycles WHERE',
+          sprintf('date=%d AND cycle=%d', date, cycle)
+        ))
+        nOccurenciesThisDTG$nOcc[1] != 0
+      },
+      warning=function(w) FALSE,
+      error=function(e) FALSE
+    )
+    if(alreadyCached) {
+      flog.debug(sprintf("Already cached %s table of file %s\n", db_table, sourceDbPath))
+      next
+    } else {
+      flog.debug(sprintf("Caching %s table of file %s\n", db_table, sourceDbPath))
+    }
+
+    # Register experiment as existing, if not previously done
+    exptDir <- dirname(dirname(dirname(sourceDbPath)))
+    tryCatch(
+      dbExecute(con_cache, sprintf(
+        "INSERT INTO experiment(basedir,db,db_table) VALUES('%s','%s','%s')",
+        exptDir, db_type, db_table
+        )
+      ),
+      error=function(e) NULL,
+      warning=function(w) NULL
+    )
+
+    # Warning user if file to be cached seems to come from a different
+    # directory than the one originally rigistered
+    exptCachedDir <- tryCatch({
+        exptCachedDiriQueryResult <- dbGetQuery(con_cache,
+          'SELECT basedir FROM experiment ORDER BY mdate_utc DESC LIMIT 1'
+        )
+        normalizePath(exptCachedDiriQueryResult$basedi[1])
+      },
+      error=function(e) NULL,
+      warning=function(w) NULL
+    )
+    if(is.null(exptCachedDir) || !(startsWith(sourceDbPath, exptCachedDir))) {
+      errMsg <- "putObservationsInCache: File path and cached exptDir differ:\n"
+      errMsg <- paste0(errMsg, '    > Cached exptDir: ', exptCachedDir, '\n')
+      errMsg <- paste0(errMsg, '    > File path: ', sourceDbPath, '\n')
+      errMsg <- paste0(errMsg, ' You may want to double-check that this is OK.', '\n')
+      flog.warn(errMsg)
+    }
+
+    # Register date and cycle as existing, if not previously done:
+    # (i) Date
+    tryCatch(
+      dbExecute(con_cache, sprintf(
+        'INSERT OR IGNORE INTO dates(date) values(%d);', date
+      )),
+      warning=function(w) NULL,
+      error=function(e) {flog.error(e$message); NULL}
+    )
+    # (ii) Cycle
+    tryCatch(
+      dbExecute(con_cache, sprintf(
+        'INSERT OR IGNORE INTO cycles(date, cycle) VALUES (%d, %d)',date,cycle
+      )),
+      warning=function(w) NULL,
+      error=function(e) {flog.error(e$message); NULL}
+    )
+
+    for(obCategory in names(obsKeyAttributes)) {
+      columns <- paste0(obsKeyAttributes[[obCategory]], collapse=', ')
+      cache_table <- paste(obCategory, '_obs', sep='')
+
+      if(db_table=='obsmon') {
+        usedCols <- gsub('statid', 'NULL as statid', columns, fixed=TRUE)
+      } else {
+        # statid values in usage contain quotes, which makes querying difficult
+        substStr <- paste('TRIM(statid, "', "' ", '") as statid', sep="")
+        usedCols <- gsub('statid', substStr, columns, fixed=TRUE)
+      }
+
+      if(obCategory=='unknown_type') {
+        obnumbers <- getAttrFromMetadata('obnumber')
+        queryNewObs <- paste(
+          'SELECT DISTINCT', usedCols, 'FROM', db_table,
+          'WHERE', sprintf('dtg="%s"', dtg), 'AND',
+          'obnumber NOT IN (', paste0(obnumbers, collapse=', '), ')'
+        )
+      } else {
+        obnumbers <- getAttrFromMetadata('obnumber', category=obCategory)
+        queryNewObs <- paste(
+          'SELECT DISTINCT', usedCols, 'FROM', db_table,
+          'WHERE', sprintf('dtg="%s"', dtg), 'AND',
+          'obnumber IN (', paste0(obnumbers, collapse=', '), ')'
         )
       }
-      dbExecute(db$cache, "DETACH 'shard'")
-    } else if(file.access(path, mode=4)!=0) {
-      flog.warn('User "%s" does NOT have read access to db file "%s"!', userName, path)
-      return(NULL)
-    }
-  }
-  if(length(newDtgs)>0) {
-    thresholdUpdtCacheLogFile <- 0
-    ingestShardUpdatingStatus <- function(dtg) {
+      newObs <- dbGetQuery(con, queryNewObs)
+      if(nrow(newObs)==0) next
 
-      ingestShard(dtg)
+      if(!is.null(newObs$statid)) {
+        # The join ops in dplyr complain about statid=NULL (obsmon table)
+        # They cannot join these with the character-type ones from usage
+        newObs$statid <- as.character(newObs$statid)
+      }
 
-      exptsCachingProgress[[db$basename]][[db$name]] <<- (
-        exptsCachingProgress[[db$basename]][[db$name]] +
-        100.0/length(newDtgs)
+      queryCachedObs <- paste(
+        'SELECT DISTINCT', usedCols, 'FROM', cache_table,
+        'WHERE', sprintf("date=%d AND cycle=%d", date, cycle)
       )
+      if(!is.null(newObs$obname)) {
+        commaSepObnames <- paste0(sprintf("'%s'", unique(newObs$obname)), collapse = ", ")
+        queryCachedObs <- paste(queryCachedObs, 'AND', 'obname in (', commaSepObnames, ')')
+      }
+      cachedObs <- dbGetQuery(con_cache, queryCachedObs)
 
-      perc <- floor(mean(unlist(exptsCachingProgress[[db$basename]])))
-      if(perc >= thresholdUpdtCacheLogFile) {
-        updateCachingStatusFile(db, exptsCachingProgress)
-        thresholdUpdtCacheLogFile <<- floor(perc) + 1
+      if(nrow(cachedObs)==0) {
+        rowsToAdd <- newObs
+      } else {
+        if(!is.null(cachedObs$statid)) {
+          cachedObs$statid <- as.character(cachedObs$statid)
+        }
+        rowsToAdd <- anti_join(newObs, cachedObs, by=colnames(newObs))
+      }
+      if(nrow(rowsToAdd)>0) {
+        cacheSuccess <- tryCatch({
+            newColNames <- c('date', 'cycle', colnames(rowsToAdd))
+            rowsToAdd$date <- date
+            rowsToAdd$cycle <- cycle
+            rowsToAdd <- rowsToAdd[newColNames]
+            dbWriteTable(con_cache, cache_table, rowsToAdd, append=TRUE)
+            TRUE
+          },
+          warning=function(w) {
+            errMsg <- paste0(w, '\n',' > Not caching ', sourceDbPath)
+            errMsg <- paste0(errMsg, '\n')
+            flog.warn(errMsg)
+            return(FALSE)
+          },
+          error=function(e) {
+            errMsg <- paste0(e, '\n',' > Not caching ', sourceDbPath)
+            errMsg <- paste0(errMsg, '\n')
+            flog.warn(errMsg)
+            return(FALSE)
+          }
+        )
+        if(!cacheSuccess) {
+          anyFailedCachingAttmpt <- TRUE
+          return(-1)
+        }
       }
     }
-
-    lapply(as.character(newDtgs), ingestShardUpdatingStatus)
-
-  } else {
-    exptsCachingProgress[[db$basename]][[db$name]] <<- 100.0
-    updateCachingStatusFile(db, exptsCachingProgress)
   }
-  db
+  return(0)
 }
 
-initObtypes <- function(db) {
-
-  getNonSatObs <- function(obtypes, dbTable=NA) {
-    res <- obtypes %>%
-      filter(!is.na(variable)) %>%
-      filter(if(!is.na(dbTable)) fromDbTable==dbTable else !is.na(fromDbTable)) %>%
-      select(obtype, variable, division) %>%
-      group_by(obtype, variable) %>%
-      summarize(levelChoices=list(sort(as.integer(division)))) %>%
-      group_by(obtype) %>%
-      summarize(
-        variable={
-          lc <- levelChoices
-          names(lc) <- variable
-          list(lc)
-        }) %>%
-      summarize(obtype={
-        v <- variable
-        names(v) <- obtype
-        list(v)
-      })
-    return(res[[1, 1]])
-  }
-
-  getSatObs <- function(obtypes, dbTable=NA) {
-    res <- obtypes %>%
-      filter(is.na(variable)) %>%
-      filter(if(!is.na(dbTable)) fromDbTable==dbTable else !is.na(fromDbTable)) %>%
-      select(obtype, sensor, satellite, division) %>%
-      group_by(obtype, sensor, satellite) %>%
-      summarize(channelChoices=list(sort(as.integer(division)))) %>%
-      group_by(obtype, sensor) %>%
-      summarize(satellite={
-        cc <- channelChoices
-        names(cc) <- satellite
-        list(cc)
-      }) %>%
-      group_by(obtype) %>%
-      summarize(sensor={
-        sat <- satellite
-        names(sat) <- sensor
-        list(sat)
-      }) %>%
-      summarize(obtype={
-        s <- sensor
-        names(s) <- obtype
-        list(s)
-      })
-    return(res[[1, 1]])
-  }
-
-  obtypes <- collect(tbl(db$cache, "obtype"))
-  obsAllTables <- c(getSatObs(obtypes), getNonSatObs(obtypes))
-  obsObsmonTable <- c(getSatObs(obtypes, 'obsmon'), getNonSatObs(obtypes, 'obsmon'))
-  obsUsageTable <- c(getSatObs(obtypes, 'usage'), getNonSatObs(obtypes, 'usage'))
-
-  db$obtypes <- obsAllTables[sort(names(obsAllTables))]
-  db$obtypesObsmonTable <- obsObsmonTable[sort(names(obsObsmonTable))]
-  db$obtypesUsageTable <- obsUsageTable[sort(names(obsUsageTable))]
-
-  res <- dbGetQuery(db$cache, paste("SELECT DISTINCT obnumber, ",
-                                    "CASE obtype ",
-                                    "WHEN 'satem' THEN sensor ",
-                                    "ELSE obtype ",
-                                    "END obtype FROM main.obtype"))
-  db$obnumbers <- res$obnumber
-  names(db$obnumbers) <- res$obtype
-  db
+assyncPutObsInCache <- function(sourceDbPaths, cacheDir, replaceExisting=FALSE) {
+  return(future({
+    for(sourceDbPath in sourceDbPaths) {
+      tryCatch(
+        putObservationsInCache(sourceDbPath, cacheDir=cacheDir, replaceExisting=replaceExisting),
+        warning=function(w) flog.warn(w$message),
+        error=function(e) flog.error(e$message)
+      )
+    }
+  }))
 }
 
-initStations <- function(db) {
-  res <- dbGetQuery(db$cache, paste("SELECT station_id, statid ",
-                                 "FROM station ",
-                                 "WHERE obname='synop' AND label IS NULL",
-                                 sep=""))
-  statids <- res$statid
-  labels <- synopStations[statids]
-  res$label <- ifelse(!is.na(labels), labels, statids)
-  dbExecute(db$cache, "UPDATE station SET label = :label WHERE station_id = :station_id", params=res)
-  stations <- within(collect(tbl(db$cache, "station")), {
-    label <- ifelse(!is.na(label), label, statid)
-  })
-  res <- stations %>%
-    select(obname, statid, label) %>%
-    group_by(obname) %>%
-    summarize(statid=list(statid), label=list(label)) %>%
-    summarize(obname={
-      l <- mapply(list, statid=statid, label=label, SIMPLIFY=F)
-      names(l) <- obname
-      list(l)
-    })
-  stations <- res[[1,1]]
-  lapply(names(stations), function(obname) {
-    s <- stations[[obname]]
-    names(s$statid) <- s$label
-    names(s$label) <- s$statid
-    db$stations[[obname]] <<- c("Any"="Any", s$statid)
-    db$stationLabels[[obname]] <<- c("Any"="Any", s$label)
-  })
-  db
+getDateQueryString <- function(dates=NULL) {
+  if(is.null(dates)) return(NULL)
+  if(length(dates)==1) rtn <- sprintf("date=%s", dates)
+  else rtn <- sprintf("date IN (%s)", paste(dates, collapse=", "))
+  return(rtn)
 }
 
-createDb <- function(dir, basename, name, file) {
-  flog.debug("...%s: creating %s db...", basename, name)
-  db <- structure(list(), class="sqliteShardedDtgDb")
-  db$dir <- dir
-  db$basename <- basename
-  db$name <- name
-  db$file <- file
+getCycleQueryString <- function(cycles=NULL) {
+  if(is.null(cycles)) return(NULL)
+  if(length(cycles)==1) rtn <- sprintf("cycle=%s", cycles)
+  else rtn <- sprintf("cycle IN (%s)", paste(cycles, collapse=", "))
+  return(rtn)
+}
 
-  cacheFileName <- slugify(paste(basename, name, "db", sep="."))
-  db$cachePath <- file.path(obsmonConfig$general$cacheDir, cacheFileName)
 
-  flog.debug("......%s: finding %s dtgs......", basename, name)
-  db$dtgs <- as.integer(dir(path=dir, pattern="[0-9]{10}"))
-  if (length(db$dtgs)==0) {
-    flog.debug("%s: Db %s contains no dtgs. Aborting.", basename, name)
-    warning("%s: Db %s contains no dtgs. Aborting.", basename, name)
-    exptsCachingProgress[[db$basename]][[db$name]] <<- 100.0
-    updateCachingStatusFile(db, exptsCachingProgress)
-    NULL
-  } else {
-    flog.debug("......%s: done finding %s dtgs......", basename, name)
-    flog.debug("......%s: Opening %s cache db", basename, name)
-    db$cache <- openCache(db)
-    flog.debug("......%s: checking %s dtgs......", basename, name)
-    db <- prepareConnections(db)
-    flog.debug("......%s: done checking %s dtgs......", basename, name)
-    flog.debug("......%s: updating %s db info......", basename, name)
-    flog.debug(
-      "......%s: Updating %s cache db. This may take some time.",basename,name
+dtgsAreCached <- function(db, dtgs) {
+  # Get all cached DTGs
+  cachedDtgs <- NULL
+  for(cacheFilePath in db$cachePaths) {
+    con <- dbConnectWrapper(cacheFilePath, read_only=TRUE, showWarnings=FALSE)
+    if(is.null(con)) return(FALSE)
+    newCachedDtgs <- tryCatch({
+        dbGetQuery(con,
+          "SELECT DISTINCT date, cycle FROM cycles"
+        )
+      },
+      error=function(e) NULL,
+      warning=function(w) NULL
     )
-    db <- updateCache(db)
-    flog.debug("......%s: Initialising %s observation types", basename, name)
-    db <- initObtypes(db)
-    flog.debug("......%s: Initialising %s stations", basename, name)
-    db <- initStations(db)
-    flog.debug("......%s: Updating %s dates", basename, name)
-    db <- updateDates(db)
-    flog.debug("......%s: done updating %s db info......", basename, name)
-    flog.debug("...%s: finished %s db...", basename, name)
-    db
+    if(is.null(cachedDtgs)) {
+      cachedDtgs <- newCachedDtgs
+    } else {
+      cachedDtgs <- intersect(cachedDtgs, newCachedDtgs)
+    }
+    dbDisconnect(con)
+    if(is.null(newCachedDtgs)) break
   }
+  if(is.null(cachedDtgs) || ncol(cachedDtgs)==0) return(FALSE)
+
+  cachedDtgsAsInt <- c()
+  for(iRow in seq_len(nrow(cachedDtgs))) {
+    dtg <- sprintf("%d%02d",cachedDtgs[iRow,"date"],cachedDtgs[iRow,"cycle"])
+    cachedDtgsAsInt <- c(cachedDtgsAsInt, as.integer(dtg))
+  }
+
+  cachedDtgsAsInt <- sort(unique(cachedDtgsAsInt))
+  dtgs <- sort(unique(as.integer(dtgs)))
+  for(dtg in dtgs) {
+    if(!(dtg %in% cachedDtgsAsInt)) return(FALSE)
+  }
+  return(TRUE)
+}
+
+getObnamesFromCache <- function(db, category, dates, cycles) {
+  rtn <- c()
+  dateQueryString <- getDateQueryString(dates)
+  cycleQueryString <- getCycleQueryString(cycles)
+
+  for(cacheFilePath in db$cachePaths) {
+    con <- dbConnectWrapper(cacheFilePath, read_only=TRUE, showWarnings=FALSE)
+    if(is.null(con)) next
+    tryCatch({
+        queryResult <- dbGetQuery(con, sprintf(
+          "SELECT DISTINCT obname FROM %s_obs WHERE %s AND %s",
+          category, dateQueryString, cycleQueryString
+        ))
+        rtn <- c(rtn, queryResult[['obname']])
+      },
+      error=function(e) NULL,
+      warning=function(w) NULL
+    )
+    dbDisconnect(con)
+  }
+  if(length(rtn)==0) rtn <- NULL
+  return(sort(unique(rtn)))
+}
+
+getObtypesFromCache <- function(db, dates, cycles) {
+  rtn <- c()
+  dateQueryString <- getDateQueryString(dates)
+  cycleQueryString <- getCycleQueryString(cycles)
+
+  for(cacheFilePath in db$cachePaths) {
+    con <- dbConnectWrapper(cacheFilePath, read_only=TRUE, showWarnings=FALSE)
+    if(is.null(con)) next
+    tryCatch({
+        dbTables <- dbListTables(con)
+        for(dbTable in dbTables) {
+          if(!endsWith(dbTable, '_obs')) next
+          if(dbTable %in% rtn) next
+          queryResult <- dbGetQuery(con, sprintf(
+            "SELECT * FROM %s WHERE %s AND %s LIMIT 1",
+            dbTable, dateQueryString, cycleQueryString
+          ))
+          if(nrow(queryResult)>0) rtn <- c(rtn, gsub("_obs", "", dbTable))
+        }
+      },
+      error=function(e) NULL,
+      warning=function(w) NULL
+    )
+    dbDisconnect(con)
+  }
+  if(length(rtn)==0) rtn <- NULL
+  return(sort(unique(rtn)))
+}
+
+getVariablesFromCache <- function(db, dates, cycles, obname) {
+  rtn <- c()
+  dateQueryString <- getDateQueryString(dates)
+  cycleQueryString <- getCycleQueryString(cycles)
+
+  category <- getAttrFromMetadata('category', obname=obname)
+  tableName <- sprintf("%s_obs", category)
+
+  for(cacheFilePath in db$cachePaths) {
+    con <- dbConnectWrapper(cacheFilePath, read_only=TRUE, showWarnings=FALSE)
+    if(is.null(con)) next
+    tryCatch({
+        tableCols <- dbListFields(con, tableName)
+        query <- sprintf("SELECT DISTINCT varname FROM %s WHERE %s AND %s",
+          tableName, dateQueryString, cycleQueryString
+        )
+        if("obname" %in% tableCols) {
+          query <- sprintf("%s AND obname='%s'", query, obname)
+        }
+        queryResult <- dbGetQuery(con, query)
+        rtn <- c(rtn, queryResult[['varname']])
+      },
+      error=function(e) NULL,
+      warning=function(w) NULL
+    )
+    dbDisconnect(con)
+  }
+  if(length(rtn)==0) rtn <- NULL
+  return(sort(unique(rtn)))
+}
+
+getLevelsFromCache <- function(db, dates, cycles, obname, varname) {
+  rtn <- list(obsmon=NULL, usage=NULL, all=NULL)
+
+  dateQueryString <- getDateQueryString(dates)
+  cycleQueryString <- getCycleQueryString(cycles)
+  category <- getAttrFromMetadata('category', obname=obname)
+  tableName <- sprintf("%s_obs", category)
+
+  for(odbTable in c("obsmon", "usage")) {
+    cacheFilePath <- db$cachePaths[[odbTable]]
+    con <- dbConnectWrapper(cacheFilePath, read_only=TRUE, showWarnings=FALSE)
+    if(is.null(con)) next
+    rtn[[odbTable]] <- tryCatch({
+        tableCols <- dbListFields(con, tableName)
+        query <- sprintf("SELECT DISTINCT level FROM %s WHERE %s AND %s AND varname='%s'",
+          tableName, dateQueryString, cycleQueryString, varname
+        )
+        if("obname" %in% tableCols) {
+          query <- sprintf("%s AND obname='%s'", query, obname)
+        }
+        query <- sprintf("%s ORDER BY level", query)
+        queryResult <- dbGetQuery(con, query)
+        queryResult[['level']]
+      },
+      error=function(e) NULL,
+      warning=function(w) NULL
+    )
+    dbDisconnect(con)
+  }
+
+  rtn[["all"]] <- unique(c(rtn$obsmon, rtn$usage))
+  return(rtn)
+}
+
+getChannelsFromCache <- function(db, dates, cycles, satname, sensorname) {
+  rtn <- c()
+
+  dateQueryString <- getDateQueryString(dates)
+  cycleQueryString <- getCycleQueryString(cycles)
+
+  for(odbTable in c("obsmon", "usage")) {
+    cacheFilePath <- db$cachePaths[[odbTable]]
+    con <- dbConnectWrapper(cacheFilePath, read_only=TRUE, showWarnings=FALSE)
+    if(is.null(con)) next
+    tryCatch({
+        query <- sprintf(
+          "SELECT DISTINCT level FROM satem_obs WHERE
+           %s AND %s AND satname='%s' AND obname='%s'
+           ORDER BY level",
+          dateQueryString, cycleQueryString, satname, sensorname
+        )
+        queryResult <- dbGetQuery(con, query)
+        rtn <- c(rtn, queryResult[['level']])
+      },
+      error=function(e) NULL,
+      warning=function(w) NULL
+    )
+    dbDisconnect(con)
+  }
+  return(rtn)
+}
+
+getSensornamesFromCache <- function(db, dates, cycles) {
+  rtn <- c()
+
+  dateQueryString <- getDateQueryString(dates)
+  cycleQueryString <- getCycleQueryString(cycles)
+
+  for(odbTable in c("obsmon", "usage")) {
+    cacheFilePath <- db$cachePaths[[odbTable]]
+    con <- dbConnectWrapper(cacheFilePath, read_only=TRUE, showWarnings=FALSE)
+    if(is.null(con)) next
+    tryCatch({
+        query <- sprintf(
+          "SELECT DISTINCT obname FROM satem_obs WHERE %s AND %s
+           ORDER BY obname",
+          dateQueryString, cycleQueryString
+        )
+        queryResult <- dbGetQuery(con, query)
+        rtn <- c(rtn, queryResult[['obname']])
+      },
+      error=function(e) NULL,
+      warning=function(w) NULL
+    )
+    dbDisconnect(con)
+  }
+  if(length(rtn)==0) rtn <- NULL
+  return(sort(unique(rtn)))
+}
+
+getSatnamesFromCache <- function(db, dates, cycles, sensorname) {
+  rtn <- c()
+
+  dateQueryString <- getDateQueryString(dates)
+  cycleQueryString <- getCycleQueryString(cycles)
+
+  for(odbTable in c("obsmon", "usage")) {
+    cacheFilePath <- db$cachePaths[[odbTable]]
+    con <- dbConnectWrapper(cacheFilePath, read_only=TRUE, showWarnings=FALSE)
+    if(is.null(con)) next
+    tryCatch({
+        query <- sprintf(
+          "SELECT DISTINCT satname FROM satem_obs WHERE %s AND %s
+           AND obname='%s'
+           ORDER BY satname",
+          dateQueryString, cycleQueryString, sensorname
+        )
+        queryResult <- dbGetQuery(con, query)
+        rtn <- c(rtn, queryResult[['satname']])
+      },
+      error=function(e) NULL,
+      warning=function(w) NULL
+    )
+    dbDisconnect(con)
+  }
+  if(length(rtn)==0) rtn <- NULL
+  return(sort(unique(rtn)))
+}
+
+getStationsFromCache <- function(db, dates, cycles, obname, variable) {
+  rtn <- c()
+
+  dateQueryString <- getDateQueryString(dates)
+  cycleQueryString <- getCycleQueryString(cycles)
+
+  category <- getAttrFromMetadata('category', obname=obname)
+  tableName <- sprintf("%s_obs", category)
+
+  for(cacheFilePath in db$cachePaths) {
+    con <- dbConnectWrapper(cacheFilePath, read_only=TRUE, showWarnings=FALSE)
+    if(is.null(con)) next
+    tryCatch({
+        tableCols <- dbListFields(con, tableName)
+        query <- sprintf("SELECT DISTINCT statid FROM %s WHERE %s AND %s",
+          tableName, dateQueryString, cycleQueryString
+        )
+        if("obname" %in% tableCols) {
+          query <- sprintf("%s AND obname='%s'", query, obname)
+        }
+        query <- sprintf("%s AND varname='%s'", query, variable)
+        queryResult <- dbGetQuery(con, query)
+        rtn <- c(rtn, queryResult[['statid']])
+      },
+      error=function(e) NULL,
+      warning=function(w) NULL
+    )
+    dbDisconnect(con)
+  }
+  if(length(rtn)==0) rtn <- NULL
+  return(sort(unique(rtn)))
+}
+
+# Wrappers
+getObnames <- function(db, category, dates, cycles) {
+  rtn <- list(cached=NULL, general=NULL)
+  rtn$cached <- getObnamesFromCache(db, category, dates, cycles)
+  rtn$general <- getAttrFromMetadata('obname', category=category)
+  return(rtn)
+}
+
+getObtypes <- function(db, dates, cycles) {
+  rtn <- list(cached=NULL, general=NULL)
+  rtn$cached <- getObtypesFromCache(db, dates, cycles)
+  rtn$general <- getAttrFromMetadata('category')
+  return(rtn)
+}
+
+getVariables <- function(db, dates, cycles, obname) {
+  rtn <- list(cached=NULL, general=NULL)
+  rtn$cached <- getVariablesFromCache(db, dates, cycles, obname)
+  rtn$general <- getAttrFromMetadata('variables', obname=obname)
+  return(rtn)
+}
+
+getAvailableChannels <- function(db, dates, cycles, satname, sensorname) {
+  rtn <- getChannelsFromCache(db, dates, cycles, satname, sensorname)
+  return(rtn)
+}
+
+getAvailableLevels <- function(db, dates, cycles, obname, varname) {
+  rtn <- getLevelsFromCache(db, dates, cycles, obname, varname)
+  return(rtn)
+}
+
+getAvailableSensornames <- function(db, dates, cycles) {
+  rtn <- list(cached=NULL, general=NULL)
+  rtn$cached <- getSensornamesFromCache(db, dates, cycles)
+  sens.sats <- getAttrFromMetadata('sensors.sats', category="satem")
+  rtn$general <- gsub('\\.{1}.*', '', sens.sats)
+  return(rtn)
+}
+
+getAvailableSatnames <- function(db, dates, cycles, sensorname) {
+  rtn <- list(cached=NULL, general=NULL)
+  rtn$cached <- getSatnamesFromCache(db, dates, cycles, sensorname)
+  sens.sats <- getAttrFromMetadata('sensors.sats', category="satem")
+  sens.sats <- sens.sats[startsWith(sens.sats, paste0(sensorname, '.'))]
+  rtn$general <- gsub(paste0(sensorname, '.'), '', sens.sats, fixed=TRUE)
+  return(rtn)
 }

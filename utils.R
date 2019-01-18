@@ -1,8 +1,14 @@
+slugify <- function(string) {
+  normalized <- stri_trans_general(string, "nfkd; Latin-ASCII; lower")
+  slugified <- stri_replace_all_charclass(normalized, "\\p{WHITE SPACE}", "_")
+  slugified
+}
+
 dtg2date <- function(dtg) {
   paste(substr(dtg, 1, 4), substr(dtg, 5, 6), substr(dtg, 7, 8), sep="-")
 }
 
-date2dtg <- function(date, cycle) {
+date2dtg <- function(date, cycle=NULL) {
   year <- substr(date, 1, 4)
   month <- substr(date, 6, 7)
   day <- substr(date, 9, 10)
@@ -16,7 +22,27 @@ dtg2POSIXct <- function(dtg) {
   as.POSIXct(as.character(dtg), format="%Y%m%d%H")
 }
 
-expandDateRange <- function(dateRange) {
+expandDateRange <- function(start, end, format="%Y%m%d") {
+  start <- date2dtg(start)
+  end <- date2dtg(end)
+  if(start>end) {
+    temp <- start
+    start <- end
+    end <- temp
+  }
+  startAsChar <- as.character(start)
+  endAsChar <- as.character(end)
+  rtn <- seq(
+    as.Date(startAsChar, format=format),
+    as.Date(endAsChar, format=format),
+    by="days"
+  )
+  rtn <- strftime(rtn, format=format)
+  if(is.numeric(c(start, end))) rtn <- as.integer(rtn)
+  return(rtn)
+}
+
+expandDtgRange <- function(dateRange) {
   startDate <- dateRange[[1]]
   endDate <- dateRange[[2]]
   cycles <- as.integer(dateRange[[3]])
@@ -30,7 +56,7 @@ expandDateRange <- function(dateRange) {
 formatDtg <- function(dtg) {
   n = length(dtg)
   if (n==1) {
-    strftime(dtg2POSIXct(dtg), format="%Y-%m-%d %HZ")
+    strftime(dtg2POSIXct(dtg), format="%Y-%m-%d %H %Z")
   } else if (n==3) {
     if (dtg[[1]] == dtg[[2]]) {
       sprintf("[%s, (%s)]", dtg[[1]], paste(dtg[[3]], collapse=", "))

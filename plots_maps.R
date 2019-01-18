@@ -114,7 +114,7 @@ doMap.mapThreshold <- function(p, plotRequest, plotData) {
       zoomLevel <- i+3
     }
   }
-  plotData$popup <- paste("Statid: ", plotData$statid, "<br>Value: ",
+  plotData$popup <- paste("Station: ", plotData$statLabel, "<br>Value: ",
                           signif(plotData$plotValues, digits=5),
                           "<br>Level: ", plotData$level)
   if ( max(plotData$plotValues) > 0 ) {
@@ -171,7 +171,7 @@ doMap.mapUsage <- function(p, plotRequest, plotData) {
   pal <- colorFactor(c("green", "blue", "black", "grey", "yellow", "red"),
                      domain=c("Active", "Active(2)",
                               "Blacklisted", "NA", "Passive", "Rejected"))
-  plotData$popup <- paste("Statid: ", plotData$statid, "<br>Anflag: ",
+  plotData$popup <- paste("Station: ", plotData$statLabel, "<br>Anflag: ",
                           plotData$anflag, "<br>Status:", plotData$status)
   clusterOptions <- markerClusterOptions(disableClusteringAtZoom=zoomLevel)
   obMap <- leaflet(data=plotData[rev(order(status)),]) %>%

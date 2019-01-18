@@ -16,6 +16,7 @@ getUserName <- function() {
   userName <- Sys.info()[["user"]]
   if (is.null(userName) | userName == "") userName <- Sys.getenv("USER")
   if (is.null(userName) | userName == "") userName <- Sys.getenv("LOGNAME")
+  if (is.null(userName) | userName == "") userName <- "Unknown username"
   return(userName)
 }
 userName <- getUserName()
@@ -34,21 +35,21 @@ tryCatch(
     suppressPackageStartupMessages(library(gridExtra))
     suppressPackageStartupMessages(library(leaflet))
     suppressPackageStartupMessages(library(methods))
-    suppressPackageStartupMessages(library(pbapply))
     suppressPackageStartupMessages(library(png))
     suppressPackageStartupMessages(library(pryr))
     suppressPackageStartupMessages(library(RcppTOML))
     suppressPackageStartupMessages(library(reshape2))
     suppressPackageStartupMessages(library(shiny))
     suppressPackageStartupMessages(library(shinyjs))
+    suppressPackageStartupMessages(library(shinycssloaders))
     suppressPackageStartupMessages(library(stringi))
+    suppressPackageStartupMessages(library(bsplus))
     suppressPackageStartupMessages(library(V8))
-
-    flog.info(paste('Running as user "', userName, '"', sep=""))
-    flog.info(libPathsMsg[['success']])
   },
   error=function(e) stop(paste(e, libPathsMsg[['error']], sep="\n"))
 )
+flog.info(paste('Running as user "', userName, '"', sep=""))
+flog.info(libPathsMsg[['success']])
 
 # Creating some default config and cache dirs
 systemConfigDir <- file.path("", "etc", "obsmon", userName)
@@ -71,7 +72,6 @@ runAppHandlingBusyPort <- function(
   ...
 ) {
 
-  on.exit(removeExptCachingStatusFiles())
   exitMsg <- paste(
                "===============",
                "Exiting Obsmon.",
@@ -118,14 +118,25 @@ runAppHandlingBusyPort <- function(
 
 setPackageOptions <- function(config) {
   options(shiny.usecairo=TRUE)
-  pboptions(type="timer")
   pdf(NULL)
   flog.appender(appender.file(stderr()), 'ROOT')
-  flog.threshold(parse(text=config$general$logLevel)[[1]])
-  plan(multiprocess)
+  logLevel <- parse(text=config$general$logLevel)[[1]]
+  if(exists("args") && isTRUE(args$debug)) logLevel <- DEBUG
+  flog.threshold(logLevel)
+  # Options controlling parallelism
+  maxExtraParallelProcs <- as.integer(config$general$maxExtraParallelProcs)
+  if(is.na(maxExtraParallelProcs) || maxExtraParallelProcs<0) {
+    maxExtraParallelProcs <- .Machine$integer.max
+  } else {
+    flog.info(sprintf("Limiting maxExtraParallelProcs to %s",
+      maxExtraParallelProcs
+    ))
+  }
+  plan(multiprocess, workers=maxExtraParallelProcs)
 }
 
 sourceObsmonFiles <- function() {
+  source("observation_definitions.R")
   source("colors.R")
   source("utils.R")
   source("sql.R")
@@ -136,7 +147,6 @@ sourceObsmonFiles <- function() {
   source("plots_timeseries.R")
   source("plots_maps.R")
   source("plots_diagnostic.R")
-  source("progress.R")
   source("windspeed.R")
 }
 
@@ -170,6 +180,11 @@ getSuitableCacheDirDefault <- function() {
 fillInDefaults <- function(config) {
   config <- fillInDefault(config, "cacheDir", getSuitableCacheDirDefault())
   config <- fillInDefault(config, "logLevel", "WARN")
+  config <- fillInDefault(config, "initCheckDataExists", FALSE)
+  config <- fillInDefault(config, "maxExtraParallelProcs",
+    Sys.getenv("OBSMON_MAX_N_EXTRA_PROCESSES")
+  )
+  config <- fillInDefault(config, "showCacheOptions", FALSE)
   config
 }
 
