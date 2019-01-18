@@ -445,7 +445,7 @@ shinyServer(function(input, output, session) {
       input$obname
       input$variable
     }, {
-    if(allowChoosingStation()) stationsAlongWithLabels(c("Any"=""))
+    if(!allowChoosingStation()) stationsAlongWithLabels(c("Any"=""))
     req(allowChoosingStation())
 
     db <- req(activeDb())
