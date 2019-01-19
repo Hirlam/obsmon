@@ -121,7 +121,7 @@ postProcessQueriedPlotData.default <- function(plotter, plotData) {
 
 # Functions used in in server.R
 # Build named list of plot criteria
-buildCriteria <- function(input) {
+plotsBuildCriteria <- function(input) {
   res <- list()
   res$info <- list()
   obname <- req(input$obname)

@@ -624,7 +624,7 @@ shinyServer(function(input, output, session) {
     input$levels
     input$station
   }, {
-    choices <- applicablePlots(req(buildCriteria(input)))
+    choices <- applicablePlots(req(plotsBuildCriteria(input)))
     updateSelectInputWrapper(session, "plottype", choices=choices)
   },
     ignoreNULL=FALSE
@@ -653,7 +653,7 @@ shinyServer(function(input, output, session) {
     plotRequest <- list()
     plotRequest$expName <- req(input$experiment)
     plotRequest$dbType <- db$dbType
-    plotRequest$criteria <- buildCriteria(input)
+    plotRequest$criteria <- plotsBuildCriteria(input)
     plotRequest$criteria$dtg <- switch(plotter$dateType,
       "single"={
         cycle <- req(input$cycle)
