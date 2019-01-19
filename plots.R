@@ -143,7 +143,18 @@ plotsBuildCriteria <- function(input) {
   res$levels <- list()
   if(length(levels)>0 && levels!="") res$levels <- levels
 
-  res
+  dateType <- plotTypesFlat[[input$plottype]]$dateType
+  if(!is.null(dateType)) {
+    res$dtg <- switch(dateType,
+      "single"=date2dtg(req(input$date), req(input$cycle)),
+      "range"={
+        dateRange <- req(input$dateRange)
+        list(dateRange[1], dateRange[2], req(input$cycles))
+      }
+    )
+  }
+
+  return(res)
 }
 # Perform plotting
 preparePlots <- function(plotter, plotRequest, db, stations) {

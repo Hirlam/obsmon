@@ -641,6 +641,11 @@ shinyServer(function(input, output, session) {
     enableShinyInputs(input)
   })
   futurePlot <- eventReactive(input$doPlot, {
+    if(dateTypeReqByPlotType()=="range") {
+      if(is.null(input$cycles))signalError("Please select at least one cycle")
+      req(!is.null(input$cycles))
+    }
+
     disableShinyInputs(input)
     shinyjs::hide("doPlot")
     shinyjs::show("cancelPlot")
@@ -654,21 +659,6 @@ shinyServer(function(input, output, session) {
     plotRequest$expName <- req(input$experiment)
     plotRequest$dbType <- db$dbType
     plotRequest$criteria <- plotsBuildCriteria(input)
-    plotRequest$criteria$dtg <- switch(plotter$dateType,
-      "single"={
-        cycle <- req(input$cycle)
-        date2dtg(req(input$date), cycle)
-      },
-      "range"={
-            dateRange <- req(input$dateRange)
-            cycles <- input$cycles
-            if (is.null(cycles)) {
-              signalError("Please select at least one cycle.")
-              return(NULL)
-            }
-            list(dateRange[1], dateRange[2], cycles)
-      }
-    )
 
     rtn <- future({
       tryCatch(
