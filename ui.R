@@ -40,6 +40,7 @@ appCSS <- "
 
 source("src/ui/create_main_panel.R")
 source("src/ui/tabs/main_tab.R")
+source("src/ui/tabs/one_click_plots_tab.R")
 shinyUI(ui=tagList(
   # Some definitions that apply to all tabs
   useShinyjs(),
@@ -48,6 +49,7 @@ shinyUI(ui=tagList(
   div(id="loading-content",h2(sprintf("Loading Obsmon v%s...",obsmonVersion))),
   # The page
   navbarPage(title=paste0("Obsmon v", obsmonVersion),
-    tabPanel("Main", value="mainTab", mainTab())
+    tabPanel("Main", value="mainTab", mainTab()),
+    tabPanel("One-click plots", value="oneClickPlotsTab", oneClickPlotsTab())
   )
 ))

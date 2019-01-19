@@ -728,4 +728,17 @@ shinyServer(function(input, output, session) {
         js$enableTab("mapTab")
       }
   })
+
+  # One-click plots
+  oneClickPlotChoices <- c()
+  for(plotConfig in obsmonConfig$oneClickPlots) {
+    oneClickPlotChoices <- c(oneClickPlotChoices, plotConfig$displayName)
+  }
+  updateSelectInputWrapper(session, "oneClickPlotTitle", choices=oneClickPlotChoices)
+
+  output$oneClickPlotsPlot <- renderPlot(
+    grid.arrange(req(readyPlot()$obplot),top=textGrob(req(readyPlot()$title))),
+    res=96, pointsize=18
+  )
+
 })
