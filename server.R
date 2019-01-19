@@ -612,35 +612,6 @@ shinyServer(function(input, output, session) {
     )
   })
 
-  # Build named list of criteria
-  buildCriteria <- function() {
-    exp <- isolate(experiments()[[req(input$experiment)]])
-    db <- req(input$odbBase)
-    adb <- req(activeDb())
-    res <- list()
-    res$info <- list()
-    obname <- req(input$obname)
-    res$obnumber <- getAttrFromMetadata('obnumber', obname=obname)
-    if (obname == 'satem') {
-      sensor <- req(input$sensor)
-      res$obname <- sensor
-      res$satname <- req(input$satellite)
-      levels <- input$channels
-    } else {
-      res$obname <- obname
-      res$varname <- req(input$variable)
-      levels <- input$levels
-
-      station <- input$station
-      if("" %in% station) station <- ""
-      res$station <- station
-    }
-    res$levels <- list()
-    if(length(levels)>0 && levels!="") res$levels <- levels
-
-    res
-  }
-
   # Update plottype choices according to criteria
   observeEvent({
     reloadInfoFromCache()
@@ -653,45 +624,11 @@ shinyServer(function(input, output, session) {
     input$levels
     input$station
   }, {
-    choices <- applicablePlots(req(buildCriteria()))
+    choices <- applicablePlots(req(buildCriteria(input)))
     updateSelectInputWrapper(session, "plottype", choices=choices)
   },
     ignoreNULL=FALSE
   )
-
-  # Perform plotting
-  preparePlots <- function(plotter, plotRequest, db, stations) {
-    isWindspeed <- "varname" %in% names(plotRequest$criteria) &&
-      plotRequest$criteria$varname %in% c("ff", "ff10m")
-    query <- NULL
-    if (isWindspeed) {
-      plotData <- buildFfData(db, plotter, plotRequest)
-    } else {
-      query <- plotBuildQuery(plotter, plotRequest)
-      plotData <- performQuery(db, query, plotRequest$criteria$dtg)
-      # Postprocessing plotData returned by performQuery.
-      # This may be useful, e.g., if performing averages over a
-      # picked date range.
-      plotData <- postProcessQueriedPlotData(plotter, plotData)
-    }
-    if(!is.null(plotData) && nrow(plotData)>0) {
-      statLabels <- c()
-      for(statid in plotData$statid) {
-        statid <- gsub(" ", "", gsub("'", "", statid))
-        statLabels <- c(statLabels, names(stations)[stations==statid])
-      }
-      if(nrow(plotData)==length(statLabels)) {
-        plotData$statLabel <- statLabels
-      } else {
-        plotData$statLabel <- plotData$statid
-      }
-    }
-
-    res <- plotGenerate(plotter, plotRequest, plotData)
-    res[["queryUsed"]] <- query
-    res[["plotData"]] <- plotData
-    return(res)
-  }
 
   currentPlotPid <- reactiveVal(-1)
   plotStartedNotifId <- reactiveVal(-1)
@@ -716,7 +653,7 @@ shinyServer(function(input, output, session) {
     plotRequest <- list()
     plotRequest$expName <- req(input$experiment)
     plotRequest$dbType <- db$dbType
-    plotRequest$criteria <- buildCriteria()
+    plotRequest$criteria <- buildCriteria(input)
     plotRequest$criteria$dtg <- switch(plotter$dateType,
       "single"={
         cycle <- req(input$cycle)

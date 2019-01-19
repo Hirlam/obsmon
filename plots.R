@@ -118,3 +118,63 @@ postProcessQueriedPlotData <-
 postProcessQueriedPlotData.default <- function(plotter, plotData) {
     plotData
 }
+
+# Functions used in in server.R
+# Build named list of plot criteria
+buildCriteria <- function(input) {
+  res <- list()
+  res$info <- list()
+  obname <- req(input$obname)
+  res$obnumber <- getAttrFromMetadata('obnumber', obname=obname)
+  if (obname == 'satem') {
+    sensor <- req(input$sensor)
+    res$obname <- sensor
+    res$satname <- req(input$satellite)
+    levels <- input$channels
+  } else {
+    res$obname <- obname
+    res$varname <- req(input$variable)
+    levels <- input$levels
+
+    station <- input$station
+    if("" %in% station) station <- ""
+    res$station <- station
+  }
+  res$levels <- list()
+  if(length(levels)>0 && levels!="") res$levels <- levels
+
+  res
+}
+# Perform plotting
+preparePlots <- function(plotter, plotRequest, db, stations) {
+  isWindspeed <- "varname" %in% names(plotRequest$criteria) &&
+    plotRequest$criteria$varname %in% c("ff", "ff10m")
+  query <- NULL
+  if (isWindspeed) {
+    plotData <- buildFfData(db, plotter, plotRequest)
+  } else {
+    query <- plotBuildQuery(plotter, plotRequest)
+    plotData <- performQuery(db, query, plotRequest$criteria$dtg)
+    # Postprocessing plotData returned by performQuery.
+    # This may be useful, e.g., if performing averages over a
+    # picked date range.
+    plotData <- postProcessQueriedPlotData(plotter, plotData)
+  }
+  if(!is.null(plotData) && nrow(plotData)>0) {
+    statLabels <- c()
+    for(statid in plotData$statid) {
+      statid <- gsub(" ", "", gsub("'", "", statid))
+      statLabels <- c(statLabels, names(stations)[stations==statid])
+    }
+    if(nrow(plotData)==length(statLabels)) {
+      plotData$statLabel <- statLabels
+    } else {
+      plotData$statLabel <- plotData$statid
+    }
+  }
+
+  res <- plotGenerate(plotter, plotRequest, plotData)
+  res[["queryUsed"]] <- query
+  res[["plotData"]] <- plotData
+  return(res)
+}
