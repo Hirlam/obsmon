@@ -736,9 +736,86 @@ shinyServer(function(input, output, session) {
   }
   updateSelectInputWrapper(session, "oneClickPlotTitle", choices=oneClickPlotChoices)
 
-  output$oneClickPlotsPlot <- renderPlot(
-    grid.arrange(req(readyPlot()$obplot),top=textGrob(req(readyPlot()$title))),
+  oneClickPlotConfigInfo <- eventReactive({input$oneClickPlotTitle}, {
+    pConfig <- NULL
+    for(pConf in obsmonConfig$oneClickPlots) {
+      if(!pConf$displayName==input$oneClickPlotTitle) next
+      pConfig <- pConf
+      break
+    }
+    pConfig
+  })
+
+  oneClickPlotExperiment <- eventReactive({oneClickPlotConfigInfo()}, {
+    pConfig <- oneClickPlotConfigInfo()
+    experiments()[[pConfig$experiment]]
+  })
+
+  oneClickPlotActiveDb <- eventReactive({oneClickPlotExperiment()}, {
+    pConfig <- oneClickPlotConfigInfo()
+    dbType <- pConfig$database
+    oneClickPlotExperiment()$dbs[[dbType]]
+  })
+
+
+  oneClickPlot <- eventReactive({input$oneClickPlotsDoPlot}, {
+    pConfig <- oneClickPlotConfigInfo()
+
+    plotter <- plotTypesFlat[[req(pConfig$plotType)]]
+
+    if(plotter$dateType=="range") {
+      if(is.null(pConfig$startDate) || is.null(pConfig$endDate)) {
+        flog.error(paste(
+          "Selected plot requires startDate and endDate (or",
+          "startDate and nDays) to be set in the config file"
+        ))
+      }
+      req(!is.null(pConfig$startDate) && !is.null(pConfig$endDate))
+    } else {
+      if(is.null(pConfig$date)) {
+        flog.error("Selected plot requires date to be set in the config file")
+      }
+      req(!is.null(pConfig$date))
+    }
+
+    inputOneClickPlot <- list(
+      experiment=pConfig$experiment,
+      plottype=pConfig$plotType,
+      obname=pConfig$obname,
+      variable=pConfig$variable,
+#      levels=,
+#      station=,
+#      sensor=,
+#      satname,
+#      channels=,
+#      date=pConfig$Date,
+#      cycle=,
+      dateRange=c(pConfig$startDate, pConfig$endDate),
+     # TODO: Set up cycles
+      cycles=c("00", "03", "06")
+    )
+
+    plotRequest <- list()
+    plotRequest$expName <- req(inputOneClickPlot$experiment)
+    plotRequest$dbType <- inputOneClickPlot$database
+    plotRequest$criteria <- plotsBuildCriteria(inputOneClickPlot)
+
+    # TODO: Set up stations
+    stations <- NULL
+
+    preparePlots(plotter, plotRequest, oneClickPlotActiveDb(), stations)
+  })
+
+  output$oneClickPlotsPlot <- renderPlot({
+      myPlot <- oneClickPlot()
+      grid.arrange(req(myPlot$obplot),top=textGrob(req(myPlot$title)))
+    },
     res=96, pointsize=18
   )
+
+  output$oneClickPlotsDataTable <- renderDataTable(
+    req(oneClickPlot()$plotData), options=list(pageLength=100)
+  )
+  output$oneClickPlotsQueryUsed <- renderText(req(oneClickPlot()$queryUsed))
 
 })
