@@ -701,6 +701,10 @@ shinyServer(function(input, output, session) {
   })
 
   # Finally, producing the output
+  # Rendering outputs dynamically
+  output$plotContainer <- renderUI(plotOutput("plot") %>% withSpinner(color="#0dc5c1"))
+
+  # Rendering plots
   output$plot <- renderPlot(
     grid.arrange(req(readyPlot()$obplot),top=textGrob(req(readyPlot()$title))),
     res=96, pointsize=18
@@ -818,21 +822,42 @@ shinyServer(function(input, output, session) {
      iPlot <- iPlot + 1
      allPlots[[iPlot]] <- newPlot
     }
-    # TEMP - temmporarily returning only one plot
-    allPlots[[1]]
+    allPlots
 
   })
 
-  output$quickPlotsPlot <- renderPlot({
-      myPlot <- quickPlot()
-      grid.arrange(req(myPlot$obplot),top=textGrob(req(myPlot$title)))
-    },
-    res=96, pointsize=18
-  )
 
-  output$quickPlotsDataTable <- renderDataTable(
-    req(quickPlot()$plotData), options=list(pageLength=100)
-  )
-  output$quickPlotsQueryUsed <- renderText(req(quickPlot()$queryUsed))
+  output$quickPlotsPlotContainer <- renderUI({
+    # Code adapted from <https://gist.github.com/wch/5436415>
+    plotOutputList <- lapply(1:length(quickPlot()), function(iPlot) {
+      plotOutputId <- paste("quickPlotsPlot", iPlot, sep="_")
+      plotOutput(plotOutputId) %>% withSpinner(color="#0dc5c1")
+
+    })
+    # Convert the list to a tagList - this is necessary for the list of items
+    # to display properly.
+    do.call(tagList, plotOutputList)
+  })
+
+  observeEvent({quickPlot()}, {
+    # Code adapted from <https://gist.github.com/wch/5436415>
+    for(iPlot in seq(length(quickPlot()))) {
+      local({
+        iPlotLocal <- iPlot
+        plotOutputId <- paste("quickPlotsPlot", iPlotLocal, sep="_")
+        output[[plotOutputId]] <- renderPlot({
+            myPlot <- quickPlot()[[iPlotLocal]]
+            grid.arrange(req(myPlot$obplot),top=textGrob(req(myPlot$title)))
+          },
+          res=96, pointsize=18
+        )
+      })
+    }
+  })
+
+#  output$quickPlotsDataTable <- renderDataTable(
+#    req(quickPlot()$plotData), options=list(pageLength=100)
+#  )
+#  output$quickPlotsQueryUsed <- renderText(req(quickPlot()$queryUsed))
 
 })

@@ -2,14 +2,14 @@
 createMainPanel <- function(prependToIds=NULL) {
   if(is.null(prependToIds)) {
     tabsetPanelId <- "mainArea"
-    plotOutputId <- "plot"
+    uiOutputIdForPlot <- "plotContainer"
     mapTitleOutputId <- "mapTitle"
     mapOutputId <- "map"
     queryUsedOutputId <- "queryUsed"
     dataTableOutputId <- "dataTable"
   } else {
     tabsetPanelId <- paste0(prependToIds, "MainArea")
-    plotOutputId <- paste0(prependToIds, "Plot")
+    uiOutputIdForPlot <- paste0(prependToIds, "PlotContainer")
     mapTitleOutputId <- paste0(prependToIds, "MapTitle")
     mapOutputId <- paste0(prependToIds, "Map")
     queryUsedOutputId <- paste0(prependToIds, "QueryUsed")
@@ -24,7 +24,7 @@ createMainPanel <- function(prependToIds=NULL) {
         fluidRow(
           column(12, align="center",
             tags$head(tags$style("#plot{height:80vh !important;}")),
-            plotOutput(outputId=plotOutputId) %>% withSpinner(color="#0dc5c1"),
+            uiOutput(uiOutputIdForPlot),
             tags$style(type="text/css", "body { overflow-y: scroll; }")
           )
         )
