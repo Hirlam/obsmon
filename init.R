@@ -148,7 +148,7 @@ sourceObsmonFiles <- function() {
   source("plots_maps.R")
   source("plots_diagnostic.R")
   source("windspeed.R")
-  source("plots_one_click.R")
+  source("plots_quick.R")
 }
 
 fillInDefault <- function(config, key, default) {

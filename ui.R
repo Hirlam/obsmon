@@ -40,7 +40,7 @@ appCSS <- "
 
 source("src/ui/create_main_panel.R")
 source("src/ui/tabs/main_tab.R")
-source("src/ui/tabs/one_click_plots_tab.R")
+source("src/ui/tabs/quick_plots_tab.R")
 shinyUI(ui=tagList(
   # Some definitions that apply to all tabs
   useShinyjs(),
