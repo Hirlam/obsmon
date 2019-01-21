@@ -126,10 +126,10 @@ getPlotDtgCriteriaFromUiInput <- function(input) {
   dateType <- plotTypesFlat[[input$plottype]]$dateType
   if(!is.null(dateType)) {
     dtgCrit <- switch(dateType,
-      "single"=date2dtg(req(input$date), req(input$cycle)),
+      "single"=date2dtg(input$date, input$cycle),
       "range"={
-        dateRange <- req(input$dateRange)
-        list(dateRange[1], dateRange[2], req(input$cycles))
+        dateRange <- input$dateRange
+        list(dateRange[1], dateRange[2], input$cycles)
       }
     )
   }
@@ -139,16 +139,16 @@ getPlotDtgCriteriaFromUiInput <- function(input) {
 plotsBuildCriteria <- function(input) {
   res <- list()
   res$info <- list()
-  obname <- req(input$obname)
+  obname <- input$obname
   res$obnumber <- getAttrFromMetadata('obnumber', obname=obname)
   if (obname == 'satem') {
-    sensor <- req(input$sensor)
+    sensor <- input$sensor
     res$obname <- sensor
-    res$satname <- req(input$satellite)
+    res$satname <- input$satellite
     levels <- input$channels
   } else {
     res$obname <- obname
-    res$varname <- req(input$variable)
+    res$varname <- input$variable
     levels <- input$levels
 
     station <- input$station
