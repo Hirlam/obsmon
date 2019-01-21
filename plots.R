@@ -121,6 +121,21 @@ postProcessQueriedPlotData.default <- function(plotter, plotData) {
 
 # Functions used in in server.R
 # Build named list of plot criteria
+getPlotDtgCriteriaFromUiInput <- function(input) {
+  dtgCrit <- NULL
+  dateType <- plotTypesFlat[[input$plottype]]$dateType
+  if(!is.null(dateType)) {
+    dtgCrit <- switch(dateType,
+      "single"=date2dtg(req(input$date), req(input$cycle)),
+      "range"={
+        dateRange <- req(input$dateRange)
+        list(dateRange[1], dateRange[2], req(input$cycles))
+      }
+    )
+  }
+  return(dtgCrit)
+}
+
 plotsBuildCriteria <- function(input) {
   res <- list()
   res$info <- list()
@@ -143,16 +158,7 @@ plotsBuildCriteria <- function(input) {
   res$levels <- list()
   if(length(levels)>0 && levels!="") res$levels <- levels
 
-  dateType <- plotTypesFlat[[input$plottype]]$dateType
-  if(!is.null(dateType)) {
-    res$dtg <- switch(dateType,
-      "single"=date2dtg(req(input$date), req(input$cycle)),
-      "range"={
-        dateRange <- req(input$dateRange)
-        list(dateRange[1], dateRange[2], req(input$cycles))
-      }
-    )
-  }
+  res$dtg <- getPlotDtgCriteriaFromUiInput(input)
 
   return(res)
 }
