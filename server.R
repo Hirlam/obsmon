@@ -730,39 +730,38 @@ shinyServer(function(input, output, session) {
   })
 
   # One-click plots
-  oneClickPlotChoices <- c()
-  for(plotConfig in obsmonConfig$oneClickPlots) {
-    oneClickPlotChoices <- c(oneClickPlotChoices, plotConfig$displayName)
+  quickPlotChoices <- c()
+  for(plotConfig in obsmonConfig$quickPlots) {
+    quickPlotChoices <- c(quickPlotChoices, plotConfig$displayName)
   }
-  updateSelectInputWrapper(session, "oneClickPlotTitle", choices=oneClickPlotChoices)
+  updateSelectInputWrapper(session, "quickPlotTitle", choices=quickPlotChoices)
 
-  oneClickPlotConfigInfo <- eventReactive({input$oneClickPlotTitle}, {
+  quickPlotConfigInfo <- eventReactive({input$quickPlotTitle}, {
     pConfig <- NULL
-    for(pConf in obsmonConfig$oneClickPlots) {
-      if(!pConf$displayName==input$oneClickPlotTitle) next
+    for(pConf in obsmonConfig$quickPlots) {
+      if(!pConf$displayName==input$quickPlotTitle) next
       pConfig <- pConf
       break
     }
     pConfig
   })
 
-  oneClickPlotExperiment <- eventReactive({oneClickPlotConfigInfo()}, {
-    pConfig <- oneClickPlotConfigInfo()
+  quickPlotExperiment <- eventReactive({quickPlotConfigInfo()}, {
+    pConfig <- quickPlotConfigInfo()
     experiments()[[pConfig$experiment]]
   })
 
-  oneClickPlotActiveDb <- eventReactive({oneClickPlotExperiment()}, {
-    pConfig <- oneClickPlotConfigInfo()
+  quickPlotActiveDb <- eventReactive({quickPlotExperiment()}, {
+    pConfig <- quickPlotConfigInfo()
     dbType <- pConfig$database
-    oneClickPlotExperiment()$dbs[[dbType]]
+    quickPlotExperiment()$dbs[[dbType]]
   })
 
+  quickPlot <- eventReactive({input$quickPlotsDoPlot}, {
+    pConfig <- quickPlotConfigInfo()
 
-  oneClickPlot <- eventReactive({input$oneClickPlotsDoPlot}, {
-    pConfig <- oneClickPlotConfigInfo()
-
+    # Stuff shared among all subplots
     plotter <- plotTypesFlat[[req(pConfig$plotType)]]
-
     if(plotter$dateType=="range") {
       if(is.null(pConfig$startDate) || is.null(pConfig$endDate)) {
         flog.error(paste(
@@ -777,45 +776,63 @@ shinyServer(function(input, output, session) {
       }
       req(!is.null(pConfig$date))
     }
-
-    inputOneClickPlot <- list(
+    # Initialising a "shiny input"-like list that will be passed to the
+    # ordinary plotting routines
+    plotsCommonInput <- list(
       experiment=pConfig$experiment,
       plottype=pConfig$plotType,
-      obname=pConfig$obname,
-      variable=pConfig$variable,
-#      levels=,
-#      station=,
-#      sensor=,
-#      satname,
-#      channels=,
-#      date=pConfig$Date,
-#      cycle=,
+      date=pConfig$date,
+      cycle=pConfig$cycle,
       dateRange=c(pConfig$startDate, pConfig$endDate),
-     # TODO: Set up cycles
-      cycles=c("00", "03", "06")
+      cycles=pConfig$cycles
     )
 
-    plotRequest <- list()
-    plotRequest$expName <- req(inputOneClickPlot$experiment)
-    plotRequest$dbType <- inputOneClickPlot$database
-    plotRequest$criteria <- plotsBuildCriteria(inputOneClickPlot)
-
-    # TODO: Set up stations
+    obnames <- names(pConfig$obs)
+    inputsForAllPlots <- list()
+    iPlot <- 0
+    for(iObname in seq(length(pConfig$obs))) {
+      obname <- obnames[iObname]
+      for(variable in unlist(pConfig$obs[iObname])) {
+        inputsThisPlotOnly <- list(
+          obname=obname,
+          variable=variable
+        )
+        iPlot <- iPlot + 1
+        inputsForAllPlots[[iPlot]] <- c(plotsCommonInput, inputsThisPlotOnly)
+      }
+    }
+    # TODO: Support to setting levels, stations and
+    #       satem-related fields (sensor, satname, channels)
     stations <- NULL
 
-    preparePlots(plotter, plotRequest, oneClickPlotActiveDb(), stations)
+
+    allPlots <- list()
+    iPlot <- 0
+    for(inputOneClickPlot in inputsForAllPlots) {
+     plotRequest <- list()
+     plotRequest$expName <- req(inputOneClickPlot$experiment)
+     plotRequest$dbType <- inputOneClickPlot$database
+     plotRequest$criteria <- plotsBuildCriteria(inputOneClickPlot)
+
+     newPlot <- preparePlots(plotter, plotRequest, quickPlotActiveDb(), stations)
+     iPlot <- iPlot + 1
+     allPlots[[iPlot]] <- newPlot
+    }
+    # TEMP - temmporarily returning only one plot
+    allPlots[[1]]
+
   })
 
-  output$oneClickPlotsPlot <- renderPlot({
-      myPlot <- oneClickPlot()
+  output$quickPlotsPlot <- renderPlot({
+      myPlot <- quickPlot()
       grid.arrange(req(myPlot$obplot),top=textGrob(req(myPlot$title)))
     },
     res=96, pointsize=18
   )
 
-  output$oneClickPlotsDataTable <- renderDataTable(
-    req(oneClickPlot()$plotData), options=list(pageLength=100)
+  output$quickPlotsDataTable <- renderDataTable(
+    req(quickPlot()$plotData), options=list(pageLength=100)
   )
-  output$oneClickPlotsQueryUsed <- renderText(req(oneClickPlot()$queryUsed))
+  output$quickPlotsQueryUsed <- renderText(req(quickPlot()$queryUsed))
 
 })

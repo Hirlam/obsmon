@@ -32,52 +32,77 @@ validateEndDate <- function(endDate, startDate=NULL, nDays=NULL, format=dateInpu
 
 
 validateOneClickPlotConfig <- function(config) {
-  anyInvalidExpt <- FALSE
-  anyInvalidPlotType <- FALSE
+  invalidExpts <- c()
+  invalidPlotNames <- c()
+  invalidDbs <- c()
 
   availablePlots <- names(plotTypesFlat)
-  availableExpts <- c()
-  for(expt in config$experiments) availableExpts <- c(availableExpts, expt$displayName)
-  for(iPlotConfig in length(config$oneClickPlots)) {
+  for(iConfig in seq(length(config$quickPlots))) {
     # pc stands for "plot config"
-    pc <- config$oneClickPlots[[iPlotConfig]]
-    validExpt <- pc$experiment %in% availableExpts
-    validPlotType <- pc$plotType %in% availablePlots
-    validOneClickPlot <- validExpt && validPlotType
+    pc <- config$quickPlots[[iConfig]]
+    if(!isTRUE((pc$experiment %in% exptNamesinConfig))) {
+      flog.warn('quickPlot "%s": experiment "%s" not recognised', pc$displayName, pc$experiment)
+      invalidExpts <- c(invalidExpts, as.character(pc$experiment))
+      pc <- NULL
+    }
+    if(!isTRUE(pc$plotType %in% availablePlots)) {
+      flog.warn('quickPlot "%s": plotType "%s" not recognised', pc$displayName, pc$plotType)
+      invalidPlotNames <- c(invalidPlotNames, as.character(plot$plotType))
+      pc <- NULL
+    }
+    if(!isTRUE((pc$database %in% dbTypesRecognised))) {
+      flog.warn('quickPlot "%s": database "%s" not recognised', pc$displayName, pc$database)
+      invalidDbs <- c(invalidDbs, as.character(pc$database))
+      pc <- NULL
+    }
+    if(is.null(pc)) {
+      config$quickPlots[[iConfig]] <- NULL
+      next
+    }
     # Process dates
     pc$date <- validateStartDate(pc$date)
     pc$startDate <- validateStartDate(pc$startDate)
     pc$endDate <- validateEndDate(pc$endDate, pc$startDate, pc$nDays)
 
-    # TODO: Validate database (ecma, ccma, ecma_sfc)
-
-    if(!validOneClickPlot) {
-      msg <- sprintf('OneClick plots: Ignoring "%s" -- Invalid configuration', pc$displayName)
-      if(!validExpt) {
-        anyInvalidExpt <- TRUE
-        msg <- sprintf('%s\n   > Experiment "%s" not found', msg, pc$experiment)
-      }
-      if(!validPlotType) {
-        anyInvalidPlotType <- TRUE
-        msg <- sprintf('%s\n   > Plot type "%s" not found', msg, pc$plotType)
-      }
-      config$oneClickPlots[iPlotConfig] <- NULL
-      flog.error(msg)
+    # Process chosen obnames
+    if(is.null(pc$obs)) {
+      allObnames <- getAttrFromMetadata("obname")
+      pc$obs <- vector("list", length(allObnames))
+      names(pc$obs) <- allObnames
     }
-
-    # Saving changes
-    config$oneClickPlots[[iPlotConfig]] <- pc
+    # Excluding obnames if requested by user
+    obsToExclude <- pc$excludeObs
+    pc$obs <- pc$obs[!(names(pc$obs) %in% obsToExclude)]
+    # Populating variables
+    obnames <- names(pc$obs)
+    for(iVarList in seq(length(pc$obs))) {
+      # Each ob will contain a list of variables
+      variables <- pc$obs[[iVarList]]
+      if(is.null(variables)) {
+        obname <- obnames[iVarList]
+        allVarsForObname <- getAttrFromMetadata("variables", obname=obname)
+        pc$obs[[iVarList]] <- allVarsForObname
+      }
+    }
+    config$quickPlots[[iConfig]] <- pc
   }
-  if(anyInvalidExpt) {
+
+  if(length(invalidExpts)>0) {
     msg <- "OneClick Plots: Please choose your experiment from:"
-    for(exptName in availableExpts) msg <- paste0(msg, "\n  > ", exptName)
+    for(exptName in exptNamesinConfig) msg <- paste0(msg, "\n  > ", exptName)
     flog.warn(msg)
   }
-  if(anyInvalidPlotType) {
+  if(length(invalidPlotNames)>0) {
     msg <- "OneClick Plots: Please choose your plotType from:"
     for(plotType in availablePlots) msg <- paste0(msg, "\n  > ", plotType)
     flog.warn(msg)
   }
+  if(length(invalidDbs)>0) {
+    msg <- "OneClick Plots: Please choose your database from:"
+    msg <- paste(msg, paste(dbTypesRecognised, collapse=", "))
+    flog.warn(msg)
+  }
+
   return(config)
 }
 

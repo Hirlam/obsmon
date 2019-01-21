@@ -50,6 +50,6 @@ shinyUI(ui=tagList(
   # The page
   navbarPage(title=paste0("Obsmon v", obsmonVersion),
     tabPanel("Main", value="mainTab", mainTab()),
-    tabPanel("One-click plots", value="oneClickPlotsTab", oneClickPlotsTab())
+    tabPanel("Quick plots", value="quickPlotsTab", quickPlotsTab())
   )
 ))
