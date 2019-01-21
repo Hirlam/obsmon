@@ -46,8 +46,14 @@ expandDtgRange <- function(dateRange) {
   startDate <- dateRange[[1]]
   endDate <- dateRange[[2]]
   cycles <- as.integer(dateRange[[3]])
-  minCycle <- min(cycles)
-  maxCycle <- max(cycles)
+  if(length(cycles)==0) {
+    cycles <- NULL
+    minCycle <- 0
+    maxCycle <- 24
+  } else {
+    minCycle <- min(cycles)
+    maxCycle <- max(cycles)
+  }
   startDtg <- date2dtg(startDate, minCycle)
   endDtg <- date2dtg(endDate, maxCycle)
   list(startDtg, endDtg, cycles)
