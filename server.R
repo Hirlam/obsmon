@@ -43,6 +43,11 @@ getFilePathsToCache <- function(db, dtgs) {
 shinyServer(function(input, output, session) {
   # Source some useful shiny-related helper functions and wrappers
   source("shiny_wrappers.R")
+
+  ############################################################################
+  #                          Handling of main tab                            #
+  ############################################################################
+
   # Start GUI with all inputs disabled.
   # They will be enabled once experiments are loaded
   isolate(disableShinyInputs(input, except="experiment"))
@@ -702,7 +707,13 @@ shinyServer(function(input, output, session) {
 
   # Finally, producing the output
   # Rendering outputs dynamically
-  output$plotContainer <- renderUI(plotOutput("plot") %>% withSpinner(color="#0dc5c1"))
+  output$plotContainer <- renderUI(plotOutputInsideFluidRow("plot"))
+  output$mapAndMapTitleContainer <- renderUI(
+    mapAndMapTitleOutput("map", "mapTitle")
+  )
+  output$queryAndTableContainer <- renderUI(
+    queryUsedAndDataTableOutput("queryUsed", "dataTable")
+  )
 
   # Rendering plots
   output$plot <- renderPlot(
@@ -733,7 +744,11 @@ shinyServer(function(input, output, session) {
       }
   })
 
-  # One-click plots
+
+  ############################################################################
+  #                        Handling of Quick plots tab                       #
+  ############################################################################
+
   quickPlotChoices <- c()
   for(plotConfig in obsmonConfig$quickPlots) {
     quickPlotChoices <- c(quickPlotChoices, plotConfig$displayName)
@@ -826,17 +841,36 @@ shinyServer(function(input, output, session) {
 
   })
 
-
+  # Prepare the correct number of plot outputs
   output$quickPlotsPlotContainer <- renderUI({
     # Code adapted from <https://gist.github.com/wch/5436415>
     plotOutputList <- lapply(1:length(quickPlot()), function(iPlot) {
       plotOutputId <- paste("quickPlotsPlot", iPlot, sep="_")
-      plotOutput(plotOutputId) %>% withSpinner(color="#0dc5c1")
-
+      plotOutputInsideFluidRow(plotOutputId)
     })
     # Convert the list to a tagList - this is necessary for the list of items
     # to display properly.
     do.call(tagList, plotOutputList)
+  })
+  # Prepare the correct number of mapTitle and map outputs
+  output$MapAndMapTitleContainer <- renderUI({
+    # Code adapted from <https://gist.github.com/wch/5436415>
+    mapAndMapTitleOutputList <- lapply(1:length(quickPlot()), function(iPlot) {
+      mapOutputId <- paste("quickPlotsMap", iPlot, sep="_")
+      mapTitleOutputId <- paste("quickPlotsMapTitle", iPlot, sep="_")
+      mapAndMapTitleOutput(mapOutputId, mapTitleOutputId)
+    })
+    do.call(tagList, mapAndMapTitleOutputList)
+  })
+  # Prepare the correct number of queryUsed and dataTable outputs
+  output$quickPlotsQueryAndTableContainer <- renderUI({
+    # Code adapted from <https://gist.github.com/wch/5436415>
+    queryAndDataTableOutputList <- lapply(1:length(quickPlot()), function(iPlot) {
+      queryOutputId <- paste("quickPlotsQueryUsed", iPlot, sep="_")
+      dataTableOutputId <- paste("quickPlotsDataTable", iPlot, sep="_")
+      queryUsedAndDataTableOutput(queryOutputId, dataTableOutputId)
+    })
+    do.call(tagList, queryAndDataTableOutputList)
   })
 
   observeEvent({quickPlot()}, {
@@ -844,20 +878,24 @@ shinyServer(function(input, output, session) {
     for(iPlot in seq(length(quickPlot()))) {
       local({
         iPlotLocal <- iPlot
+        # Add plots
         plotOutputId <- paste("quickPlotsPlot", iPlotLocal, sep="_")
+        myPlot <- quickPlot()[[iPlotLocal]]
         output[[plotOutputId]] <- renderPlot({
-            myPlot <- quickPlot()[[iPlotLocal]]
             grid.arrange(req(myPlot$obplot),top=textGrob(req(myPlot$title)))
           },
           res=96, pointsize=18
+        )
+        # Add maps and map titles
+        # Add duery strings and data tables
+        queryOutputId <- paste("quickPlotsQueryUsed", iPlotLocal, sep="_")
+        dataTableOutputId <- paste("quickPlotsDataTable", iPlotLocal, sep="_")
+        output[[queryOutputId]] <- renderText(req(myPlot$queryUsed))
+        output[[dataTableOutputId]] <- renderDataTable(
+          req(myPlot$plotData), options=list(pageLength=100)
         )
       })
     }
   })
 
-#  output$quickPlotsDataTable <- renderDataTable(
-#    req(quickPlot()$plotData), options=list(pageLength=100)
-#  )
-#  output$quickPlotsQueryUsed <- renderText(req(quickPlot()$queryUsed))
-
-})
+}) # End of shinyServer
