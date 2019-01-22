@@ -75,7 +75,7 @@ validateOneClickPlotConfig <- function(config) {
     pc$obs <- pc$obs[!(names(pc$obs) %in% obsToExclude)]
     # Populating variables
     obnames <- names(pc$obs)
-    for(iVarList in seq(length(pc$obs))) {
+    for(iVarList in seq_along(pc$obs)) {
       # Each ob will contain a list of variables
       variables <- pc$obs[[iVarList]]
       if(is.null(variables)) {

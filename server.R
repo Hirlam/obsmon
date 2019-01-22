@@ -809,7 +809,7 @@ shinyServer(function(input, output, session) {
     obnames <- names(pConfig$obs)
     inputsForAllPlots <- list()
     iPlot <- 0
-    for(iObname in seq(length(pConfig$obs))) {
+    for(iObname in seq_along(pConfig$obs)) {
       obname <- obnames[iObname]
       for(variable in unlist(pConfig$obs[iObname])) {
         inputsThisPlotOnly <- list(
@@ -875,7 +875,7 @@ shinyServer(function(input, output, session) {
 
   observeEvent({quickPlot()}, {
     # Code adapted from <https://gist.github.com/wch/5436415>
-    for(iPlot in seq(length(quickPlot()))) {
+    for(iPlot in seq_along(quickPlot())) {
       local({
         iPlotLocal <- iPlot
         # Add plots
