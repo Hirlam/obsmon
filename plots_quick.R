@@ -36,6 +36,8 @@ validateOneClickPlotConfig <- function(config) {
   invalidPlotNames <- c()
   invalidDbs <- c()
 
+  if(is.null(config$quickPlots)) return(config)
+
   availablePlots <- names(plotTypesFlat)
   for(iConfig in seq_along(config$quickPlots)) {
     # pc stands for "plot config"
