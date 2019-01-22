@@ -44,6 +44,11 @@ shinyServer(function(input, output, session) {
   # Source some useful shiny-related helper functions and wrappers
   source("shiny_wrappers.R")
 
+  # Add quickPlots tab to UI if quickPlots are available
+  if(!is.null(config$quickPlots)) {
+    appendTab("appNavbarPage", tabPanel("Quick plots", value="quickPlotsTab", quickPlotsTab()))
+  }
+
   ############################################################################
   #                          Handling of main tab                            #
   ############################################################################

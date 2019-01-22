@@ -45,8 +45,7 @@ shinyUI(ui=tagList(
   inlineCSS(appCSS),
   div(id="loading-content",h2(sprintf("Loading Obsmon v%s...",obsmonVersion))),
   # The page
-  navbarPage(title=paste0("Obsmon v", obsmonVersion),
-    tabPanel("Main", value="mainTab", mainTab()),
-    tabPanel("Quick plots", value="quickPlotsTab", quickPlotsTab())
-  )
+    navbarPage(title=paste0("Obsmon v", obsmonVersion), id="appNavbarPage",
+      tabPanel("Main", value="mainTab", mainTab())
+    )
 ))
