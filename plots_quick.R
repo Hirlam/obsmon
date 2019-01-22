@@ -40,22 +40,24 @@ validateOneClickPlotConfig <- function(config) {
   for(iConfig in seq_along(config$quickPlots)) {
     # pc stands for "plot config"
     pc <- config$quickPlots[[iConfig]]
-    if(!isTRUE((pc$experiment %in% exptNamesinConfig))) {
+    validExpt <- isTRUE(pc$experiment %in% exptNamesinConfig)
+    validPlotType <- isTRUE(pc$plotType %in% availablePlots)
+    validDatabase <- isTRUE(pc$database %in% dbTypesRecognised)
+    if(!validExpt) {
       flog.error('quickPlot "%s": experiment "%s" not recognised', pc$displayName, pc$experiment)
       invalidExpts <- c(invalidExpts, as.character(pc$experiment))
-      pc <- NULL
+      validExpt <- FALSE
     }
-    if(!isTRUE(pc$plotType %in% availablePlots)) {
+    if(!validPlotType) {
       flog.error('quickPlot "%s": plotType "%s" not recognised', pc$displayName, pc$plotType)
       invalidPlotNames <- c(invalidPlotNames, as.character(pc$plotType))
-      pc <- NULL
     }
-    if(!isTRUE((pc$database %in% dbTypesRecognised))) {
+    if(!validDatabase) {
       flog.error('quickPlot "%s": database "%s" not recognised', pc$displayName, pc$database)
       invalidDbs <- c(invalidDbs, as.character(pc$database))
-      pc <- NULL
     }
-    if(is.null(pc)) {
+    if(!(validExpt && validPlotType && validDatabase)) {
+      flog.warn('Failed to initialise quickPlot "%s". It will be ignored', pc$displayName)
       config$quickPlots[[iConfig]] <- NULL
       next
     }
