@@ -61,3 +61,8 @@ queryUsedAndDataTableOutput <- function(queryUsedOutputId, dataTableOutputId){
     )
   )
 }
+
+source("src/ui/create_main_panel.R")
+source("src/ui/tabs/main_tab.R")
+source("src/ui/tabs/quick_plots_tab.R")
+
