@@ -26,7 +26,7 @@ resetCacheButtonTooltipMsg <- paste0(
   "NB.: This action cannot be undone!"
 )
 
-mainTab <- function() {fluidPage(hidden(div(id="app-content",
+mainTab <- function() {fluidPage(
   sidebarLayout(
     sidebarPanel(
       width=3,
@@ -177,4 +177,4 @@ mainTab <- function() {fluidPage(hidden(div(id="app-content",
     ),
     mainPanel=createMainPanel()
   )
-)))}
+)}

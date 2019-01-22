@@ -45,7 +45,9 @@ shinyUI(ui=tagList(
   inlineCSS(appCSS),
   div(id="loading-content",h2(sprintf("Loading Obsmon v%s...",obsmonVersion))),
   # The page
+  hidden(div(id="app-content",
     navbarPage(title=paste0("Obsmon v", obsmonVersion), id="appNavbarPage",
       tabPanel("Main", value="mainTab", mainTab())
     )
+  ))
 ))
