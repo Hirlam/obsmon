@@ -60,7 +60,7 @@ validateOneClickPlotConfig <- function(config) {
     }
     if(!(validExpt && validPlotType && validDatabase)) {
       flog.warn('Failed to initialise quickPlot "%s". It will be ignored', pc$displayName)
-      config$quickPlots[[iConfig]] <- NULL
+      config$quickPlots[[iConfig]] <- NA
       next
     }
     # Process dates
@@ -90,6 +90,8 @@ validateOneClickPlotConfig <- function(config) {
     }
     config$quickPlots[[iConfig]] <- pc
   }
+  config$quickPlots <- Filter(Negate(anyNA), config$quickPlots)
+
 
   if(length(invalidExpts)>0) {
     msg <- "OneClick Plots: Please choose your experiment from:"
