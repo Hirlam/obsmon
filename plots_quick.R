@@ -41,17 +41,17 @@ validateOneClickPlotConfig <- function(config) {
     # pc stands for "plot config"
     pc <- config$quickPlots[[iConfig]]
     if(!isTRUE((pc$experiment %in% exptNamesinConfig))) {
-      flog.warn('quickPlot "%s": experiment "%s" not recognised', pc$displayName, pc$experiment)
+      flog.error('quickPlot "%s": experiment "%s" not recognised', pc$displayName, pc$experiment)
       invalidExpts <- c(invalidExpts, as.character(pc$experiment))
       pc <- NULL
     }
     if(!isTRUE(pc$plotType %in% availablePlots)) {
-      flog.warn('quickPlot "%s": plotType "%s" not recognised', pc$displayName, pc$plotType)
+      flog.error('quickPlot "%s": plotType "%s" not recognised', pc$displayName, pc$plotType)
       invalidPlotNames <- c(invalidPlotNames, as.character(pc$plotType))
       pc <- NULL
     }
     if(!isTRUE((pc$database %in% dbTypesRecognised))) {
-      flog.warn('quickPlot "%s": database "%s" not recognised', pc$displayName, pc$database)
+      flog.error('quickPlot "%s": database "%s" not recognised', pc$displayName, pc$database)
       invalidDbs <- c(invalidDbs, as.character(pc$database))
       pc <- NULL
     }
