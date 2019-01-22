@@ -1,5 +1,5 @@
 
-createMainPanel <- function(prependToIds=NULL, nPlots=1) {
+createMainPanel <- function(prependToIds=NULL) {
   if(is.null(prependToIds)) {
     tabsetPanelId <- "mainArea"
     uiOutputIdForPlot <- "plotContainer"
