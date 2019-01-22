@@ -47,7 +47,7 @@ validateOneClickPlotConfig <- function(config) {
     }
     if(!isTRUE(pc$plotType %in% availablePlots)) {
       flog.warn('quickPlot "%s": plotType "%s" not recognised', pc$displayName, pc$plotType)
-      invalidPlotNames <- c(invalidPlotNames, as.character(plot$plotType))
+      invalidPlotNames <- c(invalidPlotNames, as.character(pc$plotType))
       pc <- NULL
     }
     if(!isTRUE((pc$database %in% dbTypesRecognised))) {
