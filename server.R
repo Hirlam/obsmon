@@ -889,7 +889,7 @@ shinyServer(function(input, output, session) {
   output$quickPlotsQueryAndTableContainer <- renderUI({
     queryAndDataTableOutList <- lapply(seq_along(quickPlot()), function(iPlot){
       queryUsedId <- quickPlotsGenId(iPlot, type="queryUsed")
-      dataTableId <- quickPlotsGenId(iPlot, type="queryUsed")
+      dataTableId <- quickPlotsGenId(iPlot, type="dataTable")
       queryUsedAndDataTableOutput(queryUsedId, dataTableId)
     })
     do.call(tagList, queryAndDataTableOutList)
@@ -915,7 +915,7 @@ shinyServer(function(input, output, session) {
       output[[mapTitleId]] <- renderText(req(quickPlot()[[pName]]$title))
       # Assign queryUsed and dataTable
       queryUsedId <- quickPlotsGenId(iPlot, type="queryUsed")
-      dataTableId <- quickPlotsGenId(iPlot, type="queryUsed")
+      dataTableId <- quickPlotsGenId(iPlot, type="dataTable")
       output[[queryUsedId]] <- renderText(req(quickPlot()[[pName]]$queryUsed))
       output[[dataTableId]] <- renderDataTable(
         req(quickPlot()[[pName]]$plotData), options=list(pageLength=10)
