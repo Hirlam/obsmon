@@ -897,13 +897,13 @@ shinyServer(function(input, output, session) {
   })
 
   # Assign each plot/map/title/query/table to the respective outputs
-  for(iPlot in seq(obsmonConfig$quickPlotsMaxNumPltsProduced)) {
+  for(iPlot0 in seq(config$general$quickPlotsMaxNumPltsProduced)) {
     local({
-      qpName <- quickPlotsGenId(iPlot)
+      iPlot <- iPlot0
       # Assign plots
       plotOutId <- quickPlotsGenId(iPlot, type="plot")
       output[[plotOutId]] <- renderPlot({
-        myPlot <- quickPlot()[[qpName]]
+        myPlot <- quickPlot()[[iPlot]]
         grid.arrange(req(myPlot$obplot),top=textGrob(req(myPlot$title)))
       },
          res=96, pointsize=18
@@ -916,9 +916,9 @@ shinyServer(function(input, output, session) {
       # Assign queryUsed and dataTable
       queryUsedId <- quickPlotsGenId(iPlot, type="queryUsed")
       dataTableId <- quickPlotsGenId(iPlot, type="queryUsed")
-      output[[queryUsedId]] <- renderText(req(quickPlot()[[qpName]]$queryUsed))
+      output[[queryUsedId]] <- renderText(req(quickPlot()[[iPlot]]$queryUsed))
       output[[dataTableId]] <- renderDataTable(
-        req(quickPlot()[[qpName]]$plotData), options=list(pageLength=10)
+        req(quickPlot()[[iPlot]]$plotData), options=list(pageLength=10)
       )
     })
   }
