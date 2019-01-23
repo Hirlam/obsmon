@@ -761,7 +761,7 @@ shinyServer(function(input, output, session) {
   for(plotConfig in config$quickPlots) {
     quickPlotChoices <- c(quickPlotChoices, plotConfig$displayName)
   }
-  updateSelectInputWrapper(session, "quickPlotTitle", choices=quickPlotChoices)
+  updateSelectInput(session, "quickPlotTitle", choices=quickPlotChoices)
 
   quickPlotConfigInfo <- eventReactive({input$quickPlotTitle}, {
     pConfig <- NULL
