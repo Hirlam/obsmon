@@ -835,6 +835,7 @@ shinyServer(function(input, output, session) {
 
 
     allPlots <- list()
+    plotOutputIds <- c()
     iPlot <- 0
     for(inputOneClickPlot in inputsForAllPlots) {
      plotRequest <- list()
@@ -844,64 +845,74 @@ shinyServer(function(input, output, session) {
 
      newPlot <- preparePlots(plotter, plotRequest, quickPlotActiveDb(), stations)
      iPlot <- iPlot + 1
+     plotOutputIds <- c(plotOutputIds, sprintf("quickPlot_%d", iPlot))
      allPlots[[iPlot]] <- newPlot
     }
-    allPlots
-
+    names(allPlots) <- plotOutputIds
+    return(allPlots)
   })
 
-  # Prepare the correct number of plot outputs
+  quickPlotsOutputIds <- eventReactive({quickPlot()}, {
+    # Generate output IDs for the dinamically generated outpus
+    regOutIds <- c("plot", "map", "mapTitle", "queryUsed", "dataTable")
+    rtn <- list()
+    for(qpName in names(quickPlot())) {
+      rtn[[qpName]] <- list()
+      for(id in regOutIds) rtn[[qpName]][[id]] <- sprintf("%s_%s", qpName, id)
+    }
+    return(rtn)
+  })
+
+  # Prepare the correct output slots for plots, maps and dataTables
+  # Code adapted from <https://gist.github.com/wch/5436415>
+  # (i) Plots
   output$quickPlotsPlotContainer <- renderUI({
-    # Code adapted from <https://gist.github.com/wch/5436415>
-    plotOutputList <- lapply(1:length(quickPlot()), function(iPlot) {
-      plotOutputId <- paste("quickPlotsPlot", iPlot, sep="_")
-      plotOutputInsideFluidRow(plotOutputId)
+    plotOutList <- lapply(names(quickPlot()), function(qpName) {
+      plotOutputInsideFluidRow(quickPlotsOutputIds()[[qpName]]$plot)
     })
     # Convert the list to a tagList - this is necessary for the list of items
     # to display properly.
-    do.call(tagList, plotOutputList)
+    #do.call(tagList, plotOutList)
   })
-  # Prepare the correct number of mapTitle and map outputs
+  # (ii) Maps
   output$MapAndMapTitleContainer <- renderUI({
-    # Code adapted from <https://gist.github.com/wch/5436415>
-    mapAndMapTitleOutputList <- lapply(1:length(quickPlot()), function(iPlot) {
-      mapOutputId <- paste("quickPlotsMap", iPlot, sep="_")
-      mapTitleOutputId <- paste("quickPlotsMapTitle", iPlot, sep="_")
-      mapAndMapTitleOutput(mapOutputId, mapTitleOutputId)
+    mapAndMapTitleOutList <- lapply(names(quickPlot()), function(qpName) {
+      ids <- quickPlotsOutputIds()[[qpName]]
+      mapAndMapTitleOutput(ids$map, ids$mapTitle)
     })
-    do.call(tagList, mapAndMapTitleOutputList)
+    do.call(tagList, mapAndMapTitleOutList)
   })
-  # Prepare the correct number of queryUsed and dataTable outputs
+  # (iii) dataTables
   output$quickPlotsQueryAndTableContainer <- renderUI({
-    # Code adapted from <https://gist.github.com/wch/5436415>
-    queryAndDataTableOutputList <- lapply(1:length(quickPlot()), function(iPlot) {
-      queryOutputId <- paste("quickPlotsQueryUsed", iPlot, sep="_")
-      dataTableOutputId <- paste("quickPlotsDataTable", iPlot, sep="_")
-      queryUsedAndDataTableOutput(queryOutputId, dataTableOutputId)
+    queryAndDataTableOutList <- lapply(names(quickPlot()), function(qpName) {
+      ids <- quickPlotsOutputIds()[[qpName]]
+      queryUsedAndDataTableOutput(ids$queryUsed, ids$dataTable)
     })
-    do.call(tagList, queryAndDataTableOutputList)
+    do.call(tagList, queryAndDataTableOutList)
   })
 
+  # Sending plots/maps/tables to corresponding outputs
   observeEvent({quickPlot()}, {
-    # Code adapted from <https://gist.github.com/wch/5436415>
-    for(iPlot in seq_along(quickPlot())) {
+    # Cleanup old outputs before create new
+    allOutNames <- names(outputOptions(output))
+    outsToClean <- allOutNames[startsWith(allOutNames, "quickPlot_")]
+    for(outName in outsToClean) output[[outName]] <- NULL
+
+    for(qpName in names(quickPlot())) {
       local({
-        iPlotLocal <- iPlot
-        # Add plots
-        plotOutputId <- paste("quickPlotsPlot", iPlotLocal, sep="_")
-        myPlot <- quickPlot()[[iPlotLocal]]
-        output[[plotOutputId]] <- renderPlot({
+        outIds <- quickPlotsOutputIds()[[qpName]]
+        myPlot <- quickPlot()[[qpName]]
+        # Send plots
+        output[[outIds$plot]] <- renderPlot({
             grid.arrange(req(myPlot$obplot),top=textGrob(req(myPlot$title)))
           },
           res=96, pointsize=18
         )
-        # Add maps and map titles
-        # Add duery strings and data tables
-        queryOutputId <- paste("quickPlotsQueryUsed", iPlotLocal, sep="_")
-        dataTableOutputId <- paste("quickPlotsDataTable", iPlotLocal, sep="_")
-        output[[queryOutputId]] <- renderText(req(myPlot$queryUsed))
-        output[[dataTableOutputId]] <- renderDataTable(
-          req(myPlot$plotData), options=list(pageLength=100)
+        # TODO: Send maps and map titles
+        # Send query strings and data tables
+        output[[outIds$queryUsed]] <- renderText(req(myPlot$queryUsed))
+        output[[outIds$dataTable]] <- renderDataTable(
+          req(myPlot$plotData), options=list(pageLength=10)
         )
       })
     }
