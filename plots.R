@@ -51,13 +51,19 @@ plotBuildQuery.default <- function(p, plotRequest) {
 }
 
 plotGenerate.default <- function(p, plotRequest, plotData) {
-  result <- list(obplot=NULL, obmap=NULL, title=NULL)
-  if (!(is.null(plotData) || nrow(plotData)==0)) {
-    if (plotRequest$criteria$obnumber == 7
-        && "level" %in% colnames(plotData)) {
-      plotData <- rename(plotData, channel=level)
-    }
-    result$title <- plotTitle(p, plotRequest, plotData)
+  if (plotRequest$criteria$obnumber==7 && ("level" %in% colnames(plotData))) {
+    plotData <- rename(plotData, channel=level)
+  }
+  result <- list(title=plotTitle(p, plotRequest, plotData))
+  if (is.null(plotData) || nrow(plotData)==0) {
+    result$obmap=NULL
+    if(is.null(plotData)) msg<-"A problem occurred. Please check the logs"
+    else msg <- "Query returned no data"
+    result$obplot=grobTree(
+      rectGrob(gp=gpar(col="black", fill="grey90", alpha=0.5)),
+      textGrob(msg)
+    )
+  } else {
     result$obplot <- doPlot(p, plotRequest, plotData)
     result$obmap <- doMap(p, plotRequest, plotData)
   }

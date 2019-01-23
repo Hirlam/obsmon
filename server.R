@@ -703,9 +703,7 @@ shinyServer(function(input, output, session) {
     removeNotification(plotStartedNotifId())
     plotData <- readyPlot()$plotData
     if(is.null(plotData) || nrow(plotData)==0) {
-      if(is.null(plotData)) msg<-"A problem occurred. Please check the logs."
-      else msg <- "Query returned no data."
-      signalError(title="Could not produce plot", message=msg)
+      showNotification("Could not produce plot", duration=1, type="error")
     } else {
       showNotification("Redering plot", duration=1, type="message")
     }
@@ -899,8 +897,8 @@ shinyServer(function(input, output, session) {
   for(iPlot0 in seq(config$general$quickPlotsMaxNumPltsProduced)) {
     local({
       iPlot <- iPlot0
-      # Assign plots
       pName <- quickPlotsGenId(iPlot)
+      # Assign plots
       plotOutId <- quickPlotsGenId(iPlot, type="plot")
       output[[plotOutId]] <- renderPlot({
         myPlot <- quickPlot()[[pName]]
