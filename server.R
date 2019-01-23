@@ -903,7 +903,7 @@ shinyServer(function(input, output, session) {
       # Assign plots
       plotOutId <- quickPlotsGenId(iPlot, type="plot")
       output[[plotOutId]] <- renderPlot({
-        myPlot <- quickPlot()[[iPlot]]
+        myPlot <- req(quickPlot()[[iPlot]])
         grid.arrange(req(myPlot$obplot),top=textGrob(req(myPlot$title)))
       },
          res=96, pointsize=18
