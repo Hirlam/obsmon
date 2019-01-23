@@ -185,6 +185,7 @@ fillInDefaults <- function(config) {
   config <- fillInDefault(config, "maxExtraParallelProcs",
     Sys.getenv("OBSMON_MAX_N_EXTRA_PROCESSES")
   )
+  config <- fillInDefault(config, "quickPlotsMaxNumPltsProduced", 500)
   config <- fillInDefault(config, "showCacheOptions", FALSE)
   config
 }

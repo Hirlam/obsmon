@@ -13,6 +13,20 @@ defaultMenuLabels <- list(
   station="Station"
 )
 
+quickPlotsGenId <- function(iPlot, type=NULL) {
+  # Generate output IDs for the dinamically generated outpus
+  qpName <- sprintf("quickPlot_%d", iPlot)
+  if(is.null(type)) return(qpName)
+  recogOutTypes <- c("plot", "map", "mapTitle", "queryUsed", "dataTable")
+  if(!(type %in%  recogOutTypes)) {
+    stop(sprintf(
+      "quickPlotsGenId: Choose type from: %s",
+      paste(recogOutTypes, collapse=", ")
+    ))
+  }
+  return(sprintf("%s_%s", qpName, type))
+}
+
 getDefLabel <- function(inputId) {
   rtn <- defaultMenuLabels[[inputId]]
   if(is.null(rtn)) rtn <- inputId
