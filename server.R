@@ -837,7 +837,7 @@ shinyServer(function(input, output, session) {
     # Preventing producing more plots than available outputs
     nGenPlots <- length(inputsForAllPlots)
     maxAllowedPlots <- config$general$quickPlotsMaxNumPltsProduced
-    if(nGenPlots>config$general$quickPlotsMaxNumPltsProduced) {
+    if(nGenPlots>maxAllowedPlots) {
       msg <- paste0(
         sprintf("Number of generated plots (==%s) would exceed ", nGenPlots),
         sprintf("the max allowed value configured (==%s).", maxAllowedPlots),
