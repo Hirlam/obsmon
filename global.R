@@ -24,10 +24,10 @@ plotOutputInsideFluidRow <- function(plotOutputId) {
     fluidRow(
       column(12, align="center",
         tags$head(tags$style("#plot{height:80vh !important;}")),
-        plotOutput(plotOutputId) %>% withSpinner(color="#0dc5c1"),
+        plotOutput(plotOutputId),
         tags$style(type="text/css", "body { overflow-y: scroll; }")
       )
-    )
+    ) %>% withSpinner(color="#0dc5c1")
   )
 }
 
@@ -42,8 +42,7 @@ mapAndMapTitleOutput <- function(mapOutputId, mapTitleOutputId) {
     fluidRow(
       column(12, align="center",
         tags$head(tags$style("#map{height:80vh !important;}")),
-        leafletOutput(outputId=mapOutputId, height="auto", width="auto")
-          %>% withSpinner(color="#0dc5c1"),
+        leafletOutput(outputId=mapOutputId, height="auto", width="auto"),
         tags$style(type="text/css", "body { overflow-y: scroll; }")
       )
     )
@@ -56,7 +55,7 @@ queryUsedAndDataTableOutput <- function(queryUsedOutputId, dataTableOutputId){
       column(12, align="center",
         wellPanel(h5("Query used:"), textOutput(queryUsedOutputId)),
         h5("Data:"),
-        dataTableOutput(dataTableOutputId) %>% withSpinner(color="#0dc5c1")
+        dataTableOutput(dataTableOutputId)
       )
     )
   )

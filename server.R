@@ -721,8 +721,12 @@ shinyServer(function(input, output, session) {
   )
 
   # Rendering plots
-  output$plot <- renderPlot(
-    grid.arrange(req(readyPlot()$obplot),top=textGrob(req(readyPlot()$title))),
+  output$plot <- renderPlot({
+    tryCatch(
+      grid.arrange(req(readyPlot()$obplot),top=textGrob(req(readyPlot()$title))),
+      error=function(e) NULL
+    )
+  },
     res=96, pointsize=18
   )
   output$dataTable <- renderDataTable(
