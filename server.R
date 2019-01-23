@@ -852,16 +852,15 @@ shinyServer(function(input, output, session) {
     req(nGenPlots<=maxAllowedPlots)
 
     allPlots <- list()
-    iPlot <- 0
-    for(inputOneClickPlot in inputsForAllPlots) {
+    for(iPlot in seq_along(inputsForAllPlots)) {
+     inputOneClickPlot <- inputsForAllPlots[[iPlot]]
      plotRequest <- list()
      plotRequest$expName <- req(inputOneClickPlot$experiment)
      plotRequest$dbType <- inputOneClickPlot$database
      plotRequest$criteria <- plotsBuildCriteria(inputOneClickPlot)
 
      newPlot <- preparePlots(plotter, plotRequest, quickPlotActiveDb(), stations)
-     iPlot <- iPlot + 1
-     allPlots[[iPlot]] <- newPlot
+     allPlots[[quickPlotsGenId(iPlot)]] <- newPlot
     }
     return(allPlots)
   })
@@ -901,9 +900,10 @@ shinyServer(function(input, output, session) {
     local({
       iPlot <- iPlot0
       # Assign plots
+      pName <- quickPlotsGenId(iPlot)
       plotOutId <- quickPlotsGenId(iPlot, type="plot")
       output[[plotOutId]] <- renderPlot({
-        myPlot <- req(quickPlot()[[iPlot]])
+        myPlot <- quickPlot()[[pName]]
         grid.arrange(req(myPlot$obplot),top=textGrob(req(myPlot$title)))
       },
          res=96, pointsize=18
@@ -911,14 +911,14 @@ shinyServer(function(input, output, session) {
       # Assign maps and map titles
       mapId <- quickPlotsGenId(iPlot, type="map")
       mapTitleId <- quickPlotsGenId(iPlot, type="mapTitle")
-      output[[mapId]] <- renderLeaflet(req(quickPlot()$obmap))
-      output[[mapTitleId]] <- renderText(req(quickPlot()$title))
+      output[[mapId]] <- renderLeaflet(req(quickPlot()[[pName]]$obmap))
+      output[[mapTitleId]] <- renderText(req(quickPlot()[[pName]]$title))
       # Assign queryUsed and dataTable
       queryUsedId <- quickPlotsGenId(iPlot, type="queryUsed")
       dataTableId <- quickPlotsGenId(iPlot, type="queryUsed")
-      output[[queryUsedId]] <- renderText(req(quickPlot()[[iPlot]]$queryUsed))
+      output[[queryUsedId]] <- renderText(req(quickPlot()[[pName]]$queryUsed))
       output[[dataTableId]] <- renderDataTable(
-        req(quickPlot()[[iPlot]]$plotData), options=list(pageLength=10)
+        req(quickPlot()[[pName]]$plotData), options=list(pageLength=10)
       )
     })
   }
