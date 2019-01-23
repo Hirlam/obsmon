@@ -67,7 +67,14 @@ formatDtg <- function(dtg) {
     if (dtg[[1]] == dtg[[2]]) {
       sprintf("[%s, (%s)]", dtg[[1]], paste(dtg[[3]], collapse=", "))
     } else {
-      sprintf("[%s\u2013%s, (%s)]", dtg[[1]], dtg[[2]], paste(dtg[[3]], collapse=", "))
+      if(length(dtg[[3]])>0) {
+        sprintf(
+          "[%s\u2013%s, (%s)]",
+          dtg[[1]], dtg[[2]], paste(dtg[[3]], collapse=", ")
+        )
+      } else {
+        sprintf("[%s\u2013%s]", dtg[[1]], dtg[[2]])
+      }
     }
   } else {
     flog.error("Invalid dtg selection")
