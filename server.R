@@ -671,12 +671,13 @@ shinyServer(function(input, output, session) {
     plotRequest$dbType <- db$dbType
     plotRequest$criteria <- plotsBuildCriteria(input)
 
-    rtn <- future({
-      tryCatch(
-        preparePlots(plotter, plotRequest, db, stations),
-        error=function(e) {flog.error(e); NULL}
-      )
-    })
+    rtn <- tryCatch({
+      futureCall(
+        FUN=preparePlots,
+        args=list(plotter=plotter, plotRequest=plotRequest, db=db, stations=stations)
+      )},
+      error=function(e) {flog.error(e); NULL}
+    )
     if(!is.null(rtn)) {
       currentPlotPid(rtn$job$pid)
       plotStartedNotifId(showNotification("Plot initiated", type="message"))
