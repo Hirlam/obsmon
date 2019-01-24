@@ -819,23 +819,6 @@ shinyServer(function(input, output, session) {
     #       satem-related fields (sensor, satname, channels)
     stations <- NULL
 
-    # Preventing producing more plots than available outputs
-    nGenPlots <- length(inputsForAllPlots)
-    maxAllowedPlots <- config$general$quickPlotsMaxNumPltsProduced
-    if(nGenPlots>maxAllowedPlots) {
-      msg <- paste0(
-        sprintf("Number of generated plots (==%s) would exceed ", nGenPlots),
-        sprintf("the max allowed value configured (==%s).", maxAllowedPlots),
-        "\n",
-        "Please set a higher quickPlotsMaxNumPltsProduced in the config ",
-        "file and restart obsmon (or contact support) if you'd really like ",
-        "to plot this."
-      )
-      flog.error(msg)
-      signalError(title="Could not produce plots", message=msg)
-    }
-    req(nGenPlots<=maxAllowedPlots)
-
     allPlots <- list()
     for(iPlot in seq_along(inputsForAllPlots)) {
      inputOneClickPlot <- inputsForAllPlots[[iPlot]]
@@ -884,31 +867,45 @@ shinyServer(function(input, output, session) {
   })
 
   # Assign each plot/map/title/query/table to the respective outputs
-  for(iPlot0 in seq(config$general$quickPlotsMaxNumPltsProduced)) {
-    local({
-      iPlot <- iPlot0
-      pName <- quickPlotsGenId(iPlot)
-      # Assign plots
-      plotOutId <- quickPlotsGenId(iPlot, type="plot")
-      output[[plotOutId]] <- renderPlot({
-        myPlot <- quickPlot()[[pName]]
-        grid.arrange(req(myPlot$obplot),top=textGrob(req(myPlot$title)))
-      },
-         res=96, pointsize=18
-      )
-      # Assign maps and map titles
-      mapId <- quickPlotsGenId(iPlot, type="map")
-      mapTitleId <- quickPlotsGenId(iPlot, type="mapTitle")
-      output[[mapId]] <- renderLeaflet(req(quickPlot()[[pName]]$obmap))
-      output[[mapTitleId]] <- renderText(req(quickPlot()[[pName]]$title))
-      # Assign queryUsed and dataTable
-      queryUsedId <- quickPlotsGenId(iPlot, type="queryUsed")
-      dataTableId <- quickPlotsGenId(iPlot, type="dataTable")
-      output[[queryUsedId]] <- renderText(req(quickPlot()[[pName]]$queryUsed))
-      output[[dataTableId]] <- renderDataTable(
-        req(quickPlot()[[pName]]$plotData), options=list(pageLength=10)
-      )
-    })
-  }
+  quickPlotsPrevQuantity <- reactiveVal()
+  observeEvent({quickPlot()}, {
+    # Clean up old quickPlot outputs
+    for(iPlot in seq(quickPlotsPrevQuantity())) {
+      for(type in c("plot", "map", "mapTitle", "queryUsed", "dataTable")) {
+        outId <- quickPlotsGenId(iPlot, type=type)
+        output[[outId]] <- NULL
+      }
+    }
+    quickPlotsPrevQuantity(length(quickPlot()))
+    gc()
+
+    # Assign the new quickPlots
+    for(iPlot0 in seq_along(quickPlot())) {
+      local({
+        iPlot <- iPlot0
+        pName <- quickPlotsGenId(iPlot)
+        # Assign plots
+        plotOutId <- quickPlotsGenId(iPlot, type="plot")
+        output[[plotOutId]] <- renderPlot({
+          myPlot <- quickPlot()[[pName]]
+          grid.arrange(req(myPlot$obplot),top=textGrob(req(myPlot$title)))
+        },
+           res=96, pointsize=18
+        )
+        # Assign maps and map titles
+        mapId <- quickPlotsGenId(iPlot, type="map")
+        mapTitleId <- quickPlotsGenId(iPlot, type="mapTitle")
+        output[[mapId]] <- renderLeaflet(req(quickPlot()[[pName]]$obmap))
+        output[[mapTitleId]] <- renderText(req(quickPlot()[[pName]]$title))
+        # Assign queryUsed and dataTable
+        queryUsedId <- quickPlotsGenId(iPlot, type="queryUsed")
+        dataTableId <- quickPlotsGenId(iPlot, type="dataTable")
+        output[[queryUsedId]] <- renderText(req(quickPlot()[[pName]]$queryUsed))
+        output[[dataTableId]] <- renderDataTable(
+          req(quickPlot()[[pName]]$plotData), options=list(pageLength=10)
+        )
+      })
+    }
+  })
 
 }) # End of shinyServer
