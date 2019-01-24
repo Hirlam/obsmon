@@ -29,6 +29,7 @@ tryCatch(
     suppressPackageStartupMessages(library(dbplyr))
     suppressPackageStartupMessages(library(flock))
     suppressPackageStartupMessages(library(futile.logger))
+    suppressPackageStartupMessages(library(promises))
     suppressPackageStartupMessages(library(future))
     suppressPackageStartupMessages(library(ggplot2))
     suppressPackageStartupMessages(library(grid))

@@ -643,20 +643,21 @@ shinyServer(function(input, output, session) {
 
   currentPlotPid <- reactiveVal(-1)
   plotStartedNotifId <- reactiveVal(-1)
+  plotInterrupted <- reactiveVal()
   onclick("cancelPlot", {
-    removeNotification(plotStartedNotifId())
     showNotification("Cancelling plot", type="warning", duration=1)
+    plotInterrupted(TRUE)
     tools::pskill(currentPlotPid(), tools::SIGINT)
-    shinyjs::hide("cancelPlot")
-    shinyjs::show("doPlot")
-    enableShinyInputs(input)
   })
-  futurePlot <- eventReactive(input$doPlot, {
+
+  readyPlot <- reactiveVal()
+  observeEvent(input$doPlot, {
     if(dateTypeReqByPlotType()=="range") {
       if(is.null(input$cycles))signalError("Please select at least one cycle")
       req(!is.null(input$cycles))
     }
 
+    plotInterrupted(FALSE)
     disableShinyInputs(input)
     shinyjs::hide("doPlot")
     shinyjs::show("cancelPlot")
@@ -671,45 +672,49 @@ shinyServer(function(input, output, session) {
     plotRequest$dbType <- db$dbType
     plotRequest$criteria <- plotsBuildCriteria(input)
 
-    rtn <- futureCall(
+    plotStartedNotifId(showNotification("Gathering data", type="message"))
+    # The suppressWarnings is because of the warning
+    # "Warning in serialize(what, NULL, xdr = FALSE) :
+    # 'package:DBI' may not be available when loading"
+    newFutPlot <- suppressWarnings(futureCall(
       FUN=preparePlots,
       args=list(plotter=plotter, plotRequest=plotRequest, db=db, stations=stations)
+    ))
+    currentPlotPid(newFutPlot$job$pid)
+
+    then(newFutPlot,
+      onFulfilled=function(value) {
+        showNotification("Preparing to render plot",duration=1,type="message")
+        readyPlot(value)
+        if(is.null(value$obmap)) {
+          if(input$mainArea=="mapTab") {
+            updateTabsetPanel(session, "mainArea", "plotTab")
+          }
+          js$disableTab("mapTab")
+        } else {
+          js$enableTab("mapTab")
+        }
+      },
+      onRejected=function(e) {
+        if(!plotInterrupted()) {
+          showNotification("Could not produce plot", duration=1, type="error")
+          flog.error(e)
+        }
+        readyPlot(NULL)
+      }
     )
-
-    if(!is.null(rtn)) {
-      currentPlotPid(rtn$job$pid)
-      plotStartedNotifId(showNotification("Plot initiated", type="message"))
-    }
-    rtn
-  })
-
-  readyPlot <- reactive({
-    myFutPlot <- futurePlot()
-    req(!is.null(myFutPlot), cancelOutput=TRUE)
-    isReady <- resolved(myFutPlot)
-    if(!isReady) invalidateLater(1000)
-    req(isReady, cancelOutput=TRUE)
-    shinyjs::disable("cancelPlot")
-    myPlot <- tryCatch(
-      value(myFutPlot),
-      error=function(e) {NULL}
-    )
-    myPlot
-  })
-
-  # Notify the if plot went successfully or not
-  observeEvent({readyPlot()}, {
-    removeNotification(plotStartedNotifId())
-    plotData <- readyPlot()$plotData
-    if(is.null(plotData) || nrow(plotData)==0) {
-      showNotification("Could not produce plot", duration=1, type="error")
-    } else {
-      showNotification("Redering plot", duration=1, type="message")
-    }
+    finally(newFutPlot, function() {
+      removeNotification(plotStartedNotifId())
+      shinyjs::hide("cancelPlot")
+      shinyjs::show("doPlot")
+      enableShinyInputs(input)
+    })
+    # This NULL is necessary in order to avoid the future from blocking
+    NULL
   })
 
   # Finally, producing the output
-  # Rendering outputs dynamically
+  # Rendering UI slots for the outputs dynamically
   output$plotContainer <- renderUI(plotOutputInsideFluidRow("plot"))
   output$mapAndMapTitleContainer <- renderUI(
     mapAndMapTitleOutput("map", "mapTitle")
@@ -733,23 +738,6 @@ shinyServer(function(input, output, session) {
   output$queryUsed <- renderText(req(readyPlot()$queryUsed))
   output$map <- renderLeaflet(req(readyPlot()$obmap))
   output$mapTitle <- renderText(req(readyPlot()$title))
-
-  observeEvent(readyPlot(), {
-      on.exit({
-        shinyjs::hide("cancelPlot")
-        shinyjs::show("doPlot")
-        enableShinyInputs(input)
-      })
-
-      if(is.null(readyPlot()$obmap)) {
-        if(input$mainArea=="mapTab") {
-          updateTabsetPanel(session, "mainArea", "plotTab")
-        }
-        js$disableTab("mapTab")
-      } else {
-        js$enableTab("mapTab")
-      }
-  })
 
 
   ############################################################################
