@@ -652,6 +652,7 @@ shinyServer(function(input, output, session) {
 
   readyPlot <- reactiveVal()
   observeEvent(input$doPlot, {
+    readyPlot(NULL)
     if(dateTypeReqByPlotType()=="range") {
       if(is.null(input$cycles))signalError("Please select at least one cycle")
       req(!is.null(input$cycles))
