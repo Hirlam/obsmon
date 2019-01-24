@@ -170,34 +170,38 @@ plotsBuildCriteria <- function(input) {
 }
 # Perform plotting
 preparePlots <- function(plotter, plotRequest, db, stations) {
-  isWindspeed <- "varname" %in% names(plotRequest$criteria) &&
-    plotRequest$criteria$varname %in% c("ff", "ff10m")
-  query <- NULL
-  if (isWindspeed) {
-    plotData <- buildFfData(db, plotter, plotRequest)
-  } else {
-    query <- plotBuildQuery(plotter, plotRequest)
-    plotData <- performQuery(db, query, plotRequest$criteria$dtg)
-    # Postprocessing plotData returned by performQuery.
-    # This may be useful, e.g., if performing averages over a
-    # picked date range.
-    plotData <- postProcessQueriedPlotData(plotter, plotData)
-  }
-  if(!is.null(plotData) && nrow(plotData)>0) {
-    statLabels <- c()
-    for(statid in plotData$statid) {
-      statid <- gsub(" ", "", gsub("'", "", statid))
-      statLabels <- c(statLabels, names(stations)[stations==statid])
-    }
-    if(nrow(plotData)==length(statLabels)) {
-      plotData$statLabel <- statLabels
+  tryCatch({
+    isWindspeed <- "varname" %in% names(plotRequest$criteria) &&
+      plotRequest$criteria$varname %in% c("ff", "ff10m")
+    query <- NULL
+    if (isWindspeed) {
+      plotData <- buildFfData(db, plotter, plotRequest)
     } else {
-      plotData$statLabel <- plotData$statid
+      query <- plotBuildQuery(plotter, plotRequest)
+      plotData <- performQuery(db, query, plotRequest$criteria$dtg)
+      # Postprocessing plotData returned by performQuery.
+      # This may be useful, e.g., if performing averages over a
+      # picked date range.
+      plotData <- postProcessQueriedPlotData(plotter, plotData)
     }
-  }
+    if(!is.null(plotData) && nrow(plotData)>0) {
+      statLabels <- c()
+      for(statid in plotData$statid) {
+        statid <- gsub(" ", "", gsub("'", "", statid))
+        statLabels <- c(statLabels, names(stations)[stations==statid])
+      }
+      if(nrow(plotData)==length(statLabels)) {
+        plotData$statLabel <- statLabels
+      } else {
+        plotData$statLabel <- plotData$statid
+      }
+    }
 
-  res <- plotGenerate(plotter, plotRequest, plotData)
-  res[["queryUsed"]] <- query
-  res[["plotData"]] <- plotData
-  return(res)
+    res <- plotGenerate(plotter, plotRequest, plotData)
+    res[["queryUsed"]] <- query
+    res[["plotData"]] <- plotData
+    return(res)
+  },
+  error=function(e) {flog.error(paste("preparePlots:", e)); NULL}
+  )
 }
