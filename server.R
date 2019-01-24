@@ -857,7 +857,10 @@ shinyServer(function(input, output, session) {
      plotRequest$dbType <- inputOneClickPlot$database
      plotRequest$criteria <- plotsBuildCriteria(inputOneClickPlot)
 
-     newPlot <- preparePlots(plotter, plotRequest, quickPlotActiveDb(), stations)
+     newPlot <- tryCatch(
+       preparePlots(plotter, plotRequest, quickPlotActiveDb(), stations),
+       error=function(e) {flog.error(e); NULL}
+     )
      allPlots[[quickPlotsGenId(iPlot)]] <- newPlot
     }
     return(allPlots)
