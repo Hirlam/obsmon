@@ -2,6 +2,7 @@
 logLevel = "INFO"
 cacheDir = ".Rcache"
 
+# Configuring experiments
 [[experiments]]
 displayName = "First Experiment"
 baseDir = "/full/path/to/experiments/dir1"
@@ -12,3 +13,21 @@ displayName = "Second Experiment"
 baseDir = "/full/path/to/experiments/dir2"
 experiment = "mbr001"
 
+# Configuring quickPlots
+[[quickPlots]]
+  displayName = "1st Expt: ecma NObs" # Free to choose
+  experiment = "First Experiment" # Must match the dysplayName of a configured experiment
+  plotType = "Number of Observations" # Must match a valid plot type
+  database = "ecma" # Much be one of: ccma, ecma, ecma_sfc
+  startDate = -30 # From 30 days ago to today. Also accepts dates (e.g. "2018-05-12")
+  # An endDate ("YYYY-MM-DD") can also be passed, but is omitted here
+  excludeObs = ["satem"] # Do not include these obs. All not listed will be included
+
+[[quickPlots]]
+  displayName = "2nd Expt: CANARI synop NObs"
+  experiment = "Second Experiment"
+  plotType = "Number of Observations"
+  database = "ecma_sfc"
+  startDate = -30
+  [quickPlots.obs]
+    synop=["t2m","rh2m", "snow"] # Example of how to select specific obs and variables
