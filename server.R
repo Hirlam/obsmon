@@ -430,7 +430,7 @@ shinyServer(function(input, output, session) {
     input$obtype
     input$plottype
   }, {
-    if(input$obtype=="satem") {
+    if(isTRUE(input$obtype=="satem")) {
       allowChoosingStation(FALSE)
     } else {
       infoAboutSelectedPlotType <- plotTypesFlat[[req(input$plottype)]]

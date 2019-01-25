@@ -128,17 +128,16 @@ postProcessQueriedPlotData.default <- function(plotter, plotData) {
 # Functions used in in server.R
 # Build named list of plot criteria
 getPlotDtgCriteriaFromUiInput <- function(input) {
-  dtgCrit <- NULL
-  dateType <- plotTypesFlat[[input$plottype]]$dateType
-  if(!is.null(dateType)) {
-    dtgCrit <- switch(dateType,
+  dtgCrit <- tryCatch(
+    switch(plotTypesFlat[[input$plottype]]$dateType,
       "single"=date2dtg(input$date, input$cycle),
       "range"={
         dateRange <- input$dateRange
         list(dateRange[1], dateRange[2], input$cycles)
       }
-    )
-  }
+    ),
+    error=function(e) NULL
+  )
   return(dtgCrit)
 }
 
@@ -147,7 +146,7 @@ plotsBuildCriteria <- function(input) {
   res$info <- list()
   obname <- input$obname
   res$obnumber <- getAttrFromMetadata('obnumber', obname=obname)
-  if (obname == 'satem') {
+  if (isTRUE(obname=='satem')) {
     sensor <- input$sensor
     res$obname <- sensor
     res$satname <- input$satellite

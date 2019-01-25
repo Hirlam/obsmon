@@ -46,7 +46,8 @@ mainTab <- function() {fluidPage(
         condition = "input.odbBase!='ecma_sfc'",
         selectInput("obtype",
           label=getDefLabel("obtype"),
-          choices=c()
+          choices=c(),
+          selectize=FALSE
         )
       ),
       conditionalPanel(
@@ -55,18 +56,21 @@ mainTab <- function() {fluidPage(
                      input.obtype!='radar'",
         selectInput("obname",
           label=getDefLabel("obname"),
-          choices=c()
+          choices=c(),
+          selectize=FALSE
         )
       ),
       conditionalPanel(
         condition = "input.obtype == 'satem'",
         selectInput("sensor",
           label=getDefLabel("sensor"),
-          choices=c()
+          choices=c(),
+          selectize=FALSE
         ),
         selectInput("satellite",
           label=getDefLabel("satellite"),
-          choices=c()
+          choices=c(),
+          selectize=FALSE
         ),
         selectInput("channels",
           tags$div(getDefLabel("channels"),
@@ -84,7 +88,8 @@ mainTab <- function() {fluidPage(
         condition = "input.obtype != 'satem'",
         selectInput("variable",
           label=getDefLabel("variable"),
-          choices=c()
+          choices=c(),
+          selectize=FALSE
         ),
         conditionalPanel(
           condition = "input.odbBase != 'ecma_sfc' &&

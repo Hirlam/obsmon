@@ -24,6 +24,9 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - Station labels in maps are now consistent with the ones shown in the UI
 
 ### Changed
+- Experiment path specification via "path" keyword in config file
+    - Old "baseDir" and "experiment" now deprecated and will be ignored
+        - Warning issued in this case
 - Obsmon can now work even if observations are not cached
     - Auto-discovery cache is now performed only for selected date(s) and cycle(s)
         - Caching starts automatically when a new DTG, experiment or database is selected
