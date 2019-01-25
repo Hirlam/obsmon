@@ -3,15 +3,16 @@ logLevel = "INFO"
 cacheDir = ".Rcache"
 
 # Configuring experiments
+# The displayName is free to choose
+# Obsmon expects to find directories named "ecma", "ccma", "ecma_sfc"
+# on the passed path, which should contain your experiment's data files
 [[experiments]]
 displayName = "First Experiment"
-baseDir = "/full/path/to/experiments/dir1"
-experiment = "mbr000"
+path = "/full/path/to/experiment1"
 
 [[experiments]]
 displayName = "Second Experiment"
-baseDir = "/full/path/to/experiments/dir2"
-experiment = "mbr001"
+path = "/full/path/to/experiment2"
 
 # Configuring quickPlots
 [[quickPlots]]
