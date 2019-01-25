@@ -49,6 +49,7 @@ tryCatch(
   },
   error=function(e) stop(paste(e, libPathsMsg[['error']], sep="\n"))
 )
+flog.info(sprintf("Main process PID: %d", Sys.getpid()))
 flog.info(paste('Running as user "', userName, '"', sep=""))
 flog.info(libPathsMsg[['success']])
 
