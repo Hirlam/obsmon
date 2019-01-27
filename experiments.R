@@ -50,7 +50,12 @@ getDataFilePaths <- function(exptDir, dbType, assertExists=FALSE) {
   else return(structure(fPaths, names=validDtgs))
 }
 
-dbTypesRecognised <- c("ccma", "ecma", "ecma_sfc")
+dbType2DbDescription <- list(
+  "ecma"="Upper Air (3D/4D-VAR) - Screening",
+  "ccma"="Upper Air (3D/4D-VAR) - Minimization",
+  "ecma_sfc"="Surface (CANARI)"
+)
+dbTypesRecognised <- names(dbType2DbDescription)
 
 emptyExperiment <- function(name) {
   x <- list()

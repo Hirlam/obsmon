@@ -111,11 +111,6 @@ shinyServer(function(input, output, session) {
   observe({
     expName <- req(input$experiment)
     expDbs <- isolate(experiments()[[expName]]$dbs)
-    dbType2DbDescription <- list(
-      "ecma"="Upper Air (3D/4D-VAR) - Screening",
-      "ccma"="Upper Air (3D/4D-VAR) - Minimization",
-      "ecma_sfc"="Surface (CANARI)"
-    )
     choices <- list()
     for(dbType in names(dbType2DbDescription)) {
       if(is.null(expDbs[[dbType]])) next
