@@ -89,9 +89,10 @@ validateOneClickPlotConfig <- function(config) {
       }
     }
 
-    # Parsing level choices. Levels can either be configured individually for
-    # each varname or globally for each obname
+    # Parsing level and station choices. They can either be configured
+    # individually for each varname or globally for each obname
     for(obname in obnames) {
+      # Parsing level choices
       levelsConfig <- pc$levels[[obname]]
       if(!is.null(levelsConfig) && !is.list(levelsConfig)) {
         # If users set, e.g., "aircraft = 10" for levels in the config file
@@ -100,6 +101,25 @@ validateOneClickPlotConfig <- function(config) {
       if("allVars" %in% names(pc$levels[[obname]])) {
         # Removing ambiguity if users set "allVars" inside config list
         pc$levels[[obname]][!(names(pc$levels[[obname]])=="allVars")] <- NULL
+      }
+      # Parsing station choices
+      stationsConfig <- pc$stations[[obname]]
+      obtype <- getAttrFromMetadata("category", obname=obname)
+      if(plotSupportsChoosingStations(pc$plotType, obtype)) {
+        if(!is.null(stationsConfig) && !is.list(stationsConfig)) {
+          # If users set, e.g., "aircraft = 10" for levels in the config file
+          pc$stations[[obname]] <- list(allVars=stationsConfig)
+        }
+        if("allVars" %in% names(pc$stations[[obname]])) {
+          # Removing ambiguity if users set "allVars" inside config list
+          pc$stations[[obname]][!(names(pc$stations[[obname]])=="allVars")] <- NULL
+        }
+      } else if(!is.null(stationsConfig)) {
+        pc$stations[[obname]] <- NULL
+        msg <- paste0('quickPlot "',pc$displayName,'": Plot "',pc$plotType,
+          '" does not support station choices. Ignoring stations.'
+        )
+        flog.warn(msg)
       }
     }
 

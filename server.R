@@ -775,27 +775,28 @@ shinyServer(function(input, output, session) {
     for(iObname in seq_along(pConfig$obs)) {
       obname <- obnames[iObname]
       levelsConfig <- pConfig$levels[[obname]]
+      stationsConfig <- pConfig$stations[[obname]]
       for(variable in unlist(pConfig$obs[iObname])) {
         inputsThisPlotOnly <- list(
           obname=obname,
           variable=variable,
-          levels=c(levelsConfig[["allVars"]], levelsConfig[[variable]])
+          levels=c(levelsConfig[["allVars"]], levelsConfig[[variable]]),
+          station=c(stationsConfig[["allVars"]], stationsConfig[[variable]])
         )
         iPlot <- iPlot + 1
         inputsForAllPlots[[iPlot]] <- c(plotsCommonInput, inputsThisPlotOnly)
       }
     }
-    # TODO: Support to setting stations and
-    #       satem-related fields (sensor, satname, channels)
-    stations <- NULL
+    # TODO: Support to satem-related fields (sensor, satname, channels)
 
     allPlots <- list()
     for(iPlot in seq_along(inputsForAllPlots)) {
-     inputOneClickPlot <- inputsForAllPlots[[iPlot]]
+     # qp stands for "quickPlot"
+     qpInput <- inputsForAllPlots[[iPlot]]
      plotRequest <- list()
-     plotRequest$expName <- req(inputOneClickPlot$experiment)
-     plotRequest$dbType <- inputOneClickPlot$database
-     plotRequest$criteria <- plotsBuildCriteria(inputOneClickPlot)
+     plotRequest$expName <- req(qpInput$experiment)
+     plotRequest$dbType <- qpInput$database
+     plotRequest$criteria <- plotsBuildCriteria(qpInput)
 
      newPlot <- tryCatch({
          preparePlots(plotter, plotRequest, quickPlotActiveDb())

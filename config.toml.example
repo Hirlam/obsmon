@@ -39,3 +39,8 @@ path = "/full/path/to/experiment2"
   [quickPlots.obs]
     # Example of how to select specific obs and variables
     synop=["t2m","rh2m", "snow"]
+    aircraft=["t"]
+  [quickPlots.stations]
+    # Example of how to (optionally) select specific station IDs
+    synop = ["01158", "01226"]
+    aircraft = ["2BTQVXZA"]
