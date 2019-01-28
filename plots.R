@@ -46,6 +46,23 @@ plotSupportsChoosingStations <- function(plottype=NULL, obtype=NULL) {
   return(isTRUE(queryIsFromUsage))
 }
 
+putLabelsInStations <- function(stations=NULL, obname=NULL) {
+  if(length(stations)==0) return(stations)
+  if(isTRUE(obname=="synop")) {
+    stationLabels <- c()
+    for(statID in stations) {
+      statName <- synopStations[statID]
+      label <- statID
+      if(is.character(statName)) label<-sprintf("%s (%s)",statID,statName)
+      stationLabels <- c(stationLabels, label)
+    }
+    names(stations) <- stationLabels
+  } else {
+    names(stations) <- stations
+  }
+  return(stations)
+}
+
 # Define generics
 plotBuildQuery <- function(p, plotRequest) UseMethod ("plotBuildQuery")
 plotGenerate <- function(p, plotRequest, plotData) UseMethod("plotGenerate")
@@ -177,7 +194,7 @@ plotsBuildCriteria <- function(input) {
   return(res)
 }
 # Perform plotting
-preparePlots <- function(plotter, plotRequest, db, stations) {
+preparePlots <- function(plotter, plotRequest, db) {
   tryCatch({
     isWindspeed <- "varname" %in% names(plotRequest$criteria) &&
       plotRequest$criteria$varname %in% c("ff", "ff10m")
@@ -193,16 +210,15 @@ preparePlots <- function(plotter, plotRequest, db, stations) {
       plotData <- postProcessQueriedPlotData(plotter, plotData)
     }
     if(!is.null(plotData) && nrow(plotData)>0) {
-      statLabels <- c()
+      statIds <- c()
       for(statid in plotData$statid) {
         statid <- gsub(" ", "", gsub("'", "", statid))
-        statLabels <- c(statLabels, names(stations)[stations==statid])
+        statIds <- c(statIds, statid)
       }
-      if(nrow(plotData)==length(statLabels)) {
-        plotData$statLabel <- statLabels
-      } else {
-        plotData$statLabel <- plotData$statid
-      }
+      obname <- plotRequest$criteria$obname
+      if(isTRUE(plotRequest$criteria$obnumber==7)) obname="satem"
+      stations <- putLabelsInStations(statIds, obname)
+      plotData$statLabel <- names(stations)
     }
 
     res <- plotGenerate(plotter, plotRequest, plotData)

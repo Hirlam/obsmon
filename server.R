@@ -465,20 +465,7 @@ shinyServer(function(input, output, session) {
     variable <- req(input$variable)
 
     stations <- getStationsFromCache(db, dates, cycles, obname, variable)
-    if(length(stations)>0) {
-      if(obname=="synop") {
-        stationLabels <- c()
-        for(statID in stations) {
-          statName <- synopStations[statID]
-          label <- statID
-          if(is.character(statName)) label<-sprintf("%s (%s)",statID,statName)
-          stationLabels <- c(stationLabels, label)
-        }
-        names(stations) <- stationLabels
-      } else {
-        names(stations) <- stations
-      }
-    }
+    stations <- putLabelsInStations(stations, obname)
     if(selectedDtgsAreCached()) {
       stationsAlongWithLabels(c("Any"="", stations))
     } else {
@@ -640,8 +627,6 @@ shinyServer(function(input, output, session) {
     shinyjs::enable("cancelPlot")
 
     db <- req(activeDb())
-    stations <- stationsAlongWithLabels()
-
     plotter <- plotTypesFlat[[req(input$plottype)]]
     plotRequest <- list()
     plotRequest$expName <- req(input$experiment)
@@ -654,7 +639,7 @@ shinyServer(function(input, output, session) {
     # 'package:DBI' may not be available when loading"
     newFutPlot <- suppressWarnings(futureCall(
       FUN=preparePlots,
-      args=list(plotter=plotter, plotRequest=plotRequest, db=db, stations=stations)
+      args=list(plotter=plotter, plotRequest=plotRequest, db=db)
     ))
     currentPlotPid(newFutPlot$job$pid)
 
@@ -812,8 +797,9 @@ shinyServer(function(input, output, session) {
      plotRequest$dbType <- inputOneClickPlot$database
      plotRequest$criteria <- plotsBuildCriteria(inputOneClickPlot)
 
-     newPlot <- tryCatch(
-       preparePlots(plotter, plotRequest, quickPlotActiveDb(), stations),
+     newPlot <- tryCatch({
+         preparePlots(plotter, plotRequest, quickPlotActiveDb())
+       },
        error=function(e) {flog.error(e); NULL}
      )
      allPlots[[quickPlotsGenId(iPlot)]] <- newPlot
