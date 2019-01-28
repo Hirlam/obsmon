@@ -23,6 +23,12 @@ path = "/full/path/to/experiment2"
   startDate = -30 # From 30 days ago to today. Also accepts dates (e.g. "2018-05-12")
   # An endDate ("YYYY-MM-DD") can also be passed, but is omitted here
   excludeObs = ["satem"] # Do not include these obs. All not listed will be included
+  [quickPlots.levels]
+    # You can configure levels if you so wish
+    # You can do this for each variable individually:
+    aircraft = {t=[1500, 100000], u=[27500, 45000]}
+    # Or you can do this globally for any given obname:
+    synop = 10
 
 [[quickPlots]]
   displayName = "2nd Expt: CANARI synop NObs"
@@ -31,4 +37,5 @@ path = "/full/path/to/experiment2"
   database = "ecma_sfc"
   startDate = -30
   [quickPlots.obs]
-    synop=["t2m","rh2m", "snow"] # Example of how to select specific obs and variables
+    # Example of how to select specific obs and variables
+    synop=["t2m","rh2m", "snow"]

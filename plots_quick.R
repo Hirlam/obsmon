@@ -88,6 +88,22 @@ validateOneClickPlotConfig <- function(config) {
         pc$obs[[iVarList]] <- allVarsForObname
       }
     }
+
+    # Parsing level choices. Levels can either be configured individually for
+    # each varname or globally for each obname
+    for(obname in obnames) {
+      levelsConfig <- pc$levels[[obname]]
+      if(!is.null(levelsConfig) && !is.list(levelsConfig)) {
+        # If users set, e.g., "aircraft = 10" for levels in the config file
+        pc$levels[[obname]] <- list(allVars=levelsConfig)
+      }
+      if("allVars" %in% names(pc$levels[[obname]])) {
+        # Removing ambiguity if users set "allVars" inside config list
+        pc$levels[[obname]][!(names(pc$levels[[obname]])=="allVars")] <- NULL
+      }
+    }
+
+    # Save parsed config entry
     config$quickPlots[[iConfig]] <- pc
   }
   config$quickPlots <- Filter(Negate(anyNA), config$quickPlots)

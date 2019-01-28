@@ -801,16 +801,18 @@ shinyServer(function(input, output, session) {
     iPlot <- 0
     for(iObname in seq_along(pConfig$obs)) {
       obname <- obnames[iObname]
+      levelsConfig <- pConfig$levels[[obname]]
       for(variable in unlist(pConfig$obs[iObname])) {
         inputsThisPlotOnly <- list(
           obname=obname,
-          variable=variable
+          variable=variable,
+          levels=c(levelsConfig[["allVars"]], levelsConfig[[variable]])
         )
         iPlot <- iPlot + 1
         inputsForAllPlots[[iPlot]] <- c(plotsCommonInput, inputsThisPlotOnly)
       }
     }
-    # TODO: Support to setting levels, stations and
+    # TODO: Support to setting stations and
     #       satem-related fields (sensor, satname, channels)
     stations <- NULL
 
