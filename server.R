@@ -766,10 +766,12 @@ shinyServer(function(input, output, session) {
       }
       req(!is.null(pConfig$startDate) && !is.null(pConfig$endDate))
     } else {
-      if(is.null(pConfig$date)) {
-        flog.error("Selected plot requires date to be set in the config file")
+      if(is.null(pConfig$date) || is.null(pConfig$cycle)) {
+        msg <- "Selected plot requires date and cycle to be set in the config file"
+        flog.error(msg)
+        signalError(msg)
       }
-      req(!is.null(pConfig$date))
+      req(!is.null(pConfig$date) && !is.null(pConfig$cycle))
     }
     # Initialising a "shiny input"-like list that will be passed to the
     # ordinary plotting routines
