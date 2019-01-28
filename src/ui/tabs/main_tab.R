@@ -113,14 +113,11 @@ mainTab <- function() {fluidPage(
         label=getDefLabel("plottype"),
         choices=c()
       ),
-      conditionalPanel(
-        condition = "input.obtype != 'satem'",
-        selectInput("station",
-          label=getDefLabel("station"),
-          choices=c(),
-          multiple=TRUE,
-          selectize=FALSE
-        )
+      selectInput("station",
+        label=getDefLabel("station"),
+        choices=c(),
+        multiple=TRUE,
+        selectize=FALSE
       ),
       fluidRow(
         column(8, dateInput("date", "Date")),

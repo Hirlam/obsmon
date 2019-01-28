@@ -37,6 +37,15 @@ applicablePlots <- function(criteria) {
   plots
 }
 
+plotSupportsChoosingStations <- function(plottype=NULL, obtype=NULL) {
+  if(is.null(plottype) || isTRUE(obtype=="satem")) return(FALSE)
+  infoAboutSelectedPlotType <- plotTypesFlat[[plottype]]
+  query <- infoAboutSelectedPlotType$queryStub
+  # StationIDs are not stored in the "obsmon" table, only in "usage"
+  queryIsFromUsage <- grepl("FROM{1}[[:space:]]+usage",query,ignore.case=TRUE)
+  return(isTRUE(queryIsFromUsage))
+}
+
 # Define generics
 plotBuildQuery <- function(p, plotRequest) UseMethod ("plotBuildQuery")
 plotGenerate <- function(p, plotRequest, plotData) UseMethod("plotGenerate")
