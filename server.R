@@ -737,7 +737,9 @@ shinyServer(function(input, output, session) {
     quickPlotExperiment()$dbs[[dbType]]
   })
 
-  quickPlot <- eventReactive(input$quickPlotsDoPlot, {
+  quickPlot <- reactiveVal()
+  observeEvent(input$quickPlotsDoPlot, {
+    quickPlot(NULL)
     pConfig <- quickPlotConfigInfo()
 
     # Stuff shared among all subplots
@@ -758,6 +760,10 @@ shinyServer(function(input, output, session) {
       }
       req(!is.null(pConfig$date) && !is.null(pConfig$cycle))
     }
+
+    # Prevent another plot from being requested
+    disableShinyInputs(input)
+
     # Initialising a "shiny input"-like list that will be passed to the
     # ordinary plotting routines
     plotsCommonInput <- list(
@@ -801,23 +807,26 @@ shinyServer(function(input, output, session) {
       }
     }
 
-    allPlots <- list()
-    for(iPlot in seq_along(inputsForAllPlots)) {
-     # qp stands for "quickPlot"
-     qpInput <- inputsForAllPlots[[iPlot]]
-     plotRequest <- list()
-     plotRequest$expName <- req(qpInput$experiment)
-     plotRequest$dbType <- qpInput$database
-     plotRequest$criteria <- plotsBuildCriteria(qpInput)
-
-     newPlot <- tryCatch({
-         preparePlots(plotter, plotRequest, quickPlotActiveDb())
-       },
-       error=function(e) {flog.error(e); NULL}
-     )
-     allPlots[[quickPlotsGenId(iPlot)]] <- newPlot
-    }
-    return(allPlots)
+    db <- quickPlotActiveDb()
+    quickPlotsAsync <- suppressWarnings(futureCall(
+      FUN=prepareQuickPlots,
+      args=list(plotter=plotter, inputsForAllPlots=inputsForAllPlots, db=db)
+    ))
+    then(quickPlotsAsync,
+      onFulfilled=function(value) {
+        quickPlot(value)
+      },
+      onRejected=function(e) {
+        flog.error(e)
+        showNotification("Could not produce plot", duration=1, type="error")
+        quickPlot(NULL)
+      }
+    )
+    finally(quickPlotsAsync, function() {
+      enableShinyInputs(input)
+    })
+    # This NULL is necessary in order to avoid the future from blocking
+    NULL
   })
 
   # Prepare the correct output slots for plots, maps and dataTables

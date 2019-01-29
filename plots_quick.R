@@ -3,6 +3,33 @@
 # and make it easier to produce the quickPlots in server.R         #
 ####################################################################
 
+################################################
+# Helper function to produce plots in server.R #
+################################################
+prepareQuickPlots <- function(plotter, inputsForAllPlots, db) {
+  allPlots <- list()
+  for(iPlot in seq_along(inputsForAllPlots)) {
+   # qp stands for "quickPlot"
+   qpInput <- inputsForAllPlots[[iPlot]]
+   plotRequest <- list()
+   plotRequest$expName <- req(qpInput$experiment)
+   plotRequest$dbType <- qpInput$database
+   plotRequest$criteria <- plotsBuildCriteria(qpInput)
+
+   newPlot <- tryCatch({
+       preparePlots(plotter, plotRequest, db)
+     },
+     error=function(e) {flog.error(e); NULL}
+   )
+   allPlots[[quickPlotsGenId(iPlot)]] <- newPlot
+  }
+  return(allPlots)
+}
+
+
+#############################
+# Validating setup of plots #
+#############################
 dateInputFormat <- "%Y-%m-%d"
 dateIsValid <- function(date, format=dateInputFormat) {
   tryCatch(!is.na(as.Date(date, format)),
