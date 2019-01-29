@@ -774,20 +774,32 @@ shinyServer(function(input, output, session) {
     iPlot <- 0
     for(iObname in seq_along(pConfig$obs)) {
       obname <- obnames[iObname]
-      levelsConfig <- pConfig$levels[[obname]]
-      stationsConfig <- pConfig$stations[[obname]]
-      for(variable in unlist(pConfig$obs[iObname])) {
-        inputsThisPlotOnly <- list(
-          obname=obname,
-          variable=variable,
-          levels=c(levelsConfig[["allVars"]], levelsConfig[[variable]]),
-          station=c(stationsConfig[["allVars"]], stationsConfig[[variable]])
-        )
-        iPlot <- iPlot + 1
-        inputsForAllPlots[[iPlot]] <- c(plotsCommonInput, inputsThisPlotOnly)
+      if(obname=="satem") {
+        for(satemConfig in pConfig$obs[[obname]]) {
+          inputsThisPlotOnly <- list(
+            obname="satem",
+            sensor=satemConfig$sensor,
+            satellite=satemConfig$satellite,
+            channels=satemConfig$channels
+          )
+          iPlot <- iPlot + 1
+          inputsForAllPlots[[iPlot]] <- c(plotsCommonInput, inputsThisPlotOnly)
+        }
+      } else {
+        levelsConfig <- pConfig$levels[[obname]]
+        stationsConfig <- pConfig$stations[[obname]]
+        for(variable in unlist(pConfig$obs[iObname])) {
+          inputsThisPlotOnly <- list(
+            obname=obname,
+            variable=variable,
+            levels=c(levelsConfig[["allVars"]], levelsConfig[[variable]]),
+            station=c(stationsConfig[["allVars"]], stationsConfig[[variable]])
+          )
+          iPlot <- iPlot + 1
+          inputsForAllPlots[[iPlot]] <- c(plotsCommonInput, inputsThisPlotOnly)
+        }
       }
     }
-    # TODO: Support to satem-related fields (sensor, satname, channels)
 
     allPlots <- list()
     for(iPlot in seq_along(inputsForAllPlots)) {

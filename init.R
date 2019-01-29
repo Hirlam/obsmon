@@ -8,7 +8,7 @@ if(!exists("runningAsStandalone") || runningAsStandalone==FALSE) {
 }
 
 if(!runningAsStandalone) {
-  # This info is already printted in a banner when runningAsStandalone
+  # This info is already printed in a banner when runningAsStandalone
   cat(obsmonBanner)
 }
 

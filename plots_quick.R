@@ -1,3 +1,8 @@
+####################################################################
+# Routines to help validate quickPlot entries from the config file #
+# and make it easier to produce the quickPlots in server.R         #
+####################################################################
+
 dateInputFormat <- "%Y-%m-%d"
 dateIsValid <- function(date, format=dateInputFormat) {
   tryCatch(!is.na(as.Date(date, format)),
@@ -13,7 +18,7 @@ validateStartDate <- function(startDate, format=dateInputFormat) {
     if(startDate<0) rtn <- todayDateUTC + startDate
   } else if(dateIsValid(startDate, format)) {
     rtn <- as.Date(startDate, format)
-  } 
+  }
 }
 validateEndDate <- function(endDate, startDate=NULL, nDays=NULL, format=dateInputFormat) {
   rtn <- NULL
@@ -30,13 +35,14 @@ validateEndDate <- function(endDate, startDate=NULL, nDays=NULL, format=dateInpu
   return(rtn)
 }
 
-
 validateOneClickPlotConfig <- function(config) {
   invalidExpts <- c()
   invalidPlotNames <- c()
   invalidDbs <- c()
 
   if(is.null(config$quickPlots)) return(config)
+
+  flog.debug("Config file contains user-defined quickPlots. Validating.")
 
   availablePlots <- names(plotTypesFlat)
   for(iConfig in seq_along(config$quickPlots)) {
@@ -77,22 +83,30 @@ validateOneClickPlotConfig <- function(config) {
     # Excluding obnames if requested by user
     obsToExclude <- pc$excludeObs
     pc$obs <- pc$obs[!(names(pc$obs) %in% obsToExclude)]
-    # Populating variables
     obnames <- names(pc$obs)
+
+    # Populating variables
     for(iVarList in seq_along(pc$obs)) {
+      obname <- obnames[iVarList]
+      if(obname=="satem") next # satem obs have no variable lists
       # Each ob will contain a list of variables
       variables <- pc$obs[[iVarList]]
       if(is.null(variables)) {
-        obname <- obnames[iVarList]
         allVarsForObname <- getAttrFromMetadata("variables", obname=obname)
         pc$obs[[iVarList]] <- allVarsForObname
       }
     }
 
-    # Parsing level and station choices. They can either be configured
-    # individually for each varname or globally for each obname
     for(obname in obnames) {
-      # Parsing level choices
+      # Satem entries are assumed to have been corectly setup in the config
+      # file. The syntax for these is less flexible and require no further
+      # parsing. Skipping them.
+      if(obname=="satem") next
+
+      # Parsing level and station choices for non-satallite obs.
+      # These can either be configured individually for each varname or
+      # globally for each obname
+      # (i) Parsing level choices
       levelsConfig <- pc$levels[[obname]]
       if(!is.null(levelsConfig) && !is.list(levelsConfig)) {
         # If users set, e.g., "aircraft = 10" for levels in the config file
@@ -102,7 +116,7 @@ validateOneClickPlotConfig <- function(config) {
         # Removing ambiguity if users set "allVars" inside config list
         pc$levels[[obname]][!(names(pc$levels[[obname]])=="allVars")] <- NULL
       }
-      # Parsing station choices
+      # (ii) Parsing station choices
       stationsConfig <- pc$stations[[obname]]
       obtype <- getAttrFromMetadata("category", obname=obname)
       if(plotSupportsChoosingStations(pc$plotType, obtype)) {
@@ -144,6 +158,8 @@ validateOneClickPlotConfig <- function(config) {
     msg <- paste(msg, paste(dbTypesRecognised, collapse=", "))
     flog.warn(msg)
   }
+
+  flog.debug("Finished validation of user-defined quickPlots.")
 
   return(config)
 }
