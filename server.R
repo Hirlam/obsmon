@@ -840,6 +840,21 @@ shinyServer(function(input, output, session) {
           "Preparing to render quickPlot", duration=1, type="message"
         )
         quickPlot(value)
+        somePlotHasMap <- FALSE
+        for(individualPlot in value) {
+          if(!is.null(individualPlot$obmap)) {
+            somePlotHasMap <- TRUE
+            break
+          }
+        }
+        if(somePlotHasMap) {
+          js$enableTab("mapTab")
+        } else {
+          if(input$quickPlotsMainArea=="mapTab") {
+            updateTabsetPanel(session, "quickPlotsMainArea", "plotTab")
+          }
+          js$disableTab("mapTab")
+        }
       },
       onRejected=function(e) {
         if(!quickPlotInterrupted()) {
