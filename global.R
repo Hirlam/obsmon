@@ -56,7 +56,7 @@ mapAndMapTitleOutput <- function(mapOutputId, mapTitleOutputId) {
     fluidRow(
       column(12, align="center",
         tags$head(tags$style("#map{height:80vh !important;}")),
-        leafletOutput(outputId=mapOutputId, height="auto", width="auto"),
+        leafletOutput(outputId=mapOutputId, width="auto"),
         tags$style(type="text/css", "body { overflow-y: scroll; }")
       )
     )
