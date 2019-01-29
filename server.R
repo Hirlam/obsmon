@@ -737,6 +737,16 @@ shinyServer(function(input, output, session) {
     quickPlotExperiment()$dbs[[dbType]]
   })
 
+  # Producing quickPlots
+  quickPlotCurrentPid <- reactiveVal(-1)
+  quickPlotStartedNotifId <- reactiveVal(-1)
+  quickPlotInterrupted <- reactiveVal()
+  onclick("quickPlotsCancelPlot", {
+    showNotification("Cancelling quickPlot", type="warning", duration=1)
+    quickPlotInterrupted(TRUE)
+    tools::pskill(quickPlotCurrentPid(), tools::SIGINT)
+  })
+
   quickPlot <- reactiveVal()
   observeEvent(input$quickPlotsDoPlot, {
     quickPlot(NULL)
@@ -763,6 +773,11 @@ shinyServer(function(input, output, session) {
 
     # Prevent another plot from being requested
     disableShinyInputs(input)
+    shinyjs::hide("quickPlotsDoPlot")
+    # Offer possibility to cancel quickPlot
+    shinyjs::show("quickPlotsCancelPlot")
+    shinyjs::enable("quickPlotsCancelPlot")
+    quickPlotInterrupted(FALSE)
 
     # Initialising a "shiny input"-like list that will be passed to the
     # ordinary plotting routines
@@ -807,22 +822,33 @@ shinyServer(function(input, output, session) {
       }
     }
 
+    quickPlotStartedNotifId(showNotification("Gathering data",type="message"))
     db <- quickPlotActiveDb()
     quickPlotsAsync <- suppressWarnings(futureCall(
       FUN=prepareQuickPlots,
       args=list(plotter=plotter, inputsForAllPlots=inputsForAllPlots, db=db)
     ))
+    quickPlotCurrentPid(quickPlotsAsync$job$pid)
+
     then(quickPlotsAsync,
       onFulfilled=function(value) {
+        showNotification(
+          "Preparing to render quickPlot", duration=1, type="message"
+        )
         quickPlot(value)
       },
       onRejected=function(e) {
-        flog.error(e)
-        showNotification("Could not produce plot", duration=1, type="error")
+        if(!quickPlotInterrupted()) {
+          flog.error(e)
+          showNotification("Could not produce plot", duration=1, type="error")
+        }
         quickPlot(NULL)
       }
     )
     finally(quickPlotsAsync, function() {
+      removeNotification(quickPlotStartedNotifId())
+      shinyjs::hide("quickPlotsCancelPlot")
+      shinyjs::show("quickPlotsDoPlot")
       enableShinyInputs(input)
     })
     # This NULL is necessary in order to avoid the future from blocking
