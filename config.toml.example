@@ -5,112 +5,112 @@
 #           <https://github.com/toml-lang/toml/blob/master/README.md>               #
 #                                                                                   #
 # FYI:                                                                              #
-#   - Comments can be added using a "#" character and are optional                  #
-#   - Indentation is also optional, but highly encouraged                           #
+#    - Comments can be added using a "#" character and are optional                 #
+#    - Indentation is also optional, but highly encouraged                          #
 #####################################################################################
 
 ###################
 # General options #
 ###################
 [general]
-  logLevel = "INFO"
-  cacheDir = ".Rcache"
+    logLevel = "INFO"
+    cacheDir = ".Rcache"
 
 ###########################
 # Configuring experiments #
 ###########################
 [[experiments]]
-  # displayName: The name you will see in the GUI to identify your experiments
-  displayName = "First Experiment"
-  # path: The path to your experiments' data files. Obsmon expects to find
-  # directories named "ecma", "ccma", "ecma_sfc" under the selected path
-  path = "/full/path/to/experiment1"
+    # displayName: The name you will see in the GUI to identify your experiments
+    displayName = "First Experiment"
+    # path: The path to your experiments' data files. Obsmon expects to find
+    # directories named "ecma", "ccma", "ecma_sfc" under the selected path
+    path = "/full/path/to/experiment1"
 
 # To keep adding experiments to your list, do like this:
 [[experiments]]
-  displayName = "Second Experiment"
-  path = "/full/path/to/experiment2"
+    displayName = "Second Experiment"
+    path = "/full/path/to/experiment2"
 
 ##########################
 # Configuring quickPlots #
 ##########################
 [[quickPlots]]
-  # displayName: Choose how you want your quickPlot to be named
-  displayName = "1st Expt: ecma NObs for all obs but satem"
-  # experiment: Must match the dysplayName of one of the experiments configured above
-  experiment = "First Experiment"
-  # plotType: Must match a valid plot type, i.e., a plot type normally supported by obsmon
-  plotType = "Number of Observations"
-  # database: Must be one of: ccma, ecma, ecma_sfc
-  database = "ecma"
-  # startDate: A date in the format "YYYY-MM-DD" or a negative integer number.
-  #            A negative integer N represents a date N days before today
-  #            An endDate "YYYY-MM-DD" can also be passed, but is omitted here
-  startDate = -30
-  ##########################################
-  # Deciding which observations to include #
-  ##########################################
-  # The defaut behaviour is to include all types of observations in the quickPlots unless:
-  # (i) excludeObs is passed, in which case any observation name listed there will be excluded
-  # (ii) You explicitely use a [quickPlots.obs] block (see the next example), in which case only
-  #      observations explicitely listed will be included.
-  # This quick plot will include all observatrions except satem.
-  excludeObs = ["satem"]
-  #############################################################
-  # Optional: Choosing which hight/pressure levels to include #
-  #############################################################
-  [quickPlots.levels]
-    # You can select levels for each observation name and variable individually:
-    aircraft = {t=[1500, 100000], u=[27500, 45000]}
-    # Or you can do this globally for any given obname:
-    synop = 10
+    # displayName: Choose how you want your quickPlot to be named
+    displayName = "1st Expt: ecma NObs for all obs but satem"
+    # experiment: Must match the dysplayName of one of the experiments configured above
+    experiment = "First Experiment"
+    # plotType: Must match a valid plot type, i.e., a plot type normally supported by obsmon
+    plotType = "Number of Observations"
+    # database: Must be one of: ccma, ecma, ecma_sfc
+    database = "ecma"
+    # startDate: A date in the format "YYYY-MM-DD" or a negative integer number.
+    #            A negative integer N represents a date N days before today
+    #            An endDate "YYYY-MM-DD" can also be passed, but is omitted here
+    startDate = -30
+    ##########################################
+    # Deciding which observations to include #
+    ##########################################
+    # The defaut behaviour is to include all types of observations in the quickPlots unless:
+    # (i) excludeObs is passed, in which case any observation name listed there will be excluded
+    # (ii) You explicitely use a [quickPlots.obs] block (see the next example), in which case only
+    #      observations explicitely listed will be included.
+    # This quick plot will include all observatrions except satem.
+    excludeObs = ["satem"]
+    #############################################################
+    # Optional: Choosing which hight/pressure levels to include #
+    #############################################################
+    [quickPlots.levels]
+        # You can select levels for each observation name and variable individually:
+        aircraft = {t=[1500, 100000], u=[27500, 45000]}
+        # Or you can do this globally for any given obname:
+        synop = 10
 
 [[quickPlots]]
-  displayName = "2nd Expt: CANARI NObs, synop only"
-  experiment = "Second Experiment"
-  plotType = "Number of Observations"
-  database = "ecma_sfc"
-  startDate = -30
-  #####################################################################
-  # Explicitely choosing which observations to include in a quickPlot #
-  #####################################################################
-  [quickPlots.obs]
-    # Select specific obs and variables. Nothing else will be included.
-    synop=["t2m","rh2m", "snow"]
-    aircraft=["t"]
+    displayName = "2nd Expt: CANARI NObs, synop only"
+    experiment = "Second Experiment"
+    plotType = "Number of Observations"
+    database = "ecma_sfc"
+    startDate = -30
+    #####################################################################
+    # Explicitely choosing which observations to include in a quickPlot #
+    #####################################################################
+    [quickPlots.obs]
+        # Select specific obs and variables. Nothing else will be included.
+        synop=["t2m","rh2m", "snow"]
+        aircraft=["t"]
 
 [[quickPlots]]
-  displayName = "A quickPlot with station choices"
-  experiment = "Second Experiment"
-  plotType = "Observation Usage"
-  database = "ecma"
-  date = "2018-11-19"
-  cycle = 0
-  ##############################################################
-  # Optional: Choosing which stations (station IDs) to include #
-  ##############################################################
-  [quickPlots.stations]
-    synop = ["01158", "01226"]
-    aircraft = ["2BTQVXZA"]
+    displayName = "A quickPlot with station choices"
+    experiment = "Second Experiment"
+    plotType = "Observation Usage"
+    database = "ecma"
+    date = "2018-11-19"
+    cycle = 0
+    ##############################################################
+    # Optional: Choosing which stations (station IDs) to include #
+    ##############################################################
+    [quickPlots.stations]
+        synop = ["01158", "01226"]
+        aircraft = ["2BTQVXZA"]
 
 [[quickPlots]]
-  displayName = "A quickPlot with satem observations"
-  experiment = "First Experiment"
-  plotType = "First Guess and Analysis Departure"
-  database = "ecma"
-  date = "2018-11-19"
-  cycle = 0
-  [quickPlots.obs]
-    synop=["z"]
+    displayName = "A quickPlot with satem observations"
+    experiment = "First Experiment"
+    plotType = "First Guess and Analysis Departure"
+    database = "ecma"
+    date = "2018-11-19"
+    cycle = 0
+    [quickPlots.obs]
+        synop=["z"]
     #############################################
     # satem observations: a more verbose syntax #
     #############################################
     [[quickPlots.obs.satem]]
-      sensor="amsua"
-      satellite="metop1"
-      channels=[1, 3, 5, 7]
+        sensor="amsua"
+        satellite="metop1"
+        channels=[1, 3, 5, 7]
     # Add another satem entry to this quickPlot
     [[quickPlots.obs.satem]]
-      sensor="iasi"
-      satellite="metop2"
-      channels=[38, 167, 236]
+        sensor="iasi"
+        satellite="metop2"
+        channels=[38, 167, 236]

@@ -633,7 +633,9 @@ shinyServer(function(input, output, session) {
     plotRequest$dbType <- db$dbType
     plotRequest$criteria <- plotsBuildCriteria(input)
 
-    plotStartedNotifId(showNotification("Gathering data", type="message"))
+    plotStartedNotifId(showNotification(
+      "Gathering data for plot...", type="message", duration=NULL
+    ))
     # The suppressWarnings is because of the warning
     # "Warning in serialize(what, NULL, xdr = FALSE) :
     # 'package:DBI' may not be available when loading"
@@ -822,7 +824,9 @@ shinyServer(function(input, output, session) {
       }
     }
 
-    quickPlotStartedNotifId(showNotification("Gathering data",type="message"))
+    quickPlotStartedNotifId(showNotification(
+      "Gathering data for plot...", type="message", duration=NULL
+    ))
     db <- quickPlotActiveDb()
     quickPlotsAsync <- suppressWarnings(futureCall(
       FUN=prepareQuickPlots,
