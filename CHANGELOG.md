@@ -6,9 +6,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 ### Added
-- "One-click" plots
+- User-configured "multiPlots"
+    - Produce one or more pre-configured plots at once
     - Similar idea as the earlier "pre-defined plots"
-    - Configurable via config.toml file
+        - But configurable by user via config.toml file
 - "Cancel plot" button (appears only after clicking in "Plot")
 - New config options supported (to be set under the "general" section)
     - initCheckDataExists (true/false, default: false)

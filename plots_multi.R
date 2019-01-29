@@ -1,15 +1,15 @@
 ####################################################################
-# Routines to help validate quickPlot entries from the config file #
-# and make it easier to produce the quickPlots in server.R         #
+# Routines to help validate multiPlot entries from the config file #
+# and make it easier to produce the multiPlots in server.R         #
 ####################################################################
 
 ################################################
 # Helper function to produce plots in server.R #
 ################################################
-prepareQuickPlots <- function(plotter, inputsForAllPlots, db) {
+prepareMultiPlots <- function(plotter, inputsForAllPlots, db) {
   allPlots <- list()
   for(iPlot in seq_along(inputsForAllPlots)) {
-   # qp stands for "quickPlot"
+   # qp stands for "multiPlot"
    qpInput <- inputsForAllPlots[[iPlot]]
    plotRequest <- list()
    plotRequest$expName <- req(qpInput$experiment)
@@ -21,7 +21,7 @@ prepareQuickPlots <- function(plotter, inputsForAllPlots, db) {
      },
      error=function(e) {flog.error(e); NULL}
    )
-   allPlots[[quickPlotsGenId(iPlot)]] <- newPlot
+   allPlots[[multiPlotsGenId(iPlot)]] <- newPlot
   }
   return(allPlots)
 }
@@ -67,33 +67,33 @@ validateOneClickPlotConfig <- function(config) {
   invalidPlotNames <- c()
   invalidDbs <- c()
 
-  if(is.null(config$quickPlots)) return(config)
+  if(is.null(config$multiPlots)) return(config)
 
-  flog.debug("Config file contains user-defined quickPlots. Validating.")
+  flog.debug("Config file contains user-defined multiPlots. Validating.")
 
   availablePlots <- names(plotTypesFlat)
-  for(iConfig in seq_along(config$quickPlots)) {
+  for(iConfig in seq_along(config$multiPlots)) {
     # pc stands for "plot config"
-    pc <- config$quickPlots[[iConfig]]
+    pc <- config$multiPlots[[iConfig]]
     validExpt <- isTRUE(pc$experiment %in% exptNamesinConfig)
     validPlotType <- isTRUE(pc$plotType %in% availablePlots)
     validDatabase <- isTRUE(pc$database %in% dbTypesRecognised)
     if(!validExpt) {
-      flog.error('quickPlot "%s": experiment "%s" not recognised', pc$displayName, pc$experiment)
+      flog.error('multiPlot "%s": experiment "%s" not recognised', pc$displayName, pc$experiment)
       invalidExpts <- c(invalidExpts, as.character(pc$experiment))
       validExpt <- FALSE
     }
     if(!validPlotType) {
-      flog.error('quickPlot "%s": plotType "%s" not recognised', pc$displayName, pc$plotType)
+      flog.error('multiPlot "%s": plotType "%s" not recognised', pc$displayName, pc$plotType)
       invalidPlotNames <- c(invalidPlotNames, as.character(pc$plotType))
     }
     if(!validDatabase) {
-      flog.error('quickPlot "%s": database "%s" not recognised', pc$displayName, pc$database)
+      flog.error('multiPlot "%s": database "%s" not recognised', pc$displayName, pc$database)
       invalidDbs <- c(invalidDbs, as.character(pc$database))
     }
     if(!(validExpt && validPlotType && validDatabase)) {
-      flog.warn('Failed to initialise quickPlot "%s". It will be ignored', pc$displayName)
-      config$quickPlots[[iConfig]] <- NA
+      flog.warn('Failed to initialise multiPlot "%s". It will be ignored', pc$displayName)
+      config$multiPlots[[iConfig]] <- NA
       next
     }
     # Process dates
@@ -157,7 +157,7 @@ validateOneClickPlotConfig <- function(config) {
         }
       } else if(!is.null(stationsConfig)) {
         pc$stations[[obname]] <- NULL
-        msg <- paste0('quickPlot "',pc$displayName,'": Plot "',pc$plotType,
+        msg <- paste0('multiPlot "',pc$displayName,'": Plot "',pc$plotType,
           '" does not support station choices. Ignoring stations.'
         )
         flog.warn(msg)
@@ -165,9 +165,9 @@ validateOneClickPlotConfig <- function(config) {
     }
 
     # Save parsed config entry
-    config$quickPlots[[iConfig]] <- pc
+    config$multiPlots[[iConfig]] <- pc
   }
-  config$quickPlots <- Filter(Negate(anyNA), config$quickPlots)
+  config$multiPlots <- Filter(Negate(anyNA), config$multiPlots)
 
 
   if(length(invalidExpts)>0) {
@@ -186,7 +186,7 @@ validateOneClickPlotConfig <- function(config) {
     flog.warn(msg)
   }
 
-  flog.debug("Finished validation of user-defined quickPlots.")
+  flog.debug("Finished validation of user-defined multiPlots.")
 
   return(config)
 }

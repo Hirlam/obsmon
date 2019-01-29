@@ -1,24 +1,24 @@
-quickPlotsTab <- function() {
+multiPlotsTab <- function() {
   sidebarLayout(
     sidebarPanel(
       width=3,
       selectizeInput(
-        "quickPlotTitle",
+        "multiPlotTitle",
         multiple=FALSE,
-        label="Plot title",
-        options=list(placeholder='Please select plot'),
+        label="MultiPlot Name",
+        options=list(placeholder='Please select multiPlot'),
         choices=c()
       ),
-      actionButton("quickPlotsDoPlot", "Plot",
+      actionButton("multiPlotsDoPlot", "Make multiPlot",
         width="100%",
         icon("ok", lib="glyphicon")
       ),
-      shinyjs::hidden(actionButton("quickPlotsCancelPlot", "Cancel plot",
+      shinyjs::hidden(actionButton("multiPlotsCancelPlot", "Cancel multiPlot",
         width="100%",
         icon("remove", lib="glyphicon"),
         style="color: #fff; background-color: #FFA500; border-color: #2e6da4"
       ))
     ),
-    mainPanel=createMainPanel(prependToIds="quickPlots")
+    mainPanel=createMainPanel(prependToIds="multiPlots")
   )
 }

@@ -13,14 +13,14 @@ defaultMenuLabels <- list(
   station="Station"
 )
 
-quickPlotsGenId <- function(iPlot, type=NULL) {
+multiPlotsGenId <- function(iPlot, type=NULL) {
   # Generate output IDs for the dinamically generated outpus
-  qpName <- sprintf("quickPlot_%d", iPlot)
+  qpName <- sprintf("multiPlot_%d", iPlot)
   if(is.null(type)) return(qpName)
   recogOutTypes <- c("plot", "map", "mapTitle", "queryUsed", "dataTable")
   if(!(type %in%  recogOutTypes)) {
     stop(sprintf(
-      "quickPlotsGenId: Choose type from: %s",
+      "multiPlotsGenId: Choose type from: %s",
       paste(recogOutTypes, collapse=", ")
     ))
   }
@@ -77,5 +77,5 @@ queryUsedAndDataTableOutput <- function(queryUsedOutputId, dataTableOutputId){
 
 source("src/ui/create_main_panel.R")
 source("src/ui/tabs/main_tab.R")
-source("src/ui/tabs/quick_plots_tab.R")
+source("src/ui/tabs/multi_plots_tab.R")
 

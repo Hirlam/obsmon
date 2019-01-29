@@ -32,10 +32,10 @@
     path = "/full/path/to/experiment2"
 
 ##########################
-# Configuring quickPlots #
+# Configuring multiPlots #
 ##########################
-[[quickPlots]]
-    # displayName: Choose how you want your quickPlot to be named
+[[multiPlots]]
+    # displayName: Choose how you want your multiPlot to be named
     displayName = "1st Expt: ecma NObs for all obs but satem"
     # experiment: Must match the dysplayName of one of the experiments configured above
     experiment = "First Experiment"
@@ -50,37 +50,37 @@
     ##########################################
     # Deciding which observations to include #
     ##########################################
-    # The defaut behaviour is to include all types of observations in the quickPlots unless:
+    # The defaut behaviour is to include all types of observations in the multiPlots unless:
     # (i) excludeObs is passed, in which case any observation name listed there will be excluded
-    # (ii) You explicitely use a [quickPlots.obs] block (see the next example), in which case only
+    # (ii) You explicitely use a [multiPlots.obs] block (see the next example), in which case only
     #      observations explicitely listed will be included.
-    # This quick plot will include all observatrions except satem.
+    # This multi plot will include all observatrions except satem.
     excludeObs = ["satem"]
     #############################################################
     # Optional: Choosing which hight/pressure levels to include #
     #############################################################
-    [quickPlots.levels]
+    [multiPlots.levels]
         # You can select levels for each observation name and variable individually:
         aircraft = {t=[1500, 100000], u=[27500, 45000]}
         # Or you can do this globally for any given obname:
         synop = 10
 
-[[quickPlots]]
+[[multiPlots]]
     displayName = "2nd Expt: CANARI NObs, synop only"
     experiment = "Second Experiment"
     plotType = "Number of Observations"
     database = "ecma_sfc"
     startDate = -30
     #####################################################################
-    # Explicitely choosing which observations to include in a quickPlot #
+    # Explicitely choosing which observations to include in a multiPlot #
     #####################################################################
-    [quickPlots.obs]
+    [multiPlots.obs]
         # Select specific obs and variables. Nothing else will be included.
         synop=["t2m","rh2m", "snow"]
         aircraft=["t"]
 
-[[quickPlots]]
-    displayName = "A quickPlot with station choices"
+[[multiPlots]]
+    displayName = "A multiPlot with station choices"
     experiment = "Second Experiment"
     plotType = "Observation Usage"
     database = "ecma"
@@ -89,28 +89,28 @@
     ##############################################################
     # Optional: Choosing which stations (station IDs) to include #
     ##############################################################
-    [quickPlots.stations]
+    [multiPlots.stations]
         synop = ["01158", "01226"]
         aircraft = ["2BTQVXZA"]
 
-[[quickPlots]]
-    displayName = "A quickPlot with satem observations"
+[[multiPlots]]
+    displayName = "A multiPlot with satem observations"
     experiment = "First Experiment"
     plotType = "First Guess and Analysis Departure"
     database = "ecma"
     date = "2018-11-19"
     cycle = 0
-    [quickPlots.obs]
+    [multiPlots.obs]
         synop=["z"]
     #############################################
     # satem observations: a more verbose syntax #
     #############################################
-    [[quickPlots.obs.satem]]
+    [[multiPlots.obs.satem]]
         sensor="amsua"
         satellite="metop1"
         channels=[1, 3, 5, 7]
-    # Add another satem entry to this quickPlot
-    [[quickPlots.obs.satem]]
+    # Add another satem entry to this multiPlot
+    [[multiPlots.obs.satem]]
         sensor="iasi"
         satellite="metop2"
         channels=[38, 167, 236]

@@ -704,55 +704,58 @@ shinyServer(function(input, output, session) {
 
 
   ############################################################################
-  #                        Handling of Quick plots tab                       #
+  #                        Handling of multiPlots tab                       #
   ############################################################################
 
-  # Add quickPlots tab to UI if quickPlots are available
-  if(!is.null(config$quickPlots)) {
-    appendTab("appNavbarPage", tabPanel("Quick plots", value="quickPlotsTab", quickPlotsTab()))
+  # Add multiPlots tab to UI if multiPlots are available
+  if(!is.null(config$multiPlots)) {
+    appendTab("appNavbarPage", 
+      tabPanel("User-configured multiPlots",
+        value="multiPlotsTab", multiPlotsTab())
+      )
   }
 
-  quickPlotChoices <- c()
-  for(plotConfig in config$quickPlots) {
-    quickPlotChoices <- c(quickPlotChoices, plotConfig$displayName)
+  multiPlotChoices <- c()
+  for(plotConfig in config$multiPlots) {
+    multiPlotChoices <- c(multiPlotChoices, plotConfig$displayName)
   }
-  updateSelectInput(session, "quickPlotTitle", choices=quickPlotChoices)
+  updateSelectInput(session, "multiPlotTitle", choices=multiPlotChoices)
 
-  quickPlotConfigInfo <- eventReactive(input$quickPlotTitle, {
+  multiPlotConfigInfo <- eventReactive(input$multiPlotTitle, {
     pConfig <- NULL
-    for(pConf in config$quickPlots) {
-      if(!pConf$displayName==input$quickPlotTitle) next
+    for(pConf in config$multiPlots) {
+      if(!pConf$displayName==input$multiPlotTitle) next
       pConfig <- pConf
       break
     }
     pConfig
   })
 
-  quickPlotExperiment <- eventReactive(quickPlotConfigInfo(), {
-    pConfig <- quickPlotConfigInfo()
+  multiPlotExperiment <- eventReactive(multiPlotConfigInfo(), {
+    pConfig <- multiPlotConfigInfo()
     experiments()[[pConfig$experiment]]
   })
 
-  quickPlotActiveDb <- eventReactive(quickPlotExperiment(), {
-    pConfig <- quickPlotConfigInfo()
+  multiPlotActiveDb <- eventReactive(multiPlotExperiment(), {
+    pConfig <- multiPlotConfigInfo()
     dbType <- pConfig$database
-    quickPlotExperiment()$dbs[[dbType]]
+    multiPlotExperiment()$dbs[[dbType]]
   })
 
-  # Producing quickPlots
-  quickPlotCurrentPid <- reactiveVal(-1)
-  quickPlotStartedNotifId <- reactiveVal(-1)
-  quickPlotInterrupted <- reactiveVal()
-  onclick("quickPlotsCancelPlot", {
-    showNotification("Cancelling quickPlot", type="warning", duration=1)
-    quickPlotInterrupted(TRUE)
-    tools::pskill(quickPlotCurrentPid(), tools::SIGINT)
+  # Producing multiPlots
+  multiPlotCurrentPid <- reactiveVal(-1)
+  multiPlotStartedNotifId <- reactiveVal(-1)
+  multiPlotInterrupted <- reactiveVal()
+  onclick("multiPlotsCancelPlot", {
+    showNotification("Cancelling multiPlot", type="warning", duration=1)
+    multiPlotInterrupted(TRUE)
+    tools::pskill(multiPlotCurrentPid(), tools::SIGINT)
   })
 
-  quickPlot <- reactiveVal()
-  observeEvent(input$quickPlotsDoPlot, {
-    quickPlot(NULL)
-    pConfig <- quickPlotConfigInfo()
+  multiPlot <- reactiveVal()
+  observeEvent(input$multiPlotsDoPlot, {
+    multiPlot(NULL)
+    pConfig <- multiPlotConfigInfo()
 
     # Stuff shared among all subplots
     plotter <- plotTypesFlat[[req(pConfig$plotType)]]
@@ -775,11 +778,11 @@ shinyServer(function(input, output, session) {
 
     # Prevent another plot from being requested
     disableShinyInputs(input)
-    shinyjs::hide("quickPlotsDoPlot")
-    # Offer possibility to cancel quickPlot
-    shinyjs::show("quickPlotsCancelPlot")
-    shinyjs::enable("quickPlotsCancelPlot")
-    quickPlotInterrupted(FALSE)
+    shinyjs::hide("multiPlotsDoPlot")
+    # Offer possibility to cancel multiPlot
+    shinyjs::show("multiPlotsCancelPlot")
+    shinyjs::enable("multiPlotsCancelPlot")
+    multiPlotInterrupted(FALSE)
 
     # Initialising a "shiny input"-like list that will be passed to the
     # ordinary plotting routines
@@ -824,22 +827,22 @@ shinyServer(function(input, output, session) {
       }
     }
 
-    quickPlotStartedNotifId(showNotification(
+    multiPlotStartedNotifId(showNotification(
       "Gathering data for plot...", type="message", duration=NULL
     ))
-    db <- quickPlotActiveDb()
-    quickPlotsAsync <- suppressWarnings(futureCall(
-      FUN=prepareQuickPlots,
+    db <- multiPlotActiveDb()
+    multiPlotsAsync <- suppressWarnings(futureCall(
+      FUN=prepareMultiPlots,
       args=list(plotter=plotter, inputsForAllPlots=inputsForAllPlots, db=db)
     ))
-    quickPlotCurrentPid(quickPlotsAsync$job$pid)
+    multiPlotCurrentPid(multiPlotsAsync$job$pid)
 
-    then(quickPlotsAsync,
+    then(multiPlotsAsync,
       onFulfilled=function(value) {
         showNotification(
-          "Preparing to render quickPlot", duration=1, type="message"
+          "Preparing to render multiPlot", duration=1, type="message"
         )
-        quickPlot(value)
+        multiPlot(value)
         somePlotHasMap <- FALSE
         for(individualPlot in value) {
           if(!is.null(individualPlot$obmap)) {
@@ -850,24 +853,24 @@ shinyServer(function(input, output, session) {
         if(somePlotHasMap) {
           js$enableTab("mapTab")
         } else {
-          if(input$quickPlotsMainArea=="mapTab") {
-            updateTabsetPanel(session, "quickPlotsMainArea", "plotTab")
+          if(input$multiPlotsMainArea=="mapTab") {
+            updateTabsetPanel(session, "multiPlotsMainArea", "plotTab")
           }
           js$disableTab("mapTab")
         }
       },
       onRejected=function(e) {
-        if(!quickPlotInterrupted()) {
+        if(!multiPlotInterrupted()) {
           flog.error(e)
           showNotification("Could not produce plot", duration=1, type="error")
         }
-        quickPlot(NULL)
+        multiPlot(NULL)
       }
     )
-    finally(quickPlotsAsync, function() {
-      removeNotification(quickPlotStartedNotifId())
-      shinyjs::hide("quickPlotsCancelPlot")
-      shinyjs::show("quickPlotsDoPlot")
+    finally(multiPlotsAsync, function() {
+      removeNotification(multiPlotStartedNotifId())
+      shinyjs::hide("multiPlotsCancelPlot")
+      shinyjs::show("multiPlotsDoPlot")
       enableShinyInputs(input)
     })
     # This NULL is necessary in order to avoid the future from blocking
@@ -877,70 +880,70 @@ shinyServer(function(input, output, session) {
   # Prepare the correct output slots for plots, maps and dataTables
   # Code adapted from <https://gist.github.com/wch/5436415>
   # (i) Plots
-  output$quickPlotsPlotContainer <- renderUI({
-    plotOutList <- lapply(seq_along(quickPlot()), function(iPlot) {
-      plotOutputInsideFluidRow(quickPlotsGenId(iPlot, type="plot"))
+  output$multiPlotsPlotContainer <- renderUI({
+    plotOutList <- lapply(seq_along(multiPlot()), function(iPlot) {
+      plotOutputInsideFluidRow(multiPlotsGenId(iPlot, type="plot"))
     })
     # Convert the list to a tagList - this is necessary for the list of items
     # to display properly.
     do.call(tagList, plotOutList)
   })
   # (ii) Maps
-  output$quickPlotsMapAndMapTitleContainer <- renderUI({
-    mapAndMapTitleOutList <- lapply(seq_along(quickPlot()), function(iPlot) {
-      mapId <- quickPlotsGenId(iPlot, type="map")
-      mapTitleId <- quickPlotsGenId(iPlot, type="mapTitle")
+  output$multiPlotsMapAndMapTitleContainer <- renderUI({
+    mapAndMapTitleOutList <- lapply(seq_along(multiPlot()), function(iPlot) {
+      mapId <- multiPlotsGenId(iPlot, type="map")
+      mapTitleId <- multiPlotsGenId(iPlot, type="mapTitle")
       mapAndMapTitleOutput(mapId, mapTitleId)
     })
     do.call(tagList, mapAndMapTitleOutList)
   })
   # (iii) dataTables
-  output$quickPlotsQueryAndTableContainer <- renderUI({
-    queryAndDataTableOutList <- lapply(seq_along(quickPlot()), function(iPlot){
-      queryUsedId <- quickPlotsGenId(iPlot, type="queryUsed")
-      dataTableId <- quickPlotsGenId(iPlot, type="dataTable")
+  output$multiPlotsQueryAndTableContainer <- renderUI({
+    queryAndDataTableOutList <- lapply(seq_along(multiPlot()), function(iPlot){
+      queryUsedId <- multiPlotsGenId(iPlot, type="queryUsed")
+      dataTableId <- multiPlotsGenId(iPlot, type="dataTable")
       queryUsedAndDataTableOutput(queryUsedId, dataTableId)
     })
     do.call(tagList, queryAndDataTableOutList)
   })
 
   # Assign each plot/map/title/query/table to the respective outputs
-  quickPlotsPrevQuantity <- reactiveVal()
-  observeEvent(quickPlot(), {
-    # Clean up old quickPlot outputs
-    for(iPlot in seq(quickPlotsPrevQuantity())) {
+  multiPlotsPrevQuantity <- reactiveVal()
+  observeEvent(multiPlot(), {
+    # Clean up old multiPlot outputs
+    for(iPlot in seq(multiPlotsPrevQuantity())) {
       for(type in c("plot", "map", "mapTitle", "queryUsed", "dataTable")) {
-        outId <- quickPlotsGenId(iPlot, type=type)
+        outId <- multiPlotsGenId(iPlot, type=type)
         output[[outId]] <- NULL
       }
     }
-    quickPlotsPrevQuantity(length(quickPlot()))
+    multiPlotsPrevQuantity(length(multiPlot()))
     gc()
 
-    # Assign the new quickPlots
-    for(iPlot0 in seq_along(quickPlot())) {
+    # Assign the new multiPlots
+    for(iPlot0 in seq_along(multiPlot())) {
       local({
         iPlot <- iPlot0
-        pName <- quickPlotsGenId(iPlot)
+        pName <- multiPlotsGenId(iPlot)
         # Assign plots
-        plotOutId <- quickPlotsGenId(iPlot, type="plot")
+        plotOutId <- multiPlotsGenId(iPlot, type="plot")
         output[[plotOutId]] <- renderPlot({
-          myPlot <- quickPlot()[[pName]]
+          myPlot <- multiPlot()[[pName]]
           grid.arrange(req(myPlot$obplot),top=textGrob(req(myPlot$title)))
         },
            res=96, pointsize=18
         )
         # Assign maps and map titles
-        mapId <- quickPlotsGenId(iPlot, type="map")
-        mapTitleId <- quickPlotsGenId(iPlot, type="mapTitle")
-        output[[mapId]] <- renderLeaflet(req(quickPlot()[[pName]]$obmap))
-        output[[mapTitleId]] <- renderText(req(quickPlot()[[pName]]$title))
+        mapId <- multiPlotsGenId(iPlot, type="map")
+        mapTitleId <- multiPlotsGenId(iPlot, type="mapTitle")
+        output[[mapId]] <- renderLeaflet(req(multiPlot()[[pName]]$obmap))
+        output[[mapTitleId]] <- renderText(req(multiPlot()[[pName]]$title))
         # Assign queryUsed and dataTable
-        queryUsedId <- quickPlotsGenId(iPlot, type="queryUsed")
-        dataTableId <- quickPlotsGenId(iPlot, type="dataTable")
-        output[[queryUsedId]] <- renderText(req(quickPlot()[[pName]]$queryUsed))
+        queryUsedId <- multiPlotsGenId(iPlot, type="queryUsed")
+        dataTableId <- multiPlotsGenId(iPlot, type="dataTable")
+        output[[queryUsedId]] <- renderText(req(multiPlot()[[pName]]$queryUsed))
         output[[dataTableId]] <- renderDataTable(
-          req(quickPlot()[[pName]]$plotData), options=list(pageLength=10)
+          req(multiPlot()[[pName]]$plotData), options=list(pageLength=10)
         )
       })
     }
