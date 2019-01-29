@@ -8,7 +8,7 @@ if(!exists("runningAsStandalone") || runningAsStandalone==FALSE) {
 }
 
 if(!runningAsStandalone) {
-  # This info is already printted in a banner when runningAsStandalone
+  # This info is already printed in a banner when runningAsStandalone
   cat(obsmonBanner)
 }
 
@@ -29,6 +29,7 @@ tryCatch(
     suppressPackageStartupMessages(library(dbplyr))
     suppressPackageStartupMessages(library(flock))
     suppressPackageStartupMessages(library(futile.logger))
+    suppressPackageStartupMessages(library(promises))
     suppressPackageStartupMessages(library(future))
     suppressPackageStartupMessages(library(ggplot2))
     suppressPackageStartupMessages(library(grid))
@@ -48,6 +49,7 @@ tryCatch(
   },
   error=function(e) stop(paste(e, libPathsMsg[['error']], sep="\n"))
 )
+flog.info(sprintf("Main process PID: %d", Sys.getpid()))
 flog.info(paste('Running as user "', userName, '"', sep=""))
 flog.info(libPathsMsg[['success']])
 
@@ -148,6 +150,7 @@ sourceObsmonFiles <- function() {
   source("plots_maps.R")
   source("plots_diagnostic.R")
   source("windspeed.R")
+  source("plots_multi.R")
 }
 
 fillInDefault <- function(config, key, default) {

@@ -50,7 +50,12 @@ getDataFilePaths <- function(exptDir, dbType, assertExists=FALSE) {
   else return(structure(fPaths, names=validDtgs))
 }
 
-dbTypesRecognised <- c("ccma", "ecma", "ecma_sfc")
+dbType2DbDescription <- list(
+  "ecma"="Upper Air (3D/4D-VAR) - Screening",
+  "ccma"="Upper Air (3D/4D-VAR) - Minimization",
+  "ecma_sfc"="Surface (CANARI)"
+)
+dbTypesRecognised <- names(dbType2DbDescription)
 
 emptyExperiment <- function(name) {
   x <- list()
@@ -60,12 +65,12 @@ emptyExperiment <- function(name) {
   x
 }
 
-initExperiment <- function(name, baseDir, experiment, checkFilesExist) {
+initExperiment <- function(name, path, checkFilesExist) {
 
   flog.debug("Initializing experiment %s...", name)
   x <- list()
   x$name <- name
-  x$path <- file.path(baseDir, experiment)
+  x$path <- path
   x$cacheDir <- file.path(obsmonConfig$general[["cacheDir"]], slugify(name))
   x$dbs <- list()
   for(dbType in dbTypesRecognised) {
@@ -100,14 +105,34 @@ initExperiment <- function(name, baseDir, experiment, checkFilesExist) {
   return(x)
 }
 
+notifyDeprecatedPaths <- function(config) {
+  for(entry in config$experiments) {
+    if(!is.null(c(entry$baseDir, entry$experiment))) {
+      msg <- paste0(
+        'config file: Use of "baseDir" and "experiment" in the config ',
+        "has been deprecated since v3.0.0. *These values will be ignored*.\n",
+        'Please setup experiment paths by using only the keyword "path".\n',
+        ' Example:\n',
+        "    [[experiments]]\n",
+        '        displayName = "Your Experiment Name"\n',
+        '        path = "your/full/path/here"\n',
+        "\n"
+      )
+      flog.warn(msg)
+      return(NULL)
+    }
+  }
+}
+
 initExperimentsAsPromises <- function() {
+  notifyDeprecatedPaths(obsmonConfig)
   # Using new.env(), as lists cannot be used with %<-%
   experiments <- new.env()
   for(config in obsmonConfig$experiments) {
     name <- config$displayName
     # Using %<-% (library "future") to init experiments asynchronously
     experiments[[name]] %<-%
-      initExperiment(name, config$baseDir, config$experiment,
+      initExperiment(name, config$path,
         checkFilesExist=obsmonConfig$general[["initCheckDataExists"]]
       )
   }

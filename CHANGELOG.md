@@ -6,6 +6,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 ### Added
+- User-configured "multiPlots"
+    - Produce one or more pre-configured plots at once
+    - Similar idea as the earlier "pre-defined plots"
+        - But configurable by user via config.toml file
 - "Cancel plot" button (appears only after clicking in "Plot")
 - New config options supported (to be set under the "general" section)
     - initCheckDataExists (true/false, default: false)
@@ -21,6 +25,9 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - Station labels in maps are now consistent with the ones shown in the UI
 
 ### Changed
+- Experiment path specification via "path" keyword in config file
+    - Old "baseDir" and "experiment" now deprecated and will be ignored
+        - Warning issued in this case
 - Obsmon can now work even if observations are not cached
     - Auto-discovery cache is now performed only for selected date(s) and cycle(s)
         - Caching starts automatically when a new DTG, experiment or database is selected

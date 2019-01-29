@@ -37,6 +37,32 @@ applicablePlots <- function(criteria) {
   plots
 }
 
+plotSupportsChoosingStations <- function(plottype=NULL, obtype=NULL) {
+  if(is.null(plottype) || isTRUE(obtype=="satem")) return(FALSE)
+  infoAboutSelectedPlotType <- plotTypesFlat[[plottype]]
+  query <- infoAboutSelectedPlotType$queryStub
+  # StationIDs are not stored in the "obsmon" table, only in "usage"
+  queryIsFromUsage <- grepl("FROM{1}[[:space:]]+usage",query,ignore.case=TRUE)
+  return(isTRUE(queryIsFromUsage))
+}
+
+putLabelsInStations <- function(stations=NULL, obname=NULL) {
+  if(length(stations)==0) return(stations)
+  if(isTRUE(obname=="synop")) {
+    stationLabels <- c()
+    for(statID in stations) {
+      statName <- synopStations[statID]
+      label <- statID
+      if(is.character(statName)) label<-sprintf("%s (%s)",statID,statName)
+      stationLabels <- c(stationLabels, label)
+    }
+    names(stations) <- stationLabels
+  } else {
+    names(stations) <- stations
+  }
+  return(stations)
+}
+
 # Define generics
 plotBuildQuery <- function(p, plotRequest) UseMethod ("plotBuildQuery")
 plotGenerate <- function(p, plotRequest, plotData) UseMethod("plotGenerate")
@@ -51,13 +77,19 @@ plotBuildQuery.default <- function(p, plotRequest) {
 }
 
 plotGenerate.default <- function(p, plotRequest, plotData) {
-  result <- list(obplot=NULL, obmap=NULL, title=NULL)
-  if (!(is.null(plotData) || nrow(plotData)==0)) {
-    if (plotRequest$criteria$obnumber == 7
-        && "level" %in% colnames(plotData)) {
-      plotData <- rename(plotData, channel=level)
-    }
-    result$title <- plotTitle(p, plotRequest, plotData)
+  if (plotRequest$criteria$obnumber==7 && ("level" %in% colnames(plotData))) {
+    plotData <- rename(plotData, channel=level)
+  }
+  result <- list(title=plotTitle(p, plotRequest, plotData))
+  if (is.null(plotData) || nrow(plotData)==0) {
+    result$obmap=NULL
+    if(is.null(plotData)) msg<-"A problem occurred. Please check the logs"
+    else msg <- "Query returned no data"
+    result$obplot=grobTree(
+      rectGrob(gp=gpar(col="black", fill="grey90", alpha=0.5)),
+      textGrob(msg)
+    )
+  } else {
     result$obplot <- doPlot(p, plotRequest, plotData)
     result$obmap <- doMap(p, plotRequest, plotData)
   }
@@ -117,4 +149,83 @@ postProcessQueriedPlotData <-
 
 postProcessQueriedPlotData.default <- function(plotter, plotData) {
     plotData
+}
+
+# Functions used in in server.R
+# Build named list of plot criteria
+getPlotDtgCriteriaFromUiInput <- function(input) {
+  dtgCrit <- tryCatch(
+    switch(plotTypesFlat[[input$plottype]]$dateType,
+      "single"=date2dtg(input$date, input$cycle),
+      "range"={
+        dateRange <- input$dateRange
+        list(dateRange[1], dateRange[2], input$cycles)
+      }
+    ),
+    error=function(e) NULL
+  )
+  return(dtgCrit)
+}
+
+plotsBuildCriteria <- function(input) {
+  res <- list()
+  res$info <- list()
+  obname <- input$obname
+  res$obnumber <- getAttrFromMetadata('obnumber', obname=obname)
+  if (isTRUE(obname=='satem')) {
+    sensor <- input$sensor
+    res$obname <- sensor
+    res$satname <- input$satellite
+    levels <- input$channels
+  } else {
+    res$obname <- obname
+    res$varname <- input$variable
+    levels <- input$levels
+
+    station <- input$station
+    if("" %in% station) station <- ""
+    res$station <- station
+  }
+  res$levels <- list()
+  if(length(levels)>0 && levels!="") res$levels <- levels
+
+  res$dtg <- getPlotDtgCriteriaFromUiInput(input)
+
+  return(res)
+}
+# Perform plotting
+preparePlots <- function(plotter, plotRequest, db) {
+  tryCatch({
+    isWindspeed <- "varname" %in% names(plotRequest$criteria) &&
+      plotRequest$criteria$varname %in% c("ff", "ff10m")
+    query <- NULL
+    if (isWindspeed) {
+      plotData <- buildFfData(db, plotter, plotRequest)
+    } else {
+      query <- plotBuildQuery(plotter, plotRequest)
+      plotData <- performQuery(db, query, plotRequest$criteria$dtg)
+      # Postprocessing plotData returned by performQuery.
+      # This may be useful, e.g., if performing averages over a
+      # picked date range.
+      plotData <- postProcessQueriedPlotData(plotter, plotData)
+    }
+    if(!is.null(plotData) && nrow(plotData)>0) {
+      statIds <- c()
+      for(statid in plotData$statid) {
+        statid <- gsub(" ", "", gsub("'", "", statid))
+        statIds <- c(statIds, statid)
+      }
+      obname <- plotRequest$criteria$obname
+      if(isTRUE(plotRequest$criteria$obnumber==7)) obname="satem"
+      stations <- putLabelsInStations(statIds, obname)
+      plotData$statLabel <- names(stations)
+    }
+
+    res <- plotGenerate(plotter, plotRequest, plotData)
+    res[["queryUsed"]] <- query
+    res[["plotData"]] <- plotData
+    return(res)
+  },
+  error=function(e) {flog.error(paste("preparePlots:", e)); NULL}
+  )
 }

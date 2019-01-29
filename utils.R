@@ -46,8 +46,14 @@ expandDtgRange <- function(dateRange) {
   startDate <- dateRange[[1]]
   endDate <- dateRange[[2]]
   cycles <- as.integer(dateRange[[3]])
-  minCycle <- min(cycles)
-  maxCycle <- max(cycles)
+  if(length(cycles)==0) {
+    cycles <- NULL
+    minCycle <- 0
+    maxCycle <- 24
+  } else {
+    minCycle <- min(cycles)
+    maxCycle <- max(cycles)
+  }
   startDtg <- date2dtg(startDate, minCycle)
   endDtg <- date2dtg(endDate, maxCycle)
   list(startDtg, endDtg, cycles)
@@ -61,7 +67,14 @@ formatDtg <- function(dtg) {
     if (dtg[[1]] == dtg[[2]]) {
       sprintf("[%s, (%s)]", dtg[[1]], paste(dtg[[3]], collapse=", "))
     } else {
-      sprintf("[%s\u2013%s, (%s)]", dtg[[1]], dtg[[2]], paste(dtg[[3]], collapse=", "))
+      if(length(dtg[[3]])>0) {
+        sprintf(
+          "[%s\u2013%s, (%s)]",
+          dtg[[1]], dtg[[2]], paste(dtg[[3]], collapse=", ")
+        )
+      } else {
+        sprintf("[%s\u2013%s]", dtg[[1]], dtg[[2]])
+      }
     }
   } else {
     flog.error("Invalid dtg selection")

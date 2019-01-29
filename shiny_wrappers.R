@@ -66,9 +66,9 @@ updateSelectInputWrapper <- function(
   currentLabel <- allMenuLabels[[inputId]]
   if(is.null(currentLabel)) currentLabel <- getDefLabel(inputId)
 
-  currLabelFlaggedAsNotCached <- grepl(notCachedLabelMsg,currentLabel)==TRUE
+  currLabelFlaggedAsNotCached <- isTRUE(grepl(notCachedLabelMsg,currentLabel))
   needsLabelChange <- {
-    (!is.null(label) && label!=currentLabel) ||
+    isTRUE(label!=currentLabel) ||
     (choicesFoundIncache && currLabelFlaggedAsNotCached) ||
     (!choicesFoundIncache && !currLabelFlaggedAsNotCached)
   }
