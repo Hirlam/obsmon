@@ -142,6 +142,7 @@ sourceObsmonFiles <- function() {
   source("utils.R")
   source("sql.R")
   source("database.R")
+  source("src/cache_routines.R")
   source("experiments.R")
   source("src/plots/colors.R")
   source("src/plots/plots.R")
