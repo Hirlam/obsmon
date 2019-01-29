@@ -867,7 +867,7 @@ shinyServer(function(input, output, session) {
     do.call(tagList, plotOutList)
   })
   # (ii) Maps
-  output$MapAndMapTitleContainer <- renderUI({
+  output$quickPlotsMapAndMapTitleContainer <- renderUI({
     mapAndMapTitleOutList <- lapply(seq_along(quickPlot()), function(iPlot) {
       mapId <- quickPlotsGenId(iPlot, type="map")
       mapTitleId <- quickPlotsGenId(iPlot, type="mapTitle")
