@@ -139,18 +139,18 @@ setPackageOptions <- function(config) {
 
 sourceObsmonFiles <- function() {
   source("observation_definitions.R")
-  source("colors.R")
   source("utils.R")
   source("sql.R")
   source("database.R")
   source("experiments.R")
-  source("plots.R")
-  source("plots_statistical.R")
-  source("plots_timeseries.R")
-  source("plots_maps.R")
-  source("plots_diagnostic.R")
-  source("windspeed.R")
-  source("plots_multi.R")
+  source("src/plots/colors.R")
+  source("src/plots/plots.R")
+  source("src/plots/plots_statistical.R")
+  source("src/plots/plots_timeseries.R")
+  source("src/plots/plots_maps.R")
+  source("src/plots/plots_diagnostic.R")
+  source("src/plots/windspeed.R")
+  source("src/plots/plots_multi.R")
 }
 
 fillInDefault <- function(config, key, default) {
