@@ -2,8 +2,8 @@
 initFileSourced <- TRUE
 
 if(!exists("runningAsStandalone") || runningAsStandalone==FALSE) {
-  source("src_info_obsmon.R")
-  source('lib_paths_config.R')
+  source("src/src_info_obsmon.R")
+  source('src/lib_paths_config.R')
   runningAsStandalone <- FALSE
 }
 
@@ -138,11 +138,11 @@ setPackageOptions <- function(config) {
 }
 
 sourceObsmonFiles <- function() {
-  source("observation_definitions.R")
+  source("src/observation_definitions.R")
   source("src/utils.R")
   source("src/sqlite/sqlite_wrappers.R")
   source("src/sqlite/cache_routines.R")
-  source("experiments.R")
+  source("src/experiments.R")
   source("src/plots/colors.R")
   source("src/plots/plots.R")
   source("src/plots/plots_statistical.R")

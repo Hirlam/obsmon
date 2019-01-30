@@ -15,7 +15,7 @@ if(obsmonSrcDir=="" || is.na(obsmonSrcDir)) obsmonSrcDir<-dirname(thisFilePath)
 setwd(obsmonSrcDir)
 
 # Printing startup info such as code name, version and git info
-source("src_info_obsmon.R")
+source("src/src_info_obsmon.R")
 cat(obsmonBanner)
 cat("Initializing Obsmon...\n")
 
@@ -23,7 +23,7 @@ cat("Initializing Obsmon...\n")
 # We will do this here instead of inside init.R because we need this to be able to
 # load argparse, which is used when running this executable, but not used when
 # running in a shiny server
-source('lib_paths_config.R')
+source('src/lib_paths_config.R')
 
 # Parsing command line arguments
 tryCatch(
