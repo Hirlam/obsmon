@@ -66,58 +66,6 @@ for(dir in c(systemConfigDir, systemCacheDirPath)) {
   dir.create(dir, recursive=FALSE, showWarnings=FALSE, mode="0755")
 }
 
-runAppHandlingBusyPort <- function(
-  appDir=getwd(), defaultPort=getOption("shiny.port"),
-  launch.browser=getOption("shiny.launch.browser", interactive()),
-  host = getOption("shiny.host", "127.0.0.1"),
-  maxNAtt=10,
-  ...
-) {
-
-  exitMsg <- paste(
-               "===============",
-               "Exiting Obsmon.",
-               "===============",
-               "",
-               sep="\n"
-             )
-  on.exit(cat(exitMsg), add=TRUE)
-
-  port <- defaultPort
-  success <- FALSE
-  nAtt <- 0
-  lisOnMsgStart <- 'Listening on '
-  lisOnMsgMarker <- "------------------------------------"
-  while (!success & (nAtt<maxNAtt)) {
-    tryCatch(
-      {
-        cat("\n")
-        cat(paste(lisOnMsgMarker, "\n", sep=""))
-        lisOnMsg <- paste(lisOnMsgStart,"http://",host,":",port,"\n", sep='')
-        cat(lisOnMsg)
-        cat(paste(lisOnMsgMarker, "\n", sep=""))
-        cat("\n")
-
-        runApp(appDir, launch.browser=launch.browser, port=port, ...)
-        success <- TRUE
-      },
-      error=function(w) {
-        flog.warn(paste('Failed to create server using port', port, sep=" "))
-        port <<- sample(1024:65535, 1)
-        lisOnMsgStart <<- "Port updated: Listening on "
-        lisOnMsgMarker <<- "-------------------------------------------------"
-      }
-    )
-    nAtt <- nAtt + 1
-  }
-
-  if(!success) {
-    msg <- paste("Failed to create server after", nAtt, "attempts.\n",sep=" ")
-    msg <- paste(msg, "Stopping now.\n", sep=" ")
-    stop(msg)
-  }
-}
-
 setPackageOptions <- function(config) {
   options(shiny.usecairo=TRUE)
   pdf(NULL)
@@ -151,6 +99,7 @@ sourceObsmonFiles <- function() {
   source("src/plots/plots_diagnostic.R")
   source("src/plots/windspeed.R")
   source("src/plots/plots_multi.R")
+  source("src/shiny_wrappers.R")
 }
 
 fillInDefault <- function(config, key, default) {

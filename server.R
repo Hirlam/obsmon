@@ -39,8 +39,6 @@ getFilePathsToCache <- function(db, dtgs) {
 }
 
 shinyServer(function(input, output, session) {
-  # Source some useful shiny-related helper functions and wrappers
-  source("src/shiny_wrappers.R")
   # User options parsed from config file
   config <- obsmonConfig
 
