@@ -83,7 +83,7 @@ formatDtg <- function(dtg) {
 
 # Get a statID --> stationLabel list for synop obs
 readSynopStations <- function() {
-  raw <- read.table("allsynop.list.csv",
+  raw <- read.table(file.path("data", "allsynop.list.csv"),
                     sep=";", quote="",
                     col.names=c("statids", "designation"),
                     colClasses="character", encoding="UTF-8")
