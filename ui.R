@@ -1,5 +1,3 @@
-if(!exists("initFileSourced")) source("init.R")
-
 jscode <- "
 shinyjs.disableTab = function(name) {
   var tab = $('.nav li a[data-value=' + name + ']');
