@@ -42,7 +42,8 @@ createCacheFiles <- function(cacheDir, dbType=dbTypesRecognised, reset=FALSE){
       }
       dir.create(cacheDir, recursive=TRUE, showWarnings=FALSE)
 
-      cacheTemplate <- file.path('sqlite', 'cache_db_template.db')
+      cacheTemplateFilesDir <- file.path("src", "sqlite", "cache_template")
+      cacheTemplate <- file.path(cacheTemplateFilesDir, 'cache_db_template.db')
       dbTables <- c('obsmon', 'usage')
       cacheFilePaths <- file.path(cacheDir, sprintf("%s.db",
         apply(expand.grid(dbType,dbTables),1,function(x)paste(x,collapse="_"))

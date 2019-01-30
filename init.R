@@ -140,9 +140,8 @@ setPackageOptions <- function(config) {
 sourceObsmonFiles <- function() {
   source("observation_definitions.R")
   source("src/utils.R")
-  source("sql.R")
-  source("database.R")
-  source("src/cache_routines.R")
+  source("src/sqlite/sqlite_wrappers.R")
+  source("src/sqlite/cache_routines.R")
   source("experiments.R")
   source("src/plots/colors.R")
   source("src/plots/plots.R")
