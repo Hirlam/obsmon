@@ -12,7 +12,6 @@ obsKeyAttributes <- list(
   radar=c('statid', 'varname', 'level'),
   unknown_type=c('statid', 'obname', 'varname', 'satname', 'level')
 )
-
 # Cache file locking
 cacheFileLocks <- list()
 lockSignalingFpath <- function(fpath) sprintf("%s.lock", fpath)
@@ -54,6 +53,37 @@ createCacheFiles <- function(cacheDir, dbType=dbTypesRecognised, reset=FALSE){
     error=function(e) {flog.error(e); -1}
   )
   return(rtn)
+}
+
+cacheFilesLatestMdate <- function(db) {
+  # Latest modified date of cache files for a given db
+  mtimes <- c(-1)
+  for(cacheFilePath in db$cachePaths) {
+    mtime <- tryCatch(
+      file.mtime(cacheFilePath),
+      error=function(e) NULL,
+      warning=function(w) NULL
+    )
+    mtimes <- c(mtimes, mtime)
+  }
+  return(max(mtimes))
+}
+
+getFilePathsToCache <- function(db, dtgs) {
+  # Returns a selection of data file paths to be screened to info to be put
+  # in the cache, as a function of the passed active db and dtgs
+  validDtgs <- NULL
+  for(dtg in dtgs) {
+    fPath <- db$paths[dtg]
+    if(is.null(fPath) || is.na(fPath) || length(fPath)==0) next
+    validDtgs <- c(validDtgs, dtg)
+  }
+  fPathsToCache <- tryCatch(
+    db$paths[validDtgs],
+    error=function(e) {flog.error(e); NULL}
+  )
+  if(length(fPathsToCache)==0) fPathsToCache <- NULL
+  return(fPathsToCache)
 }
 
 putObservationsInCache <- function(sourceDbPath, cacheDir, replaceExisting=FALSE) {

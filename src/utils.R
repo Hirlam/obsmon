@@ -1,3 +1,15 @@
+clamp <- function(value, min, max, default=max) {
+  if (is.null(value)) {
+    default
+  } else if (value < min) {
+    min
+  } else if (value > max) {
+    max
+  } else {
+    value
+  }
+}
+
 slugify <- function(string) {
   normalized <- stri_trans_general(string, "nfkd; Latin-ASCII; lower")
   slugified <- stri_replace_all_charclass(normalized, "\\p{WHITE SPACE}", "_")
