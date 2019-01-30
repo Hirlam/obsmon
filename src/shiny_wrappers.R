@@ -49,21 +49,24 @@ getSelection <- function(session, inputId, choices, select=c("NORMAL", "ALL", "N
            c()
          })
 }
-# allMenuLabels and allMenuChoices will keep track of the current
-# labels and choices in the UI menus. It seems shiny doesn't have
-# a method to return those.
-allMenuLabels <- list()
-allMenuChoices <- list()
-# Updates a selectInput, preserving the selected
-# option(s) if available
+
 updateSelectInputWrapper <- function(
   session, inputId, label=NULL, choices=NULL, selected=NULL,
   choicesFoundIncache=TRUE, ...
 ){
+  # Update a selectInputs while preserving the selected options(s)
+  # (if any) as well as keeping track of current choices and labels
+
+  # Attaching new lists "userData$UiLabels" and "userData$UiChoices" to
+  # session if this is the 1st time this routine is run in the session.
+  # These lists will keep track of the current labels and choices in the
+  # UI menus. It seems shiny doesn't have a native method to return those.
+  if(is.null(session$userData$UiLabels)) session$userData$UiLabels <- list()
+  if(is.null(session$userData$UiChoices)) session$userData$UiChoices <- list()
 
   # First, update label
   notCachedLabelMsg <- "(cache info not available)"
-  currentLabel <- allMenuLabels[[inputId]]
+  currentLabel <- session$userData$UiLabels[[inputId]]
   if(is.null(currentLabel)) currentLabel <- getDefLabel(inputId)
 
   currLabelFlaggedAsNotCached <- isTRUE(grepl(notCachedLabelMsg,currentLabel))
@@ -78,18 +81,18 @@ updateSelectInputWrapper <- function(
     label <- gsub(notCachedLabelMsg, "", label, fixed=TRUE)
     if(!choicesFoundIncache) label <- paste(label, notCachedLabelMsg)
     updateSelectInput(session, inputId, label=label)
-    allMenuLabels[[inputId]] <<- label
+    session$userData$UiLabels[[inputId]] <- label
   }
 
   # Now, update items and choices
-  currentChoices <- allMenuChoices[[inputId]]
+  currentChoices <- session$userData$UiChoices[[inputId]]
   if(is.null(choices) || isTRUE(all.equal(choices,currentChoices)))return(NULL)
 
   selection <- getSelection(session, inputId, choices)
   updateSelectInput(
     session, inputId, choices=choices, selected=selection, label=NULL, ...
   )
-  allMenuChoices[[inputId]] <<- choices
+  session$userData$UiChoices[[inputId]] <- choices
 }
 
 
