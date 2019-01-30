@@ -2,8 +2,8 @@
 initFileSourced <- TRUE
 
 if(!exists("runningAsStandalone") || runningAsStandalone==FALSE) {
-  source("src_info_obsmon.R")
-  source('lib_paths_config.R')
+  source("src/src_info_obsmon.R")
+  source('src/lib_paths_config.R')
   runningAsStandalone <- FALSE
 }
 
@@ -66,58 +66,6 @@ for(dir in c(systemConfigDir, systemCacheDirPath)) {
   dir.create(dir, recursive=FALSE, showWarnings=FALSE, mode="0755")
 }
 
-runAppHandlingBusyPort <- function(
-  appDir=getwd(), defaultPort=getOption("shiny.port"),
-  launch.browser=getOption("shiny.launch.browser", interactive()),
-  host = getOption("shiny.host", "127.0.0.1"),
-  maxNAtt=10,
-  ...
-) {
-
-  exitMsg <- paste(
-               "===============",
-               "Exiting Obsmon.",
-               "===============",
-               "",
-               sep="\n"
-             )
-  on.exit(cat(exitMsg), add=TRUE)
-
-  port <- defaultPort
-  success <- FALSE
-  nAtt <- 0
-  lisOnMsgStart <- 'Listening on '
-  lisOnMsgMarker <- "------------------------------------"
-  while (!success & (nAtt<maxNAtt)) {
-    tryCatch(
-      {
-        cat("\n")
-        cat(paste(lisOnMsgMarker, "\n", sep=""))
-        lisOnMsg <- paste(lisOnMsgStart,"http://",host,":",port,"\n", sep='')
-        cat(lisOnMsg)
-        cat(paste(lisOnMsgMarker, "\n", sep=""))
-        cat("\n")
-
-        runApp(appDir, launch.browser=launch.browser, port=port, ...)
-        success <- TRUE
-      },
-      error=function(w) {
-        flog.warn(paste('Failed to create server using port', port, sep=" "))
-        port <<- sample(1024:65535, 1)
-        lisOnMsgStart <<- "Port updated: Listening on "
-        lisOnMsgMarker <<- "-------------------------------------------------"
-      }
-    )
-    nAtt <- nAtt + 1
-  }
-
-  if(!success) {
-    msg <- paste("Failed to create server after", nAtt, "attempts.\n",sep=" ")
-    msg <- paste(msg, "Stopping now.\n", sep=" ")
-    stop(msg)
-  }
-}
-
 setPackageOptions <- function(config) {
   options(shiny.usecairo=TRUE)
   pdf(NULL)
@@ -138,19 +86,20 @@ setPackageOptions <- function(config) {
 }
 
 sourceObsmonFiles <- function() {
-  source("observation_definitions.R")
-  source("colors.R")
-  source("utils.R")
-  source("sql.R")
-  source("database.R")
-  source("experiments.R")
-  source("plots.R")
-  source("plots_statistical.R")
-  source("plots_timeseries.R")
-  source("plots_maps.R")
-  source("plots_diagnostic.R")
-  source("windspeed.R")
-  source("plots_multi.R")
+  source("src/observation_definitions.R")
+  source("src/utils.R")
+  source("src/sqlite/sqlite_wrappers.R")
+  source("src/sqlite/cache_routines.R")
+  source("src/experiments.R")
+  source("src/plots/colors.R")
+  source("src/plots/plots.R")
+  source("src/plots/plots_statistical.R")
+  source("src/plots/plots_timeseries.R")
+  source("src/plots/plots_maps.R")
+  source("src/plots/plots_diagnostic.R")
+  source("src/plots/windspeed.R")
+  source("src/plots/plots_multi.R")
+  source("src/shiny_wrappers.R")
 }
 
 fillInDefault <- function(config, key, default) {

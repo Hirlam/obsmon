@@ -1,93 +1,8 @@
-dbConnectWrapper <- function(dbpath, read_only=FALSE, showWarnings=TRUE) {
-  con <- tryCatch({
-      if(read_only) {
-          newCon<-dbConnect(RSQLite::SQLite(),dbpath,flags=RSQLite::SQLITE_RO)
-          dbExecute(newCon, "PRAGMA  journal_mode=OFF")
-          dbExecute(newCon, "PRAGMA synchronous=off")
-      } else {
-          newCon<-dbConnect(RSQLite::SQLite(),dbpath,flags=RSQLite::SQLITE_RW)
-          dbExecute(newCon, "PRAGMA foreign_keys=ON")
-      }
-      dbExecute(newCon, sprintf("PRAGMA  mmap_size=%s", 1024**3))
-      dbExecute(newCon, sprintf("PRAGMA  cache_size=%s", 1024**3))
-      # Time in milliseconds to wait before signalling that a DB is busy
-      dbExecute(newCon, "PRAGMA  busy_timeout=1000")
-      newCon
-    },
-    error=function(e) {
-      if(showWarnings) flog.error("dbConnectWrapper (file %s): %s", dbpath, e)
-      NULL
-    },
-    warning=function(w) {
-      if(showWarnings) flog.error("dbConnectWrapper (file %s): %s", dbpath, w)
-      NULL
-    }
-  )
-  return(con)
-}
+##################################################
+# Routines that are related to caching in obsmon #
+##################################################
 
-makeSingleQuery <- function(query) {
-  function(dbpath) {
-    con <- dbConnectWrapper(dbpath, read_only=TRUE)
-    res <- tryCatch(dbGetQuery(con, query),
-                    error=function(e) {
-                      flog.warn("Ignoring error querying %s: %s", dbpath, e)
-                      NULL
-                    })
-    dbDisconnect(con)
-    res
-  }
-}
-
-performQuery <- function(
-  db, query, dtgs=NULL, expandRange=TRUE, convertDTG=TRUE)
-{
-  if (is.null(dtgs)) {
-    dbpaths <- db$paths
-  } else {
-    if (expandRange) {
-      n = length(dtgs)
-      if (n==1) {
-        dbpaths <- db$paths[as.character(dtgs)]
-      } else if (n==3) {
-        range <- expandDtgRange(dtgs)
-        dbpaths <- db$paths[range[[1]] <= db$dtgs & db$dtgs <= range[[2]]]
-      } else {
-        flog.error("Invalid combination of expandRange and dtgs.")
-      }
-    } else {
-      dbpaths <- db$paths[as.character(dtgs)]
-    }
-  }
-  dbpaths <- dbpaths[!is.null(dbpaths)]
-  dbpaths <- dbpaths[file.exists(dbpaths)]
-  if (length(dbpaths)==0) {
-    flog.error("performQuery: No usable database found. Please check paths.")
-    return(NULL)
-  }
-  singleQuery <- makeSingleQuery(query)
-  res <- lapply(dbpaths, singleQuery)
-  res <- do.call(rbind, res)
-  if(convertDTG & "DTG" %in% names(res)) {
-    res$DTG <- as.POSIXct(as.character(res$DTG), format="%Y%m%d%H")
-  }
-  res
-}
-
-readSynopStations <- function() {
-  raw <- read.table("allsynop.list.csv",
-                    sep=";", quote="",
-                    col.names=c("statids", "designation"),
-                    colClasses="character", encoding="UTF-8")
-  synopStations <- raw$designation
-  names(synopStations) <- raw$statids
-  synopStations
-}
-synopStations <- readSynopStations()
-
-### New caching stuff starts here ####
-#
-# These are attributes that will be cached and which will be used, along with
+# Define attributes that will be cached and which will be used, along with
 # a DTG, to identify the observations
 obsKeyAttributes <- list(
   upper_air=c('statid', 'obname', 'varname', 'level'),
@@ -97,7 +12,7 @@ obsKeyAttributes <- list(
   radar=c('statid', 'varname', 'level'),
   unknown_type=c('statid', 'obname', 'varname', 'satname', 'level')
 )
-
+# Cache file locking
 cacheFileLocks <- list()
 lockSignalingFpath <- function(fpath) sprintf("%s.lock", fpath)
 lockCacheFile <- function(fpath) {
@@ -115,6 +30,7 @@ cacheFileIsLocked <- function(fpath) {
 }
 
 createCacheFiles <- function(cacheDir, dbType=dbTypesRecognised, reset=FALSE){
+  # Routine to initialise cache files
   rtn <- tryCatch({
       if(reset) {
         flog.warn(paste0("createCacheFiles: Cache reset requested. ",
@@ -125,7 +41,8 @@ createCacheFiles <- function(cacheDir, dbType=dbTypesRecognised, reset=FALSE){
       }
       dir.create(cacheDir, recursive=TRUE, showWarnings=FALSE)
 
-      cacheTemplate <- file.path('sqlite', 'cache_db_template.db')
+      cacheTemplateFilesDir <- file.path("src", "sqlite", "cache_template")
+      cacheTemplate <- file.path(cacheTemplateFilesDir, 'cache_db_template.db')
       dbTables <- c('obsmon', 'usage')
       cacheFilePaths <- file.path(cacheDir, sprintf("%s.db",
         apply(expand.grid(dbType,dbTables),1,function(x)paste(x,collapse="_"))
@@ -138,7 +55,41 @@ createCacheFiles <- function(cacheDir, dbType=dbTypesRecognised, reset=FALSE){
   return(rtn)
 }
 
+cacheFilesLatestMdate <- function(db) {
+  # Latest modified date of cache files for a given db
+  mtimes <- c(-1)
+  for(cacheFilePath in db$cachePaths) {
+    mtime <- tryCatch(
+      file.mtime(cacheFilePath),
+      error=function(e) NULL,
+      warning=function(w) NULL
+    )
+    mtimes <- c(mtimes, mtime)
+  }
+  return(max(mtimes))
+}
+
+getFilePathsToCache <- function(db, dtgs) {
+  # Returns a selection of data file paths to be screened to info to be put
+  # in the cache, as a function of the passed active db and dtgs
+  validDtgs <- NULL
+  for(dtg in dtgs) {
+    fPath <- db$paths[dtg]
+    if(is.null(fPath) || is.na(fPath) || length(fPath)==0) next
+    validDtgs <- c(validDtgs, dtg)
+  }
+  fPathsToCache <- tryCatch(
+    db$paths[validDtgs],
+    error=function(e) {flog.error(e); NULL}
+  )
+  if(length(fPathsToCache)==0) fPathsToCache <- NULL
+  return(fPathsToCache)
+}
+
 putObservationsInCache <- function(sourceDbPath, cacheDir, replaceExisting=FALSE) {
+  ###################################
+  # Main routine to perform caching #
+  ###################################
   sourceDbPath <- normalizePath(sourceDbPath, mustWork=FALSE)
   anyFailedCachingAttmpt <- FALSE
   cacheDbConsCreatedHere <- c()
@@ -390,6 +341,8 @@ putObservationsInCache <- function(sourceDbPath, cacheDir, replaceExisting=FALSE
   return(0)
 }
 
+
+# Useful wrappers
 assyncPutObsInCache <- function(sourceDbPaths, cacheDir, replaceExisting=FALSE) {
   return(future({
     for(sourceDbPath in sourceDbPaths) {
@@ -691,7 +644,8 @@ getStationsFromCache <- function(db, dates, cycles, obname, variable) {
   return(sort(unique(rtn)))
 }
 
-# Wrappers
+# Routines to be used in server.R to get cached values if available
+# or return defaults otherwise
 getObnames <- function(db, category, dates, cycles) {
   rtn <- list(cached=NULL, general=NULL)
   rtn$cached <- getObnamesFromCache(db, category, dates, cycles)

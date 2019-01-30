@@ -1,58 +1,11 @@
-if(!exists("initFileSourced")) source("init.R")
-
-clamp <- function(value, min, max, default=max) {
-  if (is.null(value)) {
-    default
-  } else if (value < min) {
-    min
-  } else if (value > max) {
-    max
-  } else {
-    value
-  }
-}
-
-cacheFilesLatestMdate <- function(db) {
-  mtimes <- c(-1)
-  for(cacheFilePath in db$cachePaths) {
-    mtime <- tryCatch(
-      file.mtime(cacheFilePath),
-      error=function(e) NULL,
-      warning=function(w) NULL
-    )
-    mtimes <- c(mtimes, mtime)
-  }
-  return(max(mtimes))
-}
-
-getFilePathsToCache <- function(db, dtgs) {
-  validDtgs <- NULL
-  for(dtg in dtgs) {
-    fPath <- db$paths[dtg]
-    if(is.null(fPath) || is.na(fPath) || length(fPath)==0) next
-    validDtgs <- c(validDtgs, dtg)
-  }
-  fPathsToCache <- tryCatch(
-    db$paths[validDtgs],
-    error=function(e) {flog.error(e); NULL}
-  )
-  if(length(fPathsToCache)==0) fPathsToCache <- NULL
-  return(fPathsToCache)
-}
-
 shinyServer(function(input, output, session) {
-  # Source some useful shiny-related helper functions and wrappers
-  source("shiny_wrappers.R")
-  # User options parsed from config file
-  config <- obsmonConfig
+  # Start GUI with all inputs disabled.
+  # They will be enabled once experiments are loaded
+  isolate(disableShinyInputs(input, except="experiment"))
 
   ############################################################################
   #                          Handling of main tab                            #
   ############################################################################
-
-  # Start GUI with all inputs disabled.
-  # They will be enabled once experiments are loaded
-  isolate(disableShinyInputs(input, except="experiment"))
 
   # Deciding whether to show or hide cache-related options.
   # It is advisable not to show them by default -- especially when running on
@@ -65,7 +18,7 @@ shinyServer(function(input, output, session) {
   # having to restart obsmon (useful when running on servers)
   output$showCacheOptions <- renderText({
     file.exists(".obsmon_show_cache_options") ||
-    config$general[["showCacheOptions"]]
+    obsmonConfig$general[["showCacheOptions"]]
   })
   outputOptions(output, "showCacheOptions", suspendWhenHidden = FALSE)
 
@@ -600,9 +553,9 @@ shinyServer(function(input, output, session) {
   )
 
 
-  ########
-  # Plots#
-  ########
+  #########
+  # Plots #
+  #########
   currentPlotPid <- reactiveVal(-1)
   plotStartedNotifId <- reactiveVal(-1)
   plotInterrupted <- reactiveVal()
@@ -708,7 +661,7 @@ shinyServer(function(input, output, session) {
   ############################################################################
 
   # Add multiPlots tab to UI if multiPlots are available
-  if(!is.null(config$multiPlots)) {
+  if(!is.null(obsmonConfig$multiPlots)) {
     appendTab("appNavbarPage", 
       tabPanel("User-configured multiPlots",
         value="multiPlotsTab", multiPlotsTab())
@@ -716,14 +669,14 @@ shinyServer(function(input, output, session) {
   }
 
   multiPlotChoices <- c()
-  for(plotConfig in config$multiPlots) {
+  for(plotConfig in obsmonConfig$multiPlots) {
     multiPlotChoices <- c(multiPlotChoices, plotConfig$displayName)
   }
   updateSelectInput(session, "multiPlotTitle", choices=multiPlotChoices)
 
   multiPlotConfigInfo <- eventReactive(input$multiPlotTitle, {
     pConfig <- NULL
-    for(pConf in config$multiPlots) {
+    for(pConf in obsmonConfig$multiPlots) {
       if(!pConf$displayName==input$multiPlotTitle) next
       pConfig <- pConf
       break

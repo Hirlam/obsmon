@@ -1,3 +1,15 @@
+clamp <- function(value, min, max, default=max) {
+  if (is.null(value)) {
+    default
+  } else if (value < min) {
+    min
+  } else if (value > max) {
+    max
+  } else {
+    value
+  }
+}
+
 slugify <- function(string) {
   normalized <- stri_trans_general(string, "nfkd; Latin-ASCII; lower")
   slugified <- stri_replace_all_charclass(normalized, "\\p{WHITE SPACE}", "_")
@@ -80,6 +92,18 @@ formatDtg <- function(dtg) {
     flog.error("Invalid dtg selection")
   }
 }
+
+# Get a statID --> stationLabel list for synop obs
+readSynopStations <- function() {
+  raw <- read.table(file.path("data", "allsynop.list.csv"),
+                    sep=";", quote="",
+                    col.names=c("statids", "designation"),
+                    colClasses="character", encoding="UTF-8")
+  synopStations <- raw$designation
+  names(synopStations) <- raw$statids
+  synopStations
+}
+synopStations <- readSynopStations()
 
 units <- list(
     "u"    = "m/s",

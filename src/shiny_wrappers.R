@@ -1,3 +1,55 @@
+runAppHandlingBusyPort <- function(
+  # Wrapper to shiny's runApp
+  appDir=getwd(), defaultPort=getOption("shiny.port"),
+  launch.browser=getOption("shiny.launch.browser", interactive()),
+  host = getOption("shiny.host", "127.0.0.1"),
+  maxNAtt=10,
+  ...
+) {
+
+  exitMsg <- paste(
+               "===============",
+               "Exiting Obsmon.",
+               "===============",
+               "",
+               sep="\n"
+             )
+  on.exit(cat(exitMsg), add=TRUE)
+
+  port <- defaultPort
+  success <- FALSE
+  nAtt <- 0
+  lisOnMsgStart <- 'Listening on '
+  lisOnMsgMarker <- "------------------------------------"
+  while (!success & (nAtt<maxNAtt)) {
+    tryCatch(
+      {
+        cat("\n")
+        cat(paste(lisOnMsgMarker, "\n", sep=""))
+        lisOnMsg <- paste(lisOnMsgStart,"http://",host,":",port,"\n", sep='')
+        cat(lisOnMsg)
+        cat(paste(lisOnMsgMarker, "\n", sep=""))
+        cat("\n")
+
+        runApp(appDir, launch.browser=launch.browser, port=port, ...)
+        success <- TRUE
+      },
+      error=function(w) {
+        flog.warn(paste('Failed to create server using port', port, sep=" "))
+        port <<- sample(1024:65535, 1)
+        lisOnMsgStart <<- "Port updated: Listening on "
+        lisOnMsgMarker <<- "-------------------------------------------------"
+      }
+    )
+    nAtt <- nAtt + 1
+  }
+
+  if(!success) {
+    msg <- paste("Failed to create server after", nAtt, "attempts.\n",sep=" ")
+    msg <- paste(msg, "Stopping now.\n", sep=" ")
+    stop(msg)
+  }
+}
 
 # Showing messages in the UI
 signalError <- function(message, title="Error") {
@@ -49,21 +101,24 @@ getSelection <- function(session, inputId, choices, select=c("NORMAL", "ALL", "N
            c()
          })
 }
-# allMenuLabels and allMenuChoices will keep track of the current
-# labels and choices in the UI menus. It seems shiny doesn't have
-# a method to return those.
-allMenuLabels <- list()
-allMenuChoices <- list()
-# Updates a selectInput, preserving the selected
-# option(s) if available
+
 updateSelectInputWrapper <- function(
   session, inputId, label=NULL, choices=NULL, selected=NULL,
   choicesFoundIncache=TRUE, ...
 ){
+  # Update a selectInputs while preserving the selected options(s)
+  # (if any) as well as keeping track of current choices and labels
+
+  # Attaching new lists "userData$UiLabels" and "userData$UiChoices" to
+  # session if this is the 1st time this routine is run in the session.
+  # These lists will keep track of the current labels and choices in the
+  # UI menus. It seems shiny doesn't have a native method to return those.
+  if(is.null(session$userData$UiLabels)) session$userData$UiLabels <- list()
+  if(is.null(session$userData$UiChoices)) session$userData$UiChoices <- list()
 
   # First, update label
   notCachedLabelMsg <- "(cache info not available)"
-  currentLabel <- allMenuLabels[[inputId]]
+  currentLabel <- session$userData$UiLabels[[inputId]]
   if(is.null(currentLabel)) currentLabel <- getDefLabel(inputId)
 
   currLabelFlaggedAsNotCached <- isTRUE(grepl(notCachedLabelMsg,currentLabel))
@@ -78,18 +133,18 @@ updateSelectInputWrapper <- function(
     label <- gsub(notCachedLabelMsg, "", label, fixed=TRUE)
     if(!choicesFoundIncache) label <- paste(label, notCachedLabelMsg)
     updateSelectInput(session, inputId, label=label)
-    allMenuLabels[[inputId]] <<- label
+    session$userData$UiLabels[[inputId]] <- label
   }
 
   # Now, update items and choices
-  currentChoices <- allMenuChoices[[inputId]]
+  currentChoices <- session$userData$UiChoices[[inputId]]
   if(is.null(choices) || isTRUE(all.equal(choices,currentChoices)))return(NULL)
 
   selection <- getSelection(session, inputId, choices)
   updateSelectInput(
     session, inputId, choices=choices, selected=selection, label=NULL, ...
   )
-  allMenuChoices[[inputId]] <<- choices
+  session$userData$UiChoices[[inputId]] <- choices
 }
 
 

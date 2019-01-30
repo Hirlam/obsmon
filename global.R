@@ -1,3 +1,6 @@
+# This file is used by shiny. Whatever is put in here becomes visible
+# to both ui.R and server.R
+if(!exists("initFileSourced")) source("src/init.R")
 
 defaultMenuLabels <- list(
   experiment="Experiment",
