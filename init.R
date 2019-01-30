@@ -139,7 +139,7 @@ setPackageOptions <- function(config) {
 
 sourceObsmonFiles <- function() {
   source("observation_definitions.R")
-  source("utils.R")
+  source("src/utils.R")
   source("sql.R")
   source("database.R")
   source("src/cache_routines.R")

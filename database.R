@@ -73,14 +73,3 @@ performQuery <- function(
   }
   res
 }
-
-readSynopStations <- function() {
-  raw <- read.table("allsynop.list.csv",
-                    sep=";", quote="",
-                    col.names=c("statids", "designation"),
-                    colClasses="character", encoding="UTF-8")
-  synopStations <- raw$designation
-  names(synopStations) <- raw$statids
-  synopStations
-}
-synopStations <- readSynopStations()
