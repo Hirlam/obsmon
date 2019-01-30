@@ -24,7 +24,7 @@ plotTitle.plotDiagnostic <- function(p, plotRequest, plotData) {
   expName <- plotRequest$expName
   obtype <- plotRequest$criteria$obname
   station <- plotRequest$criteria$station
-  stationLabel <- plotRequest$criteria$info$stationLabel
+  stationLabel <- plotData$statLabel
   title <- sprintf("%s: %s %s %s",
                    expName, p$name, stationLabel, dtg)
   title
@@ -49,7 +49,7 @@ doPlot.plotDiagnostic <- function(p, plotRequest, plotData) {
   compDf <- data.frame("Date"=dtg,
                        "obs"=obs,
                        "fg"=obs-fgDep)
-  hasMinimization <- plotRequest$dbName %in% c("ecmaSfc", "ccma")
+  hasMinimization <- plotRequest$dbType %in% c("ecma_sfc", "ccma")
   if (hasMinimization) {
     compDf["an"] <- obs-anDep
   }

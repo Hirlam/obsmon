@@ -1,5 +1,3 @@
-if(!exists("initFileSourced")) source("init.R")
-
 jscode <- "
 shinyjs.disableTab = function(name) {
   var tab = $('.nav li a[data-value=' + name + ']');
@@ -17,7 +15,7 @@ shinyjs.enableTab = function(name) {
 }
 "
 
-css <- "
+appCSS <- "
 .nav li a.disabled {
   background-color: #aaa !important;
   color: #333 !important;
@@ -38,156 +36,16 @@ css <- "
 }
 "
 
-shinyUI(
-    fluidPage(
-        tags$head(tags$script(HTML("
-          (function() {
-            $.fn.bsDatepicker.defaults.autoclose = true;
-          })();
-        "))),
-        useShinyjs(),
-        extendShinyjs(text=jscode),
-        inlineCSS(css),
-        div(
-            id="loading-content",
-            h2(sprintf("Loading Obsmon v%s...", obsmonVersion))
-        ),
-        hidden(div(id="app-content",
-        tagList(
-            tags$head(tags$title(sprintf("Obsmon v%s", obsmonVersion))),
-            h3(sprintf("Obsmon v%s", obsmonVersion),
-               style="text-align: center;"),
-            hr()
-        ),
-        sidebarLayout(
-            sidebarPanel(
-                width=3,
-                selectInput("experiment",
-                            label="Experiment",
-                            choices=c()),
-                selectInput("category",
-                            label="Category",
-                            choices=list("Upper Air (3D-VAR/4D-VAR)"="upperAir",
-                                         "Surface (CANARI)"="surface")),
-                selectInput("odbBase",
-                            "Database",
-                            choices=c()),
-                selectInput("obtype",
-                            "Observation Type",
-                            choices=c()),
-                conditionalPanel(
-                    condition = "input.obtype == 'satem'",
-                    selectInput("sensor",
-                                "Sensor",
-                                choices=c()),
-                    selectInput("satellite",
-                                "Satellite",
-                                choices=c()),
-                    selectInput("channels",
-                                tags$div("Channels",
-                                         "(Select",
-                                         actionLink("channelsSelectAll", "all"),
-                                         actionLink("channelsSelectNone", "none"),
-                                         ")"
-                                         ),
-                                choices=c(),
-                                multiple=TRUE,
-                                selectize=FALSE)
-                ),
-                conditionalPanel(
-                    condition = "input.obtype != 'satem'",
-                    selectInput("variable",
-                                "Variable",
-                                choices=c()),
-                    selectInput("levels",
-                                tags$div("Levels",
-                                         "(Select",
-                                         actionLink("levelsSelectStandard", "standard"),
-                                         actionLink("levelsSelectAll", "all"),
-                                         actionLink("levelsSelectNone", "none"),
-                                         ")"
-                                         ),
-                                choices=c(),
-                                multiple=TRUE,
-                                selectize=FALSE),
-                    selectInput("station",
-                                "Station",
-                                choices=c())
-                ),
-                selectInput("plottype",
-                            "Type of Plot",
-                            choices=c()),
-                conditionalPanel(
-                    condition = "output.dateType == 'single'",
-                    fluidRow(
-                        column(8,
-                               dateInput("date", "Date")
-                               ),
-                        column(4,
-                               selectInput("cycle",
-                                           label="Cycle",
-                                           choices=c()))
-                    )
-                ),
-                conditionalPanel(
-                    condition = "output.dateType == 'range'",
-                    dateRangeInput("dateRange",
-                                   label="Date Range"),
-                    checkboxGroupInput("cycles",
-                                       label=tags$div("Cycles",
-                                                      "(Select",
-                                                      actionLink("cyclesSelectAll", "all"),
-                                                      actionLink("cyclesSelectNone", "none"),
-                                                      ")"
-                                                      ),
-                                       inline=TRUE,
-                                       choices=c())
-                ),
-                actionButton("doPlot", "Plot", width="100%")
-            ),
-            mainPanel(
-                width=9,
-                tabsetPanel(
-                    id="mainArea",
-                    tabPanel(
-                        "Plot",
-                        value="plotTab",
-                        fluidRow(
-                            column(12, align="center",
-                                   tags$head(tags$style("#plot{height:80vh !important;}")),
-                                   plotOutput(outputId="plot", height="auto", width="auto"),
-                                   tags$style(type="text/css", "body { overflow-y: scroll; }")
-                                   )
-                        )
-                    ),
-                    tabPanel(
-                        "Map",
-                        value="mapTab",
-                        fluidRow(
-                            column(12,
-                                   textOutput("mapTitle"),
-                                   tags$style(type="text/css", ".shiny-text-output { text-align: center; }")
-                                   )
-                        ),
-                        fluidRow(
-                            column(12, align="center",
-                                   tags$head(tags$style("#map{height:80vh !important;}")),
-                                   leafletOutput(outputId="map", height="auto", width="auto"),
-                                   tags$style(type="text/css", "body { overflow-y: scroll; }")
-                                   )
-                        )
-                    ),
-                    tabPanel(
-                        value="dataTab",
-                        "Query and data",
-                        wellPanel(h5("Query used:"),
-                                  textOutput("queryUsed")
-                                  ),
-                        h5("Data:"),
-                        dataTableOutput("dataTable")
-                    )
-                )
-            )
-        )))
+shinyUI(ui=tagList(
+  # Some definitions that apply to all tabs
+  useShinyjs(),
+  extendShinyjs(text=jscode),
+  inlineCSS(appCSS),
+  div(id="loading-content",h2(sprintf("Loading Obsmon v%s...",obsmonVersion))),
+  # The page
+  hidden(div(id="app-content",
+    navbarPage(title=paste0("Obsmon v", obsmonVersion), id="appNavbarPage",
+      tabPanel("Main", value="mainTab", mainTab())
     )
-)
+  ))
+))

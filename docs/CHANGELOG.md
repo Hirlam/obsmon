@@ -4,6 +4,45 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
+## [Unreleased]
+### Added
+- User-configured "multiPlots"
+    - Produce one or more pre-configured plots at once
+    - Similar idea as the earlier "pre-defined plots"
+        - But configurable by user via config.toml file
+- "Cancel plot" button (appears only after clicking in "Plot")
+- New config options supported (to be set under the "general" section)
+    - initCheckDataExists (true/false, default: false)
+      - Assert, at initialisation time,  weather or not all data files for all experiments exist
+    - showCacheOptions (true/false, default: false): to show/hide advanced cache-related options
+        - Options can also be shown by creating a file named ".obsmon_show_cache_options"
+          in the obsmon directory
+    - maxExtraParallelProcs: control max number of parallel tasks
+        - Can also be set via env var OBSMON_MAX_N_EXTRA_PROCESSES
+
+### Fixed
+- Show timezone in dates at the end of plot titles instead of "Z"
+- Station labels in maps are now consistent with the ones shown in the UI
+
+### Changed
+- Experiment path specification via "path" keyword in config file
+    - Old "baseDir" and "experiment" now deprecated and will be ignored
+        - Warning issued in this case
+- Obsmon can now work even if observations are not cached
+    - Auto-discovery cache is now performed only for selected date(s) and cycle(s)
+        - Caching starts automatically when a new DTG, experiment or database is selected
+        - While cache is not finished, the fields in the GUI are populated with all possible
+          values they may have
+        - The GUI is refreshed once cache finishes as to only show choices available according
+          to the relevant data files
+- Some UI redesign
+- Show a spinner instead of a progress bar when an output is being prepared
+- Allow selection of multiple stations
+
+### Removed
+- Progress bars from standard output
+
+
 ## [2.3.0] 2018-10-26
 ### Added
 - Option to select only standard levels/channels
