@@ -71,7 +71,7 @@ setPackageOptions <- function(config) {
   pdf(NULL)
   flog.appender(appender.file(stderr()), 'ROOT')
   logLevel <- parse(text=config$general$logLevel)[[1]]
-  if(exists("args") && isTRUE(args$debug)) logLevel <- DEBUG
+  if(exists("cmdLineArgs") && isTRUE(cmdLineArgs$debug)) logLevel <- DEBUG
   flog.threshold(logLevel)
   # Options controlling parallelism
   maxExtraParallelProcs <- as.integer(config$general$maxExtraParallelProcs)
