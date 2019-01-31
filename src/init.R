@@ -1,6 +1,8 @@
 # Flagging that this file has been sourced
 initFileSourced <- TRUE
 
+thisAppDir <- getwd()
+
 if(!exists("runningAsStandalone") || runningAsStandalone==FALSE) {
   source("src/src_info_obsmon.R")
   source('src/lib_paths_config.R')
@@ -23,13 +25,13 @@ userName <- getUserName()
 
 tryCatch(
   {
+    suppressPackageStartupMessages(library(bsplus))
     suppressPackageStartupMessages(library(Cairo))
     suppressPackageStartupMessages(library(DBI))
-    suppressPackageStartupMessages(library(dplyr))
     suppressPackageStartupMessages(library(dbplyr))
+    suppressPackageStartupMessages(library(dplyr))
     suppressPackageStartupMessages(library(flock))
     suppressPackageStartupMessages(library(futile.logger))
-    suppressPackageStartupMessages(library(promises))
     suppressPackageStartupMessages(library(future))
     suppressPackageStartupMessages(library(ggplot2))
     suppressPackageStartupMessages(library(grid))
@@ -38,13 +40,13 @@ tryCatch(
     suppressPackageStartupMessages(library(methods))
     suppressPackageStartupMessages(library(png))
     suppressPackageStartupMessages(library(pryr))
+    suppressPackageStartupMessages(library(promises))
     suppressPackageStartupMessages(library(RcppTOML))
     suppressPackageStartupMessages(library(reshape2))
     suppressPackageStartupMessages(library(shiny))
-    suppressPackageStartupMessages(library(shinyjs))
     suppressPackageStartupMessages(library(shinycssloaders))
+    suppressPackageStartupMessages(library(shinyjs))
     suppressPackageStartupMessages(library(stringi))
-    suppressPackageStartupMessages(library(bsplus))
     suppressPackageStartupMessages(library(V8))
   },
   error=function(e) stop(paste(e, libPathsMsg[['error']], sep="\n"))
@@ -143,10 +145,10 @@ fillInDefaults <- function(config) {
 getValidConfigFilePath <- function(verbose=FALSE) {
   
   configFileDefBasename <- "config.toml"
-  exampleConfigFilePath <- normalizePath("config.toml.example", mustWork=FALSE)
+  exampleConfigFilePath <- file.path(thisAppDir,"docs","config.toml.example")
 
   userEnvConfigPath <- Sys.getenv("OBSMON_CONFIG_FILE")
-  obsmonSrcDirConfigPath <- normalizePath(configFileDefBasename, mustWork=FALSE)
+  obsmonSrcDirConfigPath <- file.path(thisAppDir, configFileDefBasename)
   sysDirConfigPath <- file.path(systemConfigDir, configFileDefBasename)
   confOrder <- c(userEnvConfigPath, obsmonSrcDirConfigPath, sysDirConfigPath)
 
@@ -159,18 +161,16 @@ getValidConfigFilePath <- function(verbose=FALSE) {
   }
 
   if(is.na(configPath)) {
-    msg <- paste('Config file"', configFileDefBasename, '"not found.\n')
-    msg <- paste(msg, "\n")
-    msg <- paste(msg, "Please put such file in one of the following dirs:\n")
-    msg <- paste(msg, "  >", dirname(exampleConfigFilePath), "\n")
-    msg <- paste(msg, "  >", systemConfigDir, "\n")
-    msg <- paste(msg, "\n")
-    msg <- paste(msg, "Alternatively, you can specify the full path to your")
-    msg <- paste(msg, "config file by exporting the\n")
-    msg <- paste(msg, "envvar OBSMON_CONFIG_FILE\n")
-    msg <- paste(msg, "\n")
-    msg <- paste(msg, "Please check the following config file template:\n")
-    msg <- paste(msg, "  >", exampleConfigFilePath, "\n")
+    msg <- paste0(
+      'Config file "', configFileDefBasename, '" not found.\n\n',
+      "Please create and put such a file under one of the following dirs:\n",
+      "  > ", dirname(obsmonSrcDirConfigPath), "\n",
+      "  > ", systemConfigDir, "\n\n",
+      "Alternatively, you can specify the full path to your config \n",
+      "file by exporting the envvar OBSMON_CONFIG_FILE\n\n",
+      "A config file template can be found at:\n",
+      "  > ", exampleConfigFilePath, "\n\n"
+    )
     stop(msg)
   } 
 

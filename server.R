@@ -662,10 +662,14 @@ shinyServer(function(input, output, session) {
 
   # Add multiPlots tab to UI if multiPlots are available
   if(!is.null(obsmonConfig$multiPlots)) {
-    appendTab("appNavbarPage", 
-      tabPanel("User-configured multiPlots",
-        value="multiPlotsTab", multiPlotsTab())
-      )
+    insertTab("appNavbarPage",
+      tabPanel(
+        title="User-configured multiPlots",
+        value="multiPlotsTab",
+        multiPlotsTab()
+      ),
+      target="mainTab", position="after"
+    )
   }
 
   multiPlotChoices <- c()
@@ -901,5 +905,19 @@ shinyServer(function(input, output, session) {
       })
     }
   })
+
+  ############################################################################
+  #            Add user guide tab if pdf file for guide exists               #
+  ############################################################################
+  docPath <- file.path("docs", "obsmon_documentation.pdf")
+  if(file.exists(docPath)) {
+    appendTab("appNavbarPage",
+      tabPanel(
+        title="Documentation",
+        value="docTab",
+        docTab(docPath)
+      )
+    )
+  }
 
 }) # End of shinyServer
