@@ -79,20 +79,32 @@ validateOneClickPlotConfig <- function(config) {
     validPlotType <- isTRUE(pc$plotType %in% availablePlots)
     validDatabase <- isTRUE(pc$database %in% dbTypesRecognised)
     if(!validExpt) {
-      flog.error('multiPlot "%s": experiment "%s" not recognised', pc$displayName, pc$experiment)
+      flog.error(
+        'multiPlot "%s": experiment "%s" not recognised',
+        pc$displayName, pc$experiment
+      )
       invalidExpts <- c(invalidExpts, as.character(pc$experiment))
       validExpt <- FALSE
     }
     if(!validPlotType) {
-      flog.error('multiPlot "%s": plotType "%s" not recognised', pc$displayName, pc$plotType)
+      flog.error(
+        'multiPlot "%s": plotType "%s" not recognised',
+        pc$displayName, pc$plotType
+      )
       invalidPlotNames <- c(invalidPlotNames, as.character(pc$plotType))
     }
     if(!validDatabase) {
-      flog.error('multiPlot "%s": database "%s" not recognised', pc$displayName, pc$database)
+      flog.error(
+        'multiPlot "%s": database "%s" not recognised',
+        pc$displayName, pc$database
+      )
       invalidDbs <- c(invalidDbs, as.character(pc$database))
     }
     if(!(validExpt && validPlotType && validDatabase)) {
-      flog.warn('Failed to initialise multiPlot "%s". It will be ignored', pc$displayName)
+      flog.warn(
+        'Failed to initialise multiPlot "%s". It will be ignored',
+        pc$displayName
+      )
       config$multiPlots[[iConfig]] <- NA
       next
     }
@@ -102,10 +114,32 @@ validateOneClickPlotConfig <- function(config) {
     pc$endDate <- validateEndDate(pc$endDate, pc$startDate, pc$nDays)
 
     # Process chosen obnames
-    if(is.null(pc$obs)) {
-      allObnames <- getAttrFromMetadata("obname")
-      pc$obs <- vector("list", length(allObnames))
-      names(pc$obs) <- allObnames
+    if(is.null(names(pc$obs))) {
+      # In this case, the user has either:
+      #   (i) Passed obs using the format obs = [obname1, obname2, ...],
+      #       and we'll include all variables for the passed obnames
+      #   (ii) Not specified any obname at all, in which case we'll include
+      #        all variables for all obnames according to what has been
+      #        registered in the file src/observation_definitions.R
+      obnames <- unlist(pc$obs)
+      if(is.null(obnames)) obnames <- getAttrFromMetadata("obname")
+      pc$obs <- list()
+      pc$obs[obnames] <- "all"
+      # Satem obs require special attention
+      if("satem" %in% obnames) {
+        iSatPlot <- 0
+        pc$obs$satem <- list()
+        sens.sats <- getAttrFromMetadata('sensors.sats', category="satem")
+        allSensors <- getSensorNamesFromMetadata()
+        for(sensor in allSensors) {
+          allSatellites <- getSatelliteNamesFromMetadata(sensor)
+          for(satellite in allSatellites) {
+            newSatPlotConf <- list(sensor=sensor, satellite=satellite)
+            iSatPlot <- iSatPlot + 1
+            pc$obs$satem[[iSatPlot]] <- newSatPlotConf
+          }
+        }
+      }
     }
 
     # Get list of variables to be excluded for all obs (if requested by user)
@@ -131,23 +165,24 @@ validateOneClickPlotConfig <- function(config) {
       if(!("all" %in% varsToExclude)) {
         # pc$obs contains lists of variables as function of the obnames
         vars <- pc$obs[[obname]]
-        # If user doesn't specify any vars, use all variables from metadata
-        if(is.null(vars)) vars<-getAttrFromMetadata("variables",obname=obname)
+        # If user doesn't specify any vars, use all variables from what has
+        # been registered in the file src/observation_definitions.R
+        if("all" %in% vars)vars<-getAttrFromMetadata("variables",obname=obname)
         vars <- vars[!(vars %in% varsToExclude)]
         if(length(vars)==0) vars <- NULL
       }
       pc$obs[[obname]] <- vars
     }
 
+    # Parsing level and station choices for non-satallite obs.
+    # These can either be configured individually for each varname or
+    # globally for each obname
     for(obname in names(pc$obs)) {
       # Satem entries are assumed to have been corectly setup in the config
       # file. The syntax for these is less flexible and require no further
       # parsing. Skipping them.
       if(obname=="satem") next
 
-      # Parsing level and station choices for non-satallite obs.
-      # These can either be configured individually for each varname or
-      # globally for each obname
       # (i) Parsing level choices
       levelsConfig <- pc$levels[[obname]]
       if(!is.null(levelsConfig) && !is.list(levelsConfig)) {
