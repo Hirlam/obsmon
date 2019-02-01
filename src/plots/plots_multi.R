@@ -107,24 +107,39 @@ validateOneClickPlotConfig <- function(config) {
       pc$obs <- vector("list", length(allObnames))
       names(pc$obs) <- allObnames
     }
-    # Excluding obnames if requested by user
-    obsToExclude <- pc$excludeObs
-    pc$obs <- pc$obs[!(names(pc$obs) %in% obsToExclude)]
-    obnames <- names(pc$obs)
 
-    # Populating variables
-    for(iVarList in seq_along(pc$obs)) {
-      obname <- obnames[iVarList]
-      if(obname=="satem") next # satem obs have no variable lists
-      # Each ob will contain a list of variables
-      variables <- pc$obs[[iVarList]]
-      if(is.null(variables)) {
-        allVarsForObname <- getAttrFromMetadata("variables", obname=obname)
-        pc$obs[[iVarList]] <- allVarsForObname
-      }
+    # Get list of variables to be excluded for all obs (if requested by user)
+    # pc$excludeObs contains lists of variables as function of the obnames
+    # TOML returns these lists as named vectors. Converting this one to a
+    # proper R list in order to get NULL for non-existing entries instead of
+    # getting "subscript out of bounds" errors
+    varsToExcludeAllObs <- as.list(pc$excludeObs)
+    if(length(varsToExcludeAllObs)>0 && is.null(names(varsToExcludeAllObs))) {
+      # In this case, the user has passed excludeObs using the format
+      # excludeObs = [obname1, obname2, ...] and all variables need to
+      # be excluded
+      obnames <- unlist(varsToExcludeAllObs)
+      varsToExcludeAllObs <- list()
+      varsToExcludeAllObs[obnames] <- "all"
     }
 
-    for(obname in obnames) {
+    # Populating variables
+    for(obname in names(pc$obs)) {
+      if(obname=="satem") next # satem obs have no variable lists
+      vars <- NULL
+      varsToExclude <- varsToExcludeAllObs[[obname]]
+      if(!("all" %in% varsToExclude)) {
+        # pc$obs contains lists of variables as function of the obnames
+        vars <- pc$obs[[obname]]
+        # If user doesn't specify any vars, use all variables from metadata
+        if(is.null(vars)) vars<-getAttrFromMetadata("variables",obname=obname)
+        vars <- vars[!(vars %in% varsToExclude)]
+        if(length(vars)==0) vars <- NULL
+      }
+      pc$obs[[obname]] <- vars
+    }
+
+    for(obname in names(pc$obs)) {
       # Satem entries are assumed to have been corectly setup in the config
       # file. The syntax for these is less flexible and require no further
       # parsing. Skipping them.
