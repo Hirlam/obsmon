@@ -27,7 +27,9 @@ criterion2clause <- function(name, criteria) {
   switch(
     name,
     "dtg"=dtgClause(val),
-    "levels"=sprintf("(level in (%s))",
+    "levels"=sprintf("(level IN (%s))",
+                     do.call(partial(paste, sep=", "), as.list(val))),
+    "excludeLevels"=sprintf("(level NOT IN (%s))",
                      do.call(partial(paste, sep=", "), as.list(val))),
     "station"={
       if(all(val=="")) {
