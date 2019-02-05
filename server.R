@@ -763,7 +763,8 @@ shinyServer(function(input, output, session) {
             obname="satem",
             sensor=satemConfig$sensor,
             satellite=satemConfig$satellite,
-            channels=satemConfig$channels
+            channels=satemConfig$channels,
+            excludeChannels=satemConfig$excludeChannels
           )
           iPlot <- iPlot + 1
           inputsForAllPlots[[iPlot]] <- c(plotsCommonInput, inputsThisPlotOnly)
