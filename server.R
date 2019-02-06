@@ -776,7 +776,9 @@ shinyServer(function(input, output, session) {
           inputsThisPlotOnly <- list(
             obname=obname,
             variable=variable,
-            levels=c(levelsConfig[["allVars"]], levelsConfig[[variable]]),
+            levels=sort(unique(
+              c(levelsConfig[["allVars"]], levelsConfig[[variable]])
+            )),
             station=c(stationsConfig[["allVars"]], stationsConfig[[variable]])
           )
           iPlot <- iPlot + 1

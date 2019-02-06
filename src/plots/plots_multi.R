@@ -225,10 +225,6 @@ validateOneClickPlotConfig <- function(config) {
         # If users set, e.g., "aircraft = 10" for levels in the config file
         pc$levels[[obname]] <- list(allVars=levelsConfig)
       }
-      if("allVars" %in% names(pc$levels[[obname]])) {
-        # Removing ambiguity if users set "allVars" inside config list
-        pc$levels[[obname]][!(names(pc$levels[[obname]])=="allVars")] <- NULL
-      }
       # (ii) Parsing station choices
       stationsConfig <- pc$stations[[obname]]
       obtype <- getAttrFromMetadata("category", obname=obname)
