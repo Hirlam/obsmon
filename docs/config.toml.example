@@ -56,14 +56,22 @@
     #      observations explicitely listed will be included.
     # This multi plot will include all observatrions except satem.
     excludeObs = ["satem"]
-    #############################################################
-    # Optional: Choosing which hight/pressure levels to include #
-    #############################################################
+    ############################################################################
+    # Optional: Choosing which hight/pressure levels to include and/or exclude #
+    ############################################################################
+    # You can select levels for each observation name and variable individually:
+    [multiPlots.levels.aircraft]
+        t = 100000
+        u = [27500, 45000]
+    # Or you can do this globally for any given obname (will apply to all variables)
     [multiPlots.levels]
-        # You can select levels for each observation name and variable individually:
-        aircraft = {t=[1500, 100000], u=[27500, 45000]}
-        # Or you can do this globally for any given obname:
-        synop = 10
+        synop = 0
+        pilot = [1500, 4000, 8500, 45000]
+    # You can also exclude selected levels using a similar syntax:
+    [multiPlots.excludeLevels]
+      pilot = [8500, 100000]
+    [multiPlots.excludeLevels.aircraft]
+      v = [2500, 8500, 60000, 1500]
 
 [[multiPlots]]
     displayName = "2nd Expt: CANARI NObs, synop only"

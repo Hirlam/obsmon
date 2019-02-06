@@ -771,6 +771,7 @@ shinyServer(function(input, output, session) {
         }
       } else {
         levelsConfig <- pConfig$levels[[obname]]
+        excludeLevelsConfig <- pConfig$excludeLevels[[obname]]
         stationsConfig <- pConfig$stations[[obname]]
         for(variable in unlist(pConfig$obs[iObname])) {
           inputsThisPlotOnly <- list(
@@ -778,6 +779,10 @@ shinyServer(function(input, output, session) {
             variable=variable,
             levels=sort(unique(
               c(levelsConfig[["allVars"]], levelsConfig[[variable]])
+            )),
+            excludeLevels=sort(unique(c(
+              excludeLevelsConfig[["allVars"]],
+              excludeLevelsConfig[[variable]])
             )),
             station=c(stationsConfig[["allVars"]], stationsConfig[[variable]])
           )

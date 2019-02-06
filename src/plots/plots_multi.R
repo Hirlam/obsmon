@@ -220,10 +220,17 @@ validateOneClickPlotConfig <- function(config) {
       if(obname=="satem") next
 
       # (i) Parsing level choices
+      # (i.a) Levels to be included
       levelsConfig <- pc$levels[[obname]]
       if(!is.null(levelsConfig) && !is.list(levelsConfig)) {
         # If users set, e.g., "aircraft = 10" for levels in the config file
         pc$levels[[obname]] <- list(allVars=levelsConfig)
+      }
+      # (i.b) Levels to be excluded
+      excludeLevelsConfig <- pc$excludeLevels[[obname]]
+      if(!is.null(excludeLevelsConfig) && !is.list(excludeLevelsConfig)) {
+        # If users set, e.g., "aircraft = 10" for excludeLevels in the config
+        pc$excludeLevels[[obname]] <- list(allVars=excludeLevelsConfig)
       }
       # (ii) Parsing station choices
       stationsConfig <- pc$stations[[obname]]
