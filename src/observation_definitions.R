@@ -145,6 +145,17 @@ getDefaultsForObname <- function(obname) {
     variables <- getAttrFromMetadata('variables', obname=obname)
   )
 }
+getSensorNamesFromMetadata <- function() {
+  sens.sats <- getAttrFromMetadata('sensors.sats', category="satem")
+  rtn <- gsub('\\.{1}.*', '', sens.sats)
+  return(sort(unique(rtn)))
+}
+getSatelliteNamesFromMetadata <- function(sensor) {
+  sens.sats <- getAttrFromMetadata('sensors.sats', category="satem")
+  sens.sats <- sens.sats[startsWith(sens.sats, paste0(sensor, '.'))]
+  rtn <- gsub(paste0(sensor, '.'), '', sens.sats, fixed=TRUE)
+  return(sort(unique(rtn)))
+}
 
 
 # Testing. This is executed only if the script is run directly

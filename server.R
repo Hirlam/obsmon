@@ -763,19 +763,27 @@ shinyServer(function(input, output, session) {
             obname="satem",
             sensor=satemConfig$sensor,
             satellite=satemConfig$satellite,
-            channels=satemConfig$channels
+            channels=satemConfig$channels,
+            excludeChannels=satemConfig$excludeChannels
           )
           iPlot <- iPlot + 1
           inputsForAllPlots[[iPlot]] <- c(plotsCommonInput, inputsThisPlotOnly)
         }
       } else {
         levelsConfig <- pConfig$levels[[obname]]
+        excludeLevelsConfig <- pConfig$excludeLevels[[obname]]
         stationsConfig <- pConfig$stations[[obname]]
         for(variable in unlist(pConfig$obs[iObname])) {
           inputsThisPlotOnly <- list(
             obname=obname,
             variable=variable,
-            levels=c(levelsConfig[["allVars"]], levelsConfig[[variable]]),
+            levels=sort(unique(
+              c(levelsConfig[["allVars"]], levelsConfig[[variable]])
+            )),
+            excludeLevels=sort(unique(c(
+              excludeLevelsConfig[["allVars"]],
+              excludeLevelsConfig[[variable]])
+            )),
             station=c(stationsConfig[["allVars"]], stationsConfig[[variable]])
           )
           iPlot <- iPlot + 1

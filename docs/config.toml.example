@@ -56,14 +56,22 @@
     #      observations explicitely listed will be included.
     # This multi plot will include all observatrions except satem.
     excludeObs = ["satem"]
-    #############################################################
-    # Optional: Choosing which hight/pressure levels to include #
-    #############################################################
+    ############################################################################
+    # Optional: Choosing which hight/pressure levels to include and/or exclude #
+    ############################################################################
+    # You can select levels for each observation name and variable individually:
+    [multiPlots.levels.aircraft]
+        t = 100000
+        u = [27500, 45000]
+    # Or you can do this globally for any given obname (will apply to all variables)
     [multiPlots.levels]
-        # You can select levels for each observation name and variable individually:
-        aircraft = {t=[1500, 100000], u=[27500, 45000]}
-        # Or you can do this globally for any given obname:
-        synop = 10
+        synop = 0
+        pilot = [1500, 4000, 8500, 45000]
+    # You can also exclude selected levels using a similar syntax:
+    [multiPlots.excludeLevels]
+      pilot = [8500, 100000]
+    [multiPlots.excludeLevels.aircraft]
+      v = [2500, 8500, 60000, 1500]
 
 [[multiPlots]]
     displayName = "2nd Expt: CANARI NObs, synop only"
@@ -114,3 +122,26 @@
         sensor="iasi"
         satellite="metop2"
         channels=[38, 167, 236]
+
+[[multiPlots]]
+    displayName = "A multiPlot with more specific obs removed"
+    experiment = "Second Experiment"
+    plotType = "Observation Usage"
+    database = "ecma"
+    date = "2018-11-19"
+    cycle = 0
+    ###################################################################
+    # Another way to remove observations. Note the syntax for sat obs #
+    ###################################################################
+    [multiPlots.excludeObs]
+        ship=["apd", "snow"]
+        aircraft=["all"]
+        # Remove selected channels from a particulat sat ob
+        [[multiPlots.excludeObs.satem]]
+            sensor="amsua"
+            satellite="metop1"
+            channels=[1, 3, 5, 7]
+        # No channels specified: Completely remove this particular satem ob
+        [[multiPlots.excludeObs.satem]]
+            sensor="amsub"
+            satellite="noaa16"

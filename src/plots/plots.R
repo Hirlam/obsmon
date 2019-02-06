@@ -177,10 +177,12 @@ plotsBuildCriteria <- function(input) {
     res$obname <- sensor
     res$satname <- input$satellite
     levels <- input$channels
+    excludeLevels <- input$excludeChannels
   } else {
     res$obname <- obname
     res$varname <- input$variable
     levels <- input$levels
+    excludeLevels <- input$excludeLevels
 
     station <- input$station
     if("" %in% station) station <- ""
@@ -188,6 +190,10 @@ plotsBuildCriteria <- function(input) {
   }
   res$levels <- list()
   if(length(levels)>0 && levels!="") res$levels <- levels
+  res$excludeLevels <- list()
+  if(length(excludeLevels)>0 && excludeLevels!="") {
+    res$excludeLevels <- excludeLevels
+  }
 
   res$dtg <- getPlotDtgCriteriaFromUiInput(input)
 

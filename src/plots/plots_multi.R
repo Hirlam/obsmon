@@ -79,20 +79,32 @@ validateOneClickPlotConfig <- function(config) {
     validPlotType <- isTRUE(pc$plotType %in% availablePlots)
     validDatabase <- isTRUE(pc$database %in% dbTypesRecognised)
     if(!validExpt) {
-      flog.error('multiPlot "%s": experiment "%s" not recognised', pc$displayName, pc$experiment)
+      flog.error(
+        'multiPlot "%s": experiment "%s" not recognised',
+        pc$displayName, pc$experiment
+      )
       invalidExpts <- c(invalidExpts, as.character(pc$experiment))
       validExpt <- FALSE
     }
     if(!validPlotType) {
-      flog.error('multiPlot "%s": plotType "%s" not recognised', pc$displayName, pc$plotType)
+      flog.error(
+        'multiPlot "%s": plotType "%s" not recognised',
+        pc$displayName, pc$plotType
+      )
       invalidPlotNames <- c(invalidPlotNames, as.character(pc$plotType))
     }
     if(!validDatabase) {
-      flog.error('multiPlot "%s": database "%s" not recognised', pc$displayName, pc$database)
+      flog.error(
+        'multiPlot "%s": database "%s" not recognised',
+        pc$displayName, pc$database
+      )
       invalidDbs <- c(invalidDbs, as.character(pc$database))
     }
     if(!(validExpt && validPlotType && validDatabase)) {
-      flog.warn('Failed to initialise multiPlot "%s". It will be ignored', pc$displayName)
+      flog.warn(
+        'Failed to initialise multiPlot "%s". It will be ignored',
+        pc$displayName
+      )
       config$multiPlots[[iConfig]] <- NA
       next
     }
@@ -102,46 +114,123 @@ validateOneClickPlotConfig <- function(config) {
     pc$endDate <- validateEndDate(pc$endDate, pc$startDate, pc$nDays)
 
     # Process chosen obnames
-    if(is.null(pc$obs)) {
-      allObnames <- getAttrFromMetadata("obname")
-      pc$obs <- vector("list", length(allObnames))
-      names(pc$obs) <- allObnames
+    if(is.null(names(pc$obs))) {
+      # In this case, the user has either:
+      #   (i) Passed obs using the format obs = [obname1, obname2, ...],
+      #       and we'll include all variables for the passed obnames
+      #   (ii) Not specified any obname at all, in which case we'll include
+      #        all variables for all obnames according to what has been
+      #        registered in the file src/observation_definitions.R
+      obnames <- unlist(pc$obs)
+      if(is.null(obnames)) obnames <- getAttrFromMetadata("obname")
+      pc$obs <- list()
+      pc$obs[obnames] <- "all"
     }
-    # Excluding obnames if requested by user
-    obsToExclude <- pc$excludeObs
-    pc$obs <- pc$obs[!(names(pc$obs) %in% obsToExclude)]
-    obnames <- names(pc$obs)
 
-    # Populating variables
-    for(iVarList in seq_along(pc$obs)) {
-      obname <- obnames[iVarList]
-      if(obname=="satem") next # satem obs have no variable lists
-      # Each ob will contain a list of variables
-      variables <- pc$obs[[iVarList]]
-      if(is.null(variables)) {
-        allVarsForObname <- getAttrFromMetadata("variables", obname=obname)
-        pc$obs[[iVarList]] <- allVarsForObname
+    # Get list of variables to be excluded for all obs (if requested by user)
+    # pc$excludeObs contains lists of variables as function of the obnames
+    # TOML returns these lists as named vectors. Converting this one to a
+    # proper R list in order to get NULL for non-existing entries instead of
+    # getting "subscript out of bounds" errors
+    allObsToBeRemoved <- as.list(pc$excludeObs)
+    if(length(allObsToBeRemoved)>0 && is.null(names(allObsToBeRemoved))) {
+      # In this case, the user has passed excludeObs using the format
+      # excludeObs = [obname1, obname2, ...] and all variables need to
+      # be excluded
+      obnames <- unlist(allObsToBeRemoved)
+      allObsToBeRemoved <- list()
+      allObsToBeRemoved[obnames] <- "all"
+    }
+
+    # Populating variables (for non-satem observations) and
+    # sensor/satellite/channels (for satem observations)
+    for(obname in names(pc$obs)) {
+      obsToRemove <- allObsToBeRemoved[[obname]]
+      if(obname=="satem") {
+        if(!is.list(obsToRemove) && isTRUE(obsToRemove=="all")) {
+          # User has requested that all satem obs be removed
+          pc$obs[["satem"]] <- NULL
+          next
+        }
+        # At this point we know that there are satem obs to be included
+        if(is.character(pc$obs[["satem"]]) && ("all" %in% pc$obs[["satem"]])){
+          # User has either not explicitely listed any particular observation
+          # type, or listed obs in teh format 'obs = [..., "satem", ...]'.
+          # We'll thus add all satem obs obsmon knows about (according to info
+          # registered in the file src/observation_definitions.R)
+          iSatPlot <- 0
+          pc$obs$satem <- list()
+          allSensors <- getSensorNamesFromMetadata()
+          for(sensor in allSensors) {
+            allSatellites <- getSatelliteNamesFromMetadata(sensor)
+            for(satellite in allSatellites) {
+              newSatPlotConf <- list(sensor=sensor, satellite=satellite)
+              iSatPlot <- iSatPlot + 1
+              pc$obs$satem[[iSatPlot]] <- newSatPlotConf
+            }
+          }
+        }
+        if(!is.null(obsToRemove)) {
+          # User has passed a list of specific satem obs to be removed.
+          # The specification of sat obs to be excluded is expected to
+          # include both sensor and satellite names, and may optionally
+          # also include channels
+          for(iConf in seq_along(pc$obs$satem)) {
+            satConf <- pc$obs$satem[[iConf]]
+            for(obToRemove in obsToRemove) {
+              if(
+                isTRUE(obToRemove$sensor==satConf$sensor) &&
+                isTRUE(obToRemove$satellite==satConf$satellite)
+              ) {
+                if(is.null(obToRemove$channels)) {
+                  # No channel specified, so we'll remove the whole entry
+                  # Cannot set to NULL otherwise the entry will be removed
+                  # and the loop indexing will loose meaning
+                  pc$obs$satem[[iConf]] <- NA
+                } else {
+                  pc$obs$satem[[iConf]]$excludeChannels <- obToRemove$channels
+                }
+              }
+            }
+          }
+          # Removing NA items
+          pc$obs$satem <- Filter(Negate(anyNA), pc$obs$satem)
+        }
+      } else {
+        vars <- NULL
+        if(!("all" %in% obsToRemove)) {
+          # For non-sat obs, pc$obs contains lists of variables as function
+          # of the obnames
+          vars <- pc$obs[[obname]]
+          # If user doesn't specify any vars, use all variables from what has
+          # been registered in the file src/observation_definitions.R
+          if("all" %in% vars)vars<-getAttrFromMetadata("variables",obname=obname)
+          vars <- vars[!(vars %in% obsToRemove)]
+          if(length(vars)==0) vars <- NULL
+        }
+        pc$obs[[obname]] <- vars
       }
     }
 
-    for(obname in obnames) {
-      # Satem entries are assumed to have been corectly setup in the config
-      # file. The syntax for these is less flexible and require no further
-      # parsing. Skipping them.
+    # Parsing level and station choices for non-satallite obs.
+    # These can either be configured individually for each varname or
+    # globally for each obname
+    for(obname in names(pc$obs)) {
+      # Levels and stations are not applicable to satem obs
       if(obname=="satem") next
 
-      # Parsing level and station choices for non-satallite obs.
-      # These can either be configured individually for each varname or
-      # globally for each obname
       # (i) Parsing level choices
+      # (i.a) Levels to be included
       levelsConfig <- pc$levels[[obname]]
       if(!is.null(levelsConfig) && !is.list(levelsConfig)) {
         # If users set, e.g., "aircraft = 10" for levels in the config file
         pc$levels[[obname]] <- list(allVars=levelsConfig)
       }
-      if("allVars" %in% names(pc$levels[[obname]])) {
-        # Removing ambiguity if users set "allVars" inside config list
-        pc$levels[[obname]][!(names(pc$levels[[obname]])=="allVars")] <- NULL
+      # (i.b) Levels to be excluded
+      excludeLevelsConfig <- pc$excludeLevels[[obname]]
+      if(!is.null(excludeLevelsConfig) && !is.list(excludeLevelsConfig)) {
+        # If users set, e.g., "aircraft = 10" for excludeLevels in the config
+        pc$excludeLevels[[obname]] <- list(allVars=excludeLevelsConfig)
       }
       # (ii) Parsing station choices
       stationsConfig <- pc$stations[[obname]]
@@ -164,7 +253,7 @@ validateOneClickPlotConfig <- function(config) {
       }
     }
 
-    # Save parsed config entry
+    # Finally, save parsed config entry
     config$multiPlots[[iConfig]] <- pc
   }
   config$multiPlots <- Filter(Negate(anyNA), config$multiPlots)
