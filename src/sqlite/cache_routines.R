@@ -70,12 +70,13 @@ cacheFilesLatestMdate <- function(db) {
 }
 
 getFilePathsToCache <- function(db, dtgs) {
-  # Returns a selection of data file paths to be screened to info to be put
-  # in the cache, as a function of the passed active db and dtgs
+  # Returns a selection of data file paths to be screened for info to
+  # be put in the cache, as a function of the passed active db and dtgs
   validDtgs <- NULL
   for(dtg in dtgs) {
     fPath <- db$paths[dtg]
     if(is.null(fPath) || is.na(fPath) || length(fPath)==0) next
+    if(!file.exists(fPath)) next
     validDtgs <- c(validDtgs, dtg)
   }
   fPathsToCache <- tryCatch(
@@ -387,6 +388,8 @@ dtgsAreCached <- function(db, dtgs) {
     if(is.null(cachedDtgs)) {
       cachedDtgs <- newCachedDtgs
     } else {
+      # Only consider a DTG to be cached if it is present in both
+      # "usage" and "obsmon" cache files
       cachedDtgs <- intersect(cachedDtgs, newCachedDtgs)
     }
     dbDisconnect(con)
@@ -394,16 +397,18 @@ dtgsAreCached <- function(db, dtgs) {
   }
   if(is.null(cachedDtgs) || ncol(cachedDtgs)==0) return(FALSE)
 
-  cachedDtgsAsInt <- c()
+  cachedDtgsAsStr <- c()
   for(iRow in seq_len(nrow(cachedDtgs))) {
     dtg <- sprintf("%d%02d",cachedDtgs[iRow,"date"],cachedDtgs[iRow,"cycle"])
-    cachedDtgsAsInt <- c(cachedDtgsAsInt, as.integer(dtg))
+    cachedDtgsAsStr <- c(cachedDtgsAsStr, dtg)
   }
+  cachedDtgsAsStr <- sort(unique(cachedDtgsAsStr))
 
-  cachedDtgsAsInt <- sort(unique(cachedDtgsAsInt))
-  dtgs <- sort(unique(as.integer(dtgs)))
-  for(dtg in dtgs) {
-    if(!(dtg %in% cachedDtgsAsInt)) return(FALSE)
+  for(dtg in sort(unique(dtgs))) {
+    # If a DTG corresponds to a file that doesn't exist (e.g., a cycle 21
+    # on the current day when it's still 16:00), then ignore it
+    if(!file.exists(db$paths[dtg])) next
+    if(!(dtg %in% cachedDtgsAsStr)) return(FALSE)
   }
   return(TRUE)
 }
