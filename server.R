@@ -353,14 +353,17 @@ shinyServer(function(input, output, session) {
     sat <- input$satellite
     sens <- input$sensor
 
-    newChannels <- NULL
-    if(selectedDtgsAreCached()) {
-      newChannels <- getAvailableChannels(
-        db, dates, cycles, satname=sat, sensorname=sens
-      )
+    newChannels <- getAvailableChannels(
+      db, dates, cycles, satname=sat, sensorname=sens
+    )
+    if(length(newChannels)==0) {
+      newChannels <- c("Any (cache info not available)"="")
+    } else if(!selectedDtgsAreCached()) {
+      newChannels <- c("Any (cache info incomplete)"="", newChannels)
     }
-    if(is.null(newChannels))newChannels<-c("Any (cache info not available)"="")
-    newChannels
+    if(!selectedDtgsAreCached()) delay(1000, triggerReadCache())
+
+    return(newChannels)
   })
   observeEvent(channels(), {
     updateSelectInputWrapper(session, "channels", choices=channels())

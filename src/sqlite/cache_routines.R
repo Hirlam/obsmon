@@ -556,7 +556,7 @@ getChannelsFromCache <- function(db, dates, cycles, satname, sensorname) {
     )
     dbDisconnect(con)
   }
-  return(rtn)
+  return(sort(unique(rtn)))
 }
 
 getSensornamesFromCache <- function(db, dates, cycles) {
