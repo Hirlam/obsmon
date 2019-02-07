@@ -680,16 +680,13 @@ getAvailableLevels <- function(db, dates, cycles, obname, varname) {
 getAvailableSensornames <- function(db, dates, cycles) {
   rtn <- list(cached=NULL, general=NULL)
   rtn$cached <- getSensornamesFromCache(db, dates, cycles)
-  sens.sats <- getAttrFromMetadata('sensors.sats', category="satem")
-  rtn$general <- gsub('\\.{1}.*', '', sens.sats)
+  rtn$general <- getSensorNamesFromMetadata()
   return(rtn)
 }
 
 getAvailableSatnames <- function(db, dates, cycles, sensorname) {
   rtn <- list(cached=NULL, general=NULL)
   rtn$cached <- getSatnamesFromCache(db, dates, cycles, sensorname)
-  sens.sats <- getAttrFromMetadata('sensors.sats', category="satem")
-  sens.sats <- sens.sats[startsWith(sens.sats, paste0(sensorname, '.'))]
-  rtn$general <- gsub(paste0(sensorname, '.'), '', sens.sats, fixed=TRUE)
+  rtn$general <- getSatelliteNamesFromMetadata(sensorname)
   return(rtn)
 }
