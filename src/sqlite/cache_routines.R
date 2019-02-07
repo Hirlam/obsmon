@@ -87,7 +87,7 @@ getFilePathsToCache <- function(db, dtgs) {
   return(fPathsToCache)
 }
 
-putObservationsInCache <- function(sourceDbPath, cacheDir, replaceExisting=FALSE) {
+cacheObsFromFile <- function(sourceDbPath, cacheDir, replaceExisting=FALSE) {
   ###################################
   # Main routine to perform caching #
   ###################################
@@ -231,7 +231,7 @@ putObservationsInCache <- function(sourceDbPath, cacheDir, replaceExisting=FALSE
       warning=function(w) NULL
     )
     if(is.null(exptCachedDir) || !(startsWith(sourceDbPath, exptCachedDir))) {
-      errMsg <- "putObservationsInCache: File path and cached exptDir differ:\n"
+      errMsg <- "cacheObsFromFile: File path and cached exptDir differ:\n"
       errMsg <- paste0(errMsg, '    > Cached exptDir: ', exptCachedDir, '\n')
       errMsg <- paste0(errMsg, '    > File path: ', sourceDbPath, '\n')
       errMsg <- paste0(errMsg, ' You may want to double-check that this is OK.', '\n')
@@ -344,16 +344,15 @@ putObservationsInCache <- function(sourceDbPath, cacheDir, replaceExisting=FALSE
 
 
 # Useful wrappers
-assyncPutObsInCache <- function(sourceDbPaths, cacheDir, replaceExisting=FALSE) {
-  return(future({
+putObsInCache <- function(sourceDbPaths, cacheDir, replaceExisting=FALSE) {
     for(sourceDbPath in sourceDbPaths) {
-      tryCatch(
-        putObservationsInCache(sourceDbPath, cacheDir=cacheDir, replaceExisting=replaceExisting),
-        warning=function(w) flog.warn(w$message),
-        error=function(e) flog.error(e$message)
+      tryCatch({
+          cacheObsFromFile(sourceDbPath, cacheDir=cacheDir, replaceExisting=replaceExisting)
+        },
+          warning=function(w) flog.warn(w$message),
+          error=function(e) flog.error(e$message)
       )
     }
-  }))
 }
 
 getDateQueryString <- function(dates=NULL) {
