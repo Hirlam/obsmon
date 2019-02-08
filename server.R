@@ -204,7 +204,7 @@ shinyServer(function(input, output, session) {
         newChoices <- obtypes$cached
       } else {
         newChoices <- obtypes$general
-        delay(5000, triggerReadCache())
+        delay(1000, triggerReadCache())
       }
       updateSelectInputWrapper(
         session, "obtype", choices=newChoices, choicesFoundIncache=isCached
@@ -234,7 +234,7 @@ shinyServer(function(input, output, session) {
       if(!(obsCategory %in% c("radar", "scatt"))) {
         # In these cases obnames$cached will always be NULL, since
         # obname=obsCategory and this info is therefore not stored in cache
-        delay(5000, triggerReadCache())
+        delay(1000, triggerReadCache())
       }
     }
     updateSelectInputWrapper(
@@ -257,7 +257,7 @@ shinyServer(function(input, output, session) {
       newChoices <- variables$cached
     } else {
       newChoices <- variables$general
-      delay(5000, triggerReadCache())
+      delay(1000, triggerReadCache())
     }
     updateSelectInputWrapper(
       session, "variable", choices=newChoices, choicesFoundIncache=isCached
@@ -280,7 +280,7 @@ shinyServer(function(input, output, session) {
     } else if(!selectedDtgsAreCached()) {
       levels$all <- c("Any (cache info incomplete)"="", levels$all)
     }
-    if(!selectedDtgsAreCached()) delay(5000, triggerReadCache())
+    if(!selectedDtgsAreCached()) delay(1000, triggerReadCache())
     return(levels)
   })
   observe({
@@ -312,7 +312,7 @@ shinyServer(function(input, output, session) {
       newChoices <- sens$cached
     } else {
       newChoices <- sens$general
-      delay(5000, triggerReadCache())
+      delay(1000, triggerReadCache())
     }
     updateSelectInputWrapper(
       session, "sensor", choices=newChoices, choicesFoundIncache=isCached
@@ -334,7 +334,7 @@ shinyServer(function(input, output, session) {
       newChoices <- sats$cached
     } else {
       newChoices <- sats$general
-      delay(5000, triggerReadCache())
+      delay(1000, triggerReadCache())
     }
     updateSelectInputWrapper(
       session, "satellite", choices=newChoices, choicesFoundIncache=isCached
@@ -430,7 +430,7 @@ shinyServer(function(input, output, session) {
       } else {
         stationsAlongWithLabels(c("Any (cache info incomplete)"="", stations))
       }
-      delay(5000, triggerReadCache())
+      delay(1000, triggerReadCache())
     }
   }, ignoreNULL=TRUE)
   observe({
@@ -555,7 +555,7 @@ shinyServer(function(input, output, session) {
     Sys.time()
   },
     ignoreNULL=TRUE
-  ) %>% throttle(1000)
+  ) %>% throttle(2000)
 
   # Keep track of whether selected DTGs are cached or not
   observeEvent(reloadInfoFromCache(), {
