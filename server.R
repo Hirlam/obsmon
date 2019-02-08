@@ -477,7 +477,7 @@ shinyServer(function(input, output, session) {
 
     notifId <- showNotification(
       sprintf("Caching obs from %d new data file(s)...", length(fPaths)),
-      type="default", duration=NULL
+      type="default", duration=5
     )
 
     cacheProc <- suppressWarnings(futureCall(
