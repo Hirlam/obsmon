@@ -471,7 +471,7 @@ shinyServer(function(input, output, session) {
     db <- req(activeDb())
     fPaths <- req(fPathsToCache())
     req(length(fPaths)>0)
-    replaceExisting=isTRUE(recacheRequested())
+    replaceExisting <- isTRUE(recacheRequested())
 
     if(!replaceExisting) req(!selectedDtgsAreCached())
 
