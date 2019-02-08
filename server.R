@@ -763,11 +763,13 @@ shinyServer(function(input, output, session) {
     shinyjs::enable("multiPlotsCancelPlot")
     multiPlotInterrupted(FALSE)
 
+    db <- multiPlotActiveDb()
     # Initialising a "shiny input"-like list that will be passed to the
     # ordinary plotting routines
     plotsCommonInput <- list(
       experiment=pConfig$experiment,
       plottype=pConfig$plotType,
+      database=db$dbType,
       date=pConfig$date,
       cycle=pConfig$cycle,
       dateRange=c(pConfig$startDate, pConfig$endDate),
@@ -817,7 +819,6 @@ shinyServer(function(input, output, session) {
     multiPlotStartedNotifId(showNotification(
       "Gathering data for plot...", type="message", duration=NULL
     ))
-    db <- multiPlotActiveDb()
     multiPlotsAsync <- suppressWarnings(futureCall(
       FUN=prepareMultiPlots,
       args=list(plotter=plotter, inputsForAllPlots=inputsForAllPlots, db=db)
