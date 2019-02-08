@@ -70,12 +70,13 @@ cacheFilesLatestMdate <- function(db) {
 }
 
 getFilePathsToCache <- function(db, dtgs) {
-  # Returns a selection of data file paths to be screened to info to be put
-  # in the cache, as a function of the passed active db and dtgs
+  # Returns a selection of data file paths to be screened for info to
+  # be put in the cache, as a function of the passed active db and dtgs
   validDtgs <- NULL
   for(dtg in dtgs) {
     fPath <- db$paths[dtg]
     if(is.null(fPath) || is.na(fPath) || length(fPath)==0) next
+    if(!file.exists(fPath)) next
     validDtgs <- c(validDtgs, dtg)
   }
   fPathsToCache <- tryCatch(
@@ -86,7 +87,7 @@ getFilePathsToCache <- function(db, dtgs) {
   return(fPathsToCache)
 }
 
-putObservationsInCache <- function(sourceDbPath, cacheDir, replaceExisting=FALSE) {
+cacheObsFromFile <- function(sourceDbPath, cacheDir, replaceExisting=FALSE) {
   ###################################
   # Main routine to perform caching #
   ###################################
@@ -230,7 +231,7 @@ putObservationsInCache <- function(sourceDbPath, cacheDir, replaceExisting=FALSE
       warning=function(w) NULL
     )
     if(is.null(exptCachedDir) || !(startsWith(sourceDbPath, exptCachedDir))) {
-      errMsg <- "putObservationsInCache: File path and cached exptDir differ:\n"
+      errMsg <- "cacheObsFromFile: File path and cached exptDir differ:\n"
       errMsg <- paste0(errMsg, '    > Cached exptDir: ', exptCachedDir, '\n')
       errMsg <- paste0(errMsg, '    > File path: ', sourceDbPath, '\n')
       errMsg <- paste0(errMsg, ' You may want to double-check that this is OK.', '\n')
@@ -343,16 +344,15 @@ putObservationsInCache <- function(sourceDbPath, cacheDir, replaceExisting=FALSE
 
 
 # Useful wrappers
-assyncPutObsInCache <- function(sourceDbPaths, cacheDir, replaceExisting=FALSE) {
-  return(future({
+putObsInCache <- function(sourceDbPaths, cacheDir, replaceExisting=FALSE) {
     for(sourceDbPath in sourceDbPaths) {
-      tryCatch(
-        putObservationsInCache(sourceDbPath, cacheDir=cacheDir, replaceExisting=replaceExisting),
-        warning=function(w) flog.warn(w$message),
-        error=function(e) flog.error(e$message)
+      tryCatch({
+          cacheObsFromFile(sourceDbPath, cacheDir=cacheDir, replaceExisting=replaceExisting)
+        },
+          warning=function(w) flog.warn(w$message),
+          error=function(e) flog.error(e$message)
       )
     }
-  }))
 }
 
 getDateQueryString <- function(dates=NULL) {
@@ -387,6 +387,8 @@ dtgsAreCached <- function(db, dtgs) {
     if(is.null(cachedDtgs)) {
       cachedDtgs <- newCachedDtgs
     } else {
+      # Only consider a DTG to be cached if it is present in both
+      # "usage" and "obsmon" cache files
       cachedDtgs <- intersect(cachedDtgs, newCachedDtgs)
     }
     dbDisconnect(con)
@@ -394,16 +396,18 @@ dtgsAreCached <- function(db, dtgs) {
   }
   if(is.null(cachedDtgs) || ncol(cachedDtgs)==0) return(FALSE)
 
-  cachedDtgsAsInt <- c()
+  cachedDtgsAsStr <- c()
   for(iRow in seq_len(nrow(cachedDtgs))) {
     dtg <- sprintf("%d%02d",cachedDtgs[iRow,"date"],cachedDtgs[iRow,"cycle"])
-    cachedDtgsAsInt <- c(cachedDtgsAsInt, as.integer(dtg))
+    cachedDtgsAsStr <- c(cachedDtgsAsStr, dtg)
   }
+  cachedDtgsAsStr <- sort(unique(cachedDtgsAsStr))
 
-  cachedDtgsAsInt <- sort(unique(cachedDtgsAsInt))
-  dtgs <- sort(unique(as.integer(dtgs)))
-  for(dtg in dtgs) {
-    if(!(dtg %in% cachedDtgsAsInt)) return(FALSE)
+  for(dtg in sort(unique(dtgs))) {
+    # If a DTG corresponds to a file that doesn't exist (e.g., a cycle 21
+    # on the current day when it's still 16:00), then ignore it
+    if(!file.exists(db$paths[dtg])) next
+    if(!(dtg %in% cachedDtgsAsStr)) return(FALSE)
   }
   return(TRUE)
 }
@@ -551,7 +555,7 @@ getChannelsFromCache <- function(db, dates, cycles, satname, sensorname) {
     )
     dbDisconnect(con)
   }
-  return(rtn)
+  return(sort(unique(rtn)))
 }
 
 getSensornamesFromCache <- function(db, dates, cycles) {
@@ -680,16 +684,13 @@ getAvailableLevels <- function(db, dates, cycles, obname, varname) {
 getAvailableSensornames <- function(db, dates, cycles) {
   rtn <- list(cached=NULL, general=NULL)
   rtn$cached <- getSensornamesFromCache(db, dates, cycles)
-  sens.sats <- getAttrFromMetadata('sensors.sats', category="satem")
-  rtn$general <- gsub('\\.{1}.*', '', sens.sats)
+  rtn$general <- getSensorNamesFromMetadata()
   return(rtn)
 }
 
 getAvailableSatnames <- function(db, dates, cycles, sensorname) {
   rtn <- list(cached=NULL, general=NULL)
   rtn$cached <- getSatnamesFromCache(db, dates, cycles, sensorname)
-  sens.sats <- getAttrFromMetadata('sensors.sats', category="satem")
-  sens.sats <- sens.sats[startsWith(sens.sats, paste0(sensorname, '.'))]
-  rtn$general <- gsub(paste0(sensorname, '.'), '', sens.sats, fixed=TRUE)
+  rtn$general <- getSatelliteNamesFromMetadata(sensorname)
   return(rtn)
 }

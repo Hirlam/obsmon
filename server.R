@@ -204,7 +204,7 @@ shinyServer(function(input, output, session) {
         newChoices <- obtypes$cached
       } else {
         newChoices <- obtypes$general
-        delay(5000, triggerReadCache())
+        delay(1000, triggerReadCache())
       }
       updateSelectInputWrapper(
         session, "obtype", choices=newChoices, choicesFoundIncache=isCached
@@ -234,7 +234,7 @@ shinyServer(function(input, output, session) {
       if(!(obsCategory %in% c("radar", "scatt"))) {
         # In these cases obnames$cached will always be NULL, since
         # obname=obsCategory and this info is therefore not stored in cache
-        delay(5000, triggerReadCache())
+        delay(1000, triggerReadCache())
       }
     }
     updateSelectInputWrapper(
@@ -257,7 +257,7 @@ shinyServer(function(input, output, session) {
       newChoices <- variables$cached
     } else {
       newChoices <- variables$general
-      delay(5000, triggerReadCache())
+      delay(1000, triggerReadCache())
     }
     updateSelectInputWrapper(
       session, "variable", choices=newChoices, choicesFoundIncache=isCached
@@ -280,7 +280,7 @@ shinyServer(function(input, output, session) {
     } else if(!selectedDtgsAreCached()) {
       levels$all <- c("Any (cache info incomplete)"="", levels$all)
     }
-    if(!selectedDtgsAreCached()) delay(5000, triggerReadCache())
+    if(!selectedDtgsAreCached()) delay(1000, triggerReadCache())
     return(levels)
   })
   observe({
@@ -312,7 +312,7 @@ shinyServer(function(input, output, session) {
       newChoices <- sens$cached
     } else {
       newChoices <- sens$general
-      delay(5000, triggerReadCache())
+      delay(1000, triggerReadCache())
     }
     updateSelectInputWrapper(
       session, "sensor", choices=newChoices, choicesFoundIncache=isCached
@@ -334,7 +334,7 @@ shinyServer(function(input, output, session) {
       newChoices <- sats$cached
     } else {
       newChoices <- sats$general
-      delay(5000, triggerReadCache())
+      delay(1000, triggerReadCache())
     }
     updateSelectInputWrapper(
       session, "satellite", choices=newChoices, choicesFoundIncache=isCached
@@ -353,14 +353,17 @@ shinyServer(function(input, output, session) {
     sat <- input$satellite
     sens <- input$sensor
 
-    newChannels <- NULL
-    if(selectedDtgsAreCached()) {
-      newChannels <- getAvailableChannels(
-        db, dates, cycles, satname=sat, sensorname=sens
-      )
+    newChannels <- getAvailableChannels(
+      db, dates, cycles, satname=sat, sensorname=sens
+    )
+    if(length(newChannels)==0) {
+      newChannels <- c("Any (cache info not available)"="")
+    } else if(!selectedDtgsAreCached()) {
+      newChannels <- c("Any (cache info incomplete)"="", newChannels)
     }
-    if(is.null(newChannels))newChannels<-c("Any (cache info not available)"="")
-    newChannels
+    if(!selectedDtgsAreCached()) delay(1000, triggerReadCache())
+
+    return(newChannels)
   })
   observeEvent(channels(), {
     updateSelectInputWrapper(session, "channels", choices=channels())
@@ -427,7 +430,7 @@ shinyServer(function(input, output, session) {
       } else {
         stationsAlongWithLabels(c("Any (cache info incomplete)"="", stations))
       }
-      delay(5000, triggerReadCache())
+      delay(1000, triggerReadCache())
     }
   }, ignoreNULL=TRUE)
   observe({
@@ -438,47 +441,73 @@ shinyServer(function(input, output, session) {
   # Caching-related observers/reactives#
   ######################################
   # Caching is performed assyncronously. "assyncCachingProcs" will keep
-  # track of the processes responsible for caching the various data files.
+  # track of the ongoing processes for caching of the various data files.
   # These processes are "Future" objects (from R pkg "future"), and their
   # statuses can be checked using the function "resolved"
-  assyncCachingProcs <- reactiveValues()
-  observe({
-    # Periodic cleanup of assyncCachingProcs
-    procs <- assyncCachingProcs
-    stillAciveProcs <- list()
-    for(fPath in names(procs)) {
-      proc <- procs[[fPath]]
-      if(!resolved(proc)) stillAciveProcs[[fPath]] <- proc
-    }
-    isolate(assyncCachingProcs <- stillAciveProcs)
-    if(length(stillAciveProcs)>0) invalidateLater(300000)
-  })
+  assyncCachingProcs <- list()
 
-  # Put observations in cache when dB and/or DTG selection are modified
+  # recacheRequested: To be used if the user manually requests recache or if
+  # obsmon detects that cache has finished but DTGs remain uncached
+  recacheRequested <- reactiveVal(FALSE)
+
+  # Generate list of files to be cached as function of the currently
+  # selected dB and DTGs
   fPathsToCache <- reactiveVal(NULL)
-  observe({
-    db <- req(activeDb())
-    dtgs <- req(selectedDtgs())
-    allFiles <- getFilePathsToCache(db, dtgs)
-    # We don't want to schedule caching if file is already being cached
-    # resolved(arg) returns TRUE unless arg is a non-resolved future
-    rtn <- c()
-    for(fPath in allFiles) {
-      if(resolved(assyncCachingProcs[[fPath]])) rtn <- c(rtn, fPath)
-    }
-    isolate(fPathsToCache(rtn))
+  observeEvent({
+      activeDb()
+      selectedDtgs()
+    }, {
+    allFiles <- getFilePathsToCache(req(activeDb()), req(selectedDtgs()))
+    # Remove files for which caching is ongoing
+    notPrevCachedFiles <- allFiles[!(allFiles %in% names(assyncCachingProcs))]
+    fPathsToCache(notPrevCachedFiles)
   })
-  observeEvent(fPathsToCache(), {
+  # Cache (or recache) observations from files listed in fPathsToCache
+  observeEvent({
+      fPathsToCache()
+      recacheRequested()
+    }, {
+    on.exit(recacheRequested(FALSE))
     db <- req(activeDb())
     fPaths <- req(fPathsToCache())
-    cacheProc <- assyncPutObsInCache(fPaths, cacheDir=db$cacheDir)
-    for(fPath in fPaths) assyncCachingProcs[[fPath]] <- cacheProc
+    req(length(fPaths)>0)
+    replaceExisting=isTRUE(recacheRequested())
+
+    if(!replaceExisting) req(!selectedDtgsAreCached())
+
+    notifId <- showNotification(
+      sprintf("Caching obs from %d new data file(s)...", length(fPaths)),
+      type="default", duration=5
+    )
+
+    cacheProc <- suppressWarnings(futureCall(
+      FUN=putObsInCache,
+      args=list(
+        sourceDbPaths=fPaths,
+        cacheDir=db$cacheDir,
+        replaceExisting=replaceExisting
+      )
+    ))
+    # Register caching as "onging" for the relevant files
+    for(fPath in fPaths) assyncCachingProcs[[fPath]] <<- cacheProc
+
+    then(cacheProc,
+      onRejected=function(e) {flog.error(e)}
+    )
+    finally(cacheProc, function() {
+      removeNotification(notifId)
+      # Clean up entries from list of ongoing cache processes
+      assyncCachingProcs[fPaths] <<- NULL
+    })
+
+    # This NULL is necessary in order to avoid the future from blocking
+    NULL
   })
   # Re-cache observations if requested by user
   observeEvent(input$recacheCacheButton, {
     db <- req(activeDb())
     showNotification("Recaching selected DTG(s)", type="warning", duration=1)
-    assyncPutObsInCache(fPathsToCache(), cacheDir=db$cacheDir, replaceExisting=TRUE)
+    recacheRequested(TRUE)
   },
     ignoreInit=TRUE
   )
@@ -526,28 +555,21 @@ shinyServer(function(input, output, session) {
     Sys.time()
   },
     ignoreNULL=TRUE
-  ) %>% throttle(1000)
+  ) %>% throttle(2000)
 
   # Keep track of whether selected DTGs are cached or not
   observeEvent(reloadInfoFromCache(), {
       selectedDtgsAreCached(dtgsAreCached(req(activeDb()),req(selectedDtgs())))
   })
-  # Attempt to cache DTGs if they remain uncached even after
-  # the processes responsible for caching them have finished
+  # Periodically attempt to cache DTGs if they remain uncached even
+  # after the processes responsible for caching them have finished.
   # This is useful to retry caching if former attempts fail
   observeEvent({if(!selectedDtgsAreCached()) invalidateLater(5000)}, {
     req(!selectedDtgsAreCached())
-    db <- req(activeDb())
-    fPaths <- c()
-    for(fPath in fPathsToCache()) {
-      if(resolved(assyncCachingProcs[[fPath]])) fPaths <- c(fPaths, fPath)
-    }
-    req(length(fPaths)>0)
-    # Here we end up with files for which the caching process has finished
-    # but the corresponding DTGs stil remain uncached
+    cacheHasFinished <- length(names(assyncCachingProcs)) == 0
+    req(cacheHasFinished)
     showNotification("Attempting to recache", type="warning", duration=1)
-    cacheProc <- assyncPutObsInCache(fPaths, cacheDir=db$cacheDir, replaceExisting=TRUE)
-    for(fPath in fPaths) assyncCachingProcs[[fPath]] <- cacheProc
+    recacheRequested(TRUE)
   },
     ignoreInit=TRUE
   )

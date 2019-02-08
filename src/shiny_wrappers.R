@@ -117,7 +117,7 @@ updateSelectInputWrapper <- function(
   if(is.null(session$userData$UiChoices)) session$userData$UiChoices <- list()
 
   # First, update label
-  notCachedLabelMsg <- "(cache info not available)"
+  notCachedLabelMsg <- "(no cache info, using defaults)"
   currentLabel <- session$userData$UiLabels[[inputId]]
   if(is.null(currentLabel)) currentLabel <- getDefLabel(inputId)
 
