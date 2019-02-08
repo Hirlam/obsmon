@@ -437,72 +437,124 @@ shinyServer(function(input, output, session) {
     updateSelectInputWrapper(session, "station", choices=stationsAlongWithLabels())
   })
 
-  ######################################
-  # Caching-related observers/reactives#
-  ######################################
-  # Caching is performed assyncronously. "assyncCachingProcs" will keep
-  # track of the ongoing processes for caching of the various data files.
-  # These processes are "Future" objects (from R pkg "future"), and their
-  # statuses can be checked using the function "resolved"
+  ##########################################################################
+  #                Caching-related observers/reactives                     #
+  ##########################################################################
+  # Perform caching assyncronously as the user selects new DTGs and/or dBs.
+  # The reactive/observers defined here stablish a queue/schedule for the
+  # files to be cached. Once the user selects new DTGs/databases, the
+  # associated files are put in a queue to be cached. The files in that
+  # queue are sent to the caching routine in small batches, so that it is
+  # possible to reassign the order in which they should be parsed (e.g., to
+  # make sure the currently selected DTGs/dB have priority).
+
+  # Get paths to data files associated with currently selected DTG(s) and
+  # and dB, and which are not currently being cached
+  dataFilesForDbAndDtgs <- reactive({
+    return(getFilePathsToCache(req(activeDb()), req(selectedDtgs())))
+  })
+
+  # "assyncCachingProcs" keeps track of the ongoing processes for the caching
+  # of the various data files. These processes are "Future" objects (from R
+  # pkg "future").
   assyncCachingProcs <- list()
+
+  # Establish/update queue of files that need to be cached
+  filesPendingCache <- reactiveVal(character(0))
+  observeEvent(dataFilesForDbAndDtgs(), {
+    newFiles <- dataFilesForDbAndDtgs()
+    # Remove files for which caching is ongoing
+    filesNotCachingNow <- newFiles[!(newFiles %in% names(assyncCachingProcs))]
+    filesPendingCache(unique(c(filesNotCachingNow, filesPendingCache())))
+  })
 
   # recacheRequested: To be used if the user manually requests recache or if
   # obsmon detects that cache has finished but DTGs remain uncached
   recacheRequested <- reactiveVal(FALSE)
-
-  # Generate list of files to be cached as function of the currently
-  # selected dB and DTGs
-  fPathsToCache <- reactiveVal(NULL)
-  observeEvent({
-      activeDb()
-      selectedDtgs()
-    }, {
-    allFiles <- getFilePathsToCache(req(activeDb()), req(selectedDtgs()))
-    # Remove files for which caching is ongoing
-    notPrevCachedFiles <- allFiles[!(allFiles %in% names(assyncCachingProcs))]
-    fPathsToCache(notPrevCachedFiles)
+  # Establish/update queue of files that need to be recached (if requested)
+  filesPendingRecache <- reactiveVal(character(0))
+  observeEvent(recacheRequested(), {
+    req(isTRUE(recacheRequested()))
+    filesPendingRecache(unique(c(filesPendingRecache(), dataFilesForDbAndDtgs())))
+    recacheRequested(FALSE)
   })
-  # Cache (or recache) observations from files listed in fPathsToCache
-  observeEvent({
-      fPathsToCache()
-      recacheRequested()
+
+  # Keep track of caching activity
+  cacheIsOngoing <- reactiveVal(FALSE)
+
+  # Prepare and send batches of data files to be cached
+  newBatchFilesToCache <- eventReactive({
+    filesPendingCache()
+    cacheIsOngoing()
     }, {
-    on.exit(recacheRequested(FALSE))
-    db <- req(activeDb())
-    fPaths <- req(fPathsToCache())
+    req(!isTRUE(cacheIsOngoing()))
+    filesToCacheInThisBatch <- filesPendingCache()[1:10]
+    filesToCacheInThisBatch <- Filter(Negate(anyNA), filesToCacheInThisBatch)
+    return(filesToCacheInThisBatch)
+  })
+
+  # Prepare and send, if requested, batches of data files to be re-cached
+  newBatchFilesToRecache <- eventReactive({
+    filesPendingRecache()
+    cacheIsOngoing()
+    }, {
+    req(!isTRUE(cacheIsOngoing()))
+    filesToRecacheInThisBatch <- filesPendingRecache()[1:10]
+    filesToRecacheInThisBatch <- Filter(Negate(anyNA), filesToRecacheInThisBatch)
+    return(filesToRecacheInThisBatch)
+  })
+
+  # Cache (or recache) observations as new batches of file paths arrive
+  observeEvent({
+    newBatchFilesToCache()
+    newBatchFilesToRecache()
+    }, {
+    if(length(newBatchFilesToRecache())>0) {
+      fPaths <- newBatchFilesToRecache()
+      isRecache <- TRUE
+    } else {
+      fPaths <- newBatchFilesToCache()
+      isRecache <- FALSE
+      req(!selectedDtgsAreCached())
+    }
     req(length(fPaths)>0)
-    replaceExisting <- isTRUE(recacheRequested())
-
-    if(!replaceExisting) req(!selectedDtgsAreCached())
-
-    notifId <- showNotification(
-      sprintf("Caching obs from %d new data file(s)...", length(fPaths)),
-      type="default", duration=5
-    )
+    db <- req(activeDb())
 
     cacheProc <- suppressWarnings(futureCall(
       FUN=putObsInCache,
       args=list(
         sourceDbPaths=fPaths,
         cacheDir=db$cacheDir,
-        replaceExisting=replaceExisting
+        replaceExisting=isRecache
       )
     ))
     # Register caching as "onging" for the relevant files
+    cacheIsOngoing(TRUE)
     for(fPath in fPaths) assyncCachingProcs[[fPath]] <<- cacheProc
 
     then(cacheProc,
       onRejected=function(e) {flog.error(e)}
     )
     finally(cacheProc, function() {
-      removeNotification(notifId)
+      triggerReadCache()
       # Clean up entries from list of ongoing cache processes
       assyncCachingProcs[fPaths] <<- NULL
+      if(isRecache) {
+        recacheQueue <- filesPendingRecache()
+        newRecacheQueue <- recacheQueue[!(recacheQueue %in% fPaths)]
+        filesPendingRecache(newRecacheQueue)
+      } else {
+        cacheQueue <- filesPendingCache()
+        newCacheQueue <- cacheQueue[!(cacheQueue %in% fPaths)]
+        filesPendingCache(newCacheQueue)
+      }
+      cacheIsOngoing(FALSE)
     })
 
     # This NULL is necessary in order to avoid the future from blocking
     NULL
   })
+
   # Re-cache observations if requested by user
   observeEvent(input$recacheCacheButton, {
     db <- req(activeDb())
@@ -511,6 +563,7 @@ shinyServer(function(input, output, session) {
   },
     ignoreInit=TRUE
   )
+
   # Reset cache if requested by user
   # Doing this in two steps to require confirmation
   observeEvent(input$resetCacheButton, {
@@ -539,17 +592,10 @@ shinyServer(function(input, output, session) {
     }
   })
 
-  # Detect when the relevant cache files have been updated
-  cacheFileUpdated <- eventReactive(activeDb(), {
-    reactivePoll(5000, session,
-      partial(cacheFilesLatestMdate, db=req(activeDb())), function() NULL)
-  })
-
   # Flagging that it's time to read info from cache
   reloadInfoFromCache <- eventReactive({
       latestTriggerReadCache()
       activeDb()
-      cacheFileUpdated()
       selectedDtgs()
     }, {
     Sys.time()
@@ -561,13 +607,13 @@ shinyServer(function(input, output, session) {
   observeEvent(reloadInfoFromCache(), {
       selectedDtgsAreCached(dtgsAreCached(req(activeDb()),req(selectedDtgs())))
   })
+
   # Periodically attempt to cache DTGs if they remain uncached even
   # after the processes responsible for caching them have finished.
   # This is useful to retry caching if former attempts fail
-  observeEvent({if(!selectedDtgsAreCached()) invalidateLater(5000)}, {
+  observeEvent({if(!selectedDtgsAreCached()) invalidateLater(10000)}, {
     req(!selectedDtgsAreCached())
-    cacheHasFinished <- length(names(assyncCachingProcs)) == 0
-    req(cacheHasFinished)
+    req(!cacheIsOngoing())
     showNotification("Attempting to recache", type="warning", duration=1)
     recacheRequested(TRUE)
   },
