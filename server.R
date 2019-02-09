@@ -1,7 +1,32 @@
+# Keep track of how many sessions are connected
+sessionsConnected <- reactiveVal(0)
+
+# The server
 shinyServer(function(input, output, session) {
   # Start GUI with all inputs disabled.
   # They will be enabled once experiments are loaded
   isolate(disableShinyInputs(input, except="experiment"))
+
+  # Increment global connected sessions count when session starts
+  isolate(sessionsConnected(sessionsConnected() + 1))
+  # Decrement global connected sessions count once session finishes
+  session$onSessionEnded(function() {
+    isolate({sessionsConnected(sessionsConnected() - 1)})
+  })
+  # Show, below the title, the number of currently connected sessions
+  output$pageTitle <- renderUI({
+    nSessions <- sessionsConnected()
+    obsmonVersionText <- sprintf("Obsmon v%s", obsmonVersion)
+    if(nSessions>0) {
+      sessionsConnectedText <- sprintf(
+        '<p style="font-size:11px">#Sessions connected: %d</p>', nSessions
+      )
+      HTML(paste0(obsmonVersionText, sessionsConnectedText))
+    } else {
+      flog.debug("server.R: sessionsConnected()<1!")
+      obsmonVersionText
+    }
+  })
 
   ############################################################################
   #                          Handling of main tab                            #
