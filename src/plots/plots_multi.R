@@ -240,10 +240,6 @@ validateOneClickPlotConfig <- function(config) {
           # If users set, e.g., "aircraft = 10" for levels in the config file
           pc$stations[[obname]] <- list(allVars=stationsConfig)
         }
-        if("allVars" %in% names(pc$stations[[obname]])) {
-          # Removing ambiguity if users set "allVars" inside config list
-          pc$stations[[obname]][!(names(pc$stations[[obname]])=="allVars")] <- NULL
-        }
       } else if(!is.null(stationsConfig)) {
         pc$stations[[obname]] <- NULL
         msg <- paste0('multiPlot "',pc$displayName,'": Plot "',pc$plotType,

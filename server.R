@@ -918,21 +918,51 @@ shinyServer(function(input, output, session) {
         levelsConfig <- pConfig$levels[[obname]]
         excludeLevelsConfig <- pConfig$excludeLevels[[obname]]
         stationsConfig <- pConfig$stations[[obname]]
-        for(variable in unlist(pConfig$obs[iObname])) {
-          inputsThisPlotOnly <- list(
-            obname=obname,
-            variable=variable,
-            levels=sort(unique(
-              c(levelsConfig[["allVars"]], levelsConfig[[variable]])
-            )),
-            excludeLevels=sort(unique(c(
-              excludeLevelsConfig[["allVars"]],
-              excludeLevelsConfig[[variable]])
-            )),
-            station=c(stationsConfig[["allVars"]], stationsConfig[[variable]])
-          )
-          iPlot <- iPlot + 1
-          inputsForAllPlots[[iPlot]] <- c(plotsCommonInput, inputsThisPlotOnly)
+        if(plotSupportsMultipleStations(pConfig$plotType)) {
+          # One plot for each variable, allowing multiple stations in a
+          # single plot
+          for(variable in unlist(pConfig$obs[iObname])) {
+            stations <- unique(
+              c(stationsConfig[["allVars"]], stationsConfig[[variable]])
+            )
+            inputsThisPlotOnly <- list(
+              obname=obname,
+              variable=variable,
+              levels=sort(unique(
+                c(levelsConfig[["allVars"]], levelsConfig[[variable]])
+              )),
+              excludeLevels=sort(unique(c(
+                excludeLevelsConfig[["allVars"]],
+                excludeLevelsConfig[[variable]])
+              )),
+              station=stations
+            )
+            iPlot <- iPlot + 1
+            inputsForAllPlots[[iPlot]] <- c(plotsCommonInput, inputsThisPlotOnly)
+          }
+        } else {
+          # One plot for each variable and station
+          for(variable in unlist(pConfig$obs[iObname])) {
+            stations <- unique(
+              c(stationsConfig[["allVars"]], stationsConfig[[variable]])
+            )
+            for(station in stations) {
+              inputsThisPlotOnly <- list(
+                obname=obname,
+                variable=variable,
+                levels=sort(unique(
+                  c(levelsConfig[["allVars"]], levelsConfig[[variable]])
+                )),
+                excludeLevels=sort(unique(c(
+                  excludeLevelsConfig[["allVars"]],
+                  excludeLevelsConfig[[variable]])
+                )),
+                station=station
+              )
+              iPlot <- iPlot + 1
+              inputsForAllPlots[[iPlot]] <- c(plotsCommonInput, inputsThisPlotOnly)
+            }
+          }
         }
       }
     }
