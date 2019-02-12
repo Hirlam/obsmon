@@ -88,6 +88,7 @@ plotGenerate.default <- function(p, plotRequest, plotData) {
     plotData <- rename(plotData, channel=level)
   }
   result <- list(title=plotTitle(p, plotRequest, plotData))
+  if(length(result$title)==0) flog.warn("plotGenerate: Empty plot title")
   if (is.null(plotData) || nrow(plotData)==0) {
     result$obmap=NULL
     if(is.null(plotData)) msg<-"A problem occurred. Please check the logs"

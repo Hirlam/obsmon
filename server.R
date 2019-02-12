@@ -785,7 +785,7 @@ shinyServer(function(input, output, session) {
   # Rendering plots
   output$plot <- renderPlot({
     tryCatch(
-      grid.arrange(req(readyPlot()$obplot),top=textGrob(req(readyPlot()$title))),
+      grid.arrange(req(readyPlot()$obplot), top=textGrob(readyPlot()$title)),
       error=function(e) NULL
     )
   },
@@ -1038,7 +1038,7 @@ shinyServer(function(input, output, session) {
         plotOutId <- multiPlotsGenId(iPlot, type="plot")
         output[[plotOutId]] <- renderPlot({
           myPlot <- multiPlot()[[pName]]
-          grid.arrange(req(myPlot$obplot),top=textGrob(req(myPlot$title)))
+          grid.arrange(req(myPlot$obplot),top=textGrob(myPlot$title))
         },
            res=96, pointsize=18
         )
