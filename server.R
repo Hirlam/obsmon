@@ -563,7 +563,7 @@ shinyServer(function(input, output, session) {
     cacheIsOngoing()
     }, {
     req(!isTRUE(cacheIsOngoing()))
-    filesToCacheInThisBatch <- filesPendingCache()[1:10]
+    filesToCacheInThisBatch <- filesPendingCache()[1:2]
     filesToCacheInThisBatch <- Filter(Negate(anyNA), filesToCacheInThisBatch)
     return(filesToCacheInThisBatch)
   })
@@ -574,7 +574,7 @@ shinyServer(function(input, output, session) {
     cacheIsOngoing()
     }, {
     req(!isTRUE(cacheIsOngoing()))
-    filesToRecacheInThisBatch <- filesPendingRecache()[1:10]
+    filesToRecacheInThisBatch <- filesPendingRecache()[1:2]
     filesToRecacheInThisBatch <- Filter(Negate(anyNA), filesToRecacheInThisBatch)
     return(filesToRecacheInThisBatch)
   })
