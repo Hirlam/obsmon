@@ -119,6 +119,12 @@ mainTab <- function() {fluidPage(
         multiple=TRUE,
         selectize=FALSE
       ),
+      selectInput("stationSingle",
+        label=getDefLabel("station"),
+        choices=c(),
+        multiple=FALSE,
+        selectize=FALSE
+      ),
       fluidRow(
         column(8, dateInput("date", "Date")),
         column(4, selectInput("cycle", label="Cycle", choices=c()))

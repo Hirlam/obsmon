@@ -418,12 +418,28 @@ shinyServer(function(input, output, session) {
   })
 
   # Decide whether to allow users to select stations
-  allowChoosingStation <- reactive(
-     plotSupportsChoosingStations(input$plottype, input$obtype)
-  )
-  observeEvent(allowChoosingStation(), {
-      shinyjs::toggleState("station", condition=allowChoosingStation())
-      shinyjs::toggleElement("station", condition=allowChoosingStation())
+  allowChoosingStation <- reactive({
+     plotSupportsChoosingStations(req(input$plottype), req(input$obtype))
+  })
+  allowMultipleStations <- reactive({
+     plotSupportsMultipleStations(req(input$plottype))
+  })
+  observeEvent({
+    allowChoosingStation()
+    allowMultipleStations()
+    }, {
+    shinyjs::toggleState("station",
+      condition=(allowChoosingStation() && allowMultipleStations())
+    )
+    shinyjs::toggleElement("station",
+      condition=(allowChoosingStation() && allowMultipleStations())
+    )
+    shinyjs::toggleState("stationSingle",
+      condition=(allowChoosingStation() && !allowMultipleStations())
+    )
+    shinyjs::toggleElement("stationSingle",
+      condition=(allowChoosingStation() && !allowMultipleStations())
+    )
   })
 
   # Update stations
@@ -447,19 +463,53 @@ shinyServer(function(input, output, session) {
 
     stations <- getStationsFromCache(db, dates, cycles, obname, variable)
     stations <- putLabelsInStations(stations, obname)
-    if(selectedDtgsAreCached()) {
-      stationsAlongWithLabels(c("Any"="", stations))
-    } else {
-      if(length(stations)==0) {
-        stationsAlongWithLabels(c("Any (cache info not available)"=""))
+
+    entryForAnyStation <- NULL
+    if(allowMultipleStations()) {
+      if(selectedDtgsAreCached()) {
+        entryForAnyStation <- c("Any"="")
       } else {
-        stationsAlongWithLabels(c("Any (cache info incomplete)"="", stations))
+        if(length(stations)==0) {
+          entryForAnyStation <- c("Any (cache info not available)"="")
+        } else {
+          entryForAnyStation <- c("Any (cache info incomplete)"="")
+        }
       }
-      delay(1000, triggerReadCache())
+    } else {
+      if(selectedDtgsAreCached()) {
+        updateSelectInput(session, "stationSingle", label="Station")
+      } else {
+        if(length(stations)==0) {
+          updateSelectInput(session, "stationSingle",
+            label="Station (cache info not available)"
+          )
+        } else {
+          updateSelectInput(session, "stationSingle",
+            label="Station (cache info incomplete)"
+          )
+        }
+      }
     }
+    stationsAlongWithLabels(c(entryForAnyStation, stations))
+    if(!selectedDtgsAreCached()) delay(1000, triggerReadCache())
+
   }, ignoreNULL=TRUE)
-  observe({
-    updateSelectInputWrapper(session, "station", choices=stationsAlongWithLabels())
+  observeEvent(stationsAlongWithLabels(), {
+    # station is always going to be updated, as stationSingle is just a wrap
+    # for station to account for the fact that updateSelectInput does not have
+    # a "multiple" argument
+    updateSelectInputWrapper(
+      session, "station", choices=stationsAlongWithLabels()
+    )
+    if(!allowMultipleStations()) {
+      updateSelectInputWrapper(
+        session, "stationSingle", choices=stationsAlongWithLabels()
+      )
+    }
+  })
+  # Send selection from stationSingle to station
+  observeEvent(input$stationSingle, {
+    updateSelectInput(session, "station", selected=input$stationSingle)
   })
 
   ##########################################################################
