@@ -6,9 +6,17 @@
 ################################################
 # Helper function to produce plots in server.R #
 ################################################
-prepareMultiPlots <- function(plotter, inputsForAllPlots, db) {
+prepareMultiPlots <- function(
+  plotter, inputsForAllPlots, db, progressFile=NULL
+) {
   allPlots <- list()
   for(iPlot in seq_along(inputsForAllPlots)) {
+   # Using a file to get update on progress of multiPlots
+   # Unfortunately there was no other way to do this from within a future
+   # at the time this code was written
+   if(!is.null(progressFile)) {
+     write(c(iPlot, length(inputsForAllPlots)), progressFile, append=FALSE)
+   }
    # qp stands for "multiPlot"
    qpInput <- inputsForAllPlots[[iPlot]]
    plotRequest <- list()
@@ -239,10 +247,6 @@ validateOneClickPlotConfig <- function(config) {
         if(!is.null(stationsConfig) && !is.list(stationsConfig)) {
           # If users set, e.g., "aircraft = 10" for levels in the config file
           pc$stations[[obname]] <- list(allVars=stationsConfig)
-        }
-        if("allVars" %in% names(pc$stations[[obname]])) {
-          # Removing ambiguity if users set "allVars" inside config list
-          pc$stations[[obname]][!(names(pc$stations[[obname]])=="allVars")] <- NULL
         }
       } else if(!is.null(stationsConfig)) {
         pc$stations[[obname]] <- NULL

@@ -46,6 +46,11 @@ plotSupportsChoosingStations <- function(plottype=NULL, obtype=NULL) {
   return(isTRUE(queryIsFromUsage))
 }
 
+plotRequiresSingleStation <- function(plottype=NULL) {
+  plotReqFields <- plotTypesFlat[[plottype]]$requiredFields
+  return(isTRUE("station" %in% plotReqFields))
+}
+
 putLabelsInStations <- function(stations=NULL, obname=NULL) {
   if(length(stations)==0) return(stations)
   if(isTRUE(obname=="synop")) {
@@ -81,10 +86,17 @@ plotGenerate.default <- function(p, plotRequest, plotData) {
     plotData <- rename(plotData, channel=level)
   }
   result <- list(title=plotTitle(p, plotRequest, plotData))
+  if(length(result$title)==0) flog.warn("plotGenerate: Empty plot title")
   if (is.null(plotData) || nrow(plotData)==0) {
     result$obmap=NULL
-    if(is.null(plotData)) msg<-"A problem occurred. Please check the logs"
-    else msg <- "Query returned no data"
+    if(is.null(plotData)) {
+      msg <- paste0(
+        "Could not produce plot: ",
+        "The required data file(s) might be inaccessible.\n"
+      )
+    } else {
+      msg <- "Query returned no data"
+    }
     result$obplot=grobTree(
       rectGrob(gp=gpar(col="black", fill="grey90", alpha=0.5)),
       textGrob(msg)

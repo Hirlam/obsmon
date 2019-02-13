@@ -1,7 +1,32 @@
+# Keep track of how many sessions are connected
+sessionsConnected <- reactiveVal(0)
+
+# The server
 shinyServer(function(input, output, session) {
   # Start GUI with all inputs disabled.
   # They will be enabled once experiments are loaded
   isolate(disableShinyInputs(input, except="experiment"))
+
+  # Increment global connected sessions count when session starts
+  isolate(sessionsConnected(sessionsConnected() + 1))
+  # Decrement global connected sessions count once session finishes
+  session$onSessionEnded(function() {
+    isolate({sessionsConnected(sessionsConnected() - 1)})
+  })
+  # Show, below the title, the number of currently connected sessions
+  output$pageTitle <- renderUI({
+    nSessions <- sessionsConnected()
+    obsmonVersionText <- sprintf("Obsmon v%s", obsmonVersion)
+    if(nSessions>0) {
+      sessionsConnectedText <- sprintf(
+        '<p style="font-size:11px">#Sessions connected: %d</p>', nSessions
+      )
+      HTML(paste0(obsmonVersionText, sessionsConnectedText))
+    } else {
+      flog.debug("server.R: sessionsConnected()<1!")
+      obsmonVersionText
+    }
+  })
 
   ############################################################################
   #                          Handling of main tab                            #
@@ -393,12 +418,28 @@ shinyServer(function(input, output, session) {
   })
 
   # Decide whether to allow users to select stations
-  allowChoosingStation <- reactive(
-     plotSupportsChoosingStations(input$plottype, input$obtype)
-  )
-  observeEvent(allowChoosingStation(), {
-      shinyjs::toggleState("station", condition=allowChoosingStation())
-      shinyjs::toggleElement("station", condition=allowChoosingStation())
+  allowChoosingStation <- reactive({
+     plotSupportsChoosingStations(req(input$plottype), req(input$obtype))
+  })
+  requireSingleStation <- reactive({
+     plotRequiresSingleStation(req(input$plottype))
+  })
+  observeEvent({
+    allowChoosingStation()
+    requireSingleStation()
+    }, {
+    shinyjs::toggleState("station",
+      condition=(allowChoosingStation() && !requireSingleStation())
+    )
+    shinyjs::toggleElement("station",
+      condition=(allowChoosingStation() && !requireSingleStation())
+    )
+    shinyjs::toggleState("stationSingle",
+      condition=(allowChoosingStation() && requireSingleStation())
+    )
+    shinyjs::toggleElement("stationSingle",
+      condition=(allowChoosingStation() && requireSingleStation())
+    )
   })
 
   # Update stations
@@ -422,19 +463,53 @@ shinyServer(function(input, output, session) {
 
     stations <- getStationsFromCache(db, dates, cycles, obname, variable)
     stations <- putLabelsInStations(stations, obname)
-    if(selectedDtgsAreCached()) {
-      stationsAlongWithLabels(c("Any"="", stations))
-    } else {
-      if(length(stations)==0) {
-        stationsAlongWithLabels(c("Any (cache info not available)"=""))
+
+    entryForAnyStation <- NULL
+    if(!requireSingleStation()) {
+      if(selectedDtgsAreCached()) {
+        entryForAnyStation <- c("Any"="")
       } else {
-        stationsAlongWithLabels(c("Any (cache info incomplete)"="", stations))
+        if(length(stations)==0) {
+          entryForAnyStation <- c("Any (cache info not available)"="")
+        } else {
+          entryForAnyStation <- c("Any (cache info incomplete)"="")
+        }
       }
-      delay(1000, triggerReadCache())
+    } else {
+      if(selectedDtgsAreCached()) {
+        updateSelectInput(session, "stationSingle", label="Station")
+      } else {
+        if(length(stations)==0) {
+          updateSelectInput(session, "stationSingle",
+            label="Station (cache info not available)"
+          )
+        } else {
+          updateSelectInput(session, "stationSingle",
+            label="Station (cache info incomplete)"
+          )
+        }
+      }
     }
+    stationsAlongWithLabels(c(entryForAnyStation, stations))
+    if(!selectedDtgsAreCached()) delay(1000, triggerReadCache())
+
   }, ignoreNULL=TRUE)
-  observe({
-    updateSelectInputWrapper(session, "station", choices=stationsAlongWithLabels())
+  observeEvent(stationsAlongWithLabels(), {
+    # station is always going to be updated, as stationSingle is just a wrap
+    # for station to account for the fact that updateSelectInput does not have
+    # a "multiple" argument
+    updateSelectInputWrapper(
+      session, "station", choices=stationsAlongWithLabels()
+    )
+    if(requireSingleStation()) {
+      updateSelectInputWrapper(
+        session, "stationSingle", choices=stationsAlongWithLabels()
+      )
+    }
+  })
+  # Send selection from stationSingle to station
+  observeEvent(input$stationSingle, {
+    updateSelectInput(session, "station", selected=input$stationSingle)
   })
 
   ##########################################################################
@@ -488,7 +563,7 @@ shinyServer(function(input, output, session) {
     cacheIsOngoing()
     }, {
     req(!isTRUE(cacheIsOngoing()))
-    filesToCacheInThisBatch <- filesPendingCache()[1:10]
+    filesToCacheInThisBatch <- filesPendingCache()[1:2]
     filesToCacheInThisBatch <- Filter(Negate(anyNA), filesToCacheInThisBatch)
     return(filesToCacheInThisBatch)
   })
@@ -499,7 +574,7 @@ shinyServer(function(input, output, session) {
     cacheIsOngoing()
     }, {
     req(!isTRUE(cacheIsOngoing()))
-    filesToRecacheInThisBatch <- filesPendingRecache()[1:10]
+    filesToRecacheInThisBatch <- filesPendingRecache()[1:2]
     filesToRecacheInThisBatch <- Filter(Negate(anyNA), filesToRecacheInThisBatch)
     return(filesToRecacheInThisBatch)
   })
@@ -710,7 +785,7 @@ shinyServer(function(input, output, session) {
   # Rendering plots
   output$plot <- renderPlot({
     tryCatch(
-      grid.arrange(req(readyPlot()$obplot),top=textGrob(req(readyPlot()$title))),
+      grid.arrange(req(readyPlot()$obplot), top=textGrob(readyPlot()$title)),
       error=function(e) NULL
     )
   },
@@ -767,18 +842,57 @@ shinyServer(function(input, output, session) {
     multiPlotExperiment()$dbs[[dbType]]
   })
 
-  # Producing multiPlots
+  # Management of multiPlot progress bar
+  multiPlotsProgressFile <- reactiveVal(NULL)
+  multiPlotsProgressStatus <- reactiveVal(function() NULL)
+  multiPlotsProgressBar <- reactiveVal(NULL)
+  readProgressFile <- function(path) {
+    tryCatch(read.table(path),
+      error=function(e) NULL,
+      warning=function(w) NULL
+    )
+  }
+  observeEvent(multiPlotsProgressFile(), {
+    multiPlotsProgressStatus(reactiveFileReader(
+      500, session, isolate(multiPlotsProgressFile()), readProgressFile
+    ))
+  })
+  observeEvent(multiPlotsProgressStatus()(), {
+    mpProgress <- unlist(multiPlotsProgressStatus()(), use.names=FALSE)
+    progress <- multiPlotsProgressBar()
+    progress$set(
+      value=mpProgress[1],
+      message="Preparing multiPlot",
+      detail=sprintf(
+        "Gathering data for plot %s of %s", mpProgress[1], mpProgress[2]
+      )
+    )
+    multiPlotsProgressBar(progress)
+  })
+
+  # Keep track of multiPlot assync process PID, in case user wants to cancel it
   multiPlotCurrentPid <- reactiveVal(-1)
-  multiPlotStartedNotifId <- reactiveVal(-1)
-  multiPlotInterrupted <- reactiveVal()
+
+  # Management of "Cancel multiPlot" button
+  multiPlotInterrupted <- reactiveVal(FALSE)
   onclick("multiPlotsCancelPlot", {
     showNotification("Cancelling multiPlot", type="warning", duration=1)
     multiPlotInterrupted(TRUE)
     tools::pskill(multiPlotCurrentPid(), tools::SIGINT)
   })
 
-  multiPlot <- reactiveVal()
+  # Producing multiPlots
+  multiPlot <- reactiveVal(NULL)
   observeEvent(input$multiPlotsDoPlot, {
+    # Make sure one cannot request a multiPlot while another is being produced
+    if(multiPlotCurrentPid()>-1) {
+      showNotification(
+        "Another multiPlot is being produced. Please wait.",
+        type="warning", duration=1
+      )
+    }
+    req(multiPlotCurrentPid()==-1)
+
     multiPlot(NULL)
     pConfig <- multiPlotConfigInfo()
 
@@ -837,37 +951,82 @@ shinyServer(function(input, output, session) {
             excludeChannels=satemConfig$excludeChannels
           )
           iPlot <- iPlot + 1
-          inputsForAllPlots[[iPlot]] <- c(plotsCommonInput, inputsThisPlotOnly)
+          inputsForAllPlots[[iPlot]] <- c(plotsCommonInput,inputsThisPlotOnly)
         }
       } else {
         levelsConfig <- pConfig$levels[[obname]]
         excludeLevelsConfig <- pConfig$excludeLevels[[obname]]
         stationsConfig <- pConfig$stations[[obname]]
-        for(variable in unlist(pConfig$obs[iObname])) {
-          inputsThisPlotOnly <- list(
-            obname=obname,
-            variable=variable,
-            levels=sort(unique(
-              c(levelsConfig[["allVars"]], levelsConfig[[variable]])
-            )),
-            excludeLevels=sort(unique(c(
-              excludeLevelsConfig[["allVars"]],
-              excludeLevelsConfig[[variable]])
-            )),
-            station=c(stationsConfig[["allVars"]], stationsConfig[[variable]])
-          )
-          iPlot <- iPlot + 1
-          inputsForAllPlots[[iPlot]] <- c(plotsCommonInput, inputsThisPlotOnly)
+        if(!plotRequiresSingleStation(pConfig$plotType)) {
+          # One plot for each variable, allowing multiple stations in a
+          # single plot (if stations are applicable at all)
+          for(variable in unlist(pConfig$obs[iObname])) {
+            stations <- unique(
+              c(stationsConfig[["allVars"]], stationsConfig[[variable]])
+            )
+            inputsThisPlotOnly <- list(
+              obname=obname,
+              variable=variable,
+              levels=sort(unique(
+                c(levelsConfig[["allVars"]], levelsConfig[[variable]])
+              )),
+              excludeLevels=sort(unique(c(
+                excludeLevelsConfig[["allVars"]],
+                excludeLevelsConfig[[variable]])
+              )),
+              station=stations
+            )
+            iPlot <- iPlot + 1
+            inputsForAllPlots[[iPlot]]<-c(plotsCommonInput,inputsThisPlotOnly)
+          }
+        } else {
+          # One plot for each variable and station
+          for(variable in unlist(pConfig$obs[iObname])) {
+            stations <- unique(
+              c(stationsConfig[["allVars"]], stationsConfig[[variable]])
+            )
+            for(station in stations) {
+              inputsThisPlotOnly <- list(
+                obname=obname,
+                variable=variable,
+                levels=sort(unique(
+                  c(levelsConfig[["allVars"]], levelsConfig[[variable]])
+                )),
+                excludeLevels=sort(unique(c(
+                  excludeLevelsConfig[["allVars"]],
+                  excludeLevelsConfig[[variable]])
+                )),
+                station=station
+              )
+              iPlot <- iPlot + 1
+              inputsForAllPlots[[iPlot]]<-c(plotsCommonInput,inputsThisPlotOnly)
+            }
+          }
         }
       }
     }
 
-    multiPlotStartedNotifId(showNotification(
-      "Gathering data for plot...", type="message", duration=NULL
-    ))
+    if(length(inputsForAllPlots)==0) {
+      showNotification(
+        "Selected multiPlot generated no plots",
+        type="warning", duration=1
+      )
+    }
+    req(length(inputsForAllPlots)>0)
+
+    # Create multiPlot progess bar
+    progress <- shiny::Progress$new(max=length(inputsForAllPlots))
+    progress$set(message="Gathering data for multiPlot...", value=0)
+    multiPlotsProgressBar(progress)
+    multiPlotsProgressFile(tempfile(pattern = "multiPlotsProgress"))
+
+    # Prepare individual plots assyncronously
     multiPlotsAsync <- suppressWarnings(futureCall(
       FUN=prepareMultiPlots,
-      args=list(plotter=plotter, inputsForAllPlots=inputsForAllPlots, db=db)
+      args=list(
+        plotter=plotter, inputsForAllPlots=inputsForAllPlots, db=db,
+        progressFile=multiPlotsProgressFile()
+      )
     ))
     multiPlotCurrentPid(multiPlotsAsync$job$pid)
 
@@ -902,7 +1061,13 @@ shinyServer(function(input, output, session) {
       }
     )
     finally(multiPlotsAsync, function() {
-      removeNotification(multiPlotStartedNotifId())
+      multiPlotCurrentPid(-1)
+      # Reset items related to multiPlot progress bar
+      unlink(multiPlotsProgressFile())
+      multiPlotsProgressBar()$close()
+      multiPlotsProgressFile(NULL)
+      multiPlotsProgressBar(NULL)
+      # Hide/show and disable/enable relevant inputs
       shinyjs::hide("multiPlotsCancelPlot")
       shinyjs::show("multiPlotsDoPlot")
       enableShinyInputs(input)
@@ -963,7 +1128,7 @@ shinyServer(function(input, output, session) {
         plotOutId <- multiPlotsGenId(iPlot, type="plot")
         output[[plotOutId]] <- renderPlot({
           myPlot <- multiPlot()[[pName]]
-          grid.arrange(req(myPlot$obplot),top=textGrob(req(myPlot$title)))
+          grid.arrange(req(myPlot$obplot),top=textGrob(myPlot$title))
         },
            res=96, pointsize=18
         )
