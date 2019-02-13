@@ -997,6 +997,14 @@ shinyServer(function(input, output, session) {
       }
     }
 
+    if(length(inputsForAllPlots)==0) {
+      showNotification(
+        "Selected multiPlot generated no plots",
+        type="warning", duration=1
+      )
+    }
+    req(length(inputsForAllPlots)>0)
+
     # Create multiPlot progess bar
     progress <- shiny::Progress$new(max=length(inputsForAllPlots))
     progress$set(message="Gathering data for multiPlot...", value=0)
