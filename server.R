@@ -421,24 +421,24 @@ shinyServer(function(input, output, session) {
   allowChoosingStation <- reactive({
      plotSupportsChoosingStations(req(input$plottype), req(input$obtype))
   })
-  allowMultipleStations <- reactive({
-     plotSupportsMultipleStations(req(input$plottype))
+  requireSingleStation <- reactive({
+     plotRequiresSingleStation(req(input$plottype))
   })
   observeEvent({
     allowChoosingStation()
-    allowMultipleStations()
+    requireSingleStation()
     }, {
     shinyjs::toggleState("station",
-      condition=(allowChoosingStation() && allowMultipleStations())
+      condition=(allowChoosingStation() && !requireSingleStation())
     )
     shinyjs::toggleElement("station",
-      condition=(allowChoosingStation() && allowMultipleStations())
+      condition=(allowChoosingStation() && !requireSingleStation())
     )
     shinyjs::toggleState("stationSingle",
-      condition=(allowChoosingStation() && !allowMultipleStations())
+      condition=(allowChoosingStation() && requireSingleStation())
     )
     shinyjs::toggleElement("stationSingle",
-      condition=(allowChoosingStation() && !allowMultipleStations())
+      condition=(allowChoosingStation() && requireSingleStation())
     )
   })
 
@@ -465,7 +465,7 @@ shinyServer(function(input, output, session) {
     stations <- putLabelsInStations(stations, obname)
 
     entryForAnyStation <- NULL
-    if(allowMultipleStations()) {
+    if(!requireSingleStation()) {
       if(selectedDtgsAreCached()) {
         entryForAnyStation <- c("Any"="")
       } else {
@@ -501,7 +501,7 @@ shinyServer(function(input, output, session) {
     updateSelectInputWrapper(
       session, "station", choices=stationsAlongWithLabels()
     )
-    if(!allowMultipleStations()) {
+    if(requireSingleStation()) {
       updateSelectInputWrapper(
         session, "stationSingle", choices=stationsAlongWithLabels()
       )
@@ -918,9 +918,9 @@ shinyServer(function(input, output, session) {
         levelsConfig <- pConfig$levels[[obname]]
         excludeLevelsConfig <- pConfig$excludeLevels[[obname]]
         stationsConfig <- pConfig$stations[[obname]]
-        if(plotSupportsMultipleStations(pConfig$plotType)) {
+        if(!plotRequiresSingleStation(pConfig$plotType)) {
           # One plot for each variable, allowing multiple stations in a
-          # single plot
+          # single plot (if stations are applicable at all)
           for(variable in unlist(pConfig$obs[iObname])) {
             stations <- unique(
               c(stationsConfig[["allVars"]], stationsConfig[[variable]])

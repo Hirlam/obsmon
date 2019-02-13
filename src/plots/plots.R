@@ -46,11 +46,9 @@ plotSupportsChoosingStations <- function(plottype=NULL, obtype=NULL) {
   return(isTRUE(queryIsFromUsage))
 }
 
-plotSupportsMultipleStations <- function(plottype=NULL) {
-  if(!plotSupportsChoosingStations(plottype)) return(FALSE)
+plotRequiresSingleStation <- function(plottype=NULL) {
   plotReqFields <- plotTypesFlat[[plottype]]$requiredFields
-  mustChooseSingleStation <- isTRUE("station" %in% plotReqFields)
-  return(!mustChooseSingleStation)
+  return(isTRUE("station" %in% plotReqFields))
 }
 
 putLabelsInStations <- function(stations=NULL, obname=NULL) {
