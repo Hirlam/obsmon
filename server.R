@@ -842,17 +842,20 @@ shinyServer(function(input, output, session) {
     multiPlotExperiment()$dbs[[dbType]]
   })
 
-  # Producing multiPlots
+  # Keep track of multiPlot assync process PID, in case user wants to cancel it
   multiPlotCurrentPid <- reactiveVal(-1)
   multiPlotStartedNotifId <- reactiveVal(-1)
-  multiPlotInterrupted <- reactiveVal()
+
+  # Management of "Cancel multiPlot" button
+  multiPlotInterrupted <- reactiveVal(FALSE)
   onclick("multiPlotsCancelPlot", {
     showNotification("Cancelling multiPlot", type="warning", duration=1)
     multiPlotInterrupted(TRUE)
     tools::pskill(multiPlotCurrentPid(), tools::SIGINT)
   })
 
-  multiPlot <- reactiveVal()
+  # Producing multiPlots
+  multiPlot <- reactiveVal(NULL)
   observeEvent(input$multiPlotsDoPlot, {
     multiPlot(NULL)
     pConfig <- multiPlotConfigInfo()
@@ -912,7 +915,7 @@ shinyServer(function(input, output, session) {
             excludeChannels=satemConfig$excludeChannels
           )
           iPlot <- iPlot + 1
-          inputsForAllPlots[[iPlot]] <- c(plotsCommonInput, inputsThisPlotOnly)
+          inputsForAllPlots[[iPlot]] <- c(plotsCommonInput,inputsThisPlotOnly)
         }
       } else {
         levelsConfig <- pConfig$levels[[obname]]
@@ -938,7 +941,7 @@ shinyServer(function(input, output, session) {
               station=stations
             )
             iPlot <- iPlot + 1
-            inputsForAllPlots[[iPlot]] <- c(plotsCommonInput, inputsThisPlotOnly)
+            inputsForAllPlots[[iPlot]]<-c(plotsCommonInput,inputsThisPlotOnly)
           }
         } else {
           # One plot for each variable and station
@@ -960,7 +963,7 @@ shinyServer(function(input, output, session) {
                 station=station
               )
               iPlot <- iPlot + 1
-              inputsForAllPlots[[iPlot]] <- c(plotsCommonInput, inputsThisPlotOnly)
+              inputsForAllPlots[[iPlot]]<-c(plotsCommonInput,inputsThisPlotOnly)
             }
           }
         }
@@ -970,6 +973,8 @@ shinyServer(function(input, output, session) {
     multiPlotStartedNotifId(showNotification(
       "Gathering data for plot...", type="message", duration=NULL
     ))
+
+    # Prepare individual plots assyncronously
     multiPlotsAsync <- suppressWarnings(futureCall(
       FUN=prepareMultiPlots,
       args=list(plotter=plotter, inputsForAllPlots=inputsForAllPlots, db=db)
