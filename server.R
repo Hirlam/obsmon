@@ -884,6 +884,15 @@ shinyServer(function(input, output, session) {
   # Producing multiPlots
   multiPlot <- reactiveVal(NULL)
   observeEvent(input$multiPlotsDoPlot, {
+    # Make sure one cannot request a multiPlot while another is being produced
+    if(multiPlotCurrentPid()>-1) {
+      showNotification(
+        "Another multiPlot is being produced. Please wait.",
+        type="warning", duration=1
+      )
+    }
+    req(multiPlotCurrentPid()==-1)
+
     multiPlot(NULL)
     pConfig <- multiPlotConfigInfo()
 
@@ -1052,6 +1061,7 @@ shinyServer(function(input, output, session) {
       }
     )
     finally(multiPlotsAsync, function() {
+      multiPlotCurrentPid(-1)
       # Reset items related to multiPlot progress bar
       unlink(multiPlotsProgressFile())
       multiPlotsProgressBar()$close()
