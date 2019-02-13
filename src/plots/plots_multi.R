@@ -6,9 +6,17 @@
 ################################################
 # Helper function to produce plots in server.R #
 ################################################
-prepareMultiPlots <- function(plotter, inputsForAllPlots, db) {
+prepareMultiPlots <- function(
+  plotter, inputsForAllPlots, db, progressFile=NULL
+) {
   allPlots <- list()
   for(iPlot in seq_along(inputsForAllPlots)) {
+   # Using a file to get update on progress of multiPlots
+   # Unfortunately there was no other way to do this from within a future
+   # at the time this code was written
+   if(!is.null(progressFile)) {
+     write(c(iPlot, length(inputsForAllPlots)), progressFile, append=FALSE)
+   }
    # qp stands for "multiPlot"
    qpInput <- inputsForAllPlots[[iPlot]]
    plotRequest <- list()

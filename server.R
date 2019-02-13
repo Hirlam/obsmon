@@ -842,9 +842,36 @@ shinyServer(function(input, output, session) {
     multiPlotExperiment()$dbs[[dbType]]
   })
 
+  # Management of multiPlot progress bar
+  multiPlotsProgressFile <- reactiveVal(NULL)
+  multiPlotsProgressStatus <- reactiveVal(function() NULL)
+  multiPlotsProgressBar <- reactiveVal(NULL)
+  readProgressFile <- function(path) {
+    tryCatch(read.table(path),
+      error=function(e) NULL,
+      warning=function(w) NULL
+    )
+  }
+  observeEvent(multiPlotsProgressFile(), {
+    multiPlotsProgressStatus(reactiveFileReader(
+      500, session, isolate(multiPlotsProgressFile()), readProgressFile
+    ))
+  })
+  observeEvent(multiPlotsProgressStatus()(), {
+    mpProgress <- unlist(multiPlotsProgressStatus()(), use.names=FALSE)
+    progress <- multiPlotsProgressBar()
+    progress$set(
+      value=mpProgress[1],
+      message="Preparing multiPlot",
+      detail=sprintf(
+        "Gathering data for plot %s of %s", mpProgress[1], mpProgress[2]
+      )
+    )
+    multiPlotsProgressBar(progress)
+  })
+
   # Keep track of multiPlot assync process PID, in case user wants to cancel it
   multiPlotCurrentPid <- reactiveVal(-1)
-  multiPlotStartedNotifId <- reactiveVal(-1)
 
   # Management of "Cancel multiPlot" button
   multiPlotInterrupted <- reactiveVal(FALSE)
@@ -970,14 +997,19 @@ shinyServer(function(input, output, session) {
       }
     }
 
-    multiPlotStartedNotifId(showNotification(
-      "Gathering data for plot...", type="message", duration=NULL
-    ))
+    # Create multiPlot progess bar
+    progress <- shiny::Progress$new(max=length(inputsForAllPlots))
+    progress$set(message="Gathering data for multiPlot...", value=0)
+    multiPlotsProgressBar(progress)
+    multiPlotsProgressFile(tempfile(pattern = "multiPlotsProgress"))
 
     # Prepare individual plots assyncronously
     multiPlotsAsync <- suppressWarnings(futureCall(
       FUN=prepareMultiPlots,
-      args=list(plotter=plotter, inputsForAllPlots=inputsForAllPlots, db=db)
+      args=list(
+        plotter=plotter, inputsForAllPlots=inputsForAllPlots, db=db,
+        progressFile=multiPlotsProgressFile()
+      )
     ))
     multiPlotCurrentPid(multiPlotsAsync$job$pid)
 
@@ -1012,7 +1044,12 @@ shinyServer(function(input, output, session) {
       }
     )
     finally(multiPlotsAsync, function() {
-      removeNotification(multiPlotStartedNotifId())
+      # Reset items related to multiPlot progress bar
+      unlink(multiPlotsProgressFile())
+      multiPlotsProgressBar()$close()
+      multiPlotsProgressFile(NULL)
+      multiPlotsProgressBar(NULL)
+      # Hide/show and disable/enable relevant inputs
       shinyjs::hide("multiPlotsCancelPlot")
       shinyjs::show("multiPlotsDoPlot")
       enableShinyInputs(input)
