@@ -215,7 +215,7 @@ registerPlotType(
                      "latitude, longitude, statid,",
                      "active, rejected, passive, blacklisted, anflag",
                      "FROM usage WHERE %s"),
-               list("obnumber", "obname", "levels"))
+               list("obnumber", "obname"))
 )
 
 plotBuildQuery.mapThreshold <- function(p, plotRequest) {
@@ -242,7 +242,7 @@ registerPlotType(
                      "latitude, longitude, level, statid, obsvalue,",
                      "(%s) as plotValues",
                      "FROM usage WHERE %s"),
-               list("obnumber", "obname", "levels"),
+               list("obnumber", "obname"),
                dataColumn="fg_dep")
 )
 registerPlotType(
@@ -253,7 +253,7 @@ registerPlotType(
                      "latitude, longitude, level, statid,",
                      "(%s) as plotValues",
                      "FROM usage WHERE %s"),
-               list("obnumber", "obname", "levels"),
+               list("obnumber", "obname"),
                dataColumn="fg_dep+biascrl")
 )
 registerPlotType(
@@ -264,7 +264,7 @@ registerPlotType(
                      "latitude, longitude, level, statid, obsvalue,",
                      "(%s) as plotValues",
                      "FROM usage WHERE %s"),
-               list("obnumber", "obname", "levels"),
+               list("obnumber", "obname"),
                dataColumn="an_dep")
 )
 registerPlotType(
@@ -276,7 +276,7 @@ registerPlotType(
                      "obsvalue, fg_dep, an_dep,",
                      "(%s) as plotValues",
                      "FROM usage WHERE %s"),
-               list("obnumber", "obname", "levels"),
+               list("obnumber", "obname"),
                dataColumn="fg_dep-an_dep")
 )
 registerPlotType(
@@ -287,7 +287,7 @@ registerPlotType(
                      "latitude, longitude, level, statid,",
                      "(%s) as plotValues",
                      "FROM usage WHERE %s"),
-               list("obnumber", "obname", "levels"),
+               list("obnumber", "obname"),
                dataColumn="biascrl")
 )
 registerPlotType(
@@ -298,7 +298,7 @@ registerPlotType(
                      "latitude, longitude, level, statid,",
                      "(%s) as plotValues",
                      "FROM usage WHERE %s"),
-               list("obnumber", "obname", "levels"),
+               list("obnumber", "obname"),
                dataColumn="obsvalue")
 )
 
@@ -345,7 +345,7 @@ registerPlotType(
                      "latitude, longitude, level, statid, obsvalue,",
                      "(%s) as plotValues",
                      "FROM usage WHERE %s"),
-               list("obnumber", "obname", "levels"),
+               list("obnumber", "obname"),
                dataColumn="fg_dep")
 )
 registerPlotType(
@@ -356,7 +356,7 @@ registerPlotType(
                      "latitude, longitude, level, statid, obsvalue,",
                      "(%s) as plotValues",
                      "FROM usage WHERE %s"),
-               list("obnumber", "obname", "levels"),
+               list("obnumber", "obname"),
                dataColumn="an_dep")
 )
 registerPlotType(
@@ -368,6 +368,6 @@ registerPlotType(
                      "obsvalue, fg_dep, an_dep,",
                      "(%s) as plotValues",
                      "FROM usage WHERE %s"),
-               list("obnumber", "obname", "levels"),
+               list("obnumber", "obname"),
                dataColumn="fg_dep-an_dep")
 )
