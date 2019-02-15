@@ -895,26 +895,6 @@ shinyServer(function(input, output, session) {
     req(multiPlotCurrentPid()==-1)
 
     multiPlot(NULL)
-    pConfig <- multiPlotConfigInfo()
-
-    # Stuff shared among all subplots
-    plotter <- plotTypesFlat[[req(pConfig$plotType)]]
-    if(plotter$dateType=="range") {
-      if(is.null(pConfig$startDate) || is.null(pConfig$endDate)) {
-        flog.error(paste(
-          "Selected plot requires startDate and endDate (or",
-          "startDate and nDays) to be set in the config file"
-        ))
-      }
-      req(!is.null(pConfig$startDate) && !is.null(pConfig$endDate))
-    } else {
-      if(is.null(pConfig$date) || is.null(pConfig$cycle)) {
-        msg <- "Selected plot requires date and cycle to be set in the config file"
-        flog.error(msg)
-        signalError(msg)
-      }
-      req(!is.null(pConfig$date) && !is.null(pConfig$cycle))
-    }
 
     # Prevent another plot from being requested
     disableShinyInputs(input)
@@ -927,6 +907,7 @@ shinyServer(function(input, output, session) {
     db <- multiPlotActiveDb()
     # Initialising a "shiny input"-like list that will be passed to the
     # ordinary plotting routines
+    pConfig <- multiPlotConfigInfo()
     plotsCommonInput <- list(
       experiment=pConfig$experiment,
       plottype=pConfig$plotType,
@@ -1022,6 +1003,7 @@ shinyServer(function(input, output, session) {
     multiPlotsProgressFile(tempfile(pattern = "multiPlotsProgress"))
 
     # Prepare individual plots assyncronously
+    plotter <- plotTypesFlat[[req(pConfig$plotType)]]
     multiPlotsAsync <- suppressWarnings(futureCall(
       FUN=prepareMultiPlots,
       args=list(

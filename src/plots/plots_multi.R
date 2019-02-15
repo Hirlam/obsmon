@@ -70,56 +70,97 @@ validateEndDate <- function(endDate, startDate=NULL, nDays=NULL, format=dateInpu
   return(rtn)
 }
 
+multiPlotExptValid <- function(plotConfig) {
+  valid <- isTRUE(plotConfig$experiment %in% exptNamesinConfig)
+  if(!valid) {
+    flog.error(
+      'multiPlot "%s": experiment "%s" not recognised',
+      plotConfig$displayName, plotConfig$experiment
+    )
+  }
+  return(valid)
+}
+
+multiPlotDbValid <- function(plotConfig) {
+  valid <- isTRUE(plotConfig$database %in% dbTypesRecognised)
+  if(!valid) {
+    flog.error(
+      'multiPlot "%s": database "%s" not recognised',
+      plotConfig$displayName, plotConfig$database
+    )
+  }
+  return(valid)
+}
+
+multiPlotPlotTypeValid <- function(plotConfig) {
+  valid <- isTRUE(plotConfig$plotType %in% names(plotTypesFlat))
+  if(!valid) {
+    flog.error(
+      'multiPlot "%s": plotType "%s" not recognised',
+      plotConfig$displayName, plotConfig$plotType
+    )
+  }
+  return(valid)
+}
+
+datesCompatibleWithPlotType <- function(pConfig) {
+  compatible <- TRUE
+  plotter <- plotTypesFlat[[pConfig$plotType]]
+  if(plotter$dateType=="range") {
+    if(is.null(pConfig$startDate) || is.null(pConfig$endDate)) {
+      msg <- paste(
+        "Selected plotType requires startDate and endDate (or",
+        "startDate and nDays, or a negative startDate) to be configured."
+      )
+      compatible <- FALSE
+    }
+  } else {
+    if(is.null(pConfig$date) || is.null(pConfig$cycle)) {
+      msg <- "Selected plotType requires date and cycle to be set."
+      compatible <- FALSE
+    }
+  }
+  if(!compatible) {
+    flog.error('multiPlot "%s": %s', pConfig$displayName, msg)
+  }
+  return(compatible)
+}
+
 validateOneClickPlotConfig <- function(config) {
-  invalidExpts <- c()
-  invalidPlotNames <- c()
-  invalidDbs <- c()
-
   if(is.null(config$multiPlots)) return(config)
-
   flog.debug("Config file contains user-defined multiPlots. Validating.")
 
-  availablePlots <- names(plotTypesFlat)
   for(iConfig in seq_along(config$multiPlots)) {
     # pc stands for "plot config"
     pc <- config$multiPlots[[iConfig]]
-    validExpt <- isTRUE(pc$experiment %in% exptNamesinConfig)
-    validPlotType <- isTRUE(pc$plotType %in% availablePlots)
-    validDatabase <- isTRUE(pc$database %in% dbTypesRecognised)
-    if(!validExpt) {
-      flog.error(
-        'multiPlot "%s": experiment "%s" not recognised',
-        pc$displayName, pc$experiment
-      )
-      invalidExpts <- c(invalidExpts, as.character(pc$experiment))
-      validExpt <- FALSE
+    validConfig <- TRUE
+    if(!multiPlotExptValid(pc)) {
+      validConfig <- FALSE
+      invalidExpts <- TRUE
     }
-    if(!validPlotType) {
-      flog.error(
-        'multiPlot "%s": plotType "%s" not recognised',
-        pc$displayName, pc$plotType
-      )
-      invalidPlotNames <- c(invalidPlotNames, as.character(pc$plotType))
+    if(!multiPlotDbValid(pc)) {
+      validConfig <- FALSE
+      invalidDbs <- TRUE
     }
-    if(!validDatabase) {
-      flog.error(
-        'multiPlot "%s": database "%s" not recognised',
-        pc$displayName, pc$database
-      )
-      invalidDbs <- c(invalidDbs, as.character(pc$database))
+    if(multiPlotPlotTypeValid(pc)) {
+      # Process dates
+      pc$date <- validateStartDate(pc$date)
+      pc$startDate <- validateStartDate(pc$startDate)
+      pc$endDate <- validateEndDate(pc$endDate, pc$startDate, pc$nDays)
+      if(!datesCompatibleWithPlotType(pc)) validConfig <- FALSE
+    } else {
+      validConfig <- FALSE
+      invalidPlotNames <- TRUE
     }
-    if(!(validExpt && validPlotType && validDatabase)) {
+
+    if(!validConfig) {
       flog.warn(
-        'Failed to initialise multiPlot "%s". It will be ignored',
+        'Failed to initialise multiPlot "%s". It will be ignored.',
         pc$displayName
       )
       config$multiPlots[[iConfig]] <- NA
       next
     }
-    # Process dates
-    pc$date <- validateStartDate(pc$date)
-    pc$startDate <- validateStartDate(pc$startDate)
-    pc$endDate <- validateEndDate(pc$endDate, pc$startDate, pc$nDays)
 
     # Process chosen obnames
     if(is.null(names(pc$obs))) {
@@ -263,17 +304,17 @@ validateOneClickPlotConfig <- function(config) {
   config$multiPlots <- Filter(Negate(anyNA), config$multiPlots)
 
 
-  if(length(invalidExpts)>0) {
+  if(exists("invalidExpts")) {
     msg <- "OneClick Plots: Please choose your experiment from:"
     for(exptName in exptNamesinConfig) msg <- paste0(msg, "\n  > ", exptName)
     flog.warn(msg)
   }
-  if(length(invalidPlotNames)>0) {
+  if(exists("invalidPlotNames")) {
     msg <- "OneClick Plots: Please choose your plotType from:"
-    for(plotType in availablePlots) msg <- paste0(msg, "\n  > ", plotType)
+    for(plotType in names(plotTypesFlat)) msg <- paste0(msg,"\n  > ",plotType)
     flog.warn(msg)
   }
-  if(length(invalidDbs)>0) {
+  if(exists("invalidDbs")) {
     msg <- "OneClick Plots: Please choose your database from:"
     msg <- paste(msg, paste(dbTypesRecognised, collapse=", "))
     flog.warn(msg)
