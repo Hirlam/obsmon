@@ -508,9 +508,16 @@ shinyServer(function(input, output, session) {
       session, "station", choices=stationsAlongWithLabels()
     )
     if(requireSingleStation()) {
-      updateSelectInputWrapper(
-        session, "stationSingle", choices=stationsAlongWithLabels()
-      )
+      if(length(stationsAlongWithLabels())>0) {
+        shinyjs::enable("stationSingle")
+        shinyjs::enable("doPlot")
+        stations <- stationsAlongWithLabels()
+      } else {
+        shinyjs::disable("stationSingle")
+        shinyjs::disable("doPlot")
+        stations <- c("No stations available to choose"="")
+      }
+      updateSelectInputWrapper(session, "stationSingle", choices=stations)
     }
   })
   # Send selection from stationSingle to station
