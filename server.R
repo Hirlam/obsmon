@@ -751,7 +751,6 @@ shinyServer(function(input, output, session) {
 
     then(newFutPlot,
       onFulfilled=function(value) {
-        showNotification("Preparing to render plot",duration=1,type="message")
         readyPlot(value)
         if(is.null(value$obmap)) {
           if(input$mainArea=="mapTab") {
@@ -790,21 +789,57 @@ shinyServer(function(input, output, session) {
     queryUsedAndDataTableOutput("queryUsed", "dataTable")
   )
 
-  # Rendering plots
+  # Rendering plot/map/dataTable
   output$plot <- renderPlot({
+    if(!is.null(readyPlot()$obplot)) {
+      notifId <- showNotification(
+        "Rendering plot...", duration=NULL, type="message"
+      )
+      on.exit(removeNotification(notifId))
+    }
     tryCatch(
-      grid.arrange(req(readyPlot()$obplot), top=textGrob(readyPlot()$title)),
+      grid.arrange(readyPlot()$obplot, top=textGrob(readyPlot()$title)),
       error=function(e) NULL
     )
   },
     res=96, pointsize=18
   )
-  output$dataTable <- renderDataTable(
-    req(readyPlot()$plotData), options=list(pageLength=100)
+  output$dataTable <- renderDataTable({
+      if(!is.null(readyPlot()$plotData)) {
+        notifId <- showNotification(
+          "Rendering data table...", duration=NULL, type="message"
+        )
+        on.exit(removeNotification(notifId))
+      }
+      tryCatch(
+        readyPlot()$plotData,
+        error=function(e) NULL
+      )
+    },
+    options=list(pageLength=100)
   )
-  output$queryUsed <- renderText(req(readyPlot()$queryUsed))
-  output$map <- renderLeaflet(req(readyPlot()$obmap))
-  output$mapTitle <- renderText(req(readyPlot()$title))
+  output$queryUsed <- renderText(
+    tryCatch(
+      readyPlot()$queryUsed,
+      error=function(e) NULL
+    )
+  )
+  output$map <- renderLeaflet({
+    notifId <- showNotification(
+      "Rendering map...", duration=NULL, type="message"
+    )
+    on.exit(removeNotification(notifId))
+    tryCatch(
+      readyPlot()$obmap,
+      error=function(e) NULL
+    )
+  })
+  output$mapTitle <- renderText(
+    tryCatch(
+      readyPlot()$title,
+      error=function(e) NULL
+    )
+  )
 
 
   ############################################################################
