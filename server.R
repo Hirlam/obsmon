@@ -171,14 +171,20 @@ shinyServer(function(input, output, session) {
     selectedDates()
     selectedCycles()
    }, {
-    dtgs <- c()
-    for(date in req(selectedDates())) {
-      for(cycle in req(selectedCycles())) {
+    dtgs <- NULL
+    for(date in selectedDates()) {
+      for(cycle in selectedCycles()) {
         dtgs <- c(dtgs, sprintf("%s%s", date, cycle))
       }
     }
+    # Do not allow plot without selected DTGs
+    if(is.null(dtgs)) shinyjs::disable("doPlot")
+    else shinyjs::enable("doPlot")
     selectedDtgs(dtgs)
-  })
+  },
+    ignoreNULL=FALSE
+  )
+
 
   # Update available cycle choices when relevant fields change
   availableCycles <- reactiveVal()
@@ -711,11 +717,6 @@ shinyServer(function(input, output, session) {
   readyPlot <- reactiveVal()
   observeEvent(input$doPlot, {
     readyPlot(NULL)
-    if(dateTypeReqByPlotType()=="range") {
-      if(is.null(input$cycles))signalError("Please select at least one cycle")
-      req(!is.null(input$cycles))
-    }
-
     plotInterrupted(FALSE)
     disableShinyInputs(input)
     shinyjs::hide("doPlot")
