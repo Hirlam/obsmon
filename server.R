@@ -908,7 +908,8 @@ shinyServer(function(input, output, session) {
     mpProgress <- unlist(multiPlotsProgressStatus()(), use.names=FALSE)
     progress <- multiPlotsProgressBar()
     progress$set(
-      value=mpProgress[1],
+      # Subtract 1 from value as progress is updated when the process begins
+      value=mpProgress[1]-1,
       message="Preparing multiPlot",
       detail=sprintf(
         "Gathering data for plot %s of %s", mpProgress[1], mpProgress[2]
@@ -917,7 +918,7 @@ shinyServer(function(input, output, session) {
     multiPlotsProgressBar(progress)
   })
 
-  # Keep track of multiPlot assync process PID, in case user wants to cancel it
+  # Keep track of multiPlot assync process PID in case user wants to cancel it
   multiPlotCurrentPid <- reactiveVal(-1)
 
   # Management of "Cancel multiPlot" button
@@ -931,7 +932,10 @@ shinyServer(function(input, output, session) {
   # Producing multiPlots
   multiPlot <- reactiveVal(NULL)
   observeEvent(input$multiPlotsDoPlot, {
-    # Make sure one cannot request a multiPlot while another is being produced
+    # Make sure a multiPlot cannot be requested if another is being produced.
+    # Although the plot button is hidden when the multiPlot is being prepared,
+    # such an action may sometimes not be quick enough (e.g., when rendering
+    # is ongoing).
     if(multiPlotCurrentPid()>-1) {
       showNotification(
         "Another multiPlot is being produced. Please wait.",
@@ -940,6 +944,8 @@ shinyServer(function(input, output, session) {
     }
     req(multiPlotCurrentPid()==-1)
 
+    # This erases any plot currently on display. Useful to avoid confusion if
+    # producing the plot fails for whatever reason.
     multiPlot(NULL)
 
     pConfig <- multiPlotConfigInfo()
