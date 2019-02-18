@@ -6,7 +6,7 @@
 #################################################
 # Helper functions to produce plots in server.R #
 #################################################
-multiPlotsMakeShinyInputs <- function(pConfig, db) {
+multiPlotsMakeShinyInputs <- function(pConfig) {
   # Create a "shiny input"-like list that will be passed to the
   # ordinary plotting routines
 
@@ -14,7 +14,7 @@ multiPlotsMakeShinyInputs <- function(pConfig, db) {
   plotsCommonInput <- list(
     experiment=pConfig$experiment,
     plottype=pConfig$plotType,
-    database=db$dbType,
+    database=pConfig$database,
     date=pConfig$date,
     cycle=pConfig$cycle,
     dateRange=c(pConfig$startDate, pConfig$endDate),

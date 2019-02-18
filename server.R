@@ -948,7 +948,9 @@ shinyServer(function(input, output, session) {
 
     db <- multiPlotActiveDb()
     pConfig <- multiPlotConfigInfo()
-    inputsForAllPlots <- multiPlotsMakeShinyInputs(pConfig, db)
+    # Making shiny-like inputs for each individual plot, to be passed to the
+    # regular obsmon plotting routines
+    inputsForAllPlots <- multiPlotsMakeShinyInputs(pConfig)
     if(length(inputsForAllPlots)==0) {
       showNotification(
         "Selected multiPlot generated no plots",
