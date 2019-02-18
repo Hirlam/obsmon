@@ -877,13 +877,17 @@ shinyServer(function(input, output, session) {
   multiPlotExperiment <- eventReactive(multiPlotConfigInfo(), {
     pConfig <- multiPlotConfigInfo()
     experiments()[[pConfig$experiment]]
-  })
+  },
+    ignoreNULL=FALSE
+  )
 
   multiPlotActiveDb <- eventReactive(multiPlotExperiment(), {
     pConfig <- multiPlotConfigInfo()
     dbType <- pConfig$database
     multiPlotExperiment()$dbs[[dbType]]
-  })
+  },
+    ignoreNULL=FALSE
+  )
 
   # Management of multiPlot progress bar
   multiPlotsProgressFile <- reactiveVal(NULL)
@@ -938,16 +942,23 @@ shinyServer(function(input, output, session) {
 
     multiPlot(NULL)
 
-    # Prevent another plot from being requested
-    disableShinyInputs(input)
-    shinyjs::hide("multiPlotsDoPlot")
-    # Offer possibility to cancel multiPlot
-    shinyjs::show("multiPlotsCancelPlot")
-    shinyjs::enable("multiPlotsCancelPlot")
-    multiPlotInterrupted(FALSE)
-
-    db <- multiPlotActiveDb()
     pConfig <- multiPlotConfigInfo()
+    db <- tryCatch(
+      req(multiPlotActiveDb()),
+      error=function(e) {
+        exptName <- pConfig$experiment
+        exptNames <- gsub(": Loading experiment...$", "", names(experiments))
+        if(exptName %in% exptNames) {
+          errMsg <- "Experiment still loading. Please try again later."
+        } else {
+          errMsg <- sprintf('Cannot find files for experiment "%s"', exptName)
+        }
+        signalError(title="Cannot produce multiPlot", errMsg)
+        NULL
+      }
+    )
+    req(db)
+
     # Making shiny-like inputs for each individual plot, to be passed to the
     # regular obsmon plotting routines
     inputsForAllPlots <- multiPlotsMakeShinyInputs(pConfig)
@@ -959,6 +970,18 @@ shinyServer(function(input, output, session) {
     }
     req(length(inputsForAllPlots)>0)
 
+    ###############################################################
+    # All checks performed: We can now proceed with the multiPlot #
+    ###############################################################
+    # Prevent another plot from being requested
+    disableShinyInputs(input)
+    shinyjs::hide("multiPlotsDoPlot")
+
+    # Offer possibility to cancel multiPlot
+    shinyjs::show("multiPlotsCancelPlot")
+    shinyjs::enable("multiPlotsCancelPlot")
+    multiPlotInterrupted(FALSE)
+
     # Create multiPlot progess bar
     progress <- shiny::Progress$new(max=length(inputsForAllPlots))
     progress$set(message="Gathering data for multiPlot...", value=0)
@@ -966,7 +989,7 @@ shinyServer(function(input, output, session) {
     multiPlotsProgressFile(tempfile(pattern = "multiPlotsProgress"))
 
     # Prepare individual plots assyncronously
-    plotter <- plotTypesFlat[[req(pConfig$plotType)]]
+    plotter <- plotTypesFlat[[pConfig$plotType]]
     multiPlotsAsync <- suppressWarnings(futureCall(
       FUN=prepareMultiPlots,
       args=list(
