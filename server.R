@@ -94,7 +94,7 @@ shinyServer(function(input, output, session) {
     }
 
     updateSelectInputWrapper(session, "odbBase", choices=choices)
-    if(length(choices)==0) disableShinyInputs(input, except=c("experiment"))
+    if(length(choices)==0) disableShinyInputs(input, except="experiment")
     else enableShinyInputs(input)
   })
 
@@ -985,7 +985,6 @@ shinyServer(function(input, output, session) {
 
     # Offer possibility to cancel multiPlot
     shinyjs::show("multiPlotsCancelPlot")
-    shinyjs::enable("multiPlotsCancelPlot")
     multiPlotInterrupted(FALSE)
 
     # Create multiPlot progess bar
@@ -1019,12 +1018,12 @@ shinyServer(function(input, output, session) {
           }
         }
         if(somePlotHasMap) {
-          js$enableTab("mapTab")
+          js$enableTab("multiPlotsMapTab")
         } else {
-          if(input$multiPlotsMainArea=="mapTab") {
-            updateTabsetPanel(session, "multiPlotsMainArea", "plotTab")
+          if(input$multiPlotsMainArea=="multiPlotsMapTab") {
+            updateTabsetPanel(session,"multiPlotsMainArea","multiPlotsPlotTab")
           }
-          js$disableTab("mapTab")
+          js$disableTab("multiPlotsMapTab")
         }
       },
       onRejected=function(e) {
