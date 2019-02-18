@@ -59,7 +59,7 @@ registerPlotType(
     "Timeseries",
     plotCreate("plotTimeseries", "Number of Observations", "range",
                "SELECT DTG, level, nobs_total FROM obsmon WHERE %s",
-               list("obnumber", "obname", "levels"))
+               list("obnumber", "obname"))
 )
 
 doPlot.obsFit <- function(p, plotRequest, plotData) {
@@ -86,7 +86,7 @@ registerPlotType(
                      "fg_rms_total, an_rms_total,",
                      "fg_bias_total, an_bias_total",
                      "FROM obsmon WHERE %s"),
-               list("obnumber", "obname", "levels"))
+               list("obnumber", "obname"))
 )
 
 doPlot.biasCorrection <- function(p, plotRequest, plotData) {
@@ -103,7 +103,7 @@ registerPlotType(
                paste("SELECT DTG, level, varname, nobs_total,",
                      "fg_bias_total, fg_uncorr_total",
                      "FROM obsmon WHERE %s"),
-               list("obnumber", "obname", "levels"))
+               list("obnumber", "obname"))
 )
 
 doPlot.landSeaDepartures <- function(p, plotRequest, plotData) {
@@ -142,7 +142,7 @@ registerPlotType(
                      "fg_uncorr_sea, fg_dep_sea, an_dep_sea,",
                      "fg_uncorr_land, fg_dep_land, an_dep_land",
                      "FROM obsmon WHERE %s"),
-               list("obnumber"=7, "obname", "levels"))
+               list("obnumber"=7, "obname"))
 )
 
 doPlot.hovmoller <- function(p, plotRequest, plotData) {
@@ -158,5 +158,5 @@ registerPlotType(
                "Hovmöller", "range",
                paste("SELECT DTG, level, fg_bias_total",
                      "FROM obsmon WHERE %s"),
-               list("obnumber"=7, "obname", "levels"))
+               list("obnumber"=7, "obname"))
 )

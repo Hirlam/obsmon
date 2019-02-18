@@ -90,5 +90,5 @@ registerPlotType(
                      "fg_rms_total, an_rms_total, level",
                      "FROM obsmon WHERE %s",
                      "ORDER BY level"),
-               list("obnumber", "obname", "levels"))
+               list("obnumber", "obname"))
 )

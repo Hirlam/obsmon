@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
     - Produce one or more pre-configured plots at once
     - Similar idea as the earlier "pre-defined plots"
         - But configurable by user via config.toml file
+- Vertical profile plots
 - "Cancel plot" button (appears only after clicking in "Plot")
 - New config options supported (to be set under the "general" section)
     - initCheckDataExists (true/false, default: false)
