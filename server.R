@@ -723,12 +723,21 @@ shinyServer(function(input, output, session) {
 
   readyPlot <- reactiveVal()
   observeEvent(input$doPlot, {
+    # Make sure a plot cannot be requested if another is being produced.
+    # Although the plot button is hidden when the multiPlot is being prepared,
+    # such an action may sometimes not be quick enough (e.g., when rendering
+    # is ongoing).
+    if(currentPlotPid()>-1) {
+      showNotification(
+        "Another plot is being produced. Please wait.",
+        type="warning", duration=1
+      )
+    }
+    req(currentPlotPid()==-1)
+
+    # This erases any plot currently on display. Useful to avoid confusion if
+    # producing the plot fails for whatever reason.
     readyPlot(NULL)
-    plotInterrupted(FALSE)
-    disableShinyInputs(input)
-    shinyjs::hide("doPlot")
-    shinyjs::show("cancelPlot")
-    shinyjs::enable("cancelPlot")
 
     db <- req(activeDb())
     plotter <- plotTypesFlat[[req(input$plottype)]]
@@ -736,6 +745,18 @@ shinyServer(function(input, output, session) {
     plotRequest$expName <- req(input$experiment)
     plotRequest$dbType <- db$dbType
     plotRequest$criteria <- plotsBuildCriteria(input)
+
+    ###############################################################
+    # All checks performed: We can now proceed with the multiPlot #
+    ###############################################################
+    # Prevent another plot from being requested
+    disableShinyInputs(input)
+    shinyjs::hide("doPlot")
+
+    # Offer possibility to cancel plot
+    plotInterrupted(FALSE)
+    shinyjs::enable("cancelPlot")
+    shinyjs::show("cancelPlot")
 
     plotStartedNotifId(showNotification(
       "Gathering data for plot...", type="message", duration=NULL
@@ -770,6 +791,7 @@ shinyServer(function(input, output, session) {
       }
     )
     finally(newFutPlot, function() {
+      currentPlotPid(-1)
       removeNotification(plotStartedNotifId())
       shinyjs::hide("cancelPlot")
       shinyjs::show("doPlot")
@@ -933,9 +955,6 @@ shinyServer(function(input, output, session) {
   multiPlot <- reactiveVal(NULL)
   observeEvent(input$multiPlotsDoPlot, {
     # Make sure a multiPlot cannot be requested if another is being produced.
-    # Although the plot button is hidden when the multiPlot is being prepared,
-    # such an action may sometimes not be quick enough (e.g., when rendering
-    # is ongoing).
     if(multiPlotCurrentPid()>-1) {
       showNotification(
         "Another multiPlot is being produced. Please wait.",
@@ -944,8 +963,7 @@ shinyServer(function(input, output, session) {
     }
     req(multiPlotCurrentPid()==-1)
 
-    # This erases any plot currently on display. Useful to avoid confusion if
-    # producing the plot fails for whatever reason.
+    # Erase any plot currently on display
     multiPlot(NULL)
 
     pConfig <- multiPlotConfigInfo()
@@ -985,6 +1003,7 @@ shinyServer(function(input, output, session) {
 
     # Offer possibility to cancel multiPlot
     shinyjs::show("multiPlotsCancelPlot")
+    shinyjs::enable("multiPlotsCancelPlot")
     multiPlotInterrupted(FALSE)
 
     # Create multiPlot progess bar
