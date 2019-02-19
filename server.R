@@ -761,14 +761,28 @@ shinyServer(function(input, output, session) {
     plotStartedNotifId(showNotification(
       "Gathering data for plot...", type="message", duration=NULL
     ))
-    # The suppressWarnings is because of the warning
-    # "Warning in serialize(what, NULL, xdr = FALSE) :
-    # 'package:DBI' may not be available when loading"
-    newFutPlot <- suppressWarnings(futureCall(
+
+    # Using "sink" to suppress some annoying stuff futureCall sends to stderr.
+    # Any eventual error messages wull be catched using "then" or "catch". The
+    # aforementioned annoying stuff is:
+    # 1. "Warning in serialize(what, NULL, xdr = FALSE) :
+    #    'package:DBI' may not be available when loading",
+    #     For this, suppressWarnings would work
+    # 2. Two blank lines printed to stderr whenever a plot is cancelled
+    #    suppressWarnings did not work for this for whatever reason
+    futureCallStderrFilePath <- tempfile()
+    tmpFile <- file(futureCallStderrFilePath, open="wt")
+    sink(tmpFile, type="message")
+
+    # Prepare plot assyncronously
+    newFutPlot <- futureCall(
       FUN=preparePlots,
       args=list(plotter=plotter, plotRequest=plotRequest, db=db)
-    ))
+    )
     currentPlotPid(newFutPlot$job$pid)
+
+    # Cancel sink, so error/warning messages can be printed again
+    sink(type="message")
 
     then(newFutPlot,
       onFulfilled=function(value) {
@@ -790,12 +804,21 @@ shinyServer(function(input, output, session) {
         readyPlot(NULL)
       }
     )
-    finally(newFutPlot, function() {
+    plotCleanup <- finally(newFutPlot, function() {
       currentPlotPid(-1)
       removeNotification(plotStartedNotifId())
       shinyjs::hide("cancelPlot")
       shinyjs::show("doPlot")
       enableShinyInputs(input)
+      # Cleaning temp file used for futureCall stderr
+      close(tmpFile)
+      unlink(futureCallStderrFilePath)
+    })
+    catch(plotCleanup, function(e) {
+      # This prevents printing the annoying "Unhandled promise error" msg when
+      # plots are cancelled
+      if(!plotInterrupted()) flog.error(e)
+      NULL
     })
     # This NULL is necessary in order to avoid the future from blocking
     NULL
@@ -1012,16 +1035,26 @@ shinyServer(function(input, output, session) {
     multiPlotsProgressBar(progress)
     multiPlotsProgressFile(tempfile(pattern = "multiPlotsProgress"))
 
+
+    # Using sink to suppress a few annoying stuff futureCall sends to stderr
+    # See the analogous code in the input$doPlot observe
+    futureCallStderrFilePath <- tempfile()
+    tmpFile <- file(futureCallStderrFilePath, open="wt")
+    sink(tmpFile, type="message")
+
     # Prepare individual plots assyncronously
-    plotter <- plotTypesFlat[[pConfig$plotType]]
-    multiPlotsAsync <- suppressWarnings(futureCall(
+    multiPlotsAsync <- futureCall(
       FUN=prepareMultiPlots,
       args=list(
-        plotter=plotter, inputsForAllPlots=inputsForAllPlots, db=db,
+        plotter=plotTypesFlat[[pConfig$plotType]],
+        inputsForAllPlots=inputsForAllPlots, db=db,
         progressFile=multiPlotsProgressFile()
       )
-    ))
+    )
     multiPlotCurrentPid(multiPlotsAsync$job$pid)
+
+    # Cancel sink, so error/warning messages can be printed again
+    sink(type="message")
 
     then(multiPlotsAsync,
       onFulfilled=function(value) {
@@ -1053,7 +1086,7 @@ shinyServer(function(input, output, session) {
         multiPlot(NULL)
       }
     )
-    finally(multiPlotsAsync, function() {
+    plotCleanup <- finally(multiPlotsAsync, function() {
       multiPlotCurrentPid(-1)
       # Reset items related to multiPlot progress bar
       unlink(multiPlotsProgressFile())
@@ -1064,6 +1097,15 @@ shinyServer(function(input, output, session) {
       shinyjs::hide("multiPlotsCancelPlot")
       shinyjs::show("multiPlotsDoPlot")
       enableShinyInputs(input)
+      # Cleaning temp file used for futureCall stderr
+      close(tmpFile)
+      unlink(futureCallStderrFilePath)
+    })
+    catch(plotCleanup, function(e) {
+      # This prevents printing the annoying "Unhandled promise error" msg when
+      # plots are cancelled
+      if(!plotInterrupted()) flog.error(e)
+      NULL
     })
     # This NULL is necessary in order to avoid the future from blocking
     NULL
