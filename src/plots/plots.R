@@ -170,7 +170,7 @@ getPlotDtgCriteriaFromUiInput <- function(input) {
     switch(plotTypesFlat[[input$plottype]]$dateType,
       "single"=date2dtg(input$date, input$cycle),
       "range"={
-        dateRange <- input$dateRange
+        dateRange <- sort(input$dateRange)
         list(dateRange[1], dateRange[2], input$cycles)
       }
     ),
