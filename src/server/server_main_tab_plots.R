@@ -34,6 +34,7 @@ observeEvent(input$doPlot, {
   plotRequest$expName <- req(input$experiment)
   plotRequest$dbType <- db$dbType
   plotRequest$criteria <- plotsBuildCriteria(input)
+  if(requireSingleStation()) req(input$stationSingle)
 
   ###############################################################
   # All checks performed: We can now proceed with the multiPlot #

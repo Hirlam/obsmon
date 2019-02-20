@@ -197,7 +197,8 @@ plotsBuildCriteria <- function(input) {
     excludeLevels <- input$excludeLevels
 
     station <- input$station
-    if("" %in% station) station <- ""
+    if(plotRequiresSingleStation(input$plottype)) station<-input$stationSingle
+    if(is.null(station) || "" %in% station) station <- character(0)
     res$station <- station
   }
   res$levels <- list()

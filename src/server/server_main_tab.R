@@ -403,22 +403,16 @@ observeEvent({
   allowChoosingStation()
   requireSingleStation()
   }, {
-  shinyjs::toggleState("station",
-    condition=(allowChoosingStation() && !requireSingleStation())
-  )
-  shinyjs::toggleElement("station",
-    condition=(allowChoosingStation() && !requireSingleStation())
-  )
-  shinyjs::toggleState("stationSingle",
-    condition=(allowChoosingStation() && requireSingleStation())
-  )
-  shinyjs::toggleElement("stationSingle",
-    condition=(allowChoosingStation() && requireSingleStation())
-  )
+  useStationSingle <- allowChoosingStation() && requireSingleStation()
+  useStationMulti <- allowChoosingStation() && !requireSingleStation()
+
+  shinyjs::toggleState("station", condition=useStationMulti)
+  shinyjs::toggleElement("station", condition=useStationMulti)
+  shinyjs::toggleState("stationSingle", condition=useStationSingle)
+  shinyjs::toggleElement("stationSingle", condition=useStationSingle)
 })
 
 # Update stations
-stationsAlongWithLabels <- reactiveVal(c("Any"=""))
 updateStations <- reactive({
   allowChoosingStation()
   reloadInfoFromCache()
@@ -427,7 +421,7 @@ updateStations <- reactive({
   input$variable
 }) %>% throttle(100)
 observeEvent(updateStations(), {
-  if(!allowChoosingStation()) stationsAlongWithLabels(c("Any"=""))
+  if(!allowChoosingStation()) return(c("Any"=""))
   req(allowChoosingStation())
 
   db <- req(activeDb())
@@ -439,57 +433,28 @@ observeEvent(updateStations(), {
   stations <- getStationsFromCache(db, dates, cycles, obname, variable)
   stations <- putLabelsInStations(stations, obname)
 
-  entryForAnyStation <- NULL
-  if(!requireSingleStation()) {
-    if(selectedDtgsAreCached()) {
-      entryForAnyStation <- c("Any"="")
-    } else {
-      if(length(stations)==0) {
-        entryForAnyStation <- c("Any (cache info not available)"="")
-      } else {
-        entryForAnyStation <- c("Any (cache info incomplete)"="")
-      }
-    }
-  } else {
-    if(selectedDtgsAreCached()) {
-      updateSelectInput(session, "stationSingle", label="Station")
-    } else {
-      if(length(stations)==0) {
-        updateSelectInput(session, "stationSingle",
-          label="Station (cache info not available)"
-        )
-      } else {
-        updateSelectInput(session, "stationSingle",
-          label="Station (cache info incomplete)"
-        )
-      }
-    }
-  }
-  stationsAlongWithLabels(c(entryForAnyStation, stations))
-  if(!selectedDtgsAreCached()) delay(1000, triggerReadCache())
+  stationsAvailable <- length(stations)>0
 
-}, ignoreNULL=TRUE)
-observeEvent(stationsAlongWithLabels(), {
-  # station is always going to be updated, as stationSingle is just a wrap
-  # for station to account for the fact that updateSelectInput does not have
-  # a "multiple" argument
-  updateSelectInputWrapper(
-    session, "station", choices=stationsAlongWithLabels()
-  )
-  if(requireSingleStation()) {
-    if(length(stationsAlongWithLabels())>0) {
-      shinyjs::enable("stationSingle")
-      shinyjs::enable("doPlot")
-      stations <- stationsAlongWithLabels()
-    } else {
-      shinyjs::disable("stationSingle")
-      shinyjs::disable("doPlot")
-      stations <- c("No stations available to choose"="")
-    }
-    updateSelectInputWrapper(session, "stationSingle", choices=stations)
+  notFullyCachedMsg <- NULL
+  if(!selectedDtgsAreCached()) {
+    notFullyCachedMsg <- "(cache info not available)"
+    if(stationsAvailable) notFullyCachedMsg<-"(cache info incomplete)"
   }
-})
-# Send selection from stationSingle to station
-observeEvent(input$stationSingle, {
-  updateSelectInput(session, "station", selected=input$stationSingle)
-})
+
+  if(requireSingleStation()) {
+    inputName <- "stationSingle"
+    label <- gsub(" $", "", paste("Station", notFullyCachedMsg))
+    if(!stationsAvailable) stations <- c("No stations available to choose"="")
+  } else {
+    inputName <- "station"
+    label <- "Station"
+    entryForAnyStation <- c("")
+    names(entryForAnyStation) <- gsub(" $","",paste("Any",notFullyCachedMsg))
+    stations <- c(entryForAnyStation, stations)
+  }
+  updateSelectInputWrapper(session, inputName, choices=stations, label=label)
+
+  if(!selectedDtgsAreCached()) delay(1000, triggerReadCache())
+},
+  ignoreNULL=TRUE
+)
