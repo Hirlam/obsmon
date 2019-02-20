@@ -174,7 +174,7 @@ observeEvent(input$cyclesSelectAll, {
     choices=cycles, selected=cycles, inline=TRUE
   )
 })
-observeEvent(input$cyclesSelectNone, {
+observeEvent(input$cyclesSelectAny, {
   cycles <- req(availableCycles())
   updateCheckboxGroupInput(session, "cycles",
     choices=cycles, selected=character(0), inline=TRUE
@@ -294,13 +294,9 @@ observeEvent(input$levelsSelectStandard, {
   updateSelectInput(session, "levels",
     choices=availableLevels()$all, selected=availableLevels()$obsmon)
 })
-observeEvent(input$levelsSelectAll, {
+observeEvent(input$levelsSelectAny, {
   updateSelectInput(session, "levels",
-    choices=availableLevels()$all, selected=availableLevels()$all)
-})
-observeEvent(input$levelsSelectNone, {
-  updateSelectInput(session, "levels",
-    choices=availableLevels()$all, selected=c())
+    choices=availableLevels()$all, selected=character(0))
 })
 
 # Update sensornames

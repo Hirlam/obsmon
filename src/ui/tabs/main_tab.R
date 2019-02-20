@@ -99,8 +99,7 @@ mainTab <- function() {fluidPage(
             tags$div(getDefLabel("levels"),
               "(Select",
               actionLink("levelsSelectStandard", "standard"),
-              actionLink("levelsSelectAll", "all"),
-              actionLink("levelsSelectNone", "none"),
+              actionLink("levelsSelectAny", "any"),
               ")"
             ),
             choices=c(),
@@ -134,7 +133,7 @@ mainTab <- function() {fluidPage(
         label=tags$div("Cycles",
           "(Select",
           actionLink("cyclesSelectAll", "all"),
-          actionLink("cyclesSelectNone", "none"),
+          actionLink("cyclesSelectAny", "any"),
           ")"
         ),
         inline=TRUE,
