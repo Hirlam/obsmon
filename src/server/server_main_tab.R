@@ -137,6 +137,7 @@ observeEvent({
   } else {
     cycles <- input$cycle
   }
+  if(length(cycles)==0) cycles <- sprintf("%02d", 0:24)
   selectedCycles(sort(cycles, decreasing=FALSE))
 })
 selectedDtgs <- reactiveVal()
@@ -150,13 +151,8 @@ observeEvent({
       dtgs <- c(dtgs, sprintf("%s%s", date, cycle))
     }
   }
-  # Do not allow plot without selected DTGs
-  if(is.null(dtgs)) shinyjs::disable("doPlot")
-  else shinyjs::enable("doPlot")
   selectedDtgs(dtgs)
-},
-  ignoreNULL=FALSE
-)
+})
 
 
 # Update available cycle choices when relevant fields change
