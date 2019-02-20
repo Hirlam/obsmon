@@ -1,12 +1,12 @@
 registerPlotCategory("VerticalProfiles")
 
-plotTitle.plotVerticalProfiles <- function(p, plotRequest, plotData) {
+plotTitle.plotVerticalObsProfile <- function(p, plotRequest, plotData) {
   dtg <- formatDtg(plotRequest$criteria$dtg)
   station <- plotRequest$criteria$station
   title <- sprintf("%s: %s %s %s", plotRequest$expName, p$name, station, dtg)
 }
 
-doPlot.plotVerticalProfiles <- function(p, plotRequest, plotData) {
+doPlot.plotVerticalObsProfile <- function(p, plotRequest, plotData) {
   df <- data.frame(level=plotData$level, obsvalue=plotData$obsvalue)
   obplot <- ggplot(data=df) +
     aes(x=level, y=obsvalue) +
@@ -18,8 +18,8 @@ doPlot.plotVerticalProfiles <- function(p, plotRequest, plotData) {
 }
 
 registerPlotType("VerticalProfiles",
-  plotCreate("plotVerticalProfiles",
-    name="Vertical Profile",
+  plotCreate("plotVerticalObsProfile",
+    name="Station Vertical Profile: Obsvalue",
     dateType="single",
     queryStub=paste(
       "SELECT DISTINCT level, obsvalue FROM usage WHERE %s",
