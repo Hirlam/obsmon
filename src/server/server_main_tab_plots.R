@@ -34,7 +34,16 @@ observeEvent(input$doPlot, {
   plotRequest$expName <- req(input$experiment)
   plotRequest$dbType <- db$dbType
   plotRequest$criteria <- plotsBuildCriteria(input)
-  if(requireSingleStation()) req(input$stationSingle)
+  if(requireSingleStation()) {
+    validStation <- length(plotRequest$criteria$station)==1
+    if(!validStation) {
+      showNotification(
+        "This plot requires choosing one station!",
+        type="error", duration=2
+      )
+    }
+    req(validStation)
+  }
 
   ###############################################################
   # All checks performed: We can now proceed with the multiPlot #
