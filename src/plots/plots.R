@@ -170,7 +170,7 @@ getPlotDtgCriteriaFromUiInput <- function(input) {
     switch(plotTypesFlat[[input$plottype]]$dateType,
       "single"=date2dtg(input$date, input$cycle),
       "range"={
-        dateRange <- input$dateRange
+        dateRange <- sort(input$dateRange)
         list(dateRange[1], dateRange[2], input$cycles)
       }
     ),
@@ -197,7 +197,8 @@ plotsBuildCriteria <- function(input) {
     excludeLevels <- input$excludeLevels
 
     station <- input$station
-    if("" %in% station) station <- ""
+    if(plotRequiresSingleStation(input$plottype)) station<-input$stationSingle
+    if(is.null(station) || "" %in% station) station <- character(0)
     res$station <- station
   }
   res$levels <- list()

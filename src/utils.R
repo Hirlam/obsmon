@@ -77,11 +77,15 @@ formatDtg <- function(dtg) {
     strftime(dtg2POSIXct(dtg), format="%Y-%m-%d %H %Z")
   } else if (n==3) {
     if (dtg[[1]] == dtg[[2]]) {
-      sprintf("[%s, (%s)]", dtg[[1]], paste(dtg[[3]], collapse=", "))
+      if(length(dtg[[3]])>0) {
+        sprintf("[%s (%s)]", dtg[[1]], paste(dtg[[3]], collapse=", "))
+      } else {
+        sprintf("[%s]", dtg[[1]])
+      }
     } else {
       if(length(dtg[[3]])>0) {
         sprintf(
-          "[%s\u2013%s, (%s)]",
+          "[%s\u2013%s (%s)]",
           dtg[[1]], dtg[[2]], paste(dtg[[3]], collapse=", ")
         )
       } else {
