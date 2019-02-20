@@ -33,6 +33,20 @@ doPlot.plotVerticalAnalysisProfile <- function(p, plotRequest, plotData) {
   return(obplot)
 }
 
+doPlot.plotVerticalBiasProfile <- function(p, plotRequest, plotData) {
+  localPlotData <- melt(plotData, id=c("level"))
+  varname <- plotRequest$criteria$varname
+  ylab <- sprintf("%s [%s]", varname, units[[varname]])
+  obplot <- ggplot(data=localPlotData) +
+    aes(x=level, y=value, group=variable, colour=variable, shape=variable) +
+    geom_line() +
+    geom_point(size=2) +
+    scale_colour_manual(values=c("black", "blue")) +
+    coord_flip() +
+    labs(x="Level", y=ylab)
+  return(obplot)
+}
+
 registerPlotType("VerticalProfiles",
   plotCreate("plotVerticalObsProfile",
     name="Station Vertical Profile: Obsvalue",
@@ -63,3 +77,18 @@ registerPlotType("VerticalProfiles",
   )
 )
 
+registerPlotType("VerticalProfiles",
+  plotCreate(c("plotVerticalBiasProfile", "plotVerticalObsProfile"),
+    name="Station Vertical Profile: Bias",
+    dateType="single",
+    queryStub=paste(
+      "SELECT DISTINCT level,",
+      "obsvalue AS obsvalue_corrected,",
+      "(obsvalue+biascrl) AS obsvalue_raw",
+      "FROM usage WHERE %s ORDER BY level"
+    ),
+    requiredFields=list(
+      "station", "obnumber", "obname", "varname"
+    )
+  )
+)
