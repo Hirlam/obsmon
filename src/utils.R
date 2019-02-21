@@ -16,6 +16,17 @@ slugify <- function(string) {
   slugified
 }
 
+strLowDashToTitle <- function(str) {
+  # Replace lowDash by space and convert to title case.
+  # If conversion fails, the value of the passed argument is returned.
+  # Eg.: strLowDashToTitle("my_var_name") == "My Var Name"
+  rtn <- tryCatch(
+    paste(tools::toTitleCase(unlist(strsplit(str, "_"))),collapse=" "),
+    error=function(e) str
+  )
+  return(rtn)
+}
+
 dtg2date <- function(dtg) {
   paste(substr(dtg, 1, 4), substr(dtg, 5, 6), substr(dtg, 7, 8), sep="-")
 }
