@@ -364,12 +364,7 @@ channels <- eventReactive(updateChannels(), {
 observeEvent(channels(), {
   updateSelectInputWrapper(session, "channels", choices=channels())
 })
-observeEvent(input$channelsSelectAll, {
-  updateSelectInput(
-    session, "channels", choices=channels(), selected=channels()
-  )
-})
-observeEvent(input$channelsSelectNone, {
+observeEvent(input$channelsSelectAny, {
   updateSelectInput(
     session, "channels", choices=channels(), selected=character(0)
   )

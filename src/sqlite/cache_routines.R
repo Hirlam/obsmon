@@ -651,46 +651,43 @@ getStationsFromCache <- function(db, dates, cycles, obname, variable) {
 # Routines to be used in server.R to get cached values if available
 # or return defaults otherwise
 getObnames <- function(db, category, dates, cycles) {
-  rtn <- list(cached=NULL, general=NULL)
-  rtn$cached <- getObnamesFromCache(db, category, dates, cycles)
-  rtn$general <- getAttrFromMetadata('obname', category=category)
-  return(rtn)
+  cached <- getObnamesFromCache(db, category, dates, cycles)
+  general <- getAttrFromMetadata('obname', category=category)
+  if(!is.null(general)) names(general) <- lapply(general, strLowDashToTitle)
+  if(!is.null(cached)) names(cached) <- lapply(cached, strLowDashToTitle)
+  return(list(cached=cached, general=general))
 }
 
 getObtypes <- function(db, dates, cycles) {
-  rtn <- list(cached=NULL, general=NULL)
-  rtn$cached <- getObtypesFromCache(db, dates, cycles)
-  rtn$general <- getAttrFromMetadata('category')
-  return(rtn)
+  cached <- getObtypesFromCache(db, dates, cycles)
+  general <- getAttrFromMetadata('category')
+  if(!is.null(general)) names(general) <- lapply(general, strLowDashToTitle)
+  if(!is.null(cached)) names(cached) <- lapply(cached, strLowDashToTitle)
+  return(list(cached=cached, general=general))
 }
 
 getVariables <- function(db, dates, cycles, obname) {
-  rtn <- list(cached=NULL, general=NULL)
-  rtn$cached <- getVariablesFromCache(db, dates, cycles, obname)
-  rtn$general <- getAttrFromMetadata('variables', obname=obname)
-  return(rtn)
+  cached <- getVariablesFromCache(db, dates, cycles, obname)
+  general <- getAttrFromMetadata('variables', obname=obname)
+  return(list(cached=cached, general=general))
 }
 
 getAvailableChannels <- function(db, dates, cycles, satname, sensorname) {
-  rtn <- getChannelsFromCache(db, dates, cycles, satname, sensorname)
-  return(rtn)
+  return(getChannelsFromCache(db, dates, cycles, satname, sensorname))
 }
 
 getAvailableLevels <- function(db, dates, cycles, obname, varname) {
-  rtn <- getLevelsFromCache(db, dates, cycles, obname, varname)
-  return(rtn)
+  return(getLevelsFromCache(db, dates, cycles, obname, varname))
 }
 
 getAvailableSensornames <- function(db, dates, cycles) {
-  rtn <- list(cached=NULL, general=NULL)
-  rtn$cached <- getSensornamesFromCache(db, dates, cycles)
-  rtn$general <- getSensorNamesFromMetadata()
-  return(rtn)
+  cached <- getSensornamesFromCache(db, dates, cycles)
+  general <- getSensorNamesFromMetadata()
+  return(list(cached=cached, general=general))
 }
 
 getAvailableSatnames <- function(db, dates, cycles, sensorname) {
-  rtn <- list(cached=NULL, general=NULL)
-  rtn$cached <- getSatnamesFromCache(db, dates, cycles, sensorname)
-  rtn$general <- getSatelliteNamesFromMetadata(sensorname)
-  return(rtn)
+  cached <- getSatnamesFromCache(db, dates, cycles, sensorname)
+  general <- getSatelliteNamesFromMetadata(sensorname)
+  return(list(cached=cached, general=general))
 }

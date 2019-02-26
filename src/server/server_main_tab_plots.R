@@ -133,7 +133,31 @@ output$queryAndTableContainer <- renderUI(
   queryUsedAndDataTableOutput("queryUsed", "dataTable")
 )
 
+
 # Rendering plot/map/dataTable
+
+# (i) Rendering plots
+# Code for zoomable plot adapted from
+# https://shiny.rstudio.com/gallery/plot-interaction-zoom.html
+plotRanges <- reactiveValues(x=NULL, y=NULL)
+# Reset range upon generation of new plot
+observeEvent({readyPlot()}, {
+  plotRanges$x <- NULL
+  plotRanges$y <- NULL
+})
+# When a double-click happens, check if there's a brush on the plot.
+# If so, zoom to the brush bounds; if not, reset the zoom.
+observeEvent(input$plot_dblclick, {
+  brush <- input$plot_brush
+  if(is.null(brush)) {
+    plotRanges$x <- NULL
+    plotRanges$y <- NULL
+  } else {
+    plotRanges$x <- c(brush$xmin, brush$xmax)
+    plotRanges$y <- c(brush$ymin, brush$ymax)
+  }
+})
+
 output$plot <- renderPlot({
   if(!is.null(readyPlot()$obplot)) {
     notifId <- showNotification(
@@ -141,13 +165,46 @@ output$plot <- renderPlot({
     )
     on.exit(removeNotification(notifId))
   }
-  tryCatch(
-    grid.arrange(readyPlot()$obplot, top=textGrob(readyPlot()$title)),
-    error=function(e) NULL
+  # Add title to plot
+  myPlot <- tryCatch({
+      if(is.ggplot(readyPlot()$obplot)) {
+        readyPlot()$obplot + ggtitle(readyPlot()$title)
+      } else {
+        grid.arrange(readyPlot()$obplot, top=textGrob(readyPlot()$title))
+      }
+    },
+    error=function(e) {
+      if(!is.null(readyPlot()$obplot)) {
+        flog.error("Problems setting plot title: %s", e)
+      }
+      readyPlot()$obplot
+    }
   )
+  # Re-render plot when user zooms in
+  # At the moment, zoomming in is only supported for simple ggplot objects
+  # using cartesian coordinates
+  allowZoom <- isTRUE(attr(myPlot, "allowZoom"))
+  if(allowZoom && !is.null(c(plotRanges$x, plotRanges$y))) {
+    zoomTransform <- tryCatch({
+      if("CoordFlip" %in% class(myPlot$coordinates)) {
+        coord_flip(xlim=plotRanges$y, ylim=plotRanges$x, expand=FALSE)
+      } else {
+        coord_cartesian(xlim=plotRanges$x, ylim=plotRanges$y, expand=FALSE)
+      }
+      },
+      error=function(e) {
+        if(!is.null(myPlot)) flog.error("Problems zooming in: %s", e)
+        NULL
+      }
+    )
+    if(!is.null(zoomTransform)) myPlot <- myPlot + zoomTransform
+  }
+  myPlot
 },
   res=96, pointsize=18
 )
+
+# (ii) Rendering dataTables
 output$dataTable <- renderDataTable({
     if(!is.null(readyPlot()$plotData)) {
       notifId <- showNotification(
@@ -168,6 +225,8 @@ output$queryUsed <- renderText(
     error=function(e) NULL
   )
 )
+
+# (iii) Rendering maps
 output$map <- renderLeaflet({
   notifId <- showNotification(
     "Rendering map...", duration=NULL, type="message"

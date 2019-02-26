@@ -1,3 +1,15 @@
+coord_flip_wrapper <- function(..., default=FALSE) {
+  # Adds the argument "default" to the original ggplot's coord_flip.
+  # This gets rid of the annoying "Coordinate system already present. Adding
+  # new coordinate system, which will replace the existing one" warning which
+  # is otherwise issued when trying to modify the x and y limits in plots that
+  # use cood_flip
+  # Adapted from <https://github.com/tidyverse/ggplot2/issues/2799>
+  cf <- coord_flip(...)
+  cf$default <- default
+  return(cf)
+}
+
 plotTypesHierarchical <- list()
 plotTypesFlat <- list()
 
@@ -83,7 +95,7 @@ plotBuildQuery.default <- function(p, plotRequest) {
 
 plotGenerate.default <- function(p, plotRequest, plotData) {
   if (plotRequest$criteria$obnumber==7 && ("level" %in% colnames(plotData))) {
-    plotData <- rename(plotData, channel=level)
+    names(plotData)[names(plotData)=="level"] <- "channel"
   }
   result <- list(title=plotTitle(p, plotRequest, plotData))
   if(length(result$title)==0) flog.warn("plotGenerate: Empty plot title")

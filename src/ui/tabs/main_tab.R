@@ -75,8 +75,7 @@ mainTab <- function() {fluidPage(
         selectInput("channels",
           tags$div(getDefLabel("channels"),
             "(Select",
-            actionLink("channelsSelectAll", "all"),
-            actionLink("channelsSelectNone", "none"),
+            actionLink("channelsSelectAny", "any"),
             ")"
           ),
           choices=c(),

@@ -1,23 +1,22 @@
 registerPlotCategory("Maps")
 
 plotTitle.plotMap <- function(p, plotRequest, plotData) {
-  dtg <- formatDtg(plotRequest$criteria$dtg)
-  titleStub <- sprintf("%s: %s %%s %s\n%%s", plotRequest$expName, p$name, dtg)
-  levels <- paste(plotRequest$criteria$levels, collapse=", ")
-  switch(
-      as.character(plotRequest$criteria$obnumber),
-      "7"={
-        varLabel <- plotRequest$criteria$satname
-        levelLabel <- "channels"
-      },
-      {
-        varLabel <- plotRequest$criteria$varname
-        levelLabel <- "levels"
-      }
+  if(as.character(plotRequest$criteria$obnumber)=="7") {
+    varLabel <- plotRequest$criteria$satname
+    levelLabel <- "channels"
+  } else {
+    varLabel <- plotRequest$criteria$varname
+    levelLabel <- "levels"
+  }
+  title <- sprintf("%s: %s %s %s",
+    plotRequest$expName, p$name,
+    paste(plotRequest$criteria$obname, varLabel),
+    formatDtg(plotRequest$criteria$dtg)
   )
-  title <- sprintf(titleStub,
-                   paste(plotRequest$criteria$obname, varLabel),
-                   sprintf("%s: %s", levelLabel, levels))
+  if(length(plotRequest$criteria$levels)>0) {
+    levels <- paste(plotRequest$criteria$levels, collapse=", ")
+    title <- paste(title, sprintf("%s: %s", levelLabel, levels), sep="\n")
+  }
   title
 }
 
