@@ -11,6 +11,9 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
     - Similar idea as the earlier "pre-defined plots"
         - But configurable by user via config.toml file
 - Vertical profile plots
+- Support to zooming in for some plots, namely:
+    - First Guess and Analysis Departure
+    - All vertical profile plots
 - "Cancel plot" button (appears only after clicking in "Plot")
 - New config options supported (to be set under the "general" section)
     - initCheckDataExists (true/false, default: false)

@@ -57,7 +57,7 @@ doPlot.plotStatistical <- function(p, plotRequest, plotData) {
           geom_point(aes(y=fg_rms_total,colour="fg_rms_total"),size=4) +
           geom_line(aes(y=an_rms_total,colour="an_rms_total")) +
           geom_point(aes(y=an_rms_total,colour="an_rms_total"),size=4) +
-          coord_flip() +
+          coord_flip_wrapper(default=TRUE) +
           scale_x_continuous(breaks=plotData$channel) +
           labs(x=xlab, y=ylab)
       },
@@ -73,11 +73,16 @@ doPlot.plotStatistical <- function(p, plotRequest, plotData) {
           geom_point(size=4) +
           scale_shape_manual(values=c(16,16,32,32)) +
           scale_colour_manual(values=c("blue", "red", "blue", "red")) +
-          coord_flip() +
+          coord_flip_wrapper(default=TRUE) +
           labs(x=xlab, y=ylab) +
           xlim(100000,0)
       }
   )
+
+  # Mark that we will allow zooming in. This is not a feature of ggplot, but
+  # rather something for which we will handle the logic in the shiny server
+  attr(obplot, "allowZoom") <- TRUE
+
   obplot
 }
 
