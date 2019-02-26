@@ -95,7 +95,7 @@ plotBuildQuery.default <- function(p, plotRequest) {
 
 plotGenerate.default <- function(p, plotRequest, plotData) {
   if (plotRequest$criteria$obnumber==7 && ("level" %in% colnames(plotData))) {
-    plotData <- rename(plotData, channel=level)
+    names(plotData)[names(plotData)=="level"] <- "channel"
   }
   result <- list(title=plotTitle(p, plotRequest, plotData))
   if(length(result$title)==0) flog.warn("plotGenerate: Empty plot title")
