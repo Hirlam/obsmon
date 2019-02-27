@@ -52,6 +52,16 @@ plotOutputInsideFluidRow <- function(plotOutputId) {
   )
 }
 
+plotlyOutputInsideFluidRow <- function(plotlyOutputId) {
+  fluidPage(
+    fluidRow(
+      column(12, align="center",
+        plotlyOutput(plotlyOutputId, height="755px", width="100%")
+      )
+    ) %>% withSpinner(color="#0dc5c1")
+  )
+}
+
 mapAndMapTitleOutput <- function(mapOutputId, mapTitleOutputId) {
   fluidPage(
     fluidRow(

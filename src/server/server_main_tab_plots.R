@@ -1,6 +1,9 @@
 #########
 # Plots #
 #########
+# Start with the plotly tab disabled, so users don't see two "Plot" tabs
+shinyjs::hide(selector="#mainArea li a[data-value=plotlyTab]")
+
 currentPlotPid <- reactiveVal(-1)
 plotStartedNotifId <- reactiveVal(-1)
 plotInterrupted <- reactiveVal()
@@ -126,6 +129,7 @@ observeEvent(input$doPlot, {
 # Finally, producing the output
 # Rendering UI slots for the outputs dynamically
 output$plotContainer <- renderUI(plotOutputInsideFluidRow("plot"))
+output$plotlyContainer <- renderUI(plotlyOutputInsideFluidRow("plotly"))
 output$mapAndMapTitleContainer <- renderUI(
   mapAndMapTitleOutput("map", "mapTitle")
 )
@@ -135,8 +139,53 @@ output$queryAndTableContainer <- renderUI(
 
 
 # Rendering plot/map/dataTable
+observeEvent(readyPlot(), {
+  interactive <- is.ggplot(readyPlot()$obplot)
+  # Enable/disable, show/hide appropriate inputs
+  shinyjs::toggle(
+    condition=interactive, selector="#mainArea li a[data-value=plotlyTab]"
+  )
+  shinyjs::toggle(
+    condition=!interactive, selector="#mainArea li a[data-value=plotTab]"
+  )
+  if(interactive && input$mainArea=="plotTab") {
+    updateTabsetPanel(session, "mainArea", "plotlyTab")
+  }
+  if(!interactive && input$mainArea=="plotlyTab") {
+    updateTabsetPanel(session, "mainArea", "plotTab")
+  }
+},
+  ignoreNULL=FALSE
+)
 
 # (i) Rendering plots
+# (i.i) Interactive plot, if plot is a ggplot object
+output$plotly <- renderPlotly({
+  req(is.ggplot(readyPlot()$obplot))
+  notifId <- showNotification(
+    "Rendering interactive plot...", duration=NULL, type="message"
+  )
+  on.exit(removeNotification(notifId))
+  # Add title to plot
+  myPlot <- tryCatch(
+    readyPlot()$obplot + ggtitle(readyPlot()$title),
+    error=function(e) {
+      flog.error("Problems setting plot title: %s", e)
+      readyPlot()$obplot
+    }
+  )
+  # Convert ggplot object to plotly and customise
+  myPlot <- ggplotly(req(myPlot), tooltip = c("x","y","colour")) %>%
+    config(
+      displaylogo=FALSE, collaborate=FALSE, cloud=FALSE,
+      scrollZoom=TRUE
+    ) %>%
+    layout(title=readyPlot()$title, legend=list(orientation="v"))
+
+  myPlot
+})
+
+# (i.ii) Non-interactive plot, if plot is not a ggplot object
 # Code for zoomable plot adapted from
 # https://shiny.rstudio.com/gallery/plot-interaction-zoom.html
 plotRanges <- reactiveValues(x=NULL, y=NULL)
@@ -159,6 +208,7 @@ observeEvent(input$plot_dblclick, {
 })
 
 output$plot <- renderPlot({
+  req(!is.ggplot(readyPlot()$obplot))
   if(!is.null(readyPlot()$obplot)) {
     notifId <- showNotification(
       "Rendering plot...", duration=NULL, type="message"
@@ -166,13 +216,8 @@ output$plot <- renderPlot({
     on.exit(removeNotification(notifId))
   }
   # Add title to plot
-  myPlot <- tryCatch({
-      if(is.ggplot(readyPlot()$obplot)) {
-        readyPlot()$obplot + ggtitle(readyPlot()$title)
-      } else {
-        grid.arrange(readyPlot()$obplot, top=textGrob(readyPlot()$title))
-      }
-    },
+  myPlot <- tryCatch(
+    grid.arrange(readyPlot()$obplot, top=textGrob(readyPlot()$title)),
     error=function(e) {
       if(!is.null(readyPlot()$obplot)) {
         flog.error("Problems setting plot title: %s", e)

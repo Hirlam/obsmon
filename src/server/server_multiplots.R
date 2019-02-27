@@ -5,6 +5,9 @@
 # Show multiPlots tab if multiPlots are available
 if(!is.null(obsmonConfig$multiPlots)) {
   shinyjs::show(selector="#appNavbarPage li a[data-value=multiPlotsTab]")
+  # Hide plotly output, as it is not yet supported for multiplots
+  shinyjs::hide(selector="#multiPlotsMainArea li a[data-value=multiPlotsPlotlyTab]")
+  shinyjs::disable(selector="#multiPlotsMainArea li a[data-value=multiPlotsPlotlyTab]")
 }
 
 multiPlotChoices <- c()

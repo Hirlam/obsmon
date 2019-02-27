@@ -38,6 +38,7 @@ tryCatch(
     suppressPackageStartupMessages(library(gridExtra))
     suppressPackageStartupMessages(library(leaflet))
     suppressPackageStartupMessages(library(methods))
+    suppressPackageStartupMessages(library(plotly))
     suppressPackageStartupMessages(library(png))
     suppressPackageStartupMessages(library(pryr))
     suppressPackageStartupMessages(library(promises))
