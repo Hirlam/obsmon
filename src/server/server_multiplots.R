@@ -2,16 +2,9 @@
 #                        Handling of multiPlots tab                       #
 ############################################################################
 
-# Add multiPlots tab to UI if multiPlots are available
+# Show multiPlots tab if multiPlots are available
 if(!is.null(obsmonConfig$multiPlots)) {
-  insertTab("appNavbarPage",
-    tabPanel(
-      title="User-configured multiPlots",
-      value="multiPlotsTab",
-      multiPlotsTab()
-    ),
-    target="mainTab", position="after"
-  )
+  shinyjs::show(selector="#appNavbarPage li a[data-value=multiPlotsTab]")
 }
 
 multiPlotChoices <- c()
