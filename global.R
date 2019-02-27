@@ -40,15 +40,13 @@ plotOutputInsideFluidRow <- function(plotOutputId) {
   fluidPage(
     fluidRow(
       column(12, align="center",
-        tags$head(tags$style("#plot{height:80vh !important;}")),
-        plotOutput(plotOutputId,
+        plotOutput(plotOutputId, height="755px", width="100%",
           dblclick=paste0(plotOutputId, "_dblclick"),
           brush=brushOpts(
             id=paste0(plotOutputId, "_brush"),
             resetOnNew=TRUE
           )
-        ),
-        tags$style(type="text/css", "body { overflow-y: scroll; }")
+        )
       )
     ) %>% withSpinner(color="#0dc5c1")
   )
