@@ -13,7 +13,7 @@ onclick("cancelPlot", {
   tools::pskill(currentPlotPid(), tools::SIGINT)
 })
 
-readyPlot <- reactiveVal()
+readyPlot <- reactiveVal(NULL)
 observeEvent(input$doPlot, {
   # Make sure a plot cannot be requested if another is being produced.
   # Although the plot button is hidden when the multiPlot is being prepared,
@@ -88,7 +88,6 @@ observeEvent(input$doPlot, {
 
   then(newFutPlot,
     onFulfilled=function(value) {
-      readyPlot(value)
       if(is.null(value$obmap)) {
         if(input$mainArea=="mapTab") {
           updateTabsetPanel(session, "mainArea", "plotTab")
@@ -97,6 +96,7 @@ observeEvent(input$doPlot, {
       } else {
         js$enableTab("mapTab")
       }
+      readyPlot(value)
     },
     onRejected=function(e) {
       if(!plotInterrupted()) {
@@ -137,10 +137,9 @@ output$queryAndTableContainer <- renderUI(
   queryUsedAndDataTableOutput("queryUsed", "dataTable")
 )
 
-
 # Rendering plot/map/dataTable
 observeEvent(readyPlot(), {
-  interactive <- is.ggplot(readyPlot()$obplot)
+  interactive <- plotCanBeMadeInteractive(readyPlot()$obplot)
   # Enable/disable, show/hide appropriate inputs
   shinyjs::toggle(
     condition=interactive, selector="#mainArea li a[data-value=plotlyTab]"
@@ -161,7 +160,7 @@ observeEvent(readyPlot(), {
 # (i) Rendering plots
 # (i.i) Interactive plot, if plot is a ggplot object
 output$plotly <- renderPlotly({
-  req(is.ggplot(readyPlot()$obplot))
+  req(plotCanBeMadeInteractive(readyPlot()$obplot))
   notifId <- showNotification(
     "Rendering interactive plot...", duration=NULL, type="message"
   )
@@ -208,7 +207,7 @@ observeEvent(input$plot_dblclick, {
 })
 
 output$plot <- renderPlot({
-  req(!is.ggplot(readyPlot()$obplot))
+  req(!plotCanBeMadeInteractive(readyPlot()$obplot))
   if(!is.null(readyPlot()$obplot)) {
     notifId <- showNotification(
       "Rendering plot...", duration=NULL, type="message"
