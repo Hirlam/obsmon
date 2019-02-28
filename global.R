@@ -40,13 +40,7 @@ plotOutputInsideFluidRow <- function(plotOutputId) {
   fluidPage(
     fluidRow(
       column(12, align="center",
-        plotOutput(plotOutputId, height="755px", width="100%",
-          dblclick=paste0(plotOutputId, "_dblclick"),
-          brush=brushOpts(
-            id=paste0(plotOutputId, "_brush"),
-            resetOnNew=TRUE
-          )
-        )
+        plotOutput(plotOutputId, height="755px", width="100%")
       )
     ) %>% withSpinner(color="#0dc5c1")
   )

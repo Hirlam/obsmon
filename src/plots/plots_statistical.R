@@ -79,10 +79,7 @@ doPlot.plotStatistical <- function(p, plotRequest, plotData) {
       }
   )
 
-  # Mark that we will allow zooming in. This is not a feature of ggplot, but
-  # rather something for which we will handle the logic in the shiny server
-  attr(obplot, "allowZoom") <- TRUE
-
+  obplot <- obplot + labs(colour=NULL, group=NULL, shape=NULL)
   obplot
 }
 
