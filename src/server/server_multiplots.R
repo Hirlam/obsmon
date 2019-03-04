@@ -270,7 +270,7 @@ observeEvent(multiPlot(), {
       plotOutId <- multiPlotsGenId(iPlot, type="plot")
       output[[plotOutId]] <- renderPlot({
         myPlot <- multiPlot()[[pName]]
-        grid.arrange(req(myPlot$obplot),top=textGrob(myPlot$title))
+          addTitleToPlot(req(myPlot$obplot), myPlot$title)
       },
          res=96, pointsize=18
       )

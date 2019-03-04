@@ -165,14 +165,7 @@ output$plotly <- renderPlotly({
     "Rendering plot...", duration=NULL, type="message"
   )
   on.exit(removeNotification(notifId))
-  # Add title to plot
-  myPlot <- tryCatch(
-    readyPlot()$obplot + ggtitle(readyPlot()$title),
-    error=function(e) {
-      flog.error("Problems setting plot title: %s", e)
-      readyPlot()$obplot
-    }
-  )
+  myPlot <- addTitleToPlot(readyPlot()$obplot, readyPlot()$title)
   # Convert ggplot object to plotly and customise
   myPlot <- ggplotly(req(myPlot), tooltip = c("x","y")) %>%
     config(
@@ -201,7 +194,7 @@ output$plot <- renderPlot({
       readyPlot()$obplot
     }
   )
-  myPlot
+  addTitleToPlot(readyPlot()$obplot, readyPlot()$title)
 },
   res=96, pointsize=18
 )

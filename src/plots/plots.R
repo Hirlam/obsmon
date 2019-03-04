@@ -17,6 +17,24 @@ plotCanBeMadeInteractive <- function(myPlot) {
  # look a bit weird -- hence the restriction on CoordMap below.
  rtn <- is.ggplot(myPlot) && !("CoordMap" %in% class(myPlot$coordinates))
  return(rtn)
+
+addTitleToPlot <- function(myPlot, title) {
+  if(is.null(myPlot) || is.null(title)) return(myPlot)
+  newPlot <- tryCatch({
+    if(is.ggplot(myPlot)) {
+      myPlot + ggtitle(title)
+    } else if("plotly" %in% class(myPlot)) {
+      myPlot %>% layout(title=title, margin=list(t=50))
+    } else {
+      grid.arrange(myPlot, top=textGrob(title))
+    }
+    },
+    error=function(e) {
+      flog.error("Problems setting plot title: %s", e)
+      myPlot
+    }
+  )
+  return(newPlot)
 }
 
 plotTypesHierarchical <- list()
