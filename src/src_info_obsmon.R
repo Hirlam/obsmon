@@ -1,6 +1,6 @@
 
 # obsmonVersion is shown in the GUI and also printed along with the banner
-obsmonVersion <- "3.0.0-beta.4"
+obsmonVersion <- "3.0.0-beta.5"
 
 # Having the git info gathered below is useful when providing support to users
 execGitCommand <- function(gitCommand) {

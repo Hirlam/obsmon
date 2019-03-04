@@ -162,7 +162,7 @@ observeEvent(readyPlot(), {
 output$plotly <- renderPlotly({
   req(plotCanBeMadeInteractive(readyPlot()$obplot))
   notifId <- showNotification(
-    "Rendering interactive plot...", duration=NULL, type="message"
+    "Rendering plot...", duration=NULL, type="message"
   )
   on.exit(removeNotification(notifId))
   # Add title to plot
@@ -174,12 +174,11 @@ output$plotly <- renderPlotly({
     }
   )
   # Convert ggplot object to plotly and customise
-  myPlot <- ggplotly(req(myPlot), tooltip = c("x","y","colour")) %>%
+  myPlot <- ggplotly(req(myPlot), tooltip = c("x","y")) %>%
     config(
       displaylogo=FALSE, collaborate=FALSE, cloud=FALSE,
       scrollZoom=TRUE
-    ) %>%
-    layout(title=readyPlot()$title, legend=list(orientation="v"))
+    )
 
   myPlot
 })
