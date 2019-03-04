@@ -11,12 +11,14 @@ coord_flip_wrapper <- function(..., default=FALSE) {
 }
 
 plotCanBeMadeInteractive <- function(myPlot) {
- # To be used in the server logic to determine whether to use regular
- # (non-interactive) or plotly (interactive) plot outputs.
- # When using CoordMap in ggplot2, conversion to plotly makes the projections
- # look a bit weird -- hence the restriction on CoordMap below.
- rtn <- is.ggplot(myPlot) && !("CoordMap" %in% class(myPlot$coordinates))
- return(rtn)
+  # To be used in the server logic to determine whether to use regular
+  # (non-interactive) or plotly (interactive) plot outputs.
+  # When using CoordMap in ggplot2, conversion to plotly makes the projections
+  # look a bit weird -- hence the restriction on CoordMap below.
+  rtn <- ("plotly" %in% class(myPlot) || is.ggplot(myPlot)) &&
+    !("CoordMap" %in% class(myPlot$coordinates))
+  return(rtn)
+}
 
 addTitleToPlot <- function(myPlot, title) {
   if(is.null(myPlot) || is.null(title)) return(myPlot)

@@ -5,7 +5,8 @@
 # Show multiPlots tab if multiPlots are available
 if(!is.null(obsmonConfig$multiPlots)) {
   shinyjs::show(selector="#appNavbarPage li a[data-value=multiPlotsTab]")
-  # Hide plotly output, as it is not yet supported for multiplots
+  # Hide plotly output tab, as the multiplot outputs are generated dinamically
+  # and can thus be included in the regular tab
   shinyjs::hide(selector="#multiPlotsMainArea li a[data-value=multiPlotsPlotlyTab]")
   shinyjs::disable(selector="#multiPlotsMainArea li a[data-value=multiPlotsPlotlyTab]")
 }
@@ -223,7 +224,11 @@ observeEvent(input$multiPlotsDoPlot, {
 # (i) Plots
 output$multiPlotsPlotContainer <- renderUI({
   plotOutList <- lapply(seq_along(multiPlot()), function(iPlot) {
-    plotOutputInsideFluidRow(multiPlotsGenId(iPlot, type="plot"))
+    if(plotCanBeMadeInteractive(multiPlot()[[iPlot]]$obplot)) {
+      plotlyOutputInsideFluidRow(multiPlotsGenId(iPlot, type="plot"))
+    } else {
+      plotOutputInsideFluidRow(multiPlotsGenId(iPlot, type="plot"))
+    }
   })
   # Convert the list to a tagList - this is necessary for the list of items
   # to display properly.
@@ -268,12 +273,26 @@ observeEvent(multiPlot(), {
       pName <- multiPlotsGenId(iPlot)
       # Assign plots
       plotOutId <- multiPlotsGenId(iPlot, type="plot")
-      output[[plotOutId]] <- renderPlot({
-        myPlot <- multiPlot()[[pName]]
+      if(plotCanBeMadeInteractive(multiPlot()[[pName]]$obplot)) {
+        output[[plotOutId]] <- renderPlotly({
+          myPlot <- multiPlot()[[pName]]
+          myPlot <- addTitleToPlot(myPlot$obplot, myPlot$title)
+          # Convert ggplot object to plotly and customise
+          myPlot <- ggplotly(req(myPlot), tooltip = c("x","y")) %>%
+            config(
+              displaylogo=FALSE, collaborate=FALSE, cloud=FALSE,
+              scrollZoom=TRUE
+            )
+          myPlot
+        })
+      } else {
+        output[[plotOutId]] <- renderPlot({
+          myPlot <- multiPlot()[[pName]]
           addTitleToPlot(req(myPlot$obplot), myPlot$title)
-      },
-         res=96, pointsize=18
-      )
+        },
+           res=96, pointsize=18
+        )
+      }
       # Assign maps and map titles
       mapId <- multiPlotsGenId(iPlot, type="map")
       mapTitleId <- multiPlotsGenId(iPlot, type="mapTitle")
