@@ -39,6 +39,18 @@ addTitleToPlot <- function(myPlot, title) {
   return(newPlot)
 }
 
+plotExportedDataInfo <- function(plot) {
+  header <- paste0(
+    paste("# Plot title:", plot$title, "\n"),
+    sprintf(
+      "# Data retrieved by Obsmon v%s on %s using the following query:\n",
+      obsmonVersion, strftime(Sys.time(), format="%Y-%m-%d %H:%M:%S %Z")
+    ),
+    paste0("# ", plot$queryUsed, "\n"),
+    paste("\n")
+  )
+}
+
 plotTypesHierarchical <- list()
 plotTypesFlat <- list()
 

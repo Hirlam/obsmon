@@ -16,7 +16,7 @@ onclick("cancelPlot", {
 readyPlot <- reactiveVal(NULL)
 observeEvent(input$doPlot, {
   # Make sure a plot cannot be requested if another is being produced.
-  # Although the plot button is hidden when the multiPlot is being prepared,
+  # Although the plot button is hidden when the plot is being prepared,
   # such an action may sometimes not be quick enough (e.g., when rendering
   # is ongoing).
   if(currentPlotPid()>-1) {
@@ -48,9 +48,9 @@ observeEvent(input$doPlot, {
     req(validStation)
   }
 
-  ###############################################################
-  # All checks performed: We can now proceed with the multiPlot #
-  ###############################################################
+  ##########################################################
+  # All checks performed: We can now proceed with the plot #
+  ##########################################################
   # Prevent another plot from being requested
   disableShinyInputs(input)
   shinyjs::hide("doPlot")
@@ -219,6 +219,22 @@ output$queryUsed <- renderText(
     readyPlot()$queryUsed,
     error=function(e) NULL
   )
+)
+output$dataTableDownloadAsTxt <- downloadHandler(
+  filename = function() "plot_data.txt",
+  content = function(file) {
+    dataInfo <- plotExportedDataInfo(readyPlot())
+    write.table(readyPlot()$plotData, file, sep="\t", row.names=FALSE)
+    write(paste0("\n", dataInfo), file, append=TRUE)
+  }
+)
+output$dataTableDownloadAsCsv <- downloadHandler(
+  filename = function() "plot_data.csv",
+  content = function(file) {
+    dataInfo <- plotExportedDataInfo(readyPlot())
+    write.csv(readyPlot()$plotData, file, row.names=FALSE)
+    write(paste0("\n", dataInfo), file, append=TRUE)
+  }
 )
 
 # (iii) Rendering maps

@@ -301,9 +301,29 @@ observeEvent(multiPlot(), {
       # Assign queryUsed and dataTable
       queryUsedId <- multiPlotsGenId(iPlot, type="queryUsed")
       dataTableId <- multiPlotsGenId(iPlot, type="dataTable")
+      saveAsTxtId <- paste0(dataTableId, "DownloadAsTxt")
+      saveAsCsvId <- paste0(dataTableId, "DownloadAsCsv")
       output[[queryUsedId]] <- renderText(req(multiPlot()[[pName]]$queryUsed))
       output[[dataTableId]] <- renderDataTable(
         req(multiPlot()[[pName]]$plotData), options=list(pageLength=10)
+      )
+      output[[saveAsTxtId]] <- downloadHandler(
+        filename = function() sprintf("multiplot_%d_data.txt", iPlot),
+        content = function(file) {
+          multiplotData <- multiPlot()[[pName]]$plotData
+          dataInfo <- plotExportedDataInfo(multiPlot()[[pName]])
+          write.table(multiplotData, file, sep="\t", row.names=FALSE)
+          write(paste0("\n", dataInfo), file, append=TRUE)
+        }
+      )
+      output[[saveAsCsvId]] <- downloadHandler(
+        filename = function() sprintf("multiplot_%d_data.csv", iPlot),
+        content = function(file) {
+          multiplotData <- multiPlot()[[pName]]$plotData
+          dataInfo <- plotExportedDataInfo(multiPlot()[[pName]])
+          write.csv(multiplotData, file, row.names=FALSE)
+          write(paste0("\n", dataInfo), file, append=TRUE)
+        }
       )
     })
   }

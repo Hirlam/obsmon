@@ -75,11 +75,14 @@ mapAndMapTitleOutput <- function(mapOutputId, mapTitleOutputId) {
 }
 
 queryUsedAndDataTableOutput <- function(queryUsedOutputId, dataTableOutputId){
+  downloadButtonCsvId <- paste0(dataTableOutputId, "DownloadAsCsv")
+  downloadButtonTxtId <- paste0(dataTableOutputId, "DownloadAsTxt")
   fluidPage(
     fluidRow(
       column(12, align="center",
         wellPanel(h5("Query used:"), textOutput(queryUsedOutputId)),
-        h5("Data:"),
+        downloadButton(downloadButtonTxtId, "Download as TXT"),
+        downloadButton(downloadButtonCsvId, "Download as CSV"),
         dataTableOutput(dataTableOutputId)
       )
     )
