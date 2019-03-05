@@ -109,9 +109,9 @@ putLabelsInStations <- function(stations=NULL, obname=NULL) {
   if(isTRUE(obname=="synop")) {
     stationLabels <- c()
     for(statID in stations) {
-      statName <- synopStations[statID]
+      statName <- tryCatch(synopStations[statID], error=function(e) NA)
       label <- statID
-      if(is.character(statName)) label<-sprintf("%s (%s)",statID,statName)
+      if(!is.na(statName)) label <- sprintf("%s (%s)", statID, statName)
       stationLabels <- c(stationLabels, label)
     }
     names(stations) <- stationLabels
