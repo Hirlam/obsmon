@@ -13,6 +13,11 @@ shinyjs.enableTab = function(name) {
   tab.unbind('click.tab');
   tab.removeClass('disabled');
 }
+
+/* Initialise the app with the multiPlotsTab hidden */
+shinyjs.init = function(){
+  $('#appNavbarPage li a[data-value=\"multiPlotsTab\"]').hide();
+}
 "
 
 appCSS <- "
@@ -48,7 +53,12 @@ shinyUI(ui=tagList(
       title=uiOutput("pageTitle"),
       windowTitle=paste0("Obsmon v", obsmonVersion),
       id="appNavbarPage",
-      tabPanel("Main", value="mainTab", mainTab())
+      tabPanel("Main", value="mainTab", mainTab()),
+      tabPanel(
+        title="User-configured multiPlots",
+        value="multiPlotsTab",
+        multiPlotsTab()
+      )
     )
   ))
 ))

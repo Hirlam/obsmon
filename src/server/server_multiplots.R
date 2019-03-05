@@ -2,16 +2,13 @@
 #                        Handling of multiPlots tab                       #
 ############################################################################
 
-# Add multiPlots tab to UI if multiPlots are available
+# Show multiPlots tab if multiPlots are available
 if(!is.null(obsmonConfig$multiPlots)) {
-  insertTab("appNavbarPage",
-    tabPanel(
-      title="User-configured multiPlots",
-      value="multiPlotsTab",
-      multiPlotsTab()
-    ),
-    target="mainTab", position="after"
-  )
+  shinyjs::show(selector="#appNavbarPage li a[data-value=multiPlotsTab]")
+  # Hide plotly output tab, as the multiplot outputs are generated dinamically
+  # and can thus be included in the regular tab
+  shinyjs::hide(selector="#multiPlotsMainArea li a[data-value=multiPlotsPlotlyTab]")
+  shinyjs::disable(selector="#multiPlotsMainArea li a[data-value=multiPlotsPlotlyTab]")
 }
 
 multiPlotChoices <- c()
@@ -227,7 +224,11 @@ observeEvent(input$multiPlotsDoPlot, {
 # (i) Plots
 output$multiPlotsPlotContainer <- renderUI({
   plotOutList <- lapply(seq_along(multiPlot()), function(iPlot) {
-    plotOutputInsideFluidRow(multiPlotsGenId(iPlot, type="plot"))
+    if(plotCanBeMadeInteractive(multiPlot()[[iPlot]]$obplot)) {
+      plotlyOutputInsideFluidRow(multiPlotsGenId(iPlot, type="plot"))
+    } else {
+      plotOutputInsideFluidRow(multiPlotsGenId(iPlot, type="plot"))
+    }
   })
   # Convert the list to a tagList - this is necessary for the list of items
   # to display properly.
@@ -272,12 +273,26 @@ observeEvent(multiPlot(), {
       pName <- multiPlotsGenId(iPlot)
       # Assign plots
       plotOutId <- multiPlotsGenId(iPlot, type="plot")
-      output[[plotOutId]] <- renderPlot({
-        myPlot <- multiPlot()[[pName]]
-        grid.arrange(req(myPlot$obplot),top=textGrob(myPlot$title))
-      },
-         res=96, pointsize=18
-      )
+      if(plotCanBeMadeInteractive(multiPlot()[[pName]]$obplot)) {
+        output[[plotOutId]] <- renderPlotly({
+          myPlot <- multiPlot()[[pName]]
+          myPlot <- addTitleToPlot(myPlot$obplot, myPlot$title)
+          # Convert ggplot object to plotly and customise
+          myPlot <- ggplotly(req(myPlot), tooltip = c("x","y")) %>%
+            config(
+              displaylogo=FALSE, collaborate=FALSE, cloud=FALSE,
+              scrollZoom=TRUE
+            )
+          myPlot
+        })
+      } else {
+        output[[plotOutId]] <- renderPlot({
+          myPlot <- multiPlot()[[pName]]
+          addTitleToPlot(req(myPlot$obplot), myPlot$title)
+        },
+           res=96, pointsize=18
+        )
+      }
       # Assign maps and map titles
       mapId <- multiPlotsGenId(iPlot, type="map")
       mapTitleId <- multiPlotsGenId(iPlot, type="mapTitle")
@@ -286,9 +301,29 @@ observeEvent(multiPlot(), {
       # Assign queryUsed and dataTable
       queryUsedId <- multiPlotsGenId(iPlot, type="queryUsed")
       dataTableId <- multiPlotsGenId(iPlot, type="dataTable")
+      saveAsTxtId <- paste0(dataTableId, "DownloadAsTxt")
+      saveAsCsvId <- paste0(dataTableId, "DownloadAsCsv")
       output[[queryUsedId]] <- renderText(req(multiPlot()[[pName]]$queryUsed))
       output[[dataTableId]] <- renderDataTable(
         req(multiPlot()[[pName]]$plotData), options=list(pageLength=10)
+      )
+      output[[saveAsTxtId]] <- downloadHandler(
+        filename = function() sprintf("multiplot_%d_data.txt", iPlot),
+        content = function(file) {
+          multiplotData <- multiPlot()[[pName]]$plotData
+          dataInfo <- plotExportedDataInfo(multiPlot()[[pName]])
+          write.table(multiplotData, file, sep="\t", row.names=FALSE)
+          write(paste0("\n", dataInfo), file, append=TRUE)
+        }
+      )
+      output[[saveAsCsvId]] <- downloadHandler(
+        filename = function() sprintf("multiplot_%d_data.csv", iPlot),
+        content = function(file) {
+          multiplotData <- multiPlot()[[pName]]$plotData
+          dataInfo <- plotExportedDataInfo(multiPlot()[[pName]])
+          write.csv(multiplotData, file, row.names=FALSE)
+          write(paste0("\n", dataInfo), file, append=TRUE)
+        }
       )
     })
   }

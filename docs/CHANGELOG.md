@@ -10,10 +10,9 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
     - Produce one or more pre-configured plots at once
     - Similar idea as the earlier "pre-defined plots"
         - But configurable by user via config.toml file
+- Interactive plots (ability to zoom/pan/hover, etc)
 - Vertical profile plots
-- Support to zooming in for some plots, namely:
-    - First Guess and Analysis Departure
-    - All vertical profile plots
+- Option to export data tables as txt/csv files
 - "Cancel plot" button (appears only after clicking in "Plot")
 - New config options supported (to be set under the "general" section)
     - initCheckDataExists (true/false, default: false)
@@ -41,7 +40,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
           to the relevant data files
 - Some UI redesign
 - Show a spinner instead of a progress bar when an output is being prepared
-- Allow selection of multiple stations
+- Allow selection of multiple stations in some plots
 
 ### Removed
 - Progress bars from standard output

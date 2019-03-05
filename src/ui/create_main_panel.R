@@ -4,16 +4,20 @@ createMainPanel <- function(prependToIds=NULL) {
     tabsetPanelId <- "mainArea"
     tabPanelValueMapTab <- "mapTab"
     tabPanelValuePlotTab <- "plotTab"
+    tabPanelValuePlotlyTab <- "plotlyTab"
     tabPanelValueDataTab <- "dataTab"
     uiOutputIdForPlot <- "plotContainer"
+    uiOutputIdForPlotly <- "plotlyContainer"
     uiOutputIdForQueryAndTable <- "queryAndTableContainer"
     uiOutputIdForMapAndTitle <- "mapAndMapTitleContainer"
   } else {
     tabsetPanelId <- paste0(prependToIds, "MainArea")
     tabPanelValueMapTab <- paste0(prependToIds, "MapTab")
     tabPanelValuePlotTab <- paste0(prependToIds, "PlotTab")
+    tabPanelValuePlotlyTab <- paste0(prependToIds, "PlotlyTab")
     tabPanelValueDataTab <- paste0(prependToIds, "DataTab")
     uiOutputIdForPlot <- paste0(prependToIds, "PlotContainer")
+    uiOutputIdForPlotly <- paste0(prependToIds, "PlotlyContainer")
     uiOutputIdForQueryAndTable <- paste0(prependToIds,"QueryAndTableContainer")
     uiOutputIdForMapAndTitle <- paste0(prependToIds, "MapAndMapTitleContainer")
   }
@@ -24,6 +28,9 @@ createMainPanel <- function(prependToIds=NULL) {
       id=tabsetPanelId,
       tabPanel("Plot", value=tabPanelValuePlotTab,
         uiOutput(uiOutputIdForPlot)
+      ),
+      tabPanel("Plot", value=tabPanelValuePlotlyTab,
+        uiOutput(uiOutputIdForPlotly)
       ),
       tabPanel("Map", value=tabPanelValueMapTab,
         uiOutput(uiOutputIdForMapAndTitle)

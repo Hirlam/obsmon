@@ -1,6 +1,9 @@
 #########
 # Plots #
 #########
+# Start with the plotly tab disabled, so users don't see two "Plot" tabs
+shinyjs::hide(selector="#mainArea li a[data-value=plotlyTab]")
+
 currentPlotPid <- reactiveVal(-1)
 plotStartedNotifId <- reactiveVal(-1)
 plotInterrupted <- reactiveVal()
@@ -10,10 +13,10 @@ onclick("cancelPlot", {
   tools::pskill(currentPlotPid(), tools::SIGINT)
 })
 
-readyPlot <- reactiveVal()
+readyPlot <- reactiveVal(NULL)
 observeEvent(input$doPlot, {
   # Make sure a plot cannot be requested if another is being produced.
-  # Although the plot button is hidden when the multiPlot is being prepared,
+  # Although the plot button is hidden when the plot is being prepared,
   # such an action may sometimes not be quick enough (e.g., when rendering
   # is ongoing).
   if(currentPlotPid()>-1) {
@@ -45,9 +48,9 @@ observeEvent(input$doPlot, {
     req(validStation)
   }
 
-  ###############################################################
-  # All checks performed: We can now proceed with the multiPlot #
-  ###############################################################
+  ##########################################################
+  # All checks performed: We can now proceed with the plot #
+  ##########################################################
   # Prevent another plot from being requested
   disableShinyInputs(input)
   shinyjs::hide("doPlot")
@@ -85,7 +88,6 @@ observeEvent(input$doPlot, {
 
   then(newFutPlot,
     onFulfilled=function(value) {
-      readyPlot(value)
       if(is.null(value$obmap)) {
         if(input$mainArea=="mapTab") {
           updateTabsetPanel(session, "mainArea", "plotTab")
@@ -94,6 +96,7 @@ observeEvent(input$doPlot, {
       } else {
         js$enableTab("mapTab")
       }
+      readyPlot(value)
     },
     onRejected=function(e) {
       if(!plotInterrupted()) {
@@ -126,6 +129,7 @@ observeEvent(input$doPlot, {
 # Finally, producing the output
 # Rendering UI slots for the outputs dynamically
 output$plotContainer <- renderUI(plotOutputInsideFluidRow("plot"))
+output$plotlyContainer <- renderUI(plotlyOutputInsideFluidRow("plotly"))
 output$mapAndMapTitleContainer <- renderUI(
   mapAndMapTitleOutput("map", "mapTitle")
 )
@@ -133,32 +137,47 @@ output$queryAndTableContainer <- renderUI(
   queryUsedAndDataTableOutput("queryUsed", "dataTable")
 )
 
-
 # Rendering plot/map/dataTable
+observeEvent(readyPlot(), {
+  interactive <- plotCanBeMadeInteractive(readyPlot()$obplot)
+  # Enable/disable, show/hide appropriate inputs
+  shinyjs::toggle(
+    condition=interactive, selector="#mainArea li a[data-value=plotlyTab]"
+  )
+  shinyjs::toggle(
+    condition=!interactive, selector="#mainArea li a[data-value=plotTab]"
+  )
+  if(interactive && input$mainArea=="plotTab") {
+    updateTabsetPanel(session, "mainArea", "plotlyTab")
+  }
+  if(!interactive && input$mainArea=="plotlyTab") {
+    updateTabsetPanel(session, "mainArea", "plotTab")
+  }
+},
+  ignoreNULL=FALSE
+)
 
 # (i) Rendering plots
-# Code for zoomable plot adapted from
-# https://shiny.rstudio.com/gallery/plot-interaction-zoom.html
-plotRanges <- reactiveValues(x=NULL, y=NULL)
-# Reset range upon generation of new plot
-observeEvent({readyPlot()}, {
-  plotRanges$x <- NULL
-  plotRanges$y <- NULL
-})
-# When a double-click happens, check if there's a brush on the plot.
-# If so, zoom to the brush bounds; if not, reset the zoom.
-observeEvent(input$plot_dblclick, {
-  brush <- input$plot_brush
-  if(is.null(brush)) {
-    plotRanges$x <- NULL
-    plotRanges$y <- NULL
-  } else {
-    plotRanges$x <- c(brush$xmin, brush$xmax)
-    plotRanges$y <- c(brush$ymin, brush$ymax)
-  }
-})
+# (i.i) Interactive plot, if plot supports it
+output$plotly <- renderPlotly({
+  req(plotCanBeMadeInteractive(readyPlot()$obplot))
+  notifId <- showNotification(
+    "Rendering plot...", duration=NULL, type="message"
+  )
+  on.exit(removeNotification(notifId))
+  myPlot <- addTitleToPlot(readyPlot()$obplot, readyPlot()$title)
+  # Convert ggplot object to plotly and customise
+  myPlot <- ggplotly(req(myPlot), tooltip = c("x","y")) %>%
+    config(
+      displaylogo=FALSE, collaborate=FALSE, cloud=FALSE,
+      scrollZoom=TRUE
+    )
 
+  myPlot
+})
+# (i.ii) Non-interactive plot, if plot does not support interactivity
 output$plot <- renderPlot({
+  req(!plotCanBeMadeInteractive(readyPlot()$obplot))
   if(!is.null(readyPlot()$obplot)) {
     notifId <- showNotification(
       "Rendering plot...", duration=NULL, type="message"
@@ -166,13 +185,8 @@ output$plot <- renderPlot({
     on.exit(removeNotification(notifId))
   }
   # Add title to plot
-  myPlot <- tryCatch({
-      if(is.ggplot(readyPlot()$obplot)) {
-        readyPlot()$obplot + ggtitle(readyPlot()$title)
-      } else {
-        grid.arrange(readyPlot()$obplot, top=textGrob(readyPlot()$title))
-      }
-    },
+  myPlot <- tryCatch(
+    grid.arrange(readyPlot()$obplot, top=textGrob(readyPlot()$title)),
     error=function(e) {
       if(!is.null(readyPlot()$obplot)) {
         flog.error("Problems setting plot title: %s", e)
@@ -180,26 +194,7 @@ output$plot <- renderPlot({
       readyPlot()$obplot
     }
   )
-  # Re-render plot when user zooms in
-  # At the moment, zoomming in is only supported for simple ggplot objects
-  # using cartesian coordinates
-  allowZoom <- isTRUE(attr(myPlot, "allowZoom"))
-  if(allowZoom && !is.null(c(plotRanges$x, plotRanges$y))) {
-    zoomTransform <- tryCatch({
-      if("CoordFlip" %in% class(myPlot$coordinates)) {
-        coord_flip(xlim=plotRanges$y, ylim=plotRanges$x, expand=FALSE)
-      } else {
-        coord_cartesian(xlim=plotRanges$x, ylim=plotRanges$y, expand=FALSE)
-      }
-      },
-      error=function(e) {
-        if(!is.null(myPlot)) flog.error("Problems zooming in: %s", e)
-        NULL
-      }
-    )
-    if(!is.null(zoomTransform)) myPlot <- myPlot + zoomTransform
-  }
-  myPlot
+  addTitleToPlot(readyPlot()$obplot, readyPlot()$title)
 },
   res=96, pointsize=18
 )
@@ -224,6 +219,22 @@ output$queryUsed <- renderText(
     readyPlot()$queryUsed,
     error=function(e) NULL
   )
+)
+output$dataTableDownloadAsTxt <- downloadHandler(
+  filename = function() "plot_data.txt",
+  content = function(file) {
+    dataInfo <- plotExportedDataInfo(readyPlot())
+    write.table(readyPlot()$plotData, file, sep="\t", row.names=FALSE)
+    write(paste0("\n", dataInfo), file, append=TRUE)
+  }
+)
+output$dataTableDownloadAsCsv <- downloadHandler(
+  filename = function() "plot_data.csv",
+  content = function(file) {
+    dataInfo <- plotExportedDataInfo(readyPlot())
+    write.csv(readyPlot()$plotData, file, row.names=FALSE)
+    write(paste0("\n", dataInfo), file, append=TRUE)
+  }
 )
 
 # (iii) Rendering maps

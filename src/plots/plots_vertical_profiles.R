@@ -16,9 +16,6 @@ doPlot.plotVerticalObsProfile <- function(p, plotRequest, plotData) {
     geom_point(size=2, colour="black") +
     coord_flip_wrapper(default=TRUE) +
     labs(x="Level", y=ylab)
-  # Mark that we will allow zooming in. This is not a feature of ggplot, but
-  # rather something for which we will handle the logic in the shiny server
-  attr(obplot, "allowZoom") <- TRUE
   return(obplot)
 }
 
@@ -33,9 +30,6 @@ doPlot.plotVerticalAnalysisProfile <- function(p, plotRequest, plotData) {
     scale_colour_manual(values=c("black", "blue", "red")) +
     coord_flip_wrapper(default=TRUE) +
     labs(x="Level", y=ylab)
-  # Mark that we will allow zooming in. This is not a feature of ggplot, but
-  # rather something for which we will handle the logic in the shiny server
-  attr(obplot, "allowZoom") <- TRUE
   return(obplot)
 }
 
@@ -50,9 +44,6 @@ doPlot.plotVerticalBiasProfile <- function(p, plotRequest, plotData) {
     scale_colour_manual(values=c("black", "blue")) +
     coord_flip_wrapper(default=TRUE) +
     labs(x="Level", y=ylab)
-  # Mark that we will allow zooming in. This is not a feature of ggplot, but
-  # rather something for which we will handle the logic in the shiny server
-  attr(obplot, "allowZoom") <- TRUE
   return(obplot)
 }
 

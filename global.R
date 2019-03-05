@@ -40,15 +40,17 @@ plotOutputInsideFluidRow <- function(plotOutputId) {
   fluidPage(
     fluidRow(
       column(12, align="center",
-        tags$head(tags$style("#plot{height:80vh !important;}")),
-        plotOutput(plotOutputId,
-          dblclick=paste0(plotOutputId, "_dblclick"),
-          brush=brushOpts(
-            id=paste0(plotOutputId, "_brush"),
-            resetOnNew=TRUE
-          )
-        ),
-        tags$style(type="text/css", "body { overflow-y: scroll; }")
+        plotOutput(plotOutputId, height="755px", width="100%")
+      )
+    ) %>% withSpinner(color="#0dc5c1")
+  )
+}
+
+plotlyOutputInsideFluidRow <- function(plotlyOutputId) {
+  fluidPage(
+    fluidRow(
+      column(12, align="center",
+        plotlyOutput(plotlyOutputId, height="755px", width="100%")
       )
     ) %>% withSpinner(color="#0dc5c1")
   )
@@ -73,11 +75,14 @@ mapAndMapTitleOutput <- function(mapOutputId, mapTitleOutputId) {
 }
 
 queryUsedAndDataTableOutput <- function(queryUsedOutputId, dataTableOutputId){
+  downloadButtonCsvId <- paste0(dataTableOutputId, "DownloadAsCsv")
+  downloadButtonTxtId <- paste0(dataTableOutputId, "DownloadAsTxt")
   fluidPage(
     fluidRow(
       column(12, align="center",
         wellPanel(h5("Query used:"), textOutput(queryUsedOutputId)),
-        h5("Data:"),
+        downloadButton(downloadButtonTxtId, "Download as TXT"),
+        downloadButton(downloadButtonCsvId, "Download as CSV"),
         dataTableOutput(dataTableOutputId)
       )
     )

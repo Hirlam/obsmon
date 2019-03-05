@@ -42,7 +42,7 @@ date2dtg <- function(date, cycle=NULL) {
 }
 
 dtg2POSIXct <- function(dtg) {
-  as.POSIXct(as.character(dtg), format="%Y%m%d%H")
+  as.POSIXct(as.character(dtg), format="%Y%m%d%H", tz="UTC")
 }
 
 expandDateRange <- function(start, end, format="%Y%m%d") {
@@ -85,7 +85,7 @@ expandDtgRange <- function(dateRange) {
 formatDtg <- function(dtg) {
   n = length(dtg)
   if (n==1) {
-    strftime(dtg2POSIXct(dtg), format="%Y-%m-%d %H %Z")
+    strftime(dtg2POSIXct(dtg), format="%Y-%m-%d %H %Z", tz="UTC")
   } else if (n==3) {
     if (dtg[[1]] == dtg[[2]]) {
       if(length(dtg[[3]])>0) {

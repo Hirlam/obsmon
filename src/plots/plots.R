@@ -10,6 +10,47 @@ coord_flip_wrapper <- function(..., default=FALSE) {
   return(cf)
 }
 
+plotCanBeMadeInteractive <- function(myPlot) {
+  # To be used in the server logic to determine whether to use regular
+  # (non-interactive) or plotly (interactive) plot outputs.
+  # When using CoordMap in ggplot2, conversion to plotly makes the projections
+  # look a bit weird -- hence the restriction on CoordMap below.
+  rtn <- ("plotly" %in% class(myPlot) || is.ggplot(myPlot)) &&
+    !("CoordMap" %in% class(myPlot$coordinates))
+  return(rtn)
+}
+
+addTitleToPlot <- function(myPlot, title) {
+  if(is.null(myPlot) || is.null(title)) return(myPlot)
+  newPlot <- tryCatch({
+    if(is.ggplot(myPlot)) {
+      myPlot + ggtitle(title)
+    } else if("plotly" %in% class(myPlot)) {
+      myPlot %>% layout(title=title, margin=list(t=50))
+    } else {
+      grid.arrange(myPlot, top=textGrob(title))
+    }
+    },
+    error=function(e) {
+      flog.error("Problems setting plot title: %s", e)
+      myPlot
+    }
+  )
+  return(newPlot)
+}
+
+plotExportedDataInfo <- function(plot) {
+  header <- paste0(
+    paste("# Plot title:", plot$title, "\n"),
+    sprintf(
+      "# Data retrieved by Obsmon v%s on %s using the following query:\n",
+      obsmonVersion, strftime(Sys.time(), format="%Y-%m-%d %H:%M:%S %Z")
+    ),
+    paste0("# ", plot$queryUsed, "\n"),
+    paste("\n")
+  )
+}
+
 plotTypesHierarchical <- list()
 plotTypesFlat <- list()
 
@@ -68,9 +109,9 @@ putLabelsInStations <- function(stations=NULL, obname=NULL) {
   if(isTRUE(obname=="synop")) {
     stationLabels <- c()
     for(statID in stations) {
-      statName <- synopStations[statID]
+      statName <- tryCatch(synopStations[statID], error=function(e) NA)
       label <- statID
-      if(is.character(statName)) label<-sprintf("%s (%s)",statID,statName)
+      if(!is.na(statName)) label <- sprintf("%s (%s)", statID, statName)
       stationLabels <- c(stationLabels, label)
     }
     names(stations) <- stationLabels
