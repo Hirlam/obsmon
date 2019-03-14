@@ -27,6 +27,10 @@ strLowDashToTitle <- function(str) {
   return(rtn)
 }
 
+toLowerTrimAndSingleSpaces <- function(str) {
+  trimws(gsub(' +',' ',tolower(str)))
+}
+
 dtg2date <- function(dtg) {
   paste(substr(dtg, 1, 4), substr(dtg, 5, 6), substr(dtg, 7, 8), sep="-")
 }
