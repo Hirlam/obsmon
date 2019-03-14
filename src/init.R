@@ -141,6 +141,7 @@ fillInDefaults <- function(config) {
     Sys.getenv("OBSMON_MAX_N_EXTRA_PROCESSES")
   )
   config <- fillInDefault(config, "showCacheOptions", FALSE)
+  config <- fillInDefault(config, "multiPlotsEnableInteractivity", FALSE)
   config
 }
 

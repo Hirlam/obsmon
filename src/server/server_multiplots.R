@@ -224,7 +224,10 @@ observeEvent(input$multiPlotsDoPlot, {
 # (i) Plots
 output$multiPlotsPlotContainer <- renderUI({
   plotOutList <- lapply(seq_along(multiPlot()), function(iPlot) {
-    if(plotCanBeMadeInteractive(multiPlot()[[iPlot]]$obplot)) {
+    if(
+      isTRUE(obsmonConfig$general$multiPlotsEnableInteractivity) &&
+      plotCanBeMadeInteractive(multiPlot()[[iPlot]]$obplot)
+    ) {
       plotlyOutputInsideFluidRow(multiPlotsGenId(iPlot, type="plot"))
     } else {
       plotOutputInsideFluidRow(multiPlotsGenId(iPlot, type="plot"))
@@ -273,7 +276,10 @@ observeEvent(multiPlot(), {
       pName <- multiPlotsGenId(iPlot)
       # Assign plots
       plotOutId <- multiPlotsGenId(iPlot, type="plot")
-      if(plotCanBeMadeInteractive(multiPlot()[[pName]]$obplot)) {
+      if(
+        isTRUE(obsmonConfig$general$multiPlotsEnableInteractivity) &&
+        plotCanBeMadeInteractive(multiPlot()[[pName]]$obplot)
+      ) {
         output[[plotOutId]] <- renderPlotly({
           myPlot <- multiPlot()[[pName]]
           myPlot <- addTitleToPlot(myPlot$obplot, myPlot$title)
