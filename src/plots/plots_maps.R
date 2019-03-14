@@ -1,23 +1,22 @@
 registerPlotCategory("Maps")
 
 plotTitle.plotMap <- function(p, plotRequest, plotData) {
-  dtg <- formatDtg(plotRequest$criteria$dtg)
-  titleStub <- sprintf("%s: %s %%s %s\n%%s", plotRequest$expName, p$name, dtg)
-  levels <- paste(plotRequest$criteria$levels, collapse=", ")
-  switch(
-      as.character(plotRequest$criteria$obnumber),
-      "7"={
-        varLabel <- plotRequest$criteria$satname
-        levelLabel <- "channels"
-      },
-      {
-        varLabel <- plotRequest$criteria$varname
-        levelLabel <- "levels"
-      }
+  if(as.character(plotRequest$criteria$obnumber)=="7") {
+    varLabel <- plotRequest$criteria$satname
+    levelLabel <- "channels"
+  } else {
+    varLabel <- plotRequest$criteria$varname
+    levelLabel <- "levels"
+  }
+  title <- sprintf("%s: %s %s %s",
+    plotRequest$expName, p$name,
+    paste(plotRequest$criteria$obname, varLabel),
+    formatDtg(plotRequest$criteria$dtg)
   )
-  title <- sprintf(titleStub,
-                   paste(plotRequest$criteria$obname, varLabel),
-                   sprintf("%s: %s", levelLabel, levels))
+  if(length(plotRequest$criteria$levels)>0) {
+    levels <- paste(plotRequest$criteria$levels, collapse=", ")
+    title <- paste(title, sprintf("%s: %s", levelLabel, levels), sep="\n")
+  }
   title
 }
 
@@ -114,7 +113,7 @@ doMap.mapThreshold <- function(p, plotRequest, plotData) {
       zoomLevel <- i+3
     }
   }
-  plotData$popup <- paste("Statid: ", plotData$statid, "<br>Value: ",
+  plotData$popup <- paste("Station: ", plotData$statLabel, "<br>Value: ",
                           signif(plotData$plotValues, digits=5),
                           "<br>Level: ", plotData$level)
   if ( max(plotData$plotValues) > 0 ) {
@@ -171,7 +170,7 @@ doMap.mapUsage <- function(p, plotRequest, plotData) {
   pal <- colorFactor(c("green", "blue", "black", "grey", "yellow", "red"),
                      domain=c("Active", "Active(2)",
                               "Blacklisted", "NA", "Passive", "Rejected"))
-  plotData$popup <- paste("Statid: ", plotData$statid, "<br>Anflag: ",
+  plotData$popup <- paste("Station: ", plotData$statLabel, "<br>Anflag: ",
                           plotData$anflag, "<br>Status:", plotData$status)
   clusterOptions <- markerClusterOptions(disableClusteringAtZoom=zoomLevel)
   obMap <- leaflet(data=plotData[rev(order(status)),]) %>%
@@ -215,7 +214,7 @@ registerPlotType(
                      "latitude, longitude, statid,",
                      "active, rejected, passive, blacklisted, anflag",
                      "FROM usage WHERE %s"),
-               list("obnumber", "obname", "levels"))
+               list("obnumber", "obname"))
 )
 
 plotBuildQuery.mapThreshold <- function(p, plotRequest) {
@@ -242,7 +241,7 @@ registerPlotType(
                      "latitude, longitude, level, statid, obsvalue,",
                      "(%s) as plotValues",
                      "FROM usage WHERE %s"),
-               list("obnumber", "obname", "levels"),
+               list("obnumber", "obname"),
                dataColumn="fg_dep")
 )
 registerPlotType(
@@ -253,7 +252,7 @@ registerPlotType(
                      "latitude, longitude, level, statid,",
                      "(%s) as plotValues",
                      "FROM usage WHERE %s"),
-               list("obnumber", "obname", "levels"),
+               list("obnumber", "obname"),
                dataColumn="fg_dep+biascrl")
 )
 registerPlotType(
@@ -264,7 +263,7 @@ registerPlotType(
                      "latitude, longitude, level, statid, obsvalue,",
                      "(%s) as plotValues",
                      "FROM usage WHERE %s"),
-               list("obnumber", "obname", "levels"),
+               list("obnumber", "obname"),
                dataColumn="an_dep")
 )
 registerPlotType(
@@ -276,7 +275,7 @@ registerPlotType(
                      "obsvalue, fg_dep, an_dep,",
                      "(%s) as plotValues",
                      "FROM usage WHERE %s"),
-               list("obnumber", "obname", "levels"),
+               list("obnumber", "obname"),
                dataColumn="fg_dep-an_dep")
 )
 registerPlotType(
@@ -287,7 +286,7 @@ registerPlotType(
                      "latitude, longitude, level, statid,",
                      "(%s) as plotValues",
                      "FROM usage WHERE %s"),
-               list("obnumber", "obname", "levels"),
+               list("obnumber", "obname"),
                dataColumn="biascrl")
 )
 registerPlotType(
@@ -298,7 +297,7 @@ registerPlotType(
                      "latitude, longitude, level, statid,",
                      "(%s) as plotValues",
                      "FROM usage WHERE %s"),
-               list("obnumber", "obname", "levels"),
+               list("obnumber", "obname"),
                dataColumn="obsvalue")
 )
 
@@ -345,7 +344,7 @@ registerPlotType(
                      "latitude, longitude, level, statid, obsvalue,",
                      "(%s) as plotValues",
                      "FROM usage WHERE %s"),
-               list("obnumber", "obname", "levels"),
+               list("obnumber", "obname"),
                dataColumn="fg_dep")
 )
 registerPlotType(
@@ -356,7 +355,7 @@ registerPlotType(
                      "latitude, longitude, level, statid, obsvalue,",
                      "(%s) as plotValues",
                      "FROM usage WHERE %s"),
-               list("obnumber", "obname", "levels"),
+               list("obnumber", "obname"),
                dataColumn="an_dep")
 )
 registerPlotType(
@@ -368,6 +367,6 @@ registerPlotType(
                      "obsvalue, fg_dep, an_dep,",
                      "(%s) as plotValues",
                      "FROM usage WHERE %s"),
-               list("obnumber", "obname", "levels"),
+               list("obnumber", "obname"),
                dataColumn="fg_dep-an_dep")
 )

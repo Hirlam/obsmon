@@ -25,7 +25,8 @@ allowSrcDownload <- "--allow-downloads" %in% args | resetLocalRepo
 pedanticBuild <- "--pedantic" %in% args 
 # --local-install is useful whenever minimum interference with current R setup
 # is desirable
-localInstallRequested <- "--local-install" %in% args 
+localReinstallRequested <- "--local-reinstall" %in% args
+localInstallRequested <- "--local-install" %in% args || localReinstallRequested
 # The sf R library is only needed as a "requires" dependency and is not
 # installed be default, as it depends on gdal v2, which is not available
 # in some systems yet.
@@ -76,9 +77,15 @@ envVarPreCompiledPkgsDir <- file.path(
   sysInfoStringLong
 )
 
+# Remove locally installed packages if localReinstallRequested
+cat(sprintf(
+  'Option "--local-reinstall" passed.\n  > Resetting directory %s\n',
+  localInstallRLib
+))
+if(localReinstallRequested) unlink(localInstallRLib, recursive=TRUE)
+
 remoteRepo <- c("http://cran.ma.imperial.ac.uk/")
 localRepo <- c(file.path("file:", localRLibDir))
-
 # Configuring library search paths
 originalLibPaths <- .libPaths()
 .libPaths("")

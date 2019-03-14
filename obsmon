@@ -15,7 +15,7 @@ if(obsmonSrcDir=="" || is.na(obsmonSrcDir)) obsmonSrcDir<-dirname(thisFilePath)
 setwd(obsmonSrcDir)
 
 # Printing startup info such as code name, version and git info
-source("src_info_obsmon.R")
+source("src/src_info_obsmon.R")
 cat(obsmonBanner)
 cat("Initializing Obsmon...\n")
 
@@ -23,7 +23,7 @@ cat("Initializing Obsmon...\n")
 # We will do this here instead of inside init.R because we need this to be able to
 # load argparse, which is used when running this executable, but not used when
 # running in a shiny server
-source('lib_paths_config.R')
+source('src/lib_paths_config.R')
 
 # Parsing command line arguments
 tryCatch(
@@ -37,15 +37,26 @@ parser <- ArgumentParser()
 parser$add_argument("--launch", action="store_true", help="Launch browser")
 parser$add_argument('-pt', '--port', type="integer", default=5391,
   help=paste('Port the app will listen to (default: 5391).',
-         'If busy, the code will attempt to pick a valid port number randomly.'
+         'If busy, the code will attempt to pick a valid port number randomly'
        )
 )
-args <- parser$parse_args()
+parser$add_argument("--debug", action="store_true", help="Start in debug mode")
+cmdLineArgs <- parser$parse_args()
 
 # Initialising the rest of the code
-source("init.R")
+source("src/init.R")
 
-# Running the shinny app. This routine is defined in the file init.R
-runAppHandlingBusyPort(
-    appDir=obsmonSrcDir, defaultPort=args$port, launch.browser=args$launch, quiet=TRUE
-)
+# Running the shinny app. This routine is defined in the file src/shiny_wrappers.R
+if(cmdLineArgs$debug) {
+  options(shiny.reactlog=TRUE)
+  runAppHandlingBusyPort(
+    appDir=obsmonSrcDir, defaultPort=cmdLineArgs$port,
+    launch.browser=cmdLineArgs$launch, quiet=TRUE,
+    display.mode="showcase"
+  )
+} else {
+  runAppHandlingBusyPort(
+    appDir=obsmonSrcDir, defaultPort=cmdLineArgs$port,
+    launch.browser=cmdLineArgs$launch, quiet=TRUE
+  )
+}
