@@ -157,7 +157,8 @@ validateEndDate <- function(endDate, startDate=NULL, nDays=NULL, format=dateInpu
 }
 
 multiPlotExptValid <- function(plotConfig) {
-  valid <- isTRUE(plotConfig$experiment %in% exptNamesinConfig)
+  expt <- toLowerTrimAndSingleSpaces(plotConfig$experiment)
+  valid <- isTRUE(expt %in% toLowerTrimAndSingleSpaces(exptNamesinConfig))
   if(!valid) {
     flog.error(
       'multiPlot "%s": experiment "%s" not recognised',
@@ -168,7 +169,8 @@ multiPlotExptValid <- function(plotConfig) {
 }
 
 multiPlotDbValid <- function(plotConfig) {
-  valid <- isTRUE(plotConfig$database %in% dbTypesRecognised)
+  db <- tolower(plotConfig$database)
+  valid <- isTRUE(db %in% tolower(dbTypesRecognised))
   if(!valid) {
     flog.error(
       'multiPlot "%s": database "%s" not recognised',
@@ -179,7 +181,8 @@ multiPlotDbValid <- function(plotConfig) {
 }
 
 multiPlotPlotTypeValid <- function(plotConfig) {
-  valid <- isTRUE(plotConfig$plotType %in% names(plotTypesFlat))
+  pType <- toLowerTrimAndSingleSpaces(plotConfig$plotType)
+  valid <- isTRUE(pType %in% toLowerTrimAndSingleSpaces(names(plotTypesFlat)))
   if(!valid) {
     flog.error(
       'multiPlot "%s": plotType "%s" not recognised',
@@ -220,15 +223,33 @@ validateOneClickPlotConfig <- function(config) {
     # pc stands for "plot config"
     pc <- config$multiPlots[[iConfig]]
     validConfig <- TRUE
-    if(!multiPlotExptValid(pc)) {
+    if(multiPlotExptValid(pc)) {
+      # Correct plotType excess spaces and character case
+      pcExptName <- toLowerTrimAndSingleSpaces(pc$experiment)
+      for(exactExptName in exptNamesinConfig) {
+        if(toLowerTrimAndSingleSpaces(exactExptName) == pcExptName) {
+          pc$experiment <- exactExptName
+        }
+      }
+    } else {
       validConfig <- FALSE
       invalidExpts <- TRUE
     }
-    if(!multiPlotDbValid(pc)) {
+    if(multiPlotDbValid(pc)) {
+      pc$database <- tolower(pc$database)
+    } else {
       validConfig <- FALSE
       invalidDbs <- TRUE
     }
     if(multiPlotPlotTypeValid(pc)) {
+      # Correct plotType excess spaces and character case
+      tmpPlotType <- toLowerTrimAndSingleSpaces(pc$plotType)
+      for(exactPlotName in names(plotTypesFlat)) {
+        if(tmpPlotType == toLowerTrimAndSingleSpaces(exactPlotName)) {
+          pc$plotType <- exactPlotName
+          break
+        }
+      }
       # Process dates
       pc$date <- validateStartDate(pc$date)
       pc$startDate <- validateStartDate(pc$startDate)

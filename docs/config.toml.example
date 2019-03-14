@@ -39,7 +39,7 @@
     displayName = "1st Expt: ecma NObs for all obs but satem"
     # experiment: Must match the dysplayName of one of the experiments configured above
     experiment = "First Experiment"
-    # plotType: Must match a valid plot type, i.e., a plot type normally supported by obsmon
+    # plotType: Must match one of the plot types normally supported by obsmon
     plotType = "Number of Observations"
     # database: Must be one of: ccma, ecma, ecma_sfc
     database = "ecma"
@@ -50,15 +50,16 @@
     ##########################################
     # Deciding which observations to include #
     ##########################################
-    # The defaut behaviour is to include all types of observations in the multiPlots unless:
-    # (i) excludeObs is passed, in which case any observation name listed there will be excluded
-    # (ii) You explicitely use a [multiPlots.obs] block (see the next example), in which case only
-    #      observations explicitely listed will be included.
+    # The default behaviour is to include all observation types in the multiPlots unless:
+    # (i) excludeObs is passed, in which case any observation name listed there will
+    #     be excluded
+    # (ii) You explicitely use a [multiPlots.obs] block (see the next example), in which
+    #      case only observations explicitely listed will be included.
     # This multi plot will include all observatrions except satem.
     excludeObs = ["satem"]
-    ############################################################################
-    # Optional: Choosing which hight/pressure levels to include and/or exclude #
-    ############################################################################
+    #############################################################################
+    # Optional: Choosing which height/pressure levels to include and/or exclude #
+    #############################################################################
     # You can select levels for each observation name and variable individually:
     [multiPlots.levels.aircraft]
         t = 100000
