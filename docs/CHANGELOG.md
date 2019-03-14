@@ -4,7 +4,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
-## [Unreleased]
+## [3.0.0] 2019-03-14
 ### Added
 - User-configured "multiPlots"
     - Produce one or more pre-configured plots at once
@@ -14,10 +14,13 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - Vertical profile plots
 - Option to export data tables as txt/csv files
 - "Cancel plot" button (appears only after clicking in "Plot")
+- Better documentation in PDF format (and accessible from the GUI)
 - New config options supported (to be set under the "general" section)
     - initCheckDataExists (true/false, default: false)
-      - Assert, at initialisation time,  weather or not all data files for all experiments exist
-    - showCacheOptions (true/false, default: false): to show/hide advanced cache-related options
+      - Assert, at initialisation time, whether or not all data files for all
+        experiments exist
+    - showCacheOptions (true/false, default: false): to show/hide advanced
+      cache-related options
         - Options can also be shown by creating a file named ".obsmon_show_cache_options"
           in the obsmon directory
     - maxExtraParallelProcs: control max number of parallel tasks
@@ -34,10 +37,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - Obsmon can now work even if observations are not cached
     - Auto-discovery cache is now performed only for selected date(s) and cycle(s)
         - Caching starts automatically when a new DTG, experiment or database is selected
-        - While cache is not finished, the fields in the GUI are populated with all possible
-          values they may have
-        - The GUI is refreshed once cache finishes as to only show choices available according
-          to the relevant data files
+        - While cache is not finished, the fields in the GUI are populated with all
+          possible values they may have
+        - The GUI is refreshed once cache finishes as to only show choices available
+          according to the relevant data files
 - Some UI redesign
 - Show a spinner instead of a progress bar when an output is being prepared
 - Allow selection of multiple stations in some plots
@@ -71,7 +74,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
     - Average Analysis Departure Map
     - Average Analysis Increment Map
 - Possibility to start obsmon from any directory (obsmon must be in the PATH)
-- Support to command line options in (both in the install script as well as in obsmon itself)
+- Support to command line options in (both in the install script as well as in
+  obsmon itself)
 - Possibility to install R-packages used by obsmon locally (as part of obsmon
   itself), making it independent of R libraries installed in the system. This
   is useful for packaging.
@@ -128,6 +132,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - Environment variables for configuration
 
 
+[3.0.0]: https://git.smhi.se/foum/obsmon/compare/obsmon-2.3.0...obsmon-3.0.0
 [2.3.0]: https://git.smhi.se/foum/obsmon/compare/obsmon-2.2.0...obsmon-2.3.0
 [2.2.0]: https://git.smhi.se/foum/obsmon/compare/obsmon-2.1.0...obsmon-2.2.0
 [2.1.0]: https://git.smhi.se/a002160/obsmon/compare/obsmon-2.0.0...obsmon-2.1.0
