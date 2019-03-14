@@ -6,7 +6,7 @@ docTab <- function(docPath) {
     "docDir/%s#view=FitH&pagemode=bookmarks",
     basename(docPath
   ))
-  fillPage(
+  fluidPage(
     # Embed PDF file to show it using the browser's viewer
     tags$iframe(
       src=docUrl,
