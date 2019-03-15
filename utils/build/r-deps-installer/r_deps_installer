@@ -78,11 +78,13 @@ envVarPreCompiledPkgsDir <- file.path(
 )
 
 # Remove locally installed packages if localReinstallRequested
-cat(sprintf(
-  'Option "--local-reinstall" passed.\n  > Resetting directory %s\n',
-  localInstallRLib
-))
-if(localReinstallRequested) unlink(localInstallRLib, recursive=TRUE)
+if(localReinstallRequested) {
+  cat(sprintf(
+    'Option "--local-reinstall" passed.\n  > Resetting directory %s\n',
+    localInstallRLib
+  ))
+  unlink(localInstallRLib, recursive=TRUE)
+}
 
 remoteRepo <- c("http://cran.ma.imperial.ac.uk/")
 localRepo <- c(file.path("file:", localRLibDir))
