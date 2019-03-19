@@ -64,7 +64,7 @@ observeEvent(input$doPlot, {
   # is NULL, but the plotly tab does. Using this to keep the
   # spinner running while the plot is being prepared.
   shinyjs::show(selector="#mainArea li a[data-value=plotlyTab]")
-  if(input$mainArea=="plotTab") {
+  if(input$mainArea %in% c("plotTab", "plotlyTab")) {
     updateTabsetPanel(session, "mainArea", "plotlyTab")
   }
   shinyjs::hide(selector="#mainArea li a[data-value=plotTab]")
@@ -110,11 +110,12 @@ observeEvent(input$doPlot, {
       shinyjs::toggle(
         condition=!interactive, selector="#mainArea li a[data-value=plotTab]"
       )
-      if(interactive && input$mainArea=="plotTab") {
-        updateTabsetPanel(session, "mainArea", "plotlyTab")
-      }
-      if(!interactive && input$mainArea=="plotlyTab") {
-        updateTabsetPanel(session, "mainArea", "plotTab")
+      if(input$mainArea %in% c("plotTab", "plotlyTab")) {
+        if(interactive) {
+          updateTabsetPanel(session, "mainArea", "plotlyTab")
+        } else {
+          updateTabsetPanel(session, "mainArea", "plotTab")
+        }
       }
 
       # Update readyPlot reactive
@@ -129,7 +130,7 @@ observeEvent(input$doPlot, {
       # is NULL, but the plotly tab does. Using this to remove the
       # spinner is the plot fails for whatever reason.
       shinyjs::show(selector="#mainArea li a[data-value=plotTab]")
-      if(input$mainArea=="plotlyTab") {
+      if(input$mainArea %in% c("plotTab", "plotlyTab")) {
         updateTabsetPanel(session, "mainArea", "plotTab")
       }
       shinyjs::hide(selector="#mainArea li a[data-value=plotlyTab]")
