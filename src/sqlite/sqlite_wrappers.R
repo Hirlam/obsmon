@@ -93,6 +93,13 @@ dbConnectWrapper <- function(dbpath, read_only=FALSE, showWarnings=TRUE) {
   return(con)
 }
 
+dbDisconnectWrapper <- function(con) {
+  tryCatch(dbDisconnect(con),
+    error=function(e) flog.error("dbDisconnectWrapper: %s", e),
+    warn=function(w) flog.warn("dbDisconnectWrapper: %s", w)
+  )
+}
+
 makeSingleQuery <- function(query) {
   function(dbpath) {
     con <- dbConnectWrapper(dbpath, read_only=TRUE)
@@ -104,7 +111,7 @@ makeSingleQuery <- function(query) {
                       )
                       NULL
                     })
-    dbDisconnect(con)
+    dbDisconnectWrapper(con)
     res
   }
 }
