@@ -60,21 +60,25 @@ observeEvent(input$doPlot, {
   shinyjs::enable("cancelPlot")
   shinyjs::show("cancelPlot")
 
+  # The plot tab does not keep the spinner running if the plot
+  # is NULL, but the plotly tab does. Using this to keep the
+  # spinner running while the plot is being prepared.
+  shinyjs::show(selector="#mainArea li a[data-value=plotlyTab]")
+  if(input$mainArea=="plotTab") {
+    updateTabsetPanel(session, "mainArea", "plotlyTab")
+  }
+  shinyjs::hide(selector="#mainArea li a[data-value=plotTab]")
+
   plotStartedNotifId(showNotification(
     "Gathering data for plot...", type="message", duration=NULL
   ))
 
-  # Using "sink" to suppress some annoying stuff futureCall sends to stderr.
-  # Any eventual error messages wull be catched using "then" or "catch". The
-  # aforementioned annoying stuff is:
-  # 1. "Warning in serialize(what, NULL, xdr = FALSE) :
-  #    'package:DBI' may not be available when loading",
-  #     For this, suppressWarnings would work
-  # 2. Two blank lines printed to stderr whenever a plot is cancelled
-  #    suppressWarnings did not work for this for whatever reason
-  futureCallStderrFilePath <- tempfile()
-  tmpFile <- file(futureCallStderrFilePath, open="wt")
-  sink(tmpFile, type="message")
+  # Using "sink" to suppress two annoying blank lines that are sent
+  # to the stdout whenever a plot is cancelled. If more than these
+  # empty lines are produced as output, then it will be shown upon
+  # completion of the assync task (be it successfull or not)
+  tmpStdOut <- vector('character')
+  sink(textConnection('tmpStdOut', 'wr', local=TRUE), type="message")
 
   # Prepare plot assyncronously
   newFutPlot <- futureCall(
@@ -88,6 +92,8 @@ observeEvent(input$doPlot, {
 
   then(newFutPlot,
     onFulfilled=function(value) {
+      # Enable/disable, show/hide appropriate inputs
+      # (i) Maps tab
       if(is.null(value$obmap)) {
         if(input$mainArea=="mapTab") {
           updateTabsetPanel(session, "mainArea", "plotTab")
@@ -96,6 +102,22 @@ observeEvent(input$doPlot, {
       } else {
         js$enableTab("mapTab")
       }
+      # (ii) Interactive or regular plot tabs
+      interactive <- plotCanBeMadeInteractive(value$obplot)
+      shinyjs::toggle(
+        condition=interactive, selector="#mainArea li a[data-value=plotlyTab]"
+      )
+      shinyjs::toggle(
+        condition=!interactive, selector="#mainArea li a[data-value=plotTab]"
+      )
+      if(interactive && input$mainArea=="plotTab") {
+        updateTabsetPanel(session, "mainArea", "plotlyTab")
+      }
+      if(!interactive && input$mainArea=="plotlyTab") {
+        updateTabsetPanel(session, "mainArea", "plotTab")
+      }
+
+      # Update readyPlot reactive
       readyPlot(value)
     },
     onRejected=function(e) {
@@ -103,6 +125,15 @@ observeEvent(input$doPlot, {
         showNotification("Could not produce plot", duration=1, type="error")
         flog.error(e)
       }
+      # The plot tab does not keep the spinner running if the plot
+      # is NULL, but the plotly tab does. Using this to remove the
+      # spinner is the plot fails for whatever reason.
+      shinyjs::show(selector="#mainArea li a[data-value=plotTab]")
+      if(input$mainArea=="plotlyTab") {
+        updateTabsetPanel(session, "mainArea", "plotTab")
+      }
+      shinyjs::hide(selector="#mainArea li a[data-value=plotlyTab]")
+
       readyPlot(NULL)
     }
   )
@@ -112,9 +143,8 @@ observeEvent(input$doPlot, {
     shinyjs::hide("cancelPlot")
     shinyjs::show("doPlot")
     enableShinyInputs(input)
-    # Cleaning temp file used for futureCall stderr
-    close(tmpFile)
-    unlink(futureCallStderrFilePath)
+    # Printing stdout produced during assync plot, if any
+    if(isTRUE(trimws(tmpStdOut)!="")) cat(paste0(tmpStdOut, "\n"))
   })
   catch(plotCleanup, function(e) {
     # This prevents printing the annoying "Unhandled promise error" msg when
@@ -138,25 +168,6 @@ output$queryAndTableContainer <- renderUI(
 )
 
 # Rendering plot/map/dataTable
-observeEvent(readyPlot(), {
-  interactive <- plotCanBeMadeInteractive(readyPlot()$obplot)
-  # Enable/disable, show/hide appropriate inputs
-  shinyjs::toggle(
-    condition=interactive, selector="#mainArea li a[data-value=plotlyTab]"
-  )
-  shinyjs::toggle(
-    condition=!interactive, selector="#mainArea li a[data-value=plotTab]"
-  )
-  if(interactive && input$mainArea=="plotTab") {
-    updateTabsetPanel(session, "mainArea", "plotlyTab")
-  }
-  if(!interactive && input$mainArea=="plotlyTab") {
-    updateTabsetPanel(session, "mainArea", "plotTab")
-  }
-},
-  ignoreNULL=FALSE
-)
-
 # (i) Rendering plots
 # (i.i) Interactive plot, if plot supports it
 output$plotly <- renderPlotly({

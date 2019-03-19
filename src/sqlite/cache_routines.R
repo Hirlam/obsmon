@@ -113,7 +113,7 @@ cacheObsFromFile <- function(sourceDbPath, cacheDir, replaceExisting=FALSE) {
         flog.debug(sprintf("Caching: Done with file %s\n", sourceDbPath))
       }
       allDbConsCreatedHere <- c(allDbConsCreatedHere, cacheDbConsCreatedHere)
-      for(dbCon in allDbConsCreatedHere) dbDisconnect(dbCon)
+      for(dbCon in allDbConsCreatedHere) dbDisconnectWrapper(dbCon)
       for(lockedFName in fPathsLockedHere) unlockCacheFile(lockedFName)
     }
   )
@@ -391,7 +391,7 @@ dtgsAreCached <- function(db, dtgs) {
       # "usage" and "obsmon" cache files
       cachedDtgs <- intersect(cachedDtgs, newCachedDtgs)
     }
-    dbDisconnect(con)
+    dbDisconnectWrapper(con)
     if(is.null(newCachedDtgs)) break
   }
   if(is.null(cachedDtgs) || ncol(cachedDtgs)==0) return(FALSE)
@@ -430,7 +430,7 @@ getObnamesFromCache <- function(db, category, dates, cycles) {
       error=function(e) NULL,
       warning=function(w) NULL
     )
-    dbDisconnect(con)
+    dbDisconnectWrapper(con)
   }
   if(length(rtn)==0) rtn <- NULL
   return(sort(unique(rtn)))
@@ -459,7 +459,7 @@ getObtypesFromCache <- function(db, dates, cycles) {
       error=function(e) NULL,
       warning=function(w) NULL
     )
-    dbDisconnect(con)
+    dbDisconnectWrapper(con)
   }
   if(length(rtn)==0) rtn <- NULL
   return(sort(unique(rtn)))
@@ -490,7 +490,7 @@ getVariablesFromCache <- function(db, dates, cycles, obname) {
       error=function(e) NULL,
       warning=function(w) NULL
     )
-    dbDisconnect(con)
+    dbDisconnectWrapper(con)
   }
   if(length(rtn)==0) rtn <- NULL
   return(sort(unique(rtn)))
@@ -523,7 +523,7 @@ getLevelsFromCache <- function(db, dates, cycles, obname, varname) {
       error=function(e) NULL,
       warning=function(w) NULL
     )
-    dbDisconnect(con)
+    dbDisconnectWrapper(con)
   }
 
   rtn[["all"]] <- unique(c(rtn$obsmon, rtn$usage))
@@ -553,7 +553,7 @@ getChannelsFromCache <- function(db, dates, cycles, satname, sensorname) {
       error=function(e) NULL,
       warning=function(w) NULL
     )
-    dbDisconnect(con)
+    dbDisconnectWrapper(con)
   }
   return(sort(unique(rtn)))
 }
@@ -580,7 +580,7 @@ getSensornamesFromCache <- function(db, dates, cycles) {
       error=function(e) NULL,
       warning=function(w) NULL
     )
-    dbDisconnect(con)
+    dbDisconnectWrapper(con)
   }
   if(length(rtn)==0) rtn <- NULL
   return(sort(unique(rtn)))
@@ -609,7 +609,7 @@ getSatnamesFromCache <- function(db, dates, cycles, sensorname) {
       error=function(e) NULL,
       warning=function(w) NULL
     )
-    dbDisconnect(con)
+    dbDisconnectWrapper(con)
   }
   if(length(rtn)==0) rtn <- NULL
   return(sort(unique(rtn)))
@@ -642,7 +642,7 @@ getStationsFromCache <- function(db, dates, cycles, obname, variable) {
       error=function(e) NULL,
       warning=function(w) NULL
     )
-    dbDisconnect(con)
+    dbDisconnectWrapper(con)
   }
   if(length(rtn)==0) rtn <- NULL
   return(sort(unique(rtn)))

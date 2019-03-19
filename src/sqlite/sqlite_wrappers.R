@@ -93,15 +93,25 @@ dbConnectWrapper <- function(dbpath, read_only=FALSE, showWarnings=TRUE) {
   return(con)
 }
 
+dbDisconnectWrapper <- function(con) {
+  tryCatch(dbDisconnect(con),
+    error=function(e) flog.error("dbDisconnectWrapper: %s", e),
+    warn=function(w) flog.warn("dbDisconnectWrapper: %s", w)
+  )
+}
+
 makeSingleQuery <- function(query) {
   function(dbpath) {
     con <- dbConnectWrapper(dbpath, read_only=TRUE)
     res <- tryCatch(dbGetQuery(con, query),
                     error=function(e) {
-                      flog.warn("Ignoring error querying %s: %s", dbpath, e)
+                      flog.warn(
+                        "makeSingleQuery: Error querying %s:\n%s\nIgnoring.",
+                        dbpath, e
+                      )
                       NULL
                     })
-    dbDisconnect(con)
+    dbDisconnectWrapper(con)
     res
   }
 }
