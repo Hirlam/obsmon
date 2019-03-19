@@ -144,11 +144,11 @@ observeEvent(input$multiPlotsDoPlot, {
   multiPlotsProgressFile(tempfile(pattern = "multiPlotsProgress"))
 
 
-  # Using sink to suppress a few annoying stuff futureCall sends to stderr
+  # Using sink to suppress two annoying blank lines that are sent to
+  # stdout whenever a multiPlot is cancelled.
   # See the analogous code in the input$doPlot observe
-  futureCallStderrFilePath <- tempfile()
-  tmpFile <- file(futureCallStderrFilePath, open="wt")
-  sink(tmpFile, type="message")
+  tmpStdOut <- vector('character')
+  sink(textConnection('tmpStdOut', 'wr', local=TRUE), type="message")
 
   # Prepare individual plots assyncronously
   multiPlotsAsync <- futureCall(
@@ -205,9 +205,8 @@ observeEvent(input$multiPlotsDoPlot, {
     shinyjs::hide("multiPlotsCancelPlot")
     shinyjs::show("multiPlotsDoPlot")
     enableShinyInputs(input)
-    # Cleaning temp file used for futureCall stderr
-    close(tmpFile)
-    unlink(futureCallStderrFilePath)
+    # Printing stdout produced during assync plot, if any
+    if(isTRUE(trimws(tmpStdOut)!="")) cat(paste0(tmpStdOut, "\n"))
   })
   catch(plotCleanup, function(e) {
     # This prevents printing the annoying "Unhandled promise error" msg when

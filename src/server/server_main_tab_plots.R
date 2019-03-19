@@ -64,17 +64,12 @@ observeEvent(input$doPlot, {
     "Gathering data for plot...", type="message", duration=NULL
   ))
 
-  # Using "sink" to suppress some annoying stuff futureCall sends to stderr.
-  # Any eventual error messages wull be catched using "then" or "catch". The
-  # aforementioned annoying stuff is:
-  # 1. "Warning in serialize(what, NULL, xdr = FALSE) :
-  #    'package:DBI' may not be available when loading",
-  #     For this, suppressWarnings would work
-  # 2. Two blank lines printed to stderr whenever a plot is cancelled
-  #    suppressWarnings did not work for this for whatever reason
-  futureCallStderrFilePath <- tempfile()
-  tmpFile <- file(futureCallStderrFilePath, open="wt")
-  sink(tmpFile, type="message")
+  # Using "sink" to suppress two annoying blank lines that are sent
+  # to the stdout whenever a plot is cancelled. If more than these
+  # empty lines are produced as output, then it will be shown upon
+  # completion of the assync task (be it successfull or not)
+  tmpStdOut <- vector('character')
+  sink(textConnection('tmpStdOut', 'wr', local=TRUE), type="message")
 
   # Prepare plot assyncronously
   newFutPlot <- futureCall(
@@ -112,9 +107,8 @@ observeEvent(input$doPlot, {
     shinyjs::hide("cancelPlot")
     shinyjs::show("doPlot")
     enableShinyInputs(input)
-    # Cleaning temp file used for futureCall stderr
-    close(tmpFile)
-    unlink(futureCallStderrFilePath)
+    # Printing stdout produced during assync plot, if any
+    if(isTRUE(trimws(tmpStdOut)!="")) cat(paste0(tmpStdOut, "\n"))
   })
   catch(plotCleanup, function(e) {
     # This prevents printing the annoying "Unhandled promise error" msg when
