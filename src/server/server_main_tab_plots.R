@@ -78,7 +78,8 @@ observeEvent(input$doPlot, {
   # empty lines are produced as output, then it will be shown upon
   # completion of the assync task (be it successfull or not)
   tmpStdOut <- vector('character')
-  sink(textConnection('tmpStdOut', 'wr', local=TRUE), type="message")
+  tmpStdOutCon <- textConnection('tmpStdOut', 'wr', local=TRUE)
+  sink(tmpStdOutCon, type="message")
 
   # Prepare plot assyncronously
   newFutPlot <- futureCall(
@@ -146,6 +147,7 @@ observeEvent(input$doPlot, {
     enableShinyInputs(input)
     # Printing stdout produced during assync plot, if any
     if(isTRUE(trimws(tmpStdOut)!="")) cat(paste0(tmpStdOut, "\n"))
+    close(tmpStdOutCon)
   })
   catch(plotCleanup, function(e) {
     # This prevents printing the annoying "Unhandled promise error" msg when

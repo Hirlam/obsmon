@@ -148,7 +148,8 @@ observeEvent(input$multiPlotsDoPlot, {
   # stdout whenever a multiPlot is cancelled.
   # See the analogous code in the input$doPlot observe
   tmpStdOut <- vector('character')
-  sink(textConnection('tmpStdOut', 'wr', local=TRUE), type="message")
+  tmpStdOutCon <- textConnection('tmpStdOut', 'wr', local=TRUE)
+  sink(tmpStdOutCon, type="message")
 
   # Prepare individual plots assyncronously
   multiPlotsAsync <- futureCall(
@@ -207,6 +208,7 @@ observeEvent(input$multiPlotsDoPlot, {
     enableShinyInputs(input)
     # Printing stdout produced during assync plot, if any
     if(isTRUE(trimws(tmpStdOut)!="")) cat(paste0(tmpStdOut, "\n"))
+    close(tmpStdOutCon)
   })
   catch(plotCleanup, function(e) {
     # This prevents printing the annoying "Unhandled promise error" msg when
