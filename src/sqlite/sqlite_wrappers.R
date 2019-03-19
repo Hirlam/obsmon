@@ -98,7 +98,10 @@ makeSingleQuery <- function(query) {
     con <- dbConnectWrapper(dbpath, read_only=TRUE)
     res <- tryCatch(dbGetQuery(con, query),
                     error=function(e) {
-                      flog.warn("Ignoring error querying %s: %s", dbpath, e)
+                      flog.warn(
+                        "makeSingleQuery: Error querying %s:\n%s\nIgnoring.",
+                        dbpath, e
+                      )
                       NULL
                     })
     dbDisconnect(con)
