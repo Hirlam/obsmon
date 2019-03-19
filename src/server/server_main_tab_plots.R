@@ -60,6 +60,15 @@ observeEvent(input$doPlot, {
   shinyjs::enable("cancelPlot")
   shinyjs::show("cancelPlot")
 
+  # The plot tab does not keep the spinner running if the plot
+  # is NULL, but the plotly tab does. Using this to keep the
+  # spinner running while the plot is being prepared.
+  shinyjs::show(selector="#mainArea li a[data-value=plotlyTab]")
+  if(input$mainArea=="plotTab") {
+    updateTabsetPanel(session, "mainArea", "plotlyTab")
+  }
+  shinyjs::hide(selector="#mainArea li a[data-value=plotTab]")
+
   plotStartedNotifId(showNotification(
     "Gathering data for plot...", type="message", duration=NULL
   ))
@@ -83,6 +92,8 @@ observeEvent(input$doPlot, {
 
   then(newFutPlot,
     onFulfilled=function(value) {
+      # Enable/disable, show/hide appropriate inputs
+      # (i) Maps tab
       if(is.null(value$obmap)) {
         if(input$mainArea=="mapTab") {
           updateTabsetPanel(session, "mainArea", "plotTab")
@@ -91,6 +102,22 @@ observeEvent(input$doPlot, {
       } else {
         js$enableTab("mapTab")
       }
+      # (ii) Interactive or regular plot tabs
+      interactive <- plotCanBeMadeInteractive(value$obplot)
+      shinyjs::toggle(
+        condition=interactive, selector="#mainArea li a[data-value=plotlyTab]"
+      )
+      shinyjs::toggle(
+        condition=!interactive, selector="#mainArea li a[data-value=plotTab]"
+      )
+      if(interactive && input$mainArea=="plotTab") {
+        updateTabsetPanel(session, "mainArea", "plotlyTab")
+      }
+      if(!interactive && input$mainArea=="plotlyTab") {
+        updateTabsetPanel(session, "mainArea", "plotTab")
+      }
+
+      # Update readyPlot reactive
       readyPlot(value)
     },
     onRejected=function(e) {
@@ -98,6 +125,15 @@ observeEvent(input$doPlot, {
         showNotification("Could not produce plot", duration=1, type="error")
         flog.error(e)
       }
+      # The plot tab does not keep the spinner running if the plot
+      # is NULL, but the plotly tab does. Using this to remove the
+      # spinner is the plot fails for whatever reason.
+      shinyjs::show(selector="#mainArea li a[data-value=plotTab]")
+      if(input$mainArea=="plotlyTab") {
+        updateTabsetPanel(session, "mainArea", "plotTab")
+      }
+      shinyjs::hide(selector="#mainArea li a[data-value=plotlyTab]")
+
       readyPlot(NULL)
     }
   )
@@ -132,25 +168,6 @@ output$queryAndTableContainer <- renderUI(
 )
 
 # Rendering plot/map/dataTable
-observeEvent(readyPlot(), {
-  interactive <- plotCanBeMadeInteractive(readyPlot()$obplot)
-  # Enable/disable, show/hide appropriate inputs
-  shinyjs::toggle(
-    condition=interactive, selector="#mainArea li a[data-value=plotlyTab]"
-  )
-  shinyjs::toggle(
-    condition=!interactive, selector="#mainArea li a[data-value=plotTab]"
-  )
-  if(interactive && input$mainArea=="plotTab") {
-    updateTabsetPanel(session, "mainArea", "plotlyTab")
-  }
-  if(!interactive && input$mainArea=="plotlyTab") {
-    updateTabsetPanel(session, "mainArea", "plotTab")
-  }
-},
-  ignoreNULL=FALSE
-)
-
 # (i) Rendering plots
 # (i.i) Interactive plot, if plot supports it
 output$plotly <- renderPlotly({
