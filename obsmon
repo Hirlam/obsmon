@@ -41,22 +41,32 @@ parser$add_argument('-pt', '--port', type="integer", default=5391,
        )
 )
 parser$add_argument("--debug", action="store_true", help="Start in debug mode")
+parser$add_argument("--batch", action="store_true", help="Run in batch mode")
 cmdLineArgs <- parser$parse_args()
 
 # Initialising the rest of the code
 source("src/init.R")
 
-# Running the shinny app. This routine is defined in the file src/shiny_wrappers.R
-if(cmdLineArgs$debug) {
-  options(shiny.reactlog=TRUE)
-  runAppHandlingBusyPort(
-    appDir=obsmonSrcDir, defaultPort=cmdLineArgs$port,
-    launch.browser=cmdLineArgs$launch, quiet=TRUE,
-    display.mode="showcase"
-  )
+if(cmdLineArgs$batch) {
+  repeat {
+    allExptsInitialised <- all(resolved(experimentsAsPromises))
+    if(allExptsInitialised) print(experimentsAsPromises); break
+    Sys.sleep(1)
+  }
+  source("src/plots/plots_batch.R")
 } else {
-  runAppHandlingBusyPort(
-    appDir=obsmonSrcDir, defaultPort=cmdLineArgs$port,
-    launch.browser=cmdLineArgs$launch, quiet=TRUE
-  )
+  # Running the shinny app. This routine is defined in the file src/shiny_wrappers.R
+  if(cmdLineArgs$debug) {
+    options(shiny.reactlog=TRUE)
+    runAppHandlingBusyPort(
+      appDir=obsmonSrcDir, defaultPort=cmdLineArgs$port,
+      launch.browser=cmdLineArgs$launch, quiet=TRUE,
+      display.mode="showcase"
+    )
+  } else {
+    runAppHandlingBusyPort(
+      appDir=obsmonSrcDir, defaultPort=cmdLineArgs$port,
+      launch.browser=cmdLineArgs$launch, quiet=TRUE
+    )
+  }
 }
