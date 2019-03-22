@@ -3,6 +3,20 @@
 # and make it easier to produce the multiPlots in server.R         #
 ####################################################################
 
+multiPlotsGenId <- function(iPlot, type=NULL) {
+  # Generate output IDs for the dinamically generated outpus
+  qpName <- sprintf("multiPlot_%d", iPlot)
+  if(is.null(type)) return(qpName)
+  recogOutTypes <- c("plot", "map", "mapTitle", "queryUsed", "dataTable")
+  if(!(type %in%  recogOutTypes)) {
+    stop(sprintf(
+      "multiPlotsGenId: Choose type from: %s",
+      paste(recogOutTypes, collapse=", ")
+    ))
+  }
+  return(sprintf("%s_%s", qpName, type))
+}
+
 #################################################
 # Helper functions to produce plots in server.R #
 #################################################
