@@ -1,29 +1,67 @@
-for(pConfig in obsmonConfig$multiPlots) {
-  if(!isTRUE(pConfig$batchMode)) next
-  flog.info('Producing plots in multiPlot config "%s"', pConfig$displayName)
-  # Making shiny-like inputs for each individual plot, to be passed to the
-  # regular obsmon plotting routines
-  inputsForAllPlots <- multiPlotsMakeShinyInputs(pConfig)
-  if(length(inputsForAllPlots)==0) {
-    flog.error("Selected multiPlot generated no plots")
-  }
+makeBatchPlots <- function() {
+  for(mpConf in obsmonConfig$multiPlots) {
+    batchModeConf <- mpConf$batchMode
+    if(!is.list(batchModeConf)) {
+      batchModeConf <- list(enable=isTRUE(batchModeConf))
+    }
+    if(is.null(batchModeConf$enable)) batchModeConf$enable <- TRUE
+    if(!isTRUE(batchModeConf$enable)) next
+    if(is.null(batchModeConf$destDir)) {
+      batchModeConf$destDir <- dirObsmonWasCalledFrom
+    }
+    batchModeConf$filetype <- tolower(batchModeConf$filetype)
+    if(length(batchModeConf$filetype)==0) batchModeConf$filetype <- "png"
+    
+    batchModeConf$destDir <- normalizePath(batchModeConf$destDir, mustWork=FALSE)
 
-  expt <- experimentsAsPromises[[pConfig$experiment]]
-  dbType <- pConfig$database
-  db <- expt$dbs[[dbType]]
+    if(is.null(batchModeConf) || isFALSE(batchModeConf)) next
+    flog.info('Producing plots in multiPlot config "%s"...',mpConf$displayName)
+    # Making shiny-like inputs for each individual plot, to be passed to the
+    # regular obsmon plotting routines
+    inputsForAllPlots <- multiPlotsMakeShinyInputs(mpConf)
+    if(length(inputsForAllPlots)==0) {
+      flog.error("  > Selected multiPlot generated no plots")
+      next
+    }
 
-  multiPlots <- prepareMultiPlots(
-      plotter=plotTypesFlat[[pConfig$plotType]],
+    expt <- experimentsAsPromises[[mpConf$experiment]]
+    dbType <- mpConf$database
+    db <- expt$dbs[[dbType]]
+
+    plots <- prepareMultiPlots(
+      plotter=plotTypesFlat[[mpConf$plotType]],
       inputsForAllPlots=inputsForAllPlots, db=db
-  )
+    )
 
-  iPlot <- 0
-  fType <- "png"
-  for(multiPlot in multiPlots) {
-    iPlot <- iPlot + 1
-    fName <- sprintf("multiPlot_%s.%s", iPlot, fType)
-    plot <- addTitleToPlot(multiPlot$obplot, multiPlot$title)
-    ggsave(filename=fName, plot=plot, device=fType)
+    timeStamp <- strftime(Sys.time(), "%Y_%m_%d_%H%M%S")
+    dirname <- file.path(
+      batchModeConf$destDir,
+      sprintf(
+        "obsmon_batch_%s_%s",
+        slugify(mpConf$displayName), timeStamp
+      )
+    )
+    destDirCreated <- tryCatch({
+        dir.create(dirname, recursive=TRUE)
+        TRUE
+      },
+      warning=function(w) {
+        flog.error('  > Problems creating dir "%s": %s', dirname, w)
+        FALSE
+      }
+    )
+    if(!destDirCreated) next
+
+    filetype <- batchModeConf$filetype
+    for(iPlt in seq_along(plots)) {
+      flog.info("  > Saving plot %d of %d...", iPlt, length(plots))
+      plot <- addTitleToPlot(plots[[iPlt]]$obplot, plots[[iPlt]]$title)
+      fName <- file.path(dirname, sprintf("plot_%s.%s", iPlt, filetype))
+      ggsave(
+        filename=fName, plot=plot, device=filetype,
+        dpi=600, height=6, width=10, units="in"
+      )
+    }
+    flog.info('Done with batch mode for multiPlot "%s"...',mpConf$displayName)
   }
-
 }

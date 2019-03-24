@@ -8,6 +8,7 @@ argv <- commandArgs(trailingOnly = FALSE)
 runningAsStandalone <- TRUE
 
 # Changing work dir to obsmonSrcDir, so all needed files can be found
+dirObsmonWasCalledFrom <- getwd()
 thisFilePath <- normalizePath(sub("--file=", "", argv[grep("--file=", argv)]))
 # Accounting for the fact that the script may be executed via a symlink
 obsmonSrcDir <- dirname(Sys.readlink(thisFilePath))
@@ -50,10 +51,10 @@ source("src/init.R")
 if(cmdLineArgs$batch) {
   repeat {
     allExptsInitialised <- all(resolved(experimentsAsPromises))
-    if(allExptsInitialised) print(experimentsAsPromises); break
+    if(allExptsInitialised) break
     Sys.sleep(1)
   }
-  source("src/plots/plots_batch.R")
+  makeBatchPlots()
 } else {
   # Running the shinny app. This routine is defined in the file src/shiny_wrappers.R
   if(cmdLineArgs$debug) {

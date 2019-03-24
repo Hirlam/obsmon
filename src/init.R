@@ -7,6 +7,7 @@ if(!exists("runningAsStandalone") || runningAsStandalone==FALSE) {
   source("src/src_info_obsmon.R")
   source('src/lib_paths_config.R')
   runningAsStandalone <- FALSE
+  dirObsmonWasCalledFrom <- thisAppDir
 }
 
 if(!runningAsStandalone) {
@@ -103,6 +104,7 @@ sourceObsmonFiles <- function() {
   source("src/plots/plots_vertical_profiles.R")
   source("src/plots/windspeed.R")
   source("src/plots/plots_multi.R")
+  source("src/plots/plots_batch.R")
   source("src/shiny_wrappers.R")
 }
 
