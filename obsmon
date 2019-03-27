@@ -49,11 +49,6 @@ cmdLineArgs <- parser$parse_args()
 source("src/init.R")
 
 if(cmdLineArgs$batch) {
-  repeat {
-    allExptsInitialised <- all(resolved(experimentsAsPromises))
-    if(allExptsInitialised) break
-    Sys.sleep(1)
-  }
   makeBatchPlots()
 } else {
   # Running the shinny app. This routine is defined in the file src/shiny_wrappers.R
