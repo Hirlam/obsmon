@@ -9,13 +9,10 @@ makeOneMultiPlotInBatch <- function(mpConf) {
       return(NULL)
     }
 
-    expt <- experimentsAsPromises[[mpConf$experiment]]
-    dbType <- mpConf$database
-    db <- expt$dbs[[dbType]]
-
     plots <- prepareMultiPlots(
       plotter=plotTypesFlat[[mpConf$plotType]],
-      inputsForAllPlots=inputsForAllPlots, db=db
+      inputsForAllPlots=inputsForAllPlots,
+      db=experimentsAsPromises[[mpConf$experiment]]$dbs[[mpConf$database]]
     )
 
     timeStamp <- strftime(Sys.time(), "%Y_%m_%d_%H%M%S")
@@ -89,7 +86,17 @@ makeBatchPlots <- function(maxAttempts=10) {
     flog.info('Producing plots in multiPlot "%s"...',mpConf$displayName)
 
     nAttempts[iConf] <- nAttempts[iConf] + 1
-    if(!resolved(experimentsAsPromises)[[mpConf$experiment]]) {
+    if(resolved(experimentsAsPromises)[[mpConf$experiment]]) {
+      db <- experimentsAsPromises[[mpConf$experiment]]$dbs[[mpConf$database]]
+      if(is.null(db)) {
+        flog.error(
+          'Could not find %s data for expt "%s". Skipping multiPlot "%s".',
+          mpConf$database, mpConf$experiment, mpConf$displayName
+        )
+        finished[iConf] <- TRUE
+        next
+      }
+    } else {
       if(nAttempts[iConf]<maxAttempts) {
         flog.info(
           '  > Experiment "%s" not yet initialised. Retrying later',
@@ -98,7 +105,7 @@ makeBatchPlots <- function(maxAttempts=10) {
         Sys.sleep(1)
       } else {
         flog.error(
-          '  > Batch plot failed for multiPlot "%s" after %d attempts',
+          'Batch plot failed for multiPlot "%s" after %d attempts. Skipping.',
           mpConf$displayName, nAttempts[iConf]
         )
         finished[iConf] <- TRUE
