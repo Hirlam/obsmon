@@ -6,16 +6,6 @@ runAppHandlingBusyPort <- function(
   maxNAtt=10,
   ...
 ) {
-
-  exitMsg <- paste(
-               "===============",
-               "Exiting Obsmon.",
-               "===============",
-               "",
-               sep="\n"
-             )
-  on.exit(cat(exitMsg), add=TRUE)
-
   port <- defaultPort
   success <- FALSE
   nAtt <- 0

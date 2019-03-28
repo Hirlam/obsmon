@@ -48,21 +48,4 @@ cmdLineArgs <- parser$parse_args()
 # Initialising the rest of the code
 source("src/init.R")
 
-if(cmdLineArgs$batch) {
-  makeBatchPlots()
-} else {
-  # Running the shinny app. This routine is defined in the file src/shiny_wrappers.R
-  if(cmdLineArgs$debug) {
-    options(shiny.reactlog=TRUE)
-    runAppHandlingBusyPort(
-      appDir=obsmonSrcDir, defaultPort=cmdLineArgs$port,
-      launch.browser=cmdLineArgs$launch, quiet=TRUE,
-      display.mode="showcase"
-    )
-  } else {
-    runAppHandlingBusyPort(
-      appDir=obsmonSrcDir, defaultPort=cmdLineArgs$port,
-      launch.browser=cmdLineArgs$launch, quiet=TRUE
-    )
-  }
-}
+runObsmonStandAlone(cmdLineArgs)

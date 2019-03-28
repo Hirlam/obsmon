@@ -10,11 +10,6 @@ if(!exists("runningAsStandalone") || runningAsStandalone==FALSE) {
   dirObsmonWasCalledFrom <- thisAppDir
 }
 
-if(!runningAsStandalone) {
-  # This info is already printed in a banner when runningAsStandalone
-  cat(obsmonBanner)
-}
-
 getUserName <- function() {
   userName <- Sys.info()[["user"]]
   if (is.null(userName) | userName == "") userName <- Sys.getenv("USER")
@@ -217,6 +212,37 @@ configure <- function() {
     setPackageOptions(config)
     obsmonConfig <<- config
     sourceObsmonFiles()
+  }
+}
+
+runObsmonStandAlone <- function(cmdLineArgs) {
+  exitMsg <- paste(
+    "===============",
+    "Exiting Obsmon.",
+    "===============",
+    "",
+    sep="\n"
+  )
+  on.exit(cat(exitMsg))
+
+  if(cmdLineArgs$batch) {
+    makeBatchPlots()
+  } else {
+    # Running the shinny app. The runAppHandlingBusyPort routine is defined in
+    # the file src/shiny_wrappers.R
+    if(cmdLineArgs$debug) {
+      options(shiny.reactlog=TRUE)
+      runAppHandlingBusyPort(
+        appDir=obsmonSrcDir, defaultPort=cmdLineArgs$port,
+        launch.browser=cmdLineArgs$launch, quiet=TRUE,
+        display.mode="showcase"
+      )
+    } else {
+      runAppHandlingBusyPort(
+        appDir=obsmonSrcDir, defaultPort=cmdLineArgs$port,
+        launch.browser=cmdLineArgs$launch, quiet=TRUE
+      )
+    }
   }
 }
 

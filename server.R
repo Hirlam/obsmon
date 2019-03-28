@@ -24,6 +24,10 @@ shinyServer(function(input, output, session) {
     }
   })
 
+  # Write code info to the log for every session when using a shiny server
+  # This info is already printed in a banner when running standalone
+  if(!runningAsStandalone) cat(obsmonBanner)
+
   # Separating the logic for these sessions, as they are quite distinct 
   source("src/server/server_main_tab.R", local=TRUE)
   source("src/server/server_cache.R", local=TRUE)
