@@ -17,13 +17,13 @@ makeOneMultiPlotInBatch <- function(mpConf) {
 
     timeStamp <- strftime(Sys.time(), "%Y_%m_%d_%H%M%S")
     dirPath <- file.path(
-      bmConf$destDir,
+      bmConf$parentDir,
       sprintf(
         "obsmon_batch_%s_%s",
         slugify(mpConf$displayName), timeStamp
       )
     )
-    destDirCreated <- tryCatch({
+    parentDirCreated <- tryCatch({
         dir.create(dirPath, recursive=TRUE)
         TRUE
       },
@@ -32,7 +32,7 @@ makeOneMultiPlotInBatch <- function(mpConf) {
         FALSE
       }
     )
-    if(!destDirCreated) next
+    if(!parentDirCreated) next
     flog.info(
       '  > multiPlot "%s": Saving plots to directory\n  %s',
       mpConf$displayName, dirPath
@@ -66,14 +66,14 @@ makeBatchPlots <- function(maxAttempts=10) {
 
     # Setting defaults for [multiPlots.batchMode] options
     if(is.null(bmConf$enable)) bmConf$enable <- TRUE
-    # destDir
-    bmConf$destDir <- trimws(bmConf$destDir)
-    if(length(bmConf$destDir)==0) {
-      bmConf$destDir <- dirObsmonWasCalledFrom
-    } else if(!startsWith(bmConf$destDir, "/")) {
-        bmConf$destDir <- file.path(dirObsmonWasCalledFrom, bmConf$destDir)
+    # parentDir
+    bmConf$parentDir <- trimws(bmConf$parentDir)
+    if(length(bmConf$parentDir)==0) {
+      bmConf$parentDir <- dirObsmonWasCalledFrom
+    } else if(!startsWith(bmConf$parentDir, "/")) {
+        bmConf$parentDir <- file.path(dirObsmonWasCalledFrom,bmConf$parentDir)
     }
-    bmConf$destDir <- normalizePath(bmConf$destDir, mustWork=FALSE)
+    bmConf$parentDir <- normalizePath(bmConf$parentDir, mustWork=FALSE)
     # fileType
     bmConf$filetype <- tolower(bmConf$filetype)
     if(length(bmConf$filetype)==0) bmConf$filetype <- "png"
