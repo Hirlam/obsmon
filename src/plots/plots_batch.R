@@ -15,15 +15,16 @@ makeOneMultiPlotInBatch <- function(mpConf) {
       db=experimentsAsPromises[[mpConf$experiment]]$dbs[[mpConf$database]]
     )
 
-    timeStamp <- strftime(Sys.time(), "%Y_%m_%d_%H%M%S")
-    dirPath <- file.path(
-      bmConf$parentDir,
-      sprintf(
+    dirName <- bmConf$dirName
+    if(length(dirName)==0) {
+      timeStamp <- strftime(Sys.time(), "%Y_%m_%d_%H%M%S")
+      dirName <- tolower(sprintf(
         "obsmon_batch_%s_%s",
         slugify(mpConf$displayName), timeStamp
-      )
-    )
-    parentDirCreated <- tryCatch({
+      ))
+    }
+    dirPath <- file.path(bmConf$parentDir, dirName)
+    dirPathCreated <- tryCatch({
         dir.create(dirPath, recursive=TRUE)
         TRUE
       },
@@ -32,7 +33,7 @@ makeOneMultiPlotInBatch <- function(mpConf) {
         FALSE
       }
     )
-    if(!parentDirCreated) next
+    if(!dirPathCreated) next
     flog.info(
       '  > multiPlot "%s": Saving plots to directory\n  %s',
       mpConf$displayName, dirPath
@@ -73,7 +74,12 @@ makeBatchPlots <- function(maxAttempts=10) {
     } else if(!startsWith(bmConf$parentDir, "/")) {
         bmConf$parentDir <- file.path(dirObsmonWasCalledFrom,bmConf$parentDir)
     }
-    bmConf$parentDir <- normalizePath(bmConf$parentDir, mustWork=FALSE)
+    if(length(bmConf$parentDir)==0) bmConf$parentDir <- dirObsmonWasCalledFrom
+    # dirName. Will be left as NULL if not defined, so that the
+    # makeOneMultiPlotInBatch routine can put a timestamp that
+    # corresponds to when the plots are actually produced
+    bmConf$dirName <- trimws(bmConf$dirName)
+    if(length(bmConf$dirName)==0) bmConf$dirName <- NULL
     # fileType
     bmConf$filetype <- tolower(bmConf$filetype)
     if(length(bmConf$filetype)==0) bmConf$filetype <- "png"
