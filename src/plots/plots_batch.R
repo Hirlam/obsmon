@@ -29,11 +29,14 @@ makeOneMultiPlotInBatch <- function(mpConf) {
         TRUE
       },
       warning=function(w) {
-        flog.error('  > Problems creating dir "%s": %s', dirPath, w)
+        flog.error(
+          '  > Problems creating dir %s: %s. Skipping multiPlot "%s"',
+          dirPath, w, mpConf$displayName
+        )
         FALSE
       }
     )
-    if(!dirPathCreated) next
+    if(!dirPathCreated) return(-1)
     flog.info(
       '  > multiPlot "%s": Saving plots to directory\n  %s',
       mpConf$displayName, dirPath
