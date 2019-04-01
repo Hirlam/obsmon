@@ -16,7 +16,7 @@ makeOneMultiPlotInBatch <- function(mpConf) {
     )
 
     timeStamp <- strftime(Sys.time(), "%Y_%m_%d_%H%M%S")
-    dirname <- file.path(
+    dirPath <- file.path(
       bmConf$destDir,
       sprintf(
         "obsmon_batch_%s_%s",
@@ -24,15 +24,19 @@ makeOneMultiPlotInBatch <- function(mpConf) {
       )
     )
     destDirCreated <- tryCatch({
-        dir.create(dirname, recursive=TRUE)
+        dir.create(dirPath, recursive=TRUE)
         TRUE
       },
       warning=function(w) {
-        flog.error('  > Problems creating dir "%s": %s', dirname, w)
+        flog.error('  > Problems creating dir "%s": %s', dirPath, w)
         FALSE
       }
     )
     if(!destDirCreated) next
+    flog.info(
+      '  > multiPlot "%s": Saving plots to directory\n  %s',
+      mpConf$displayName, dirPath
+    )
 
     filetype <- bmConf$filetype
     for(iPlt in seq_along(plots)) {
@@ -41,7 +45,7 @@ makeOneMultiPlotInBatch <- function(mpConf) {
         mpConf$displayName, iPlt, length(plots)
       )
       plot <- addTitleToPlot(plots[[iPlt]]$obplot, plots[[iPlt]]$title)
-      fName <- file.path(dirname, sprintf("plot_%s.%s", iPlt, filetype))
+      fName <- file.path(dirPath, sprintf("plot_%s.%s", iPlt, filetype))
       ggsave(
         filename=fName, plot=plot, device=filetype,
         dpi=600, height=6, width=10, units="in"
@@ -62,10 +66,17 @@ makeBatchPlots <- function(maxAttempts=10) {
 
     # Setting defaults for [multiPlots.batchMode] options
     if(is.null(bmConf$enable)) bmConf$enable <- TRUE
-    if(is.null(bmConf$destDir)) bmConf$destDir <- dirObsmonWasCalledFrom
+    # destDir
+    bmConf$destDir <- trimws(bmConf$destDir)
+    if(length(bmConf$destDir)==0) {
+      bmConf$destDir <- dirObsmonWasCalledFrom
+    } else if(!startsWith(bmConf$destDir, "/")) {
+        bmConf$destDir <- file.path(dirObsmonWasCalledFrom, bmConf$destDir)
+    }
+    bmConf$destDir <- normalizePath(bmConf$destDir, mustWork=FALSE)
+    # fileType
     bmConf$filetype <- tolower(bmConf$filetype)
     if(length(bmConf$filetype)==0) bmConf$filetype <- "png"
-    bmConf$destDir <- normalizePath(bmConf$destDir, mustWork=FALSE)
 
     # Saving results in global obsmonConfig
     obsmonConfig$multiPlots[[iConf]]$batchMode <<- bmConf
