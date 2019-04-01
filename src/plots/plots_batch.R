@@ -71,11 +71,9 @@ makeBatchPlots <- function(maxAttempts=10) {
     # Setting defaults for [multiPlots.batchMode] options
     if(is.null(bmConf$enable)) bmConf$enable <- TRUE
     # parentDir
-    bmConf$parentDir <- trimws(bmConf$parentDir)
-    if(length(bmConf$parentDir)==0) {
-      bmConf$parentDir <- dirObsmonWasCalledFrom
-    } else if(!startsWith(bmConf$parentDir, "/")) {
-        bmConf$parentDir <- file.path(dirObsmonWasCalledFrom,bmConf$parentDir)
+    bmConf$parentDir <- normalizePath(trimws(bmConf$parentDir),mustWork=FALSE)
+    if(isFALSE(startsWith(bmConf$parentDir, "/"))) {
+      bmConf$parentDir <- file.path(dirObsmonWasCalledFrom, bmConf$parentDir)
     }
     if(length(bmConf$parentDir)==0) bmConf$parentDir <- dirObsmonWasCalledFrom
     # dirName. Will be left as NULL if not defined, so that the
