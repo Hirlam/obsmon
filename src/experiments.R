@@ -128,8 +128,18 @@ initExperimentsAsPromises <- function() {
   notifyDeprecatedPaths(obsmonConfig)
   # Using new.env(), as lists cannot be used with %<-%
   experiments <- new.env()
+  simplifiedExptNames <- c()
   for(config in obsmonConfig$experiments) {
     name <- config$displayName
+    simplifiedName <- slugify(name)
+    if(simplifiedName %in% simplifiedExptNames) {
+      flog.error(
+        'Conflicting name for experiment "%s". Skipping additional entry.',
+        name
+      )
+      next
+    }
+    simplifiedExptNames <- c(simplifiedExptNames, simplifiedName)
     # Using %<-% (library "future") to init experiments asynchronously
     experiments[[name]] %<-%
       initExperiment(name, config$path,
