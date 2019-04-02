@@ -9,12 +9,6 @@ makeOneMultiPlotInBatch <- function(mpConf) {
       return(NULL)
     }
 
-    plots <- prepareMultiPlots(
-      plotter=plotTypesFlat[[mpConf$plotType]],
-      inputsForAllPlots=inputsForAllPlots,
-      db=experimentsAsPromises[[mpConf$experiment]]$dbs[[mpConf$database]]
-    )
-
     dirName <- bmConf$dirName
     if(length(dirName)==0) {
       timeStamp <- strftime(Sys.time(), "%Y_%m_%d_%H%M%S")
@@ -40,6 +34,13 @@ makeOneMultiPlotInBatch <- function(mpConf) {
     flog.info(
       '  > multiPlot "%s": Saving plots to directory\n  %s',
       mpConf$displayName, dirPath
+    )
+
+    # Making the plots
+    plots <- prepareMultiPlots(
+      plotter=plotTypesFlat[[mpConf$plotType]],
+      inputsForAllPlots=inputsForAllPlots,
+      db=experimentsAsPromises[[mpConf$experiment]]$dbs[[mpConf$database]]
     )
 
     filetype <- bmConf$filetype
