@@ -229,7 +229,7 @@ datesCompatibleWithPlotType <- function(pConfig) {
   return(compatible)
 }
 
-validateOneClickPlotConfig <- function(config) {
+multiPlotsValidateConfig <- function(config) {
   if(is.null(config$multiPlots)) return(config)
   flog.debug("Config file contains user-defined multiPlots. Validating.")
 
@@ -426,17 +426,17 @@ validateOneClickPlotConfig <- function(config) {
 
 
   if(exists("invalidExpts")) {
-    msg <- "OneClick Plots: Please choose your experiment from:"
+    msg <- "multiPlots: Please choose your experiment from:"
     for(exptName in exptNamesinConfig) msg <- paste0(msg, "\n  > ", exptName)
     flog.warn(msg)
   }
   if(exists("invalidPlotNames")) {
-    msg <- "OneClick Plots: Please choose your plotType from:"
+    msg <- "multiPlots: Please choose your plotType from:"
     for(plotType in names(plotTypesFlat)) msg <- paste0(msg,"\n  > ",plotType)
     flog.warn(msg)
   }
   if(exists("invalidDbs")) {
-    msg <- "OneClick Plots: Please choose your database from:"
+    msg <- "multiPlots: Please choose your database from:"
     msg <- paste(msg, paste(dbTypesRecognised, collapse=", "))
     flog.warn(msg)
   }
@@ -446,4 +446,4 @@ validateOneClickPlotConfig <- function(config) {
   return(config)
 }
 
-obsmonConfig <<- validateOneClickPlotConfig(obsmonConfig)
+obsmonConfig <<- multiPlotsValidateConfig(obsmonConfig)
