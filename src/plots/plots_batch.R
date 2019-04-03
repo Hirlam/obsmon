@@ -1,3 +1,17 @@
+getExptNamesNeededForBatch <- function(config) {
+  # This routine assumes that multiPlot options in the config file have been
+  # parsed using the routines
+  # "multiPlotsValidateConfig" (from plots_multi.R)
+  # and
+  # "configFillInBatchModeDefaults" (from this file)
+  exptNames <- c()
+  for(mpConfig in config$multiPlots) {
+    if(!mpConfig$batchMode$enable) next
+    exptNames <- c(exptNames, mpConfig$experiment)
+  }
+  return(exptNames)
+}
+
 configFillInBatchModeDefaults <- function(config) {
   for(iConf in seq_along(config$multiPlots)) {
     bmConf <- config$multiPlots[[iConf]]$batchMode
@@ -35,7 +49,7 @@ configFillInBatchModeDefaults <- function(config) {
   return(config)
 }
 
-makeOneMultiPlotInBatch <- function(mpConf) {
+makeOneMultiPlotInBatch <- function(mpConf, exptDb) {
   bmConf <- mpConf$batchMode
 
   # Making shiny-like inputs for each individual plot, to be passed to the
@@ -76,8 +90,7 @@ makeOneMultiPlotInBatch <- function(mpConf) {
   # Making the plots
   plots <- prepareMultiPlots(
     plotter=plotTypesFlat[[mpConf$plotType]],
-    inputsForAllPlots=inputsForAllPlots,
-    db=experimentsAsPromises[[mpConf$experiment]]$dbs[[mpConf$database]]
+    inputsForAllPlots=inputsForAllPlots, db=exptDb
   )
 
   fileType <- bmConf$fileType
@@ -102,6 +115,8 @@ makeBatchPlots <- function() {
   finished <- rep(FALSE, length(obsmonConfig$multiPlots))
 
   obsmonConfig <<- configFillInBatchModeDefaults(obsmonConfig)
+  exptsToInitialise <- getExptNamesNeededForBatch(obsmonConfig)
+  experimentsAsPromises <- initExperimentsAsPromises(exptsToInitialise)
 
   iConf <- 0
   repeat {
@@ -146,7 +161,7 @@ makeBatchPlots <- function() {
       }
       next
     }
-    makeOneMultiPlotInBatch(mpConf)
+    makeOneMultiPlotInBatch(mpConf, exptDb=db)
     finished[iConf] <- TRUE
     flog.info('Done with batch mode for multiPlot "%s"...',mpConf$displayName)
   }

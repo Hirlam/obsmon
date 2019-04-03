@@ -247,3 +247,9 @@ runObsmonStandAlone <- function(cmdLineArgs) {
 }
 
 configure()
+# Initialise experiments only if not running in batch mode
+# In batch mode, only the required experiments will be initialised, and
+# initialisation will be performed when it is needed.
+if(!runningAsStandalone || !isTRUE(cmdLineArgs$batch)) {
+  experimentsAsPromises <- initExperimentsAsPromises()
+}
