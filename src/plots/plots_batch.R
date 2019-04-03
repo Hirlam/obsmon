@@ -110,10 +110,6 @@ makeOneMultiPlotInBatch <- function(mpConf, exptDb) {
 }
 
 makeBatchPlots <- function() {
-  if(length(obsmonConfig$multiPlots)==0) return(NULL)
-  nAttempts <- rep(0, length(obsmonConfig$multiPlots))
-  finished <- rep(FALSE, length(obsmonConfig$multiPlots))
-
   obsmonConfig <<- configFillInBatchModeDefaults(obsmonConfig)
   anyEnabledBatchPlot <- FALSE
   for(mpConfig in obsmonConfig$multiPlots) {
@@ -132,6 +128,8 @@ makeBatchPlots <- function() {
   exptsToInitialise <- getExptNamesNeededForBatch(obsmonConfig)
   experimentsAsPromises <- initExperimentsAsPromises(exptsToInitialise)
 
+  nAttempts <- rep(0, length(obsmonConfig$multiPlots))
+  finished <- rep(FALSE, length(obsmonConfig$multiPlots))
   iConf <- 0
   repeat {
     if(all(finished)) break
