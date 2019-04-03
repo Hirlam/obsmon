@@ -1,3 +1,35 @@
+configFillInBatchModeDefaults <- function(config) {
+  for(iConf in seq_along(config$multiPlots)) {
+    bmConf <- config$multiPlots[[iConf]]$batchMode
+    # This allows users to use batchMode=true/false in the config file
+    if(!is.list(bmConf)) bmConf <- list(enable=isTRUE(bmConf))
+
+    if(is.null(bmConf$enable)) bmConf$enable <- TRUE
+
+    # parentDir
+    bmConf$parentDir <- normalizePath(trimws(bmConf$parentDir),mustWork=FALSE)
+    if(isFALSE(startsWith(bmConf$parentDir, "/"))) {
+      bmConf$parentDir <- file.path(dirObsmonWasCalledFrom, bmConf$parentDir)
+    }
+    if(length(bmConf$parentDir)==0) bmConf$parentDir <- dirObsmonWasCalledFrom
+    # dirName. Will be left as NULL if not defined, so that the
+    # makeOneMultiPlotInBatch routine can put a timestamp that
+    # corresponds to when the plots are actually produced
+    bmConf$dirName <- trimws(bmConf$dirName)
+    if(length(bmConf$dirName)==0) bmConf$dirName <- NULL
+    # Fig resolution, dimentions and type
+    if(length(bmConf$dpi)==0) bmConf$dpi <- 300
+    if(length(bmConf$figHeight)==0) bmConf$figHeight <- 6
+    if(length(bmConf$figWidth)==0) bmConf$figWidth <- 10
+    bmConf$fileType <- tolower(bmConf$fileType)
+    if(length(bmConf$fileType)==0) bmConf$fileType <- "png"
+
+    # Saving results
+    config$multiPlots[[iConf]]$batchMode <- bmConf
+  }
+  return(config)
+}
+
 makeOneMultiPlotInBatch <- function(mpConf) {
     bmConf <- mpConf$batchMode
 
@@ -32,7 +64,7 @@ makeOneMultiPlotInBatch <- function(mpConf) {
     )
     if(!dirPathCreated) return(-1)
     flog.info(
-      '  > multiPlot "%s": Saving plots to directory\n  %s',
+      '  > multiPlot "%s": Plots will be saved into directory\n  %s',
       mpConf$displayName, dirPath
     )
 
@@ -64,37 +96,7 @@ makeBatchPlots <- function(maxAttempts=10) {
   nAttempts <- rep(0, length(obsmonConfig$multiPlots))
   finished <- rep(FALSE, length(obsmonConfig$multiPlots))
 
-  for(iConf in seq_along(obsmonConfig$multiPlots)) {
-    mpConf <- obsmonConfig$multiPlots[[iConf]]
-    bmConf <- mpConf$batchMode
-    # This allows users to use batchMode=true/false in the config file
-    if(!is.list(bmConf)) bmConf <- list(enable=isTRUE(bmConf))
-
-    # Setting defaults for [multiPlots.batchMode] options
-    if(is.null(bmConf$enable)) bmConf$enable <- TRUE
-    # parentDir
-    bmConf$parentDir <- normalizePath(trimws(bmConf$parentDir),mustWork=FALSE)
-    if(isFALSE(startsWith(bmConf$parentDir, "/"))) {
-      bmConf$parentDir <- file.path(dirObsmonWasCalledFrom, bmConf$parentDir)
-    }
-    if(length(bmConf$parentDir)==0) bmConf$parentDir <- dirObsmonWasCalledFrom
-    # dirName. Will be left as NULL if not defined, so that the
-    # makeOneMultiPlotInBatch routine can put a timestamp that
-    # corresponds to when the plots are actually produced
-    bmConf$dirName <- trimws(bmConf$dirName)
-    if(length(bmConf$dirName)==0) bmConf$dirName <- NULL
-    # fileType
-    bmConf$fileType <- tolower(bmConf$fileType)
-    if(length(bmConf$fileType)==0) bmConf$fileType <- "png"
-    # Fig resolution
-    if(length(bmConf$dpi)==0) bmConf$dpi <- 300
-    # Fig dimensions
-    if(length(bmConf$figHeight)==0) bmConf$figHeight <- 6
-    if(length(bmConf$figWidth)==0) bmConf$figWidth <- 10
-
-    # Saving results in global obsmonConfig
-    obsmonConfig$multiPlots[[iConf]]$batchMode <<- bmConf
-  }
+  obsmonConfig <<- configFillInBatchModeDefaults(obsmonConfig)
 
   iConf <- 0
   repeat {
