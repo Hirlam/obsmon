@@ -31,64 +31,64 @@ configFillInBatchModeDefaults <- function(config) {
 }
 
 makeOneMultiPlotInBatch <- function(mpConf) {
-    bmConf <- mpConf$batchMode
+  bmConf <- mpConf$batchMode
 
-    # Making shiny-like inputs for each individual plot, to be passed to the
-    # regular obsmon plotting routines
-    inputsForAllPlots <- multiPlotsMakeShinyInputs(mpConf)
-    if(length(inputsForAllPlots)==0) {
-      flog.error("  > Selected multiPlot generated no plots")
-      return(NULL)
-    }
+  # Making shiny-like inputs for each individual plot, to be passed to the
+  # regular obsmon plotting routines
+  inputsForAllPlots <- multiPlotsMakeShinyInputs(mpConf)
+  if(length(inputsForAllPlots)==0) {
+    flog.error("  > Selected multiPlot generated no plots")
+    return(NULL)
+  }
 
-    dirName <- bmConf$dirName
-    if(length(dirName)==0) {
-      timeStamp <- strftime(Sys.time(), "%Y_%m_%d_%H%M%S")
-      dirName <- tolower(sprintf(
-        "obsmon_batch_%s_%s",
-        slugify(mpConf$displayName), timeStamp
-      ))
+  dirName <- bmConf$dirName
+  if(length(dirName)==0) {
+    timeStamp <- strftime(Sys.time(), "%Y_%m_%d_%H%M%S")
+    dirName <- tolower(sprintf(
+      "obsmon_batch_%s_%s",
+      slugify(mpConf$displayName), timeStamp
+    ))
+  }
+  dirPath <- file.path(bmConf$parentDir, dirName)
+  dirPathCreated <- tryCatch({
+      dir.create(dirPath, recursive=TRUE)
+      TRUE
+    },
+    warning=function(w) {
+      flog.error(
+        '  > Problems creating dir %s: %s. Skipping multiPlot "%s"',
+        dirPath, w, mpConf$displayName
+      )
+      FALSE
     }
-    dirPath <- file.path(bmConf$parentDir, dirName)
-    dirPathCreated <- tryCatch({
-        dir.create(dirPath, recursive=TRUE)
-        TRUE
-      },
-      warning=function(w) {
-        flog.error(
-          '  > Problems creating dir %s: %s. Skipping multiPlot "%s"',
-          dirPath, w, mpConf$displayName
-        )
-        FALSE
-      }
-    )
-    if(!dirPathCreated) return(-1)
+  )
+  if(!dirPathCreated) return(-1)
+  flog.info(
+    '  > multiPlot "%s": Plots will be saved into directory\n  %s',
+    mpConf$displayName, dirPath
+  )
+
+  # Making the plots
+  plots <- prepareMultiPlots(
+    plotter=plotTypesFlat[[mpConf$plotType]],
+    inputsForAllPlots=inputsForAllPlots,
+    db=experimentsAsPromises[[mpConf$experiment]]$dbs[[mpConf$database]]
+  )
+
+  fileType <- bmConf$fileType
+  for(iPlt in seq_along(plots)) {
     flog.info(
-      '  > multiPlot "%s": Plots will be saved into directory\n  %s',
-      mpConf$displayName, dirPath
+      '  > multiPlot "%s": Saving plot %d of %d...',
+      mpConf$displayName, iPlt, length(plots)
     )
-
-    # Making the plots
-    plots <- prepareMultiPlots(
-      plotter=plotTypesFlat[[mpConf$plotType]],
-      inputsForAllPlots=inputsForAllPlots,
-      db=experimentsAsPromises[[mpConf$experiment]]$dbs[[mpConf$database]]
+    plot <- addTitleToPlot(plots[[iPlt]]$obplot, plots[[iPlt]]$title)
+    fName <- file.path(dirPath, sprintf("plot_%s.%s",iPlt,bmConf$fileType))
+    ggsave(
+      filename=fName, plot=plot, device=bmConf$fileType,
+      dpi=bmConf$dpi, height=bmConf$figHeight, width=bmConf$figWidth,
+      units="in"
     )
-
-    fileType <- bmConf$fileType
-    for(iPlt in seq_along(plots)) {
-      flog.info(
-        '  > multiPlot "%s": Saving plot %d of %d...',
-        mpConf$displayName, iPlt, length(plots)
-      )
-      plot <- addTitleToPlot(plots[[iPlt]]$obplot, plots[[iPlt]]$title)
-      fName <- file.path(dirPath, sprintf("plot_%s.%s",iPlt,bmConf$fileType))
-      ggsave(
-        filename=fName, plot=plot, device=bmConf$fileType,
-        dpi=bmConf$dpi, height=bmConf$figHeight, width=bmConf$figWidth,
-        units="in"
-      )
-    }
+  }
 }
 
 makeBatchPlots <- function(maxAttempts=10) {
