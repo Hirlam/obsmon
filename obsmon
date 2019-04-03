@@ -48,4 +48,4 @@ cmdLineArgs <- parser$parse_args()
 # Initialising the rest of the code
 source("src/init.R")
 
-runObsmonStandAlone(cmdLineArgs)
+status <- runObsmonStandAlone(cmdLineArgs)

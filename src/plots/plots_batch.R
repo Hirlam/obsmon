@@ -4,7 +4,7 @@ getExptNamesNeededForBatch <- function(config) {
   # "multiPlotsValidateConfig" (from plots_multi.R)
   # and
   # "configFillInBatchModeDefaults" (from this file)
-  exptNames <- c()
+  exptNames <- character(0)
   for(mpConfig in config$multiPlots) {
     if(!mpConfig$batchMode$enable) next
     exptNames <- c(exptNames, mpConfig$experiment)
@@ -115,6 +115,20 @@ makeBatchPlots <- function() {
   finished <- rep(FALSE, length(obsmonConfig$multiPlots))
 
   obsmonConfig <<- configFillInBatchModeDefaults(obsmonConfig)
+  anyEnabledBatchPlot <- FALSE
+  for(mpConfig in obsmonConfig$multiPlots) {
+    if(isTRUE(mpConfig$batchMode$enable)) {
+      anyEnabledBatchPlot <- TRUE
+      break
+    }
+  }
+  if(!anyEnabledBatchPlot) {
+    flog.warn(
+      "makeBatchPlots: Could not detect any multiPlot enabled for batch mode."
+    )
+    return(-1)
+  }
+
   exptsToInitialise <- getExptNamesNeededForBatch(obsmonConfig)
   experimentsAsPromises <- initExperimentsAsPromises(exptsToInitialise)
 
