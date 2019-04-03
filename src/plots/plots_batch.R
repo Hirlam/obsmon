@@ -43,16 +43,16 @@ makeOneMultiPlotInBatch <- function(mpConf) {
       db=experimentsAsPromises[[mpConf$experiment]]$dbs[[mpConf$database]]
     )
 
-    filetype <- bmConf$filetype
+    fileType <- bmConf$fileType
     for(iPlt in seq_along(plots)) {
       flog.info(
         '  > multiPlot "%s": Saving plot %d of %d...',
         mpConf$displayName, iPlt, length(plots)
       )
       plot <- addTitleToPlot(plots[[iPlt]]$obplot, plots[[iPlt]]$title)
-      fName <- file.path(dirPath, sprintf("plot_%s.%s", iPlt, filetype))
+      fName <- file.path(dirPath, sprintf("plot_%s.%s",iPlt,bmConf$fileType))
       ggsave(
-        filename=fName, plot=plot, device=filetype,
+        filename=fName, plot=plot, device=bmConf$fileType,
         dpi=600, height=6, width=10, units="in"
       )
     }
@@ -83,8 +83,8 @@ makeBatchPlots <- function(maxAttempts=10) {
     bmConf$dirName <- trimws(bmConf$dirName)
     if(length(bmConf$dirName)==0) bmConf$dirName <- NULL
     # fileType
-    bmConf$filetype <- tolower(bmConf$filetype)
-    if(length(bmConf$filetype)==0) bmConf$filetype <- "png"
+    bmConf$fileType <- tolower(bmConf$fileType)
+    if(length(bmConf$fileType)==0) bmConf$fileType <- "png"
 
     # Saving results in global obsmonConfig
     obsmonConfig$multiPlots[[iConf]]$batchMode <<- bmConf
@@ -102,7 +102,8 @@ makeBatchPlots <- function(maxAttempts=10) {
       finished[iConf] <- TRUE
       next
     }
-    flog.info('Producing plots in multiPlot "%s"...',mpConf$displayName)
+    cat("\n")
+    flog.info('Producing plots in multiPlot "%s"...', mpConf$displayName)
 
     nAttempts[iConf] <- nAttempts[iConf] + 1
     if(resolved(experimentsAsPromises)[[mpConf$experiment]]) {
