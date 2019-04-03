@@ -6,6 +6,11 @@ configFillInBatchModeDefaults <- function(config) {
 
     if(is.null(bmConf$enable)) bmConf$enable <- TRUE
 
+    # Max number of attempts at producing the batch plots. Useful when
+    # experiments are still being initialised and may thus not be available
+    # yet when first trying to produce the plots.
+    if(length(bmConf$nAttemptsMax)==0) bmConf$nAttemptsMax <- 10
+
     # parentDir
     bmConf$parentDir <- normalizePath(trimws(bmConf$parentDir),mustWork=FALSE)
     if(isFALSE(startsWith(bmConf$parentDir, "/"))) {
@@ -91,7 +96,7 @@ makeOneMultiPlotInBatch <- function(mpConf) {
   }
 }
 
-makeBatchPlots <- function(maxAttempts=10) {
+makeBatchPlots <- function() {
   if(length(obsmonConfig$multiPlots)==0) return(NULL)
   nAttempts <- rep(0, length(obsmonConfig$multiPlots))
   finished <- rep(FALSE, length(obsmonConfig$multiPlots))
@@ -125,10 +130,11 @@ makeBatchPlots <- function(maxAttempts=10) {
         next
       }
     } else {
-      if(nAttempts[iConf]<maxAttempts) {
+      nAttemptsMax <- obsmonConfig$multiPlots[[iConf]]$batchMode$nAttemptsMax
+      if(nAttempts[iConf]<nAttemptsMax) {
         flog.info(
-          '  > Experiment "%s" not yet initialised. Retrying later',
-          mpConf$experiment
+          '  > Experiment "%s" not yet initialised. Retrying later (%d/%d)',
+          mpConf$experiment, nAttempts[iConf]+1, nAttemptsMax
         )
         Sys.sleep(1)
       } else {
