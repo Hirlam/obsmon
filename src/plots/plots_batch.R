@@ -53,7 +53,8 @@ makeOneMultiPlotInBatch <- function(mpConf) {
       fName <- file.path(dirPath, sprintf("plot_%s.%s",iPlt,bmConf$fileType))
       ggsave(
         filename=fName, plot=plot, device=bmConf$fileType,
-        dpi=600, height=6, width=10, units="in"
+        dpi=bmConf$dpi, height=bmConf$figHeight, width=bmConf$figWidth,
+        units="in"
       )
     }
 }
@@ -85,6 +86,11 @@ makeBatchPlots <- function(maxAttempts=10) {
     # fileType
     bmConf$fileType <- tolower(bmConf$fileType)
     if(length(bmConf$fileType)==0) bmConf$fileType <- "png"
+    # Fig resolution
+    if(length(bmConf$dpi)==0) bmConf$dpi <- 300
+    # Fig dimensions
+    if(length(bmConf$figHeight)==0) bmConf$figHeight <- 6
+    if(length(bmConf$figWidth)==0) bmConf$figWidth <- 10
 
     # Saving results in global obsmonConfig
     obsmonConfig$multiPlots[[iConf]]$batchMode <<- bmConf
