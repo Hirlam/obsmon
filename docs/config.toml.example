@@ -1,5 +1,5 @@
 #####################################################################################
-# This config file provides an example of how to set up obsmon. The syntax follows  #
+# This config file provides examples of how to set up obsmon. The syntax follows    #
 # "Tom's Obvious, Minimal Language" (TOML), which aims to be simple to use and easy #
 # not difficult to understand. For more details about TOML, please take a look at   #
 #           <https://github.com/toml-lang/toml/blob/master/README.md>               #
@@ -73,6 +73,12 @@
       pilot = [8500, 100000]
     [multiPlots.excludeLevels.aircraft]
       v = [2500, 8500, 60000, 1500]
+    ################################################
+    # Activating a multiPlot for use in batch mode #
+    # ##############################################
+    [multiPlots.batchMode]
+        # Other options exist. See the obsmon_documentation.pdf file for more details.
+        parentDir = "batch_mode_plots"
 
 [[multiPlots]]
     displayName = "2nd Expt: CANARI NObs, synop only"
@@ -87,6 +93,11 @@
         # Select specific obs and variables. Nothing else will be included.
         synop=["t2m","rh2m", "snow"]
         aircraft=["t"]
+    ###############################################################
+    #  Another way to activate a multiPlot for use in batch mode  #
+    # No options accepted in this mode; defaults are used instead #
+    # #############################################################
+    batchMode = true
 
 [[multiPlots]]
     displayName = "A multiPlot with station choices"
