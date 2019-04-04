@@ -1,17 +1,3 @@
-getExptNamesNeededForBatch <- function(config) {
-  # This routine assumes that multiPlot options in the config file have been
-  # parsed using the routines
-  # "multiPlotsValidateConfig" (from plots_multi.R)
-  # and
-  # "configFillInBatchModeDefaults" (from this file)
-  exptNames <- character(0)
-  for(mpConfig in config$multiPlots) {
-    if(!mpConfig$batchMode$enable) next
-    exptNames <- c(exptNames, mpConfig$experiment)
-  }
-  return(exptNames)
-}
-
 configFillInBatchModeDefaults <- function(config) {
   for(iConf in seq_along(config$multiPlots)) {
     bmConf <- config$multiPlots[[iConf]]$batchMode
@@ -49,6 +35,19 @@ configFillInBatchModeDefaults <- function(config) {
   return(config)
 }
 
+getExptNamesNeededForBatch <- function(config) {
+  # This routine assumes that multiPlot options in the config file have been
+  # parsed using the following routines:
+  # "multiPlotsValidateConfig" (from plots_multi.R)
+  # "configFillInBatchModeDefaults" (from this file)
+  exptNames <- character(0)
+  for(mpConfig in config$multiPlots) {
+    if(!mpConfig$batchMode$enable) next
+    exptNames <- c(exptNames, mpConfig$experiment)
+  }
+  return(exptNames)
+}
+
 makeOneMultiPlotInBatch <- function(mpConf, exptDb) {
   bmConf <- mpConf$batchMode
 
@@ -56,7 +55,7 @@ makeOneMultiPlotInBatch <- function(mpConf, exptDb) {
   # regular obsmon plotting routines
   inputsForAllPlots <- multiPlotsMakeShinyInputs(mpConf)
   if(length(inputsForAllPlots)==0) {
-    flog.error("  > Selected multiPlot generated no plots")
+    flog.warn("  > Selected multiPlot generated no plots")
     return(NULL)
   }
 
@@ -119,9 +118,7 @@ makeBatchPlots <- function() {
     }
   }
   if(!anyEnabledBatchPlot) {
-    flog.warn(
-      "makeBatchPlots: Could not detect any multiPlot enabled for batch mode."
-    )
+    flog.warn("makeBatchPlots: Could not detect any batch-enabled multiPlot.")
     return(-1)
   }
 
@@ -143,15 +140,14 @@ makeBatchPlots <- function() {
       next
     }
     cat("\n")
-    flog.info('Producing plots in multiPlot "%s"...', mpConf$displayName)
 
     nAttempts[iConf] <- nAttempts[iConf] + 1
     if(resolved(experimentsAsPromises)[[mpConf$experiment]]) {
       db <- experimentsAsPromises[[mpConf$experiment]]$dbs[[mpConf$database]]
       if(is.null(db)) {
         flog.error(
-          'Could not find %s data for expt "%s". Skipping multiPlot "%s".',
-          mpConf$database, mpConf$experiment, mpConf$displayName
+          'multiPlot "%s": Could not find %s data for expt "%s". Skipping.',
+          mpConf$displayName, mpConf$database, mpConf$experiment
         )
         finished[iConf] <- TRUE
         next
@@ -159,20 +155,25 @@ makeBatchPlots <- function() {
     } else {
       nAttemptsMax <- obsmonConfig$multiPlots[[iConf]]$batchMode$nAttemptsMax
       if(nAttempts[iConf]<nAttemptsMax) {
-        flog.info(
-          '  > Experiment "%s" not yet initialised. Retrying later (%d/%d)',
-          mpConf$experiment, nAttempts[iConf]+1, nAttemptsMax
+        flog.warn(
+          paste(
+            'multiPlot "%s": Experiment "%s" not yet initialised.',
+            'Retrying later (%d/%d)'
+          ),
+          mpConf$displayName, mpConf$experiment,
+          nAttempts[iConf]+1, nAttemptsMax
         )
         Sys.sleep(1)
       } else {
         flog.error(
-          'Batch plot failed for multiPlot "%s" after %d attempts. Skipping.',
+          'multiPlot "%s": Batch plot failed after %d attempts. Skipping.',
           mpConf$displayName, nAttempts[iConf]
         )
         finished[iConf] <- TRUE
       }
       next
     }
+    flog.info('multiPlot "%s": Producing plots...', mpConf$displayName)
     makeOneMultiPlotInBatch(mpConf, exptDb=db)
     finished[iConf] <- TRUE
     flog.info('Done with batch mode for multiPlot "%s"...',mpConf$displayName)
