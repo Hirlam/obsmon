@@ -110,14 +110,17 @@ makeOneMultiPlotInBatch <- function(mpConf, exptDb) {
 
 makeBatchPlots <- function() {
   obsmonConfig <<- configFillInBatchModeDefaults(obsmonConfig)
-  anyEnabledBatchPlot <- FALSE
+
+  # Select the subset of multiPlot configs that have been activated
+  # for batch mode and save them into bConfigs
+  bConfigs <- list()
   for(mpConfig in obsmonConfig$multiPlots) {
     if(isTRUE(mpConfig$batchMode$enable)) {
-      anyEnabledBatchPlot <- TRUE
-      break
+      bConfigs[[length(bConfigs) + 1]] <- mpConfig
     }
   }
-  if(!anyEnabledBatchPlot) {
+  nConf <- length(bConfigs)
+  if(nConf==0) {
     flog.warn("makeBatchPlots: Could not detect any batch-enabled multiPlot.")
     return(-1)
   }
@@ -125,23 +128,17 @@ makeBatchPlots <- function() {
   exptsToInitialise <- getExptNamesNeededForBatch(obsmonConfig)
   experimentsAsPromises <- initExperimentsAsPromises(exptsToInitialise)
 
-  nAttempts <- rep(0, length(obsmonConfig$multiPlots))
-  finished <- rep(FALSE, length(obsmonConfig$multiPlots))
+  nAttempts <- rep(0, nConf)
+  finished <- rep(FALSE, nConf)
   iConf <- 0
   repeat {
     if(all(finished)) break
-    iConf <- iConf + 1
-    if(iConf > length(obsmonConfig$multiPlots)) iConf <- 1
+    iConf <- (iConf %% nConf) + 1
     if(finished[iConf]) next
-
-    mpConf <- obsmonConfig$multiPlots[[iConf]]
-    if(!isTRUE(mpConf$batchMode$enable)) {
-      finished[iConf] <- TRUE
-      next
-    }
-    cat("\n")
-
+    mpConf <- bConfigs[[iConf]]
     nAttempts[iConf] <- nAttempts[iConf] + 1
+
+    cat("\n")
     if(resolved(experimentsAsPromises)[[mpConf$experiment]]) {
       db <- experimentsAsPromises[[mpConf$experiment]]$dbs[[mpConf$database]]
       if(is.null(db)) {
@@ -153,7 +150,7 @@ makeBatchPlots <- function() {
         next
       }
     } else {
-      nAttemptsMax <- obsmonConfig$multiPlots[[iConf]]$batchMode$nAttemptsMax
+      nAttemptsMax <- bConfigs[[iConf]]$batchMode$nAttemptsMax
       if(nAttempts[iConf]<nAttemptsMax) {
         flog.warn(
           paste(
