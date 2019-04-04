@@ -9,7 +9,7 @@ configFillInBatchModeDefaults <- function(config) {
     # Max number of attempts at producing the batch plots. Useful when
     # experiments are still being initialised and may thus not be available
     # yet when first trying to produce the plots.
-    if(length(bmConf$nAttemptsMax)==0) bmConf$nAttemptsMax <- 10
+    if(length(bmConf$nRetriesMax)==0) bmConf$nRetriesMax <- 10
 
     # parentDir
     bmConf$parentDir <- normalizePath(trimws(bmConf$parentDir),mustWork=FALSE)
@@ -128,7 +128,7 @@ makeBatchPlots <- function() {
   exptsToInitialise <- getExptNamesNeededForBatch(obsmonConfig)
   experimentsAsPromises <- initExperimentsAsPromises(exptsToInitialise)
 
-  nAttempts <- rep(0, nConf)
+  nRetries <- rep(0, nConf)
   finished <- rep(FALSE, nConf)
   iConf <- 0
   repeat {
@@ -136,7 +136,6 @@ makeBatchPlots <- function() {
     iConf <- (iConf %% nConf) + 1
     if(finished[iConf]) next
     mpConf <- bConfigs[[iConf]]
-    nAttempts[iConf] <- nAttempts[iConf] + 1
 
     cat("\n")
     if(resolved(experimentsAsPromises)[[mpConf$experiment]]) {
@@ -150,21 +149,22 @@ makeBatchPlots <- function() {
         next
       }
     } else {
-      nAttemptsMax <- bConfigs[[iConf]]$batchMode$nAttemptsMax
-      if(nAttempts[iConf]<nAttemptsMax) {
+      nRetriesMax <- bConfigs[[iConf]]$batchMode$nRetriesMax
+      if(nRetries[iConf]<nRetriesMax) {
+        nRetries[iConf] <- nRetries[iConf] + 1
         flog.warn(
           paste(
             'multiPlot "%s": Experiment "%s" not yet initialised.',
             'Retrying later (%d/%d)'
           ),
           mpConf$displayName, mpConf$experiment,
-          nAttempts[iConf]+1, nAttemptsMax
+          nRetries[iConf], nRetriesMax
         )
         Sys.sleep(1)
       } else {
         flog.error(
           'multiPlot "%s": Batch plot failed after %d attempts. Skipping.',
-          mpConf$displayName, nAttempts[iConf]
+          mpConf$displayName, nRetries[iConf] + 1
         )
         finished[iConf] <- TRUE
       }
