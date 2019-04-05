@@ -3,6 +3,20 @@
 # and make it easier to produce the multiPlots in server.R         #
 ####################################################################
 
+multiPlotsGenId <- function(iPlot, type=NULL) {
+  # Generate output IDs for the dinamically generated outpus
+  qpName <- sprintf("multiPlot_%d", iPlot)
+  if(is.null(type)) return(qpName)
+  recogOutTypes <- c("plot", "map", "mapTitle", "queryUsed", "dataTable")
+  if(!(type %in%  recogOutTypes)) {
+    stop(sprintf(
+      "multiPlotsGenId: Choose type from: %s",
+      paste(recogOutTypes, collapse=", ")
+    ))
+  }
+  return(sprintf("%s_%s", qpName, type))
+}
+
 #################################################
 # Helper functions to produce plots in server.R #
 #################################################
@@ -126,7 +140,7 @@ prepareMultiPlots <- function(
 #############################
 dateInputFormat <- "%Y-%m-%d"
 dateIsValid <- function(date, format=dateInputFormat) {
-  tryCatch(!is.na(as.Date(date, format)),
+  tryCatch(!anyNA(as.Date(date, format)),
     error = function(e) FALSE
   )
 }
@@ -215,7 +229,7 @@ datesCompatibleWithPlotType <- function(pConfig) {
   return(compatible)
 }
 
-validateOneClickPlotConfig <- function(config) {
+multiPlotsValidateConfig <- function(config) {
   if(is.null(config$multiPlots)) return(config)
   flog.debug("Config file contains user-defined multiPlots. Validating.")
 
@@ -412,17 +426,17 @@ validateOneClickPlotConfig <- function(config) {
 
 
   if(exists("invalidExpts")) {
-    msg <- "OneClick Plots: Please choose your experiment from:"
+    msg <- "multiPlots: Please choose your experiment from:"
     for(exptName in exptNamesinConfig) msg <- paste0(msg, "\n  > ", exptName)
     flog.warn(msg)
   }
   if(exists("invalidPlotNames")) {
-    msg <- "OneClick Plots: Please choose your plotType from:"
+    msg <- "multiPlots: Please choose your plotType from:"
     for(plotType in names(plotTypesFlat)) msg <- paste0(msg,"\n  > ",plotType)
     flog.warn(msg)
   }
   if(exists("invalidDbs")) {
-    msg <- "OneClick Plots: Please choose your database from:"
+    msg <- "multiPlots: Please choose your database from:"
     msg <- paste(msg, paste(dbTypesRecognised, collapse=", "))
     flog.warn(msg)
   }
@@ -432,4 +446,4 @@ validateOneClickPlotConfig <- function(config) {
   return(config)
 }
 
-obsmonConfig <<- validateOneClickPlotConfig(obsmonConfig)
+obsmonConfig <<- multiPlotsValidateConfig(obsmonConfig)

@@ -1,17 +1,19 @@
 # Flagging that this file has been sourced
 initFileSourced <- TRUE
 
+# Define isFALSE function, which is not available for R<3.5
+isFALSE <- tryCatch(
+  isFALSE,
+  error=function(e) {function(x) identical(x, FALSE)}
+)
+
 thisAppDir <- getwd()
 
 if(!exists("runningAsStandalone") || runningAsStandalone==FALSE) {
   source("src/src_info_obsmon.R")
   source('src/lib_paths_config.R')
   runningAsStandalone <- FALSE
-}
-
-if(!runningAsStandalone) {
-  # This info is already printed in a banner when runningAsStandalone
-  cat(obsmonBanner)
+  dirObsmonWasCalledFrom <- thisAppDir
 }
 
 getUserName <- function() {
@@ -78,7 +80,7 @@ setPackageOptions <- function(config) {
   flog.threshold(logLevel)
   # Options controlling parallelism
   maxExtraParallelProcs <- as.integer(config$general$maxExtraParallelProcs)
-  if(is.na(maxExtraParallelProcs) || maxExtraParallelProcs<0) {
+  if(anyNA(maxExtraParallelProcs) || maxExtraParallelProcs<0) {
     maxExtraParallelProcs <- .Machine$integer.max
   } else {
     flog.info(sprintf("Limiting maxExtraParallelProcs to %s",
@@ -103,6 +105,7 @@ sourceObsmonFiles <- function() {
   source("src/plots/plots_vertical_profiles.R")
   source("src/plots/windspeed.R")
   source("src/plots/plots_multi.R")
+  source("src/plots/plots_batch.R")
   source("src/shiny_wrappers.R")
 }
 
@@ -127,7 +130,7 @@ getSuitableCacheDirDefault <- function() {
     if(!(dirCreated | dir.exists(dirPath))) next
     if(file.access(dirPath, mode=2)==0) cacheDirPath <- dirPath
     if(dirCreated) unlink(dirPath, recursive=TRUE)
-    if(!is.na(cacheDirPath)) break
+    if(!anyNA(cacheDirPath)) break
   }
 
   return(cacheDirPath)
@@ -163,7 +166,7 @@ getValidConfigFilePath <- function(verbose=FALSE) {
     }
   }
 
-  if(is.na(configPath)) {
+  if(anyNA(configPath)) {
     msg <- paste0(
       'Config file "', configFileDefBasename, '" not found.\n\n',
       "Please create and put such a file under one of the following dirs:\n",
@@ -218,4 +221,41 @@ configure <- function() {
   }
 }
 
+runObsmonStandAlone <- function(cmdLineArgs) {
+  exitMsg <- paste(
+    "===============",
+    "Exiting Obsmon.",
+    "===============",
+    "",
+    sep="\n"
+  )
+  on.exit(cat(exitMsg))
+
+  if(cmdLineArgs$batch) {
+    makeBatchPlots()
+  } else {
+    # Running the shinny app. The runAppHandlingBusyPort routine is defined in
+    # the file src/shiny_wrappers.R
+    if(cmdLineArgs$debug) {
+      options(shiny.reactlog=TRUE)
+      runAppHandlingBusyPort(
+        appDir=obsmonSrcDir, defaultPort=cmdLineArgs$port,
+        launch.browser=cmdLineArgs$launch, quiet=TRUE,
+        display.mode="showcase"
+      )
+    } else {
+      runAppHandlingBusyPort(
+        appDir=obsmonSrcDir, defaultPort=cmdLineArgs$port,
+        launch.browser=cmdLineArgs$launch, quiet=TRUE
+      )
+    }
+  }
+}
+
 configure()
+# Initialise experiments only if not running in batch mode
+# In batch mode, only the required experiments will be initialised, and
+# initialisation will be performed when it is needed.
+if(!runningAsStandalone || !isTRUE(cmdLineArgs$batch)) {
+  experimentsAsPromises <- initExperimentsAsPromises()
+}

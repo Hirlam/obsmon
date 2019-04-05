@@ -9,9 +9,31 @@
 # possible to reassign the order in which they should be parsed (e.g., to
 # make sure the currently selected DTGs/dB have priority).
 
+# Vars to establish/update queue of files that need to be cached
+filesPendingCache <- reactiveVal(character(0))
+filesPendingRecache <- reactiveVal(character(0))
+newBatchFilesToCache <- reactiveVal(character(0))
+newBatchFilesToRecache <- reactiveVal(character(0))
+# Reset queues of files to cache/recache if db changes
+# One could argue that it's fine to keep the queue going,
+# but if the user changes dBs, they are probably no longer
+# interested in the info present in the files on the queue,
+# so not much point keep the processors working on this
+activeDbChanged <- reactiveVal(0)
+observeEvent(activeDb(), {
+  filesPendingCache(character(0))
+  filesPendingRecache(character(0))
+  newBatchFilesToCache(character(0))
+  newBatchFilesToRecache(character(0))
+  activeDbChanged((activeDbChanged() + 1) %% 2)
+})
+
 # Get paths to data files associated with currently selected DTG(s) and
 # and dB, and which are not currently being cached
-dataFilesForDbAndDtgs <- reactive({
+dataFilesForDbAndDtgs <- eventReactive({
+  activeDbChanged()
+  selectedDtgs()
+}, {
   return(getFilePathsToCache(req(activeDb()), req(selectedDtgs())))
 })
 
@@ -21,7 +43,6 @@ dataFilesForDbAndDtgs <- reactive({
 assyncCachingProcs <- list()
 
 # Establish/update queue of files that need to be cached
-filesPendingCache <- reactiveVal(character(0))
 observeEvent(dataFilesForDbAndDtgs(), {
   newFiles <- dataFilesForDbAndDtgs()
   # Remove files for which caching is ongoing
@@ -33,10 +54,9 @@ observeEvent(dataFilesForDbAndDtgs(), {
 # obsmon detects that cache has finished but DTGs remain uncached
 recacheRequested <- reactiveVal(FALSE)
 # Establish/update queue of files that need to be recached (if requested)
-filesPendingRecache <- reactiveVal(character(0))
 observeEvent(recacheRequested(), {
   req(isTRUE(recacheRequested()))
-  filesPendingRecache(unique(c(filesPendingRecache(), dataFilesForDbAndDtgs())))
+  filesPendingRecache(unique(c(filesPendingRecache(),dataFilesForDbAndDtgs())))
   recacheRequested(FALSE)
 })
 
@@ -44,25 +64,24 @@ observeEvent(recacheRequested(), {
 cacheIsOngoing <- reactiveVal(FALSE)
 
 # Prepare and send batches of data files to be cached
-newBatchFilesToCache <- eventReactive({
+observeEvent({
   filesPendingCache()
   cacheIsOngoing()
   }, {
   req(!isTRUE(cacheIsOngoing()))
   filesToCacheInThisBatch <- filesPendingCache()[1:2]
   filesToCacheInThisBatch <- Filter(Negate(anyNA), filesToCacheInThisBatch)
-  return(filesToCacheInThisBatch)
+  newBatchFilesToCache(filesToCacheInThisBatch)
 })
-
 # Prepare and send, if requested, batches of data files to be re-cached
-newBatchFilesToRecache <- eventReactive({
+observeEvent({
   filesPendingRecache()
   cacheIsOngoing()
   }, {
   req(!isTRUE(cacheIsOngoing()))
   filesToRecacheInThisBatch <- filesPendingRecache()[1:2]
   filesToRecacheInThisBatch <- Filter(Negate(anyNA), filesToRecacheInThisBatch)
-  return(filesToRecacheInThisBatch)
+  newBatchFilesToRecache(filesToRecacheInThisBatch)
 })
 
 # Cache (or recache) observations as new batches of file paths arrive
@@ -76,7 +95,6 @@ observeEvent({
   } else {
     fPaths <- newBatchFilesToCache()
     isRecache <- FALSE
-    req(!selectedDtgsAreCached())
   }
   req(length(fPaths)>0)
   db <- req(activeDb())
@@ -161,7 +179,7 @@ reloadInfoFromCache <- eventReactive({
   }, {
   Sys.time()
 },
-  ignoreNULL=TRUE
+  ignoreNULL=FALSE
 ) %>% throttle(2000)
 
 # Keep track of whether selected DTGs are cached or not
