@@ -195,7 +195,7 @@ observeEvent({
  }, {
   db <- activeDb()
   if(isTRUE(db$dbType=="ecma_sfc")) {
-    updateSelectInputWrapper(session, "obtype", choices=c("surface"))
+    updateSelectInputWrapper(session,"obtype",choices=c("Surface"="surface"))
   } else {
     obtypes <- getObtypes(db, selectedDates(), selectedCycles())
 
