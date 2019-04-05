@@ -1,6 +1,12 @@
 # Flagging that this file has been sourced
 initFileSourced <- TRUE
 
+# Define isFALSE function, which is not available for R<3.5
+isFALSE <- tryCatch(
+  isFALSE,
+  error=function(e) {function(x) identical(x, FALSE)}
+)
+
 thisAppDir <- getwd()
 
 if(!exists("runningAsStandalone") || runningAsStandalone==FALSE) {
