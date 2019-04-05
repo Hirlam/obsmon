@@ -95,7 +95,6 @@ observeEvent({
   } else {
     fPaths <- newBatchFilesToCache()
     isRecache <- FALSE
-    req(!selectedDtgsAreCached())
   }
   req(length(fPaths)>0)
   db <- req(activeDb())
@@ -180,7 +179,7 @@ reloadInfoFromCache <- eventReactive({
   }, {
   Sys.time()
 },
-  ignoreNULL=TRUE
+  ignoreNULL=FALSE
 ) %>% throttle(2000)
 
 # Keep track of whether selected DTGs are cached or not

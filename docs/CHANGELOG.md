@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - Batch mode
 ### Fixed
 - Issue that would cause cache to end up in incorrect files in some occasions
+- Issue that would prevent caching from being triggered in some occasions
 
 
 ## [3.0.0] 2019-03-14
