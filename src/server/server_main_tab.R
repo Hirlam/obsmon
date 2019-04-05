@@ -40,7 +40,7 @@ observe({
        !all(exptNames==newExptNames)) {
       selectedExpt <- tryCatch({
         iExpt <- which(exptNames==input$experiment)[1]
-        if(is.na(iExpt)) NULL else newExptNames[iExpt]
+        if(anyNA(iExpt)) NULL else newExptNames[iExpt]
         },
         error=function(e) NULL
       )

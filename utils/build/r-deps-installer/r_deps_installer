@@ -9,7 +9,7 @@ getArgVal <- function(argName) {
   if(length(argStr)==0) argVal <- NULL
   else {
     argVal <- gsub(argPatt, "", argStr)
-    if(is.na(argVal) | argVal=="") argVal <- NULL
+    if(anyNA(argVal) | argVal=="") argVal <- NULL
   }
   return(argVal)
 }
@@ -350,7 +350,7 @@ if(rebuildAll | length(binFilePaths)==0) {
                pkgName, pkgVer, platform=sysInfoStringShort, 
                fullBinList=binFilePaths
              )
-    if(is.na(fPath)) binsToBeBuilt <- c(binsToBeBuilt, pkgName)
+    if(anyNA(fPath)) binsToBeBuilt <- c(binsToBeBuilt, pkgName)
   }
 }
 

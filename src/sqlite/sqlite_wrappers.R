@@ -48,7 +48,7 @@ criterion2clause <- function(name, criteria) {
 }
 
 notValidCrit <- function(crit) {
-  rtn <- is.null(crit) || is.na(crit) || length(crit)==0 || crit==''
+  rtn <- is.null(crit) || anyNA(crit) || length(crit)==0 || crit==''
   return(rtn)
 }
 

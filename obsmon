@@ -12,7 +12,7 @@ dirObsmonWasCalledFrom <- getwd()
 thisFilePath <- normalizePath(sub("--file=", "", argv[grep("--file=", argv)]))
 # Accounting for the fact that the script may be executed via a symlink
 obsmonSrcDir <- dirname(Sys.readlink(thisFilePath))
-if(obsmonSrcDir=="" || is.na(obsmonSrcDir)) obsmonSrcDir<-dirname(thisFilePath)
+if(obsmonSrcDir=="" || anyNA(obsmonSrcDir)) obsmonSrcDir<-dirname(thisFilePath)
 setwd(obsmonSrcDir)
 
 # Printing startup info such as code name, version and git info

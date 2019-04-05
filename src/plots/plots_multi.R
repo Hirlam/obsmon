@@ -140,7 +140,7 @@ prepareMultiPlots <- function(
 #############################
 dateInputFormat <- "%Y-%m-%d"
 dateIsValid <- function(date, format=dateInputFormat) {
-  tryCatch(!is.na(as.Date(date, format)),
+  tryCatch(!anyNA(as.Date(date, format)),
     error = function(e) FALSE
   )
 }

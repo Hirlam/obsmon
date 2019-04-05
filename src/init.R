@@ -74,7 +74,7 @@ setPackageOptions <- function(config) {
   flog.threshold(logLevel)
   # Options controlling parallelism
   maxExtraParallelProcs <- as.integer(config$general$maxExtraParallelProcs)
-  if(is.na(maxExtraParallelProcs) || maxExtraParallelProcs<0) {
+  if(anyNA(maxExtraParallelProcs) || maxExtraParallelProcs<0) {
     maxExtraParallelProcs <- .Machine$integer.max
   } else {
     flog.info(sprintf("Limiting maxExtraParallelProcs to %s",
@@ -124,7 +124,7 @@ getSuitableCacheDirDefault <- function() {
     if(!(dirCreated | dir.exists(dirPath))) next
     if(file.access(dirPath, mode=2)==0) cacheDirPath <- dirPath
     if(dirCreated) unlink(dirPath, recursive=TRUE)
-    if(!is.na(cacheDirPath)) break
+    if(!anyNA(cacheDirPath)) break
   }
 
   return(cacheDirPath)
@@ -160,7 +160,7 @@ getValidConfigFilePath <- function(verbose=FALSE) {
     }
   }
 
-  if(is.na(configPath)) {
+  if(anyNA(configPath)) {
     msg <- paste0(
       'Config file "', configFileDefBasename, '" not found.\n\n',
       "Please create and put such a file under one of the following dirs:\n",

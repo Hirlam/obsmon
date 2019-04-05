@@ -75,7 +75,7 @@ getFilePathsToCache <- function(db, dtgs) {
   validDtgs <- NULL
   for(dtg in dtgs) {
     fPath <- db$paths[dtg]
-    if(is.null(fPath) || is.na(fPath) || length(fPath)==0) next
+    if(is.null(fPath) || anyNA(fPath) || length(fPath)==0) next
     if(!file.exists(fPath)) next
     validDtgs <- c(validDtgs, dtg)
   }
