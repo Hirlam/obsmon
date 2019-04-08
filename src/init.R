@@ -158,9 +158,14 @@ getValidConfigFilePath <- function(verbose=FALSE) {
   exampleConfigFilePath <- file.path(thisAppDir,"docs","config.toml.example")
 
   userEnvConfigPath <- Sys.getenv("OBSMON_CONFIG_FILE")
+  if(userEnvConfigPath=="") userEnvConfigPath <- NULL
   obsmonSrcDirConfigPath <- file.path(thisAppDir, configFileDefBasename)
   sysDirConfigPath <- file.path(systemConfigDir, configFileDefBasename)
-  confOrder <- c(userEnvConfigPath, obsmonSrcDirConfigPath, sysDirConfigPath)
+  confOrder <- c(
+    userEnvConfigPath,
+    sysDirConfigPath,
+    obsmonSrcDirConfigPath
+  )
 
   configPath <- NA
   for (fPath in confOrder) {
@@ -173,11 +178,16 @@ getValidConfigFilePath <- function(verbose=FALSE) {
   if(anyNA(configPath)) {
     msg <- paste0(
       'Config file "', configFileDefBasename, '" not found.\n\n',
-      "Please create and put such a file under one of the following dirs:\n",
-      "  > ", dirname(obsmonSrcDirConfigPath), "\n",
-      "  > ", systemConfigDir, "\n\n",
-      "Alternatively, you can specify the full path to your config \n",
-      "file by exporting the envvar OBSMON_CONFIG_FILE\n\n",
+      "Please put the config file under one of the following dir(s):\n"
+    )
+    for (fPath in confOrder) {
+      fDir <- dirname(fPath)
+      if(file.access(dirname(fPath), 2) != 0) next
+      msg <- paste0(msg, "  > ", fDir, "\n")
+    }
+    msg <- paste0(msg,
+      "or use the environment variable OBSMON_CONFIG_FILE to provide the\n",
+      "full path (including file name) to an existing configuration file.\n\n",
       "A config file template can be found at:\n",
       "  > ", exampleConfigFilePath, "\n\n"
     )
