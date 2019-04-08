@@ -128,7 +128,7 @@ getSuitableCacheDirDefault <- function() {
   cacheDirPath <- NA
   homeCacheDirPath <- file.path(homeAuxDir, "experiments_cache")
 
-  cacheDirPrio <- c(systemCacheDirPath, homeCacheDirPath)
+  cacheDirPrio <- c(homeCacheDirPath, systemCacheDirPath)
   for(dirPath in cacheDirPrio) {
     dirCreated <- dir.create(dirPath, recursive=TRUE, showWarnings=FALSE, mode="0755")
     if(!(dirCreated | dir.exists(dirPath))) next
