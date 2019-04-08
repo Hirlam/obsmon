@@ -58,6 +58,10 @@ flog.info(sprintf("Main process PID: %d", Sys.getpid()))
 flog.info(paste('Running as user "', userName, '"', sep=""))
 flog.info(libPathsMsg[['success']])
 
+# homeAuxDir: Used for storage of information such as config files,
+# cache, etc.
+homeAuxDir <- file.path(Sys.getenv("HOME"), ".obsmon")
+dir.create(homeAuxDir, recursive=TRUE, showWarnings=FALSE)
 # Creating some default config and cache dirs
 systemConfigDir <- file.path("", "etc", "obsmon", userName)
 systemCacheDirPath <- file.path("", "var", "cache", "obsmon", userName)
@@ -122,7 +126,7 @@ fillInDefault <- function(config, key, default) {
 getSuitableCacheDirDefault <- function() {
 
   cacheDirPath <- NA
-  homeCacheDirPath <- file.path(Sys.getenv("HOME"), ".obsmon", "experiments_cache")
+  homeCacheDirPath <- file.path(homeAuxDir, "experiments_cache")
 
   cacheDirPrio <- c(systemCacheDirPath, homeCacheDirPath)
   for(dirPath in cacheDirPrio) {
