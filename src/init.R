@@ -159,10 +159,12 @@ getValidConfigFilePath <- function(verbose=FALSE) {
 
   userEnvConfigPath <- Sys.getenv("OBSMON_CONFIG_FILE")
   if(userEnvConfigPath=="") userEnvConfigPath <- NULL
+  homeAuxDirConfigPath <- file.path(homeAuxDir, configFileDefBasename)
   obsmonSrcDirConfigPath <- file.path(thisAppDir, configFileDefBasename)
   sysDirConfigPath <- file.path(systemConfigDir, configFileDefBasename)
   confOrder <- c(
     userEnvConfigPath,
+    homeAuxDirConfigPath,
     sysDirConfigPath,
     obsmonSrcDirConfigPath
   )
