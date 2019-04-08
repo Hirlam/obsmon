@@ -58,6 +58,10 @@ flog.info(sprintf("Main process PID: %d", Sys.getpid()))
 flog.info(paste('Running as user "', userName, '"', sep=""))
 flog.info(libPathsMsg[['success']])
 
+# homeAuxDir: Used for storage of information such as config files,
+# cache, etc.
+homeAuxDir <- file.path(Sys.getenv("HOME"), ".obsmon")
+dir.create(homeAuxDir, recursive=TRUE, showWarnings=FALSE)
 # Creating some default config and cache dirs
 systemConfigDir <- file.path("", "etc", "obsmon", userName)
 systemCacheDirPath <- file.path("", "var", "cache", "obsmon", userName)
@@ -122,9 +126,9 @@ fillInDefault <- function(config, key, default) {
 getSuitableCacheDirDefault <- function() {
 
   cacheDirPath <- NA
-  homeCacheDirPath <- file.path(Sys.getenv("HOME"), ".obsmon", "experiments_cache")
+  homeCacheDirPath <- file.path(homeAuxDir, "experiments_cache")
 
-  cacheDirPrio <- c(systemCacheDirPath, homeCacheDirPath)
+  cacheDirPrio <- c(homeCacheDirPath, systemCacheDirPath)
   for(dirPath in cacheDirPrio) {
     dirCreated <- dir.create(dirPath, recursive=TRUE, showWarnings=FALSE, mode="0755")
     if(!(dirCreated | dir.exists(dirPath))) next
@@ -154,9 +158,16 @@ getValidConfigFilePath <- function(verbose=FALSE) {
   exampleConfigFilePath <- file.path(thisAppDir,"docs","config.toml.example")
 
   userEnvConfigPath <- Sys.getenv("OBSMON_CONFIG_FILE")
+  if(userEnvConfigPath=="") userEnvConfigPath <- NULL
+  homeAuxDirConfigPath <- file.path(homeAuxDir, configFileDefBasename)
   obsmonSrcDirConfigPath <- file.path(thisAppDir, configFileDefBasename)
   sysDirConfigPath <- file.path(systemConfigDir, configFileDefBasename)
-  confOrder <- c(userEnvConfigPath, obsmonSrcDirConfigPath, sysDirConfigPath)
+  confOrder <- c(
+    userEnvConfigPath,
+    homeAuxDirConfigPath,
+    sysDirConfigPath,
+    obsmonSrcDirConfigPath
+  )
 
   configPath <- NA
   for (fPath in confOrder) {
@@ -169,11 +180,16 @@ getValidConfigFilePath <- function(verbose=FALSE) {
   if(anyNA(configPath)) {
     msg <- paste0(
       'Config file "', configFileDefBasename, '" not found.\n\n',
-      "Please create and put such a file under one of the following dirs:\n",
-      "  > ", dirname(obsmonSrcDirConfigPath), "\n",
-      "  > ", systemConfigDir, "\n\n",
-      "Alternatively, you can specify the full path to your config \n",
-      "file by exporting the envvar OBSMON_CONFIG_FILE\n\n",
+      "Please put the config file under one of the following dir(s):\n"
+    )
+    for (fPath in confOrder) {
+      fDir <- dirname(fPath)
+      if(file.access(dirname(fPath), 2) != 0) next
+      msg <- paste0(msg, "  > ", fDir, "\n")
+    }
+    msg <- paste0(msg,
+      "or use the environment variable OBSMON_CONFIG_FILE to provide the\n",
+      "full path (including file name) to an existing configuration file.\n\n",
       "A config file template can be found at:\n",
       "  > ", exampleConfigFilePath, "\n\n"
     )
