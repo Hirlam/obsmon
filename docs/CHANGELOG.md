@@ -4,6 +4,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
+## [3.1.1] 2019-04-08
+### Changed
+- Default paths for cacheDir and config file search
+
+
 ## [3.1.0] 2019-04-05
 ### Added
 - Batch mode
@@ -140,6 +145,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - Environment variables for configuration
 
 
+[3.1.1]: https://git.smhi.se/foum/obsmon/compare/obsmon-3.1.0...obsmon-3.1.1
 [3.1.0]: https://git.smhi.se/foum/obsmon/compare/obsmon-3.0.0...obsmon-3.1.0
 [3.0.0]: https://git.smhi.se/foum/obsmon/compare/obsmon-2.3.0...obsmon-3.0.0
 [2.3.0]: https://git.smhi.se/foum/obsmon/compare/obsmon-2.2.0...obsmon-2.3.0
