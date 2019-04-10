@@ -1,20 +1,48 @@
-
 # obsmonVersion is shown in the GUI and also printed along with the banner
-obsmonVersion <- "3.1.1"
+obsmonVersion <- "3.1.2"
 
 # Having the git info gathered below is useful when providing support to users
-execGitCommand <- function(gitCommand) {
-  rtn <- tryCatch(
-    system(gitCommand, intern=TRUE, ignore.stderr=TRUE),
-    error=function(e) sprintf("Unknown (%s)", e$message),
-    warning=function(w) sprintf("Unknown (%s)", w$message)
-  )
+readGitInfoFromFile <- function(fPath=".obsmon_git_info") {
+  # Having an option to read git info from a file is useful, for instance,
+  # if one builds an RPM from obsmon, in which case one doesn't really want
+  # to keep the whole repo history, but rather a snapshot of the current
+  # version. In this case, one can have the build system record the required
+  # info in a file, which is then include din the RPM.
+  df <- read.table(fPath, header=FALSE, sep="=", col.names=c('key','value'))
+  rtn <- list()
+  for(iRow in 1:nrow(df)) {
+    key <- trimws(df[iRow, "key"])
+    value <- trimws(df[iRow, "value"])
+    rtn[[key]] <- value
+  }
   return(rtn)
 }
-gitCommitHash <- execGitCommand("git log --format='%H' -n 1")
-gitBranch <- execGitCommand("git rev-parse --abbrev-ref HEAD")
-gitTag <- execGitCommand("git describe --tags --dirty")
-gitAuthorDate <- execGitCommand("git log --format='%ai' -n 1")
+gitInfoFromFile <- tryCatch(
+  readGitInfoFromFile(),
+  error=function(e) NULL,
+  warning=function(w) NULL
+)
+
+getGitInfo <- function(key, sourceList=gitInfoFromFile) {
+  gitCommand <- switch(key,
+    "commit"="git log --format='%H' -n 1",
+    "branch"="git rev-parse --abbrev-ref HEAD",
+    "tag"="git describe --tags --dirty",
+    "author_date"="git log --format='%ai' -n 1"
+  )
+  rtn <- tryCatch(
+    system(gitCommand, intern=TRUE, ignore.stderr=TRUE),
+    warning=function(w) gitInfoFromFile[[key]],
+    error=function(e) gitInfoFromFile[[key]]
+  )
+  if(is.null(rtn)) rtn <- "Unknown"
+  return(rtn)
+}
+
+gitCommitHash <- getGitInfo("commit")
+gitBranch <- getGitInfo("branch")
+gitTag <- getGitInfo("tag")
+gitAuthorDate <- getGitInfo("author_date")
 
 gitInfo <- paste(
   paste("Branch:", gitBranch, sep=" "),

@@ -1,0 +1,17 @@
+#!/bin/bash
+
+original_dir=$(pwd)
+this_script_dir=$(dirname "$0")
+
+cd $this_script_dir
+gitCommitHash=$(git log --format='%H' -n 1)
+gitBranch=$(git rev-parse --abbrev-ref HEAD)
+gitTag=$(git describe --tags --dirty)
+gitAuthorDate=$(git log --format='%ai' -n 1)
+cd $original_dir
+
+echo "branch = \"$gitBranch\""
+echo "tag = \"$gitTag\""
+echo "commit = \"$gitCommitHash\""
+echo "author_date = \"$gitAuthorDate\""
+

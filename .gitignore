@@ -18,6 +18,7 @@ Rplots.pdf
 rtags
 rtags.R
 TAGS
+.obsmon_git_info
 
 # Stuff generated at run time or during installation
 R-libs/
