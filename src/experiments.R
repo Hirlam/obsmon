@@ -104,27 +104,8 @@ initExperiment <- function(name, path, checkFilesExist) {
   return(x)
 }
 
-notifyDeprecatedPaths <- function(config) {
-  for(entry in config$experiments) {
-    if(!is.null(c(entry$baseDir, entry$experiment))) {
-      msg <- paste0(
-        'config file: Use of "baseDir" and "experiment" in the config ',
-        "has been deprecated since v3.0.0. *These values will be ignored*.\n",
-        'Please setup experiment paths by using only the keyword "path".\n',
-        ' Example:\n',
-        "    [[experiments]]\n",
-        '        displayName = "Your Experiment Name"\n',
-        '        path = "your/full/path/here"\n',
-        "\n"
-      )
-      flog.warn(msg)
-      return(NULL)
-    }
-  }
-}
 
 initExperimentsAsPromises <- function(exptNames=NULL) {
-  notifyDeprecatedPaths(obsmonConfig)
   if(!is.null(exptNames)) {
     flog.debug(
       "initExperimentsAsPromises: Only initialising requested experiments"
