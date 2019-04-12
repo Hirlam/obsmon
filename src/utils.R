@@ -73,7 +73,7 @@ expandDateRange <- function(start, end, format="%Y%m%d") {
   return(rtn)
 }
 
-expandDtgRange <- function(dateRange) {
+summariseDtgRange <- function(dateRange) {
   startDate <- dateRange[[1]]
   endDate <- dateRange[[2]]
   cycles <- as.integer(dateRange[[3]])

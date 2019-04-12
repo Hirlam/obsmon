@@ -9,7 +9,7 @@ dtgClause <- function(val) {
   if (n==1) {
     sprintf("(DTG = %d)", val)
   } else if (n==3) {
-    range <- expandDtgRange(val)
+    range <- summariseDtgRange(val)
     clause <- sprintf("(%d <= DTG) AND (DTG <= %d)", range[[1]], range[[2]])
     if(length(range[[3]])>0) {
       clause <- paste(clause,
@@ -127,7 +127,7 @@ performQuery <- function(
       if (n==1) {
         dbpaths <- db$getDataFilePaths(as.character(dtgs))
       } else if (n==3) {
-        range <- expandDtgRange(dtgs)
+        range <- summariseDtgRange(dtgs)
         dbpaths <- db$getDataFilePaths(range[[1]] <= db$dtgs & db$dtgs <= range[[2]])
       } else {
         flog.error("Invalid combination of expandRange and dtgs.")
