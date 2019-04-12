@@ -138,6 +138,11 @@ prepareMultiPlots <- function(
 #############################
 # Validating setup of plots #
 #############################
+exptNamesInConfig <- c()
+for(config in obsmonConfig$experiments) {
+  exptNamesInConfig <- c(exptNamesInConfig, config$displayName)
+}
+
 dateInputFormat <- "%Y-%m-%d"
 dateIsValid <- function(date, format=dateInputFormat) {
   tryCatch(!anyNA(as.Date(date, format)),
@@ -172,7 +177,7 @@ validateEndDate <- function(endDate, startDate=NULL, nDays=NULL, format=dateInpu
 
 multiPlotExptValid <- function(plotConfig) {
   expt <- toLowerTrimAndSingleSpaces(plotConfig$experiment)
-  valid <- isTRUE(expt %in% toLowerTrimAndSingleSpaces(exptNamesinConfig))
+  valid <- isTRUE(expt %in% toLowerTrimAndSingleSpaces(exptNamesInConfig))
   if(!valid) {
     flog.error(
       'multiPlot "%s": experiment "%s" not recognised',
@@ -240,7 +245,7 @@ multiPlotsValidateConfig <- function(config) {
     if(multiPlotExptValid(pc)) {
       # Correct plotType excess spaces and character case
       pcExptName <- toLowerTrimAndSingleSpaces(pc$experiment)
-      for(exactExptName in exptNamesinConfig) {
+      for(exactExptName in exptNamesInConfig) {
         if(toLowerTrimAndSingleSpaces(exactExptName) == pcExptName) {
           pc$experiment <- exactExptName
         }
@@ -427,7 +432,7 @@ multiPlotsValidateConfig <- function(config) {
 
   if(exists("invalidExpts")) {
     msg <- "multiPlots: Please choose your experiment from:"
-    for(exptName in exptNamesinConfig) msg <- paste0(msg, "\n  > ", exptName)
+    for(exptName in exptNamesInConfig) msg <- paste0(msg, "\n  > ", exptName)
     flog.warn(msg)
   }
   if(exists("invalidPlotNames")) {

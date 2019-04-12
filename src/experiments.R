@@ -123,8 +123,3 @@ initExperiments <- function(exptNames=NULL) {
   }
   experiments
 }
-
-exptNamesinConfig <- c()
-for(config in obsmonConfig$experiments) {
-  exptNamesinConfig <- c(exptNamesinConfig, config$displayName)
-}
