@@ -33,7 +33,10 @@ toLowerTrimAndSingleSpaces <- function(str) {
 }
 
 dtg2date <- function(dtg) {
-  paste(substr(dtg, 1, 4), substr(dtg, 5, 6), substr(dtg, 7, 8), sep="-")
+  dtgAsPOSIXlt <- strptime(dtg, format="%Y%m%d%H", tz="GMT")
+  rtn <- strftime(dtgAsPOSIXlt, format="%Y-%m-%d", tz="GMT")
+  if(anyNA(rtn) || length(rtn)==0) rtn <- character(0)
+  return(rtn)
 }
 
 date2dtg <- function(date, cycle=NULL) {
