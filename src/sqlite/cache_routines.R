@@ -69,24 +69,6 @@ cacheFilesLatestMdate <- function(db) {
   return(max(mtimes))
 }
 
-getFilePathsToCache <- function(db, dtgs) {
-  # Returns a selection of data file paths to be screened for info to
-  # be put in the cache, as a function of the passed active db and dtgs
-  validDtgs <- NULL
-  for(dtg in dtgs) {
-    fPath <- db$paths[dtg]
-    if(is.null(fPath) || anyNA(fPath) || length(fPath)==0) next
-    if(!file.exists(fPath)) next
-    validDtgs <- c(validDtgs, dtg)
-  }
-  fPathsToCache <- tryCatch(
-    db$paths[validDtgs],
-    error=function(e) {flog.error(e); NULL}
-  )
-  if(length(fPathsToCache)==0) fPathsToCache <- NULL
-  return(fPathsToCache)
-}
-
 cacheObsFromFile <- function(sourceDbPath, cacheDir, replaceExisting=FALSE) {
   ###################################
   # Main routine to perform caching #
@@ -406,7 +388,7 @@ dtgsAreCached <- function(db, dtgs) {
   for(dtg in sort(unique(dtgs))) {
     # If a DTG corresponds to a file that doesn't exist (e.g., a cycle 21
     # on the current day when it's still 16:00), then ignore it
-    if(!file.exists(db$paths[dtg])) next
+    if(!file.exists(db$getDataFilePaths(dtg))) next
     if(!(dtg %in% cachedDtgsAsStr)) return(FALSE)
   }
   return(TRUE)

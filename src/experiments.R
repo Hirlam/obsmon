@@ -35,21 +35,6 @@ pathToDataFileForDtg <- function(exptDir, dbType, dtg) {
   return(dbpath)
 }
 
-getDataFilePaths <- function(exptDir, dbType, assertExists=FALSE) {
-  dtgs <- getDtgs(file.path(exptDir, dbType))
-  fPaths <- NULL
-  validDtgs <- NULL
-  for(dtg in dtgs) {
-    fPath <- pathToDataFileForDtg(exptDir, dbType, dtg)
-    if(is.null(fPath)) next
-    if(assertExists && !file.exists(fPath)) next
-    fPaths <- c(fPaths, fPath)
-    validDtgs <- c(validDtgs, dtg)
-  }
-  if(is.null(fPaths)) return(NULL)
-  else return(structure(fPaths, names=validDtgs))
-}
-
 dbType2DbDescription <- list(
   "ecma"="Upper Air (3D/4D-VAR) - Screening",
   "ccma"="Upper Air (3D/4D-VAR) - Minimization",
@@ -57,70 +42,82 @@ dbType2DbDescription <- list(
 )
 dbTypesRecognised <- names(dbType2DbDescription)
 
-emptyExperiment <- function(name) {
-  x <- list()
-  x$name <- name
-  x$dbs <- list()
-  for(dbType in dbTypesRecognised) x$dbs[[dbType]] <- NULL
-  x
-}
-
-initExperiment <- function(name, path, checkFilesExist) {
-
-  flog.debug("Initializing experiment %s...", name)
-  x <- list()
-  x$name <- name
-  x$path <- path
-  x$cacheDir <- file.path(obsmonConfig$general[["cacheDir"]], slugify(name))
-  x$dbs <- list()
-  for(dbType in dbTypesRecognised) {
-    x$dbs[[dbType]] <- NULL
-    # Making sure to only store dtgs that correspond to existing data files
-    dataFilePaths<-getDataFilePaths(x$path,dbType,assertExists=checkFilesExist)
-    dtgs <- sort(names(dataFilePaths))
-    if(is.null(dtgs)) next
-    x$dbs[[dbType]] <- list(
-      dbType=dbType,
-      dir=file.path(x$path, dbType),
-      dtgs=dtgs,
-      maxDateRange=dtg2date(c(dtgs[1], dtgs[length(dtgs)])),
-      # Set paths where obsmon expects to find experiment data for each dtg
-      paths=dataFilePaths,
-      # Paths related to caching
-      cacheDir=x$cacheDir,
-      cachePaths=list(
-        obsmon=file.path(x$cacheDir, sprintf('%s_obsmon.db', dbType)),
-        usage=file.path(x$cacheDir, sprintf('%s_usage.db', dbType))
+obsmonDatabaseClass <- setRefClass("obsmonDatabase",
+  fields=list(
+    dbType="character",
+    dir="character",
+    cacheDir="character",
+    exptDir=function() {dirname(dir)},
+    cachePaths=function() {
+      list(
+        obsmon=file.path(cacheDir, sprintf('%s_obsmon.db', dbType)),
+        usage=file.path(cacheDir, sprintf('%s_usage.db', dbType))
       )
-    )
-  }
+    },
+    dtgsPrivate="numeric",
+    dtgsLastUpdated="POSIXt",
+    dtgs=function() {
+      tDiffSec <- Sys.time() - dtgsLastUpdated
+      rtn <- dtgsPrivate
+      if(length(dtgsPrivate)==0 || tDiffSec>60) {
+        rtn <- getDtgs(dir)
+        dtgsPrivate <<- rtn
+        dtgsLastUpdated <<- Sys.time()
+      }
+      return(rtn)
+    },
+    dateRange=function() {dtg2date(c(dtgs[1], dtgs[length(dtgs)]))},
+    hasData=function() {length(dtgs)>0}
+  ),
+  methods=list(
+    getDataFilePaths=function(selectedDtgs=NULL, assertExists=FALSE) {
+       if(is.null(selectedDtgs)) selectedDtgs <- .self$dtgs
+       rtn <- pathToDataFileForDtg(exptDir, dbType, selectedDtgs)
+       if(assertExists) rtn <- Filter(file.exists, rtn)
+       return(rtn)
+    }
+  )
+)
 
-  if(is.null(x$dbs$ecma) & is.null(x$dbs$ecma_sfc) & is.null(x$dbs$ccma)){
-    flog.warn("Could not find data for experiment %s. Skipping.", name)
-    x <- NULL
-  } else {
-    flog.debug("Finished initialization of experiment %s.", name)
-  }
-  return(x)
-}
+experimentClass <- setRefClass("experiment",
+  fields=list(
+    name="character",
+    path="character",
+    dbs="list",
+    cacheDir=function() {
+      file.path(obsmonConfig$general[["cacheDir"]], slugify(name))
+    }
+  ),
+  methods=list(
+    initialize=function(name, path, cacheDir, dbTypes=dbTypesRecognised) {
+      .self$name <- name
+      .self$path <- path
+      .self$dbs <- sapply(dbTypes, function(dbType) {
+        obsmonDatabaseClass(
+          dbType=dbType,
+          dir=file.path(path, dbType),
+          cacheDir=.self$cacheDir
+        )
+      })
+    }
+  )
+)
 
-
-initExperimentsAsPromises <- function(exptNames=NULL) {
+initExperiments <- function(exptNames=NULL) {
   if(!is.null(exptNames)) {
     flog.debug(
-      "initExperimentsAsPromises: Only initialising requested experiments"
+      "initExperiments: Only initialising requested experiments"
     )
     exptNames <- slugify(exptNames)
   }
-  # Using new.env(), as lists cannot be used with %<-%
-  experiments <- new.env()
+  experiments <- list()
   simplifiedExptNames <- c()
   for(config in obsmonConfig$experiments) {
     name <- config$displayName
     simplifiedName <- slugify(name)
     if(!is.null(exptNames) && !(simplifiedName %in% exptNames)) {
       flog.debug(
-        'initExperimentsAsPromises: Skipping expt "%s": Not in exptNames.',
+        'initExperiments: Skipping expt "%s": Not in exptNames.',
         name
       )
       next
@@ -133,34 +130,9 @@ initExperimentsAsPromises <- function(exptNames=NULL) {
       next
     }
     simplifiedExptNames <- c(simplifiedExptNames, simplifiedName)
-    # Using %<-% (library "future") to init experiments asynchronously
-    experiments[[name]] %<-%
-      initExperiment(name, config$path,
-        checkFilesExist=obsmonConfig$general[["initCheckDataExists"]]
-      )
+    experiments[[name]] <- experimentClass(name=name, path=config$path)
   }
   experiments
-}
-
-flagNotReadyExpts <- function(experiments) {
-  # Checks whether experiments have been initialised. Those that are still
-  # initialising will be flagged and replaced by empty ones (placeholders).
-  # This allows using experiments that are ready even if there are others
-  # that are not.
-  resolvedStatus <- resolved(experiments)
-
-  readyExpts <- list()
-  notReadyExpts <- list()
-  exptNames <- exptNamesinConfig[exptNamesinConfig %in% ls(experiments)]
-  for (exptName in exptNames) {
-    if(resolvedStatus[[exptName]]) {
-      readyExpts[[exptName]] <- experiments[[exptName]]
-    } else {
-      newName <- paste0(exptName, ': Loading experiment...')
-      notReadyExpts[[newName]] <- emptyExperiment(newName)
-    }
-  }
-  return(c(readyExpts, notReadyExpts))
 }
 
 exptNamesinConfig <- c()

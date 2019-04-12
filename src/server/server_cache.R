@@ -28,13 +28,14 @@ observeEvent(activeDb(), {
   activeDbChanged((activeDbChanged() + 1) %% 2)
 })
 
-# Get paths to data files associated with currently selected DTG(s) and
-# and dB, and which are not currently being cached
+# Get paths to data files associated with currently selected dB and DTG(s)
 dataFilesForDbAndDtgs <- eventReactive({
   activeDbChanged()
   selectedDtgs()
 }, {
-  return(getFilePathsToCache(req(activeDb()), req(selectedDtgs())))
+  db <- req(activeDb())
+  dtgs <- req(selectedDtgs())
+  return(db$getDataFilePaths(dtgs, assertExists=TRUE))
 })
 
 # "assyncCachingProcs" keeps track of the ongoing processes for the caching

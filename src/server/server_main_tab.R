@@ -22,10 +22,8 @@ outputOptions(output, "showCacheOptions", suspendWhenHidden = FALSE)
 
 # Initial population of experiments
 exptNames <- c("")
-experiments <- reactive ({
-  # Keep checking if experiments finished initialisation
-  if(!all(resolved(experimentsAsPromises))) invalidateLater(2000, session)
-  flagNotReadyExpts(experimentsAsPromises)
+experiments <- reactiveVal({
+  initExperiments()
 })
 observe({
     newExptNames <- names(experiments())
@@ -81,16 +79,16 @@ activeDb <- reactive({
 # Update available choices of dates when changing active database
 observeEvent(activeDb(), {
   db <- req(activeDb())
-  min <- db$maxDateRange[1]
-  max <- db$maxDateRange[2]
-  start <- clamp(input$dateRange[1], min, max, min)
-  end <- clamp(input$dateRange[2], min, max)
-  single <- clamp(input$date, min, max)
-  updateDateRangeInput(session, "dateRange",
-                       start = start, end = end,
-                       min = db$maxDateRange[1], max = db$maxDateRange[2])
-  updateDateInput(session, "date", value = single,
-                  min = db$maxDateRange[1], max = db$maxDateRange[2])
+  dbDateRange <- req(db$dateRange)
+  dbMinDate <- dbDateRange[1]
+  dbMaxDate <- dbDateRange[2]
+  start <- clamp(input$dateRange[1], dbMinDate, dbMaxDate, dbMinDate)
+  end <- clamp(input$dateRange[2], dbMinDate, dbMaxDate)
+  single <- clamp(input$date, dbMinDate, dbMaxDate)
+  updateDateRangeInput(
+    session, "dateRange", start=start, end=end, min=dbMinDate, max=dbMaxDate
+  )
+  updateDateInput(session, "date", value=single, min=dbMinDate, max=dbMaxDate)
 })
 
 # Signal when required dateType of plot changes value

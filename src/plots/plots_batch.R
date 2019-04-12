@@ -126,7 +126,7 @@ makeBatchPlots <- function() {
   }
 
   exptsToInitialise <- getExptNamesNeededForBatch(obsmonConfig)
-  experimentsAsPromises <- initExperimentsAsPromises(exptsToInitialise)
+  experiments <- initExperiments(exptsToInitialise)
 
   nRetries <- rep(0, nConf)
   finished <- rep(FALSE, nConf)
@@ -138,8 +138,8 @@ makeBatchPlots <- function() {
     mpConf <- bConfigs[[iConf]]
 
     cat("\n")
-    if(resolved(experimentsAsPromises)[[mpConf$experiment]]) {
-      db <- experimentsAsPromises[[mpConf$experiment]]$dbs[[mpConf$database]]
+    if(resolved(experiments)[[mpConf$experiment]]) {
+      db <- experiments[[mpConf$experiment]]$dbs[[mpConf$database]]
       if(is.null(db)) {
         flog.error(
           'multiPlot "%s": Could not find %s data for expt "%s". Skipping.',

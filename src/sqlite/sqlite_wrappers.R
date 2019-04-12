@@ -120,20 +120,20 @@ performQuery <- function(
   db, query, dtgs=NULL, expandRange=TRUE, convertDTG=TRUE)
 {
   if (is.null(dtgs)) {
-    dbpaths <- db$paths
+    dbpaths <- db$getDataFilePaths()
   } else {
     if (expandRange) {
       n = length(dtgs)
       if (n==1) {
-        dbpaths <- db$paths[as.character(dtgs)]
+        dbpaths <- db$getDataFilePaths(as.character(dtgs))
       } else if (n==3) {
         range <- expandDtgRange(dtgs)
-        dbpaths <- db$paths[range[[1]] <= db$dtgs & db$dtgs <= range[[2]]]
+        dbpaths <- db$getDataFilePaths(range[[1]] <= db$dtgs & db$dtgs <= range[[2]])
       } else {
         flog.error("Invalid combination of expandRange and dtgs.")
       }
     } else {
-      dbpaths <- db$paths[as.character(dtgs)]
+      dbpaths <- db$getDataFilePaths(as.character(dtgs))
     }
   }
   dbpaths <- dbpaths[!is.null(dbpaths)]
