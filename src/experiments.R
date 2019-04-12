@@ -4,10 +4,10 @@ getDtgs <- function(path) {
       foundDtgs <- sort(unique(foundDtgs))
       foundDtgs
     },
-    error=function(e) {flog.error(e); NULL},
+    error=function(e) {flog.error(e); integer(0)},
     warning=function(w) {flog.warn(w); foundDtgs}
   )
-  if(length(dtgs)==0) dtgs <- NULL
+  if(length(dtgs)==0) dtgs <- integer(0)
   return(dtgs)
 }
 
