@@ -80,7 +80,6 @@ initExperiment <- function(name, path, checkFilesExist) {
     dtgs <- sort(names(dataFilePaths))
     if(is.null(dtgs)) next
     x$dbs[[dbType]] <- list(
-      exptName=name,
       dbType=dbType,
       dir=file.path(x$path, dbType),
       dtgs=dtgs,
