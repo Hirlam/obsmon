@@ -84,12 +84,13 @@ experimentClass <- setRefClass("experiment",
     name="character",
     path="character",
     dbs="list",
+    slugName=function() {slugify(name)},
     cacheDir=function() {
-      file.path(obsmonConfig$general[["cacheDir"]], slugify(name))
+      file.path(obsmonConfig$general[["cacheDir"]], slugName)
     }
   ),
   methods=list(
-    initialize=function(name, path, cacheDir, dbTypes=dbTypesRecognised) {
+    initialize=function(name, path, dbTypes=dbTypesRecognised) {
       .self$name <- name
       .self$path <- path
       .self$dbs <- sapply(dbTypes, function(dbType) {
@@ -104,33 +105,21 @@ experimentClass <- setRefClass("experiment",
 )
 
 initExperiments <- function(exptNames=NULL) {
-  if(!is.null(exptNames)) {
-    flog.debug(
-      "initExperiments: Only initialising requested experiments"
-    )
-    exptNames <- slugify(exptNames)
-  }
+  if(!is.null(exptNames)) exptNames <- slugify(exptNames)
   experiments <- list()
-  simplifiedExptNames <- c()
+  slugExptNames <- c()
   for(config in obsmonConfig$experiments) {
-    name <- config$displayName
-    simplifiedName <- slugify(name)
-    if(!is.null(exptNames) && !(simplifiedName %in% exptNames)) {
-      flog.debug(
-        'initExperiments: Skipping expt "%s": Not in exptNames.',
-        name
-      )
-      next
-    }
-    if(simplifiedName %in% simplifiedExptNames) {
+    newExpt <- experimentClass(name=config$displayName, path=config$path)
+    if(!is.null(exptNames) && !(newExpt$slugName %in% exptNames)) next
+    if(newExpt$slugName %in% slugExptNames) {
       flog.error(
         'Conflicting name for experiment "%s". Skipping additional entry.',
-        name
+        newExpt$slugName
       )
       next
     }
-    simplifiedExptNames <- c(simplifiedExptNames, simplifiedName)
-    experiments[[name]] <- experimentClass(name=name, path=config$path)
+    slugExptNames <- c(slugExptNames, newExpt$slugName)
+    experiments[[newExpt$name]] <- newExpt
   }
   experiments
 }
