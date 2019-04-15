@@ -35,7 +35,7 @@ dataFilesForDbAndDtgs <- eventReactive({
 }, {
   db <- req(activeDb())
   dtgs <- req(selectedDtgs())
-  return(db$getDataFilePaths(dtgs, assertExists=TRUE))
+  return(db$getDataFilePaths(dtgs))
 })
 
 # "assyncCachingProcs" keeps track of the ongoing processes for the caching
