@@ -117,29 +117,14 @@ makeSingleQuery <- function(query) {
   }
 }
 
-performQuery <- function(
-  db, query, dtgs=NULL, expandRange=TRUE, convertDTG=TRUE)
-{
-  if (is.null(dtgs)) {
-    dbpaths <- db$getDataFilePaths()
-  } else {
-    if (expandRange) {
-      n = length(dtgs)
-      if (n==1) {
-        dbpaths <- db$getDataFilePaths(as.character(dtgs))
-      } else if (n==3) {
-        range <- summariseDtgRange(dtgs)
-        selectedDtgs <- expandDtgRange(range)
-        dbpaths <- db$getDataFilePaths(selectedDtgs)
-      } else {
-        flog.error("Invalid combination of expandRange and dtgs.")
-      }
-    } else {
-      dbpaths <- db$getDataFilePaths(as.character(dtgs))
-    }
+performQuery <- function(db, query, dtgs) {
+  selectedDtgs <- dtgs
+  if(length(dtgs)>1) {
+    range <- summariseDtgRange(dtgs)
+    selectedDtgs <- expandDtgRange(range)
   }
-  dbpaths <- dbpaths[!is.null(dbpaths)]
-  dbpaths <- dbpaths[file.exists(dbpaths)]
+  dbpaths <- db$getDataFilePaths(selectedDtgs, assertExists=TRUE)
+
   if (length(dbpaths)==0) {
     flog.error("performQuery: No usable database found. Please check paths.")
     return(NULL)
@@ -147,7 +132,8 @@ performQuery <- function(
   singleQuery <- makeSingleQuery(query)
   res <- lapply(dbpaths, singleQuery)
   res <- do.call(rbind, res)
-  if(convertDTG & "DTG" %in% names(res)) {
+  if("DTG" %in% names(res)) {
+    # Convert DTGs from integers to POSIXct
     res$DTG <- as.POSIXct(as.character(res$DTG), format="%Y%m%d%H")
   }
   res
