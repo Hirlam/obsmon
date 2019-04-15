@@ -101,26 +101,24 @@ dbDisconnectWrapper <- function(con) {
   )
 }
 
-makeSingleQuery <- function(query) {
-  function(dbpath) {
-    con <- dbConnectWrapper(dbpath, read_only=TRUE)
-    # If con if NULL then we could not connect. Returning NULL silently here,
-    # as the dbConnectWrapper will have a better error message in this case.
-    if(is.null(con)) return(NULL)
+singleFileQuerier <- function(dbpath, query) {
+  con <- dbConnectWrapper(dbpath, read_only=TRUE)
+  # If con if NULL then we could not connect. Returning NULL silently here,
+  # as the dbConnectWrapper will have a better error message in this case.
+  if(is.null(con)) return(NULL)
 
-    res <- tryCatch(
-      dbGetQuery(con, query),
-      error=function(e) {
-        flog.warn(
-          "makeSingleQuery: Error querying %s:\n%s\nIgnoring.",
-          dbpath, e
-        )
-        NULL
-      }
-    )
-    dbDisconnectWrapper(con)
-    res
-  }
+  res <- tryCatch(
+    dbGetQuery(con, query),
+    error=function(e) {
+      flog.warn(
+        "singleFileQuerier: Error querying %s:\n%s\nIgnoring.",
+        dbpath, e
+      )
+      NULL
+    }
+  )
+  dbDisconnectWrapper(con)
+  res
 }
 
 performQuery <- function(db, query, dtgs) {
@@ -131,8 +129,7 @@ performQuery <- function(db, query, dtgs) {
   }
   dbpaths <- db$getDataFilePaths(selectedDtgs)
 
-  singleQuery <- makeSingleQuery(query)
-  res <- lapply(dbpaths, singleQuery)
+  res <- lapply(dbpaths, partial(singleFileQuerier, query=query))
   res <- do.call(rbind, res)
   if("DTG" %in% names(res)) {
     # Convert DTGs from integers to POSIXct
