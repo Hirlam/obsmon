@@ -85,6 +85,11 @@ experimentClass <- setRefClass("experiment",
     path="character",
     dbs="list",
     slugName=function() {slugify(name)},
+    guiName=function() {
+      nameCompl <- character(0)
+      if(is.null(unlist(.self$dbs))) nameCompl <- "(no data found)"
+      return(trimws(paste(.self$name, nameCompl)))
+    },
     cacheDir=function() {
       file.path(obsmonConfig$general[["cacheDir"]], slugName)
     }
@@ -94,11 +99,12 @@ experimentClass <- setRefClass("experiment",
       .self$name <- name
       .self$path <- path
       .self$dbs <- sapply(dbTypes, function(dbType) {
-        obsmonDatabaseClass(
-          dbType=dbType,
-          dir=file.path(path, dbType),
-          cacheDir=.self$cacheDir
-        )
+        dbDir <- file.path(path, dbType)
+        if(!isTRUE(file.access(dbDir, 4)==0)) {
+          flog.debug("Cannot read dir %s", dbDir)
+          return(NULL)
+        }
+        obsmonDatabaseClass(dbType=dbType, dir=dbDir, cacheDir=.self$cacheDir)
       })
     }
   )
