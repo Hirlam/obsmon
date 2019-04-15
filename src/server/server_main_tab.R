@@ -3,7 +3,7 @@
 ############################################################################
 # Start GUI with all inputs disabled.
 # They will be enabled once experiments are loaded
-isolate(disableShinyInputs(input, except="experiment"))
+disableShinyInputs(input)
 
 # Deciding whether to show or hide cache-related options.
 # It is advisable not to show them by default -- especially when running on
