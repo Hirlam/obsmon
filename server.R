@@ -28,6 +28,9 @@ shinyServer(function(input, output, session) {
   # This info is already printed in a banner when running standalone
   if(!runningAsStandalone) cat(obsmonBanner)
 
+  # Loading experiment data
+  expts <- initExperiments()
+
   # Separating the logic for these sessions, as they are quite distinct 
   source("src/server/server_main_tab.R", local=TRUE)
   source("src/server/server_cache.R", local=TRUE)

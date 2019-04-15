@@ -18,37 +18,20 @@ output$showCacheOptions <- renderText({
   file.exists(".obsmon_show_cache_options") ||
   obsmonConfig$general[["showCacheOptions"]]
 })
-outputOptions(output, "showCacheOptions", suspendWhenHidden = FALSE)
+outputOptions(output, "showCacheOptions", suspendWhenHidden=FALSE)
 
-# Initial population of experiments
-exptNames <- c("")
-experiments <- reactiveVal({
-  initExperiments()
-})
-observe({
-    newExptNames <- names(experiments())
-    if(length(newExptNames)==0) {
-      exptPlaceholder <- "ERROR: Could not read experiment data"
-      disableShinyInputs(input)
-    } else {
-      exptPlaceholder <- "Please select experiment"
-      shinyjs::enable("experiment")
-    }
-    if((length(newExptNames) != length(exptNames)) ||
-       !all(exptNames==newExptNames)) {
-      selectedExpt <- tryCatch({
-        iExpt <- which(exptNames==input$experiment)[1]
-        if(anyNA(iExpt)) NULL else newExptNames[iExpt]
-        },
-        error=function(e) NULL
-      )
-      updateSelectizeInput(session, "experiment",
-        choices=newExptNames, selected=selectedExpt,
-        options=list(placeholder=exptPlaceholder)
-      )
-      exptNames <<- newExptNames
-    }
-})
+# Populate experiment choices
+exptPlaceholder <- "ERROR: Could not read experiments"
+if(length(expts)>0) {
+  exptPlaceholder <- "Please select experiment"
+  shinyjs::enable("experiment")
+}
+exptGuiNames <- lapply(expts, function(x) x$guiName)
+exptChoices <- lapply(expts, function(x) x$name)
+names(exptChoices) <- exptGuiNames
+updateSelectizeInput(session, "experiment",
+  choices=exptChoices, options=list(placeholder=exptPlaceholder)
+)
 
 # Hide "Loading Obsmon" screen and show the app
 shinyjs::hide(id="loading-content", anim=TRUE, animType="fade")
@@ -56,8 +39,7 @@ shinyjs::show("app-content")
 
 # Update database options according to chosen experiment
 observe({
-  expName <- req(input$experiment)
-  expDbs <- isolate(experiments()[[expName]]$dbs)
+  expDbs <- expts[[req(input$experiment)]]$dbs
   choices <- list()
   for(dbType in names(dbType2DbDescription)) {
     if(is.null(expDbs[[dbType]])) next
@@ -69,11 +51,7 @@ observe({
   else enableShinyInputs(input)
 })
 
-activeDb <- reactive({
-  expName <- req(input$experiment)
-  dbType <- req(input$odbBase)
-  isolate(experiments()[[expName]]$dbs[[dbType]])
-})
+activeDb <- reactive(expts[[req(input$experiment)]]$dbs[[req(input$odbBase)]])
 
 # DTG-related reactives and observers
 # Update available choices of dates when changing active database

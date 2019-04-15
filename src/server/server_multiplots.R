@@ -29,7 +29,7 @@ multiPlotConfigInfo <- eventReactive(input$multiPlotTitle, {
 
 multiPlotExperiment <- eventReactive(multiPlotConfigInfo(), {
   pConfig <- multiPlotConfigInfo()
-  experiments()[[pConfig$experiment]]
+  expts[[pConfig$experiment]]
 },
   ignoreNULL=FALSE
 )
@@ -102,7 +102,7 @@ observeEvent(input$multiPlotsDoPlot, {
     req(multiPlotActiveDb()),
     error=function(e) {
       exptName <- pConfig$experiment
-      exptNames <- gsub(": Loading experiment...$", "", names(experiments))
+      exptNames <- gsub(": Loading experiment...$", "", names(expts))
       if(exptName %in% exptNames) {
         errMsg <- "Experiment still loading. Please try again later."
       } else {
