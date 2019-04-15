@@ -128,7 +128,8 @@ performQuery <- function(
         dbpaths <- db$getDataFilePaths(as.character(dtgs))
       } else if (n==3) {
         range <- summariseDtgRange(dtgs)
-        dbpaths <- db$getDataFilePaths(range[[1]] <= db$dtgs & db$dtgs <= range[[2]])
+        selectedDtgs <- expandDtgRange(range)
+        dbpaths <- db$getDataFilePaths(selectedDtgs)
       } else {
         flog.error("Invalid combination of expandRange and dtgs.")
       }

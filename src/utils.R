@@ -90,6 +90,16 @@ summariseDtgRange <- function(dateRange) {
   list(startDtg, endDtg, cycles)
 }
 
+expandDtgRange <- function(range, cycles=NULL) {
+  startDtg <- strptime(range[[1]], format="%Y%m%d%H", tz="GMT")
+  endDtg <- strptime(range[[2]], format="%Y%m%d%H", tz="GMT")
+  dateTimes <- seq(from=startDtg, to=endDtg, by="hour")
+
+  rtn <- as.integer(strftime(dateTimes, format="%Y%m%d%H", tz="GMT"))
+  if(!is.null(cycles)) rtn <- rtn[(rtn %% 100) %in% as.integer(cycles)]
+  return(rtn)
+}
+
 formatDtg <- function(dtg) {
   n = length(dtg)
   if (n==1) {
