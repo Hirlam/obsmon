@@ -388,7 +388,7 @@ dtgsAreCached <- function(db, dtgs) {
   for(dtg in sort(unique(dtgs))) {
     # If a DTG corresponds to a file that doesn't exist (e.g., a cycle 21
     # on the current day when it's still 16:00), then ignore it
-    if(!file.exists(db$getDataFilePaths(dtg))) next
+    if(!isTRUE(file.exists(db$getDataFilePaths(dtg)))) next
     if(!(dtg %in% cachedDtgsAsStr)) return(FALSE)
   }
   return(TRUE)

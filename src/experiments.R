@@ -72,7 +72,13 @@ obsmonDatabaseClass <- setRefClass("obsmonDatabase",
   methods=list(
     getDataFilePaths=function(selectedDtgs=NULL, assertExists=FALSE) {
        if(is.null(selectedDtgs)) selectedDtgs <- .self$dtgs
+
+       # The filter below normally runs very quickly
+       selectedDtgs <- selectedDtgs[selectedDtgs %in% .self$dtgs]
+
        rtn <- pathToDataFileForDtg(exptDir, dbType, selectedDtgs)
+       # The file existence check can take a very long time depending on how
+       # many there are or where they are located
        if(assertExists) rtn <- Filter(file.exists, rtn)
        return(rtn)
     }
