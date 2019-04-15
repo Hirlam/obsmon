@@ -94,6 +94,7 @@ dbConnectWrapper <- function(dbpath, read_only=FALSE, showWarnings=TRUE) {
 }
 
 dbDisconnectWrapper <- function(con) {
+  if(is.null(con)) return(NULL)
   tryCatch(dbDisconnect(con),
     error=function(e) flog.error("dbDisconnectWrapper: %s", e),
     warn=function(w) flog.warn("dbDisconnectWrapper: %s", w)
