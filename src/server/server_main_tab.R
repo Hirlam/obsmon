@@ -132,10 +132,11 @@ observeEvent({
  }, {
   if(dateTypeReqByPlotType() %in% c("range")) {
     cycles <- input$cycles
+    if(length(cycles)==0) cycles <- sprintf("%02d", 0:24)
   } else {
     cycles <- input$cycle
+    if(trimws(cycles)=="") cycles <- NULL
   }
-  if(length(cycles)==0) cycles <- sprintf("%02d", 0:24)
   selectedCycles(sort(cycles, decreasing=FALSE))
 })
 selectedDtgs <- reactiveVal()
