@@ -129,12 +129,8 @@ performQuery <- function(db, query, dtgs) {
     range <- summariseDtgRange(dtgs)
     selectedDtgs <- expandDtgRange(range)
   }
-  dbpaths <- db$getDataFilePaths(selectedDtgs, assertExists=TRUE)
+  dbpaths <- db$getDataFilePaths(selectedDtgs)
 
-  if (length(dbpaths)==0) {
-    flog.error("performQuery: No usable database found. Please check paths.")
-    return(NULL)
-  }
   singleQuery <- makeSingleQuery(query)
   res <- lapply(dbpaths, singleQuery)
   res <- do.call(rbind, res)
