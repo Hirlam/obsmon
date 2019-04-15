@@ -76,9 +76,12 @@ expandDateRange <- function(start, end, format="%Y%m%d") {
 summariseDtgRange <- function(dateRange) {
   startDate <- dateRange[[1]]
   endDate <- dateRange[[2]]
-  cycles <- as.integer(dateRange[[3]])
+  cycles <- tryCatch(
+    as.integer(dateRange[[3]]),
+    error=function(e) {flog.error("summariseDtgRange: %s", e); integer(0)}
+  )
   if(length(cycles)==0) {
-    cycles <- NULL
+    cycles <- integer(0)
     minCycle <- 0
     maxCycle <- 24
   } else {
@@ -96,7 +99,7 @@ expandDtgRange <- function(range, cycles=NULL) {
   dateTimes <- seq(from=startDtg, to=endDtg, by="hour")
 
   rtn <- as.integer(strftime(dateTimes, format="%Y%m%d%H", tz="GMT"))
-  if(!is.null(cycles)) rtn <- rtn[(rtn %% 100) %in% as.integer(cycles)]
+  if(length(cycles)>0) rtn <- rtn[(rtn %% 100) %in% as.integer(cycles)]
   return(rtn)
 }
 
