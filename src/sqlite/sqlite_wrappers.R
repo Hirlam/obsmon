@@ -82,11 +82,11 @@ dbConnectWrapper <- function(dbpath, read_only=FALSE, showWarnings=TRUE) {
       newCon
     },
     error=function(e) {
-      if(showWarnings) flog.error("dbConnectWrapper (file %s): %s", dbpath, e)
+      if(showWarnings) flog.error("dbConnectWrapper: %s (%s)", e, dbpath)
       NULL
     },
     warning=function(w) {
-      if(showWarnings) flog.error("dbConnectWrapper (file %s): %s", dbpath, w)
+      if(showWarnings) flog.error("dbConnectWrapper: %s (%s)", w, dbpath)
       NULL
     }
   )
@@ -104,14 +104,20 @@ dbDisconnectWrapper <- function(con) {
 makeSingleQuery <- function(query) {
   function(dbpath) {
     con <- dbConnectWrapper(dbpath, read_only=TRUE)
-    res <- tryCatch(dbGetQuery(con, query),
-                    error=function(e) {
-                      flog.warn(
-                        "makeSingleQuery: Error querying %s:\n%s\nIgnoring.",
-                        dbpath, e
-                      )
-                      NULL
-                    })
+    # If con if NULL then we could not connect. Returning NULL silently here,
+    # as the dbConnectWrapper will have a better error message in this case.
+    if(is.null(con)) return(NULL)
+
+    res <- tryCatch(
+      dbGetQuery(con, query),
+      error=function(e) {
+        flog.warn(
+          "makeSingleQuery: Error querying %s:\n%s\nIgnoring.",
+          dbpath, e
+        )
+        NULL
+      }
+    )
     dbDisconnectWrapper(con)
     res
   }
