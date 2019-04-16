@@ -101,14 +101,10 @@ observeEvent(input$multiPlotsDoPlot, {
   db <- tryCatch(
     req(multiPlotActiveDb()),
     error=function(e) {
-      exptName <- pConfig$experiment
-      exptNames <- gsub(": Loading experiment...$", "", names(expts))
-      if(exptName %in% exptNames) {
-        errMsg <- "Experiment still loading. Please try again later."
-      } else {
-        errMsg <- sprintf('Cannot find files for experiment "%s"', exptName)
-      }
-      signalError(title="Cannot produce multiPlot", errMsg)
+      signalError(title="Cannot produce multiPlot", sprintf(
+        'Could not find files for database "%s" of experiment "%s"',
+        pConfig$database, multiPlotExperiment()$name
+      ))
       NULL
     }
   )
