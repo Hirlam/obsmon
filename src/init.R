@@ -252,19 +252,17 @@ runObsmonStandAlone <- function(cmdLineArgs) {
   } else {
     # Running the shinny app. The runAppHandlingBusyPort routine is defined in
     # the file src/shiny_wrappers.R
+    displayMode <- NULL
     if(cmdLineArgs$debug) {
+      Rprof()
       options(shiny.reactlog=TRUE)
-      runAppHandlingBusyPort(
-        appDir=obsmonSrcDir, defaultPort=cmdLineArgs$port,
-        launch.browser=cmdLineArgs$launch, quiet=TRUE,
-        display.mode="showcase"
-      )
-    } else {
-      runAppHandlingBusyPort(
-        appDir=obsmonSrcDir, defaultPort=cmdLineArgs$port,
-        launch.browser=cmdLineArgs$launch, quiet=TRUE
-      )
+      displayMode <- "showcase"
     }
+    runAppHandlingBusyPort(
+      appDir=obsmonSrcDir, defaultPort=cmdLineArgs$port,
+      launch.browser=cmdLineArgs$launch, quiet=TRUE,
+      display.mode=displayMode
+    )
   }
 }
 
