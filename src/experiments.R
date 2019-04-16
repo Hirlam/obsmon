@@ -23,11 +23,9 @@ getAvailableCycles <- function(db, dates) {
 pathToDataFileForDtg <- function(exptDir, dbType, dtg) {
   dbpath <- tryCatch({
       fname <- gsub('_sfc', '', paste0(dbType, '.db'), fixed=TRUE)
-      fpath <- file.path(exptDir, dbType, dtg, fname)
-      fpath
+      file.path(exptDir, dbType, dtg, fname)
     },
-    error=function(e) {flog.error(e); NULL},
-    warning=function(w) {flog.warn(w); fpath}
+    warning=function(w) character(0)
   )
   return(dbpath)
 }
