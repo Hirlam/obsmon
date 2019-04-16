@@ -239,6 +239,7 @@ configure <- function() {
 
 runObsmonStandAlone <- function(cmdLineArgs) {
   exitMsg <- paste(
+    "",
     "===============",
     "Exiting Obsmon.",
     "===============",

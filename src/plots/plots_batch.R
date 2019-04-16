@@ -6,11 +6,6 @@ configFillInBatchModeDefaults <- function(config) {
 
     if(is.null(bmConf$enable)) bmConf$enable <- TRUE
 
-    # Max number of attempts at producing the batch plots. Useful when
-    # experiments are still being initialised and may thus not be available
-    # yet when first trying to produce the plots.
-    if(length(bmConf$nRetriesMax)==0) bmConf$nRetriesMax <- 10
-
     # parentDir
     bmConf$parentDir <- normalizePath(trimws(bmConf$parentDir),mustWork=FALSE)
     if(isFALSE(startsWith(bmConf$parentDir, "/"))) {
@@ -119,60 +114,24 @@ makeBatchPlots <- function() {
       bConfigs[[length(bConfigs) + 1]] <- mpConfig
     }
   }
-  nConf <- length(bConfigs)
-  if(nConf==0) {
+  if(length(bConfigs)==0) {
     flog.warn("makeBatchPlots: Could not detect any batch-enabled multiPlot.")
     return(-1)
   }
 
-  exptsToInitialise <- getExptNamesNeededForBatch(obsmonConfig)
-  experiments <- initExperiments(exptsToInitialise)
-
-  nRetries <- rep(0, nConf)
-  finished <- rep(FALSE, nConf)
-  iConf <- 0
-  repeat {
-    if(all(finished)) break
-    iConf <- (iConf %% nConf) + 1
-    if(finished[iConf]) next
-    mpConf <- bConfigs[[iConf]]
-
+  expts <- initExperiments(getExptNamesNeededForBatch(obsmonConfig))
+  for(mpConf in bConfigs) {
     cat("\n")
-    if(resolved(experiments)[[mpConf$experiment]]) {
-      db <- experiments[[mpConf$experiment]]$dbs[[mpConf$database]]
-      if(is.null(db)) {
-        flog.error(
-          'multiPlot "%s": Could not find %s data for expt "%s". Skipping.',
-          mpConf$displayName, mpConf$database, mpConf$experiment
-        )
-        finished[iConf] <- TRUE
-        next
-      }
-    } else {
-      nRetriesMax <- bConfigs[[iConf]]$batchMode$nRetriesMax
-      if(nRetries[iConf]<nRetriesMax) {
-        nRetries[iConf] <- nRetries[iConf] + 1
-        flog.warn(
-          paste(
-            'multiPlot "%s": Experiment "%s" not yet initialised.',
-            'Retrying later (%d/%d)'
-          ),
-          mpConf$displayName, mpConf$experiment,
-          nRetries[iConf], nRetriesMax
-        )
-        Sys.sleep(1)
-      } else {
-        flog.error(
-          'multiPlot "%s": Batch plot failed after %d attempts. Skipping.',
-          mpConf$displayName, nRetries[iConf] + 1
-        )
-        finished[iConf] <- TRUE
-      }
+    db <- expts[[mpConf$experiment]]$dbs[[mpConf$database]]
+    if(is.null(db)) {
+      flog.error(
+        'multiPlot "%s"\n  > Could not find %s data for expt "%s". Skipping.',
+        mpConf$displayName, mpConf$database, mpConf$experiment
+      )
       next
     }
     flog.info('multiPlot "%s": Producing plots...', mpConf$displayName)
     makeOneMultiPlotInBatch(mpConf, exptDb=db)
-    finished[iConf] <- TRUE
     flog.info('Done with batch mode for multiPlot "%s"...',mpConf$displayName)
   }
 }
