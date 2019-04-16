@@ -91,9 +91,10 @@ experimentClass <- setRefClass("experiment",
     path="character",
     dbs="list",
     slugName=function() {slugify(name)},
+    hasData=function() {!is.null(unlist(.self$dbs))},
     guiName=function() {
       nameCompl <- character(0)
-      if(is.null(unlist(.self$dbs))) nameCompl <- "(no data found)"
+      if(!.self$hasData) nameCompl <- "(no data found)"
       return(trimws(paste(.self$name, nameCompl)))
     },
     cacheDir=function() {

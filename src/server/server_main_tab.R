@@ -26,9 +26,14 @@ if(length(expts)>0) {
   exptPlaceholder <- "Please select experiment"
   shinyjs::enable("experiment")
 }
-exptGuiNames <- lapply(expts, function(x) x$guiName)
-exptChoices <- lapply(expts, function(x) x$name)
-names(exptChoices) <- exptGuiNames
+
+labelNoData <- "Experiments for which no data could be read"
+exptChoices <- setNames(vector("list", length=2), c(" ", labelNoData))
+for(expt in expts) {
+  exptEntry <- structure(expt$name, names=expt$guiName)
+  if(expt$hasData) exptChoices[[" "]] <- c(exptChoices[[" "]], exptEntry)
+  else exptChoices[[labelNoData]] <- c(exptChoices[[labelNoData]], exptEntry)
+}
 updateSelectizeInput(session, "experiment",
   choices=exptChoices, options=list(placeholder=exptPlaceholder)
 )
