@@ -27,7 +27,7 @@ if(length(expts)>0) {
   shinyjs::enable("experiment")
 }
 
-labelNoData <- "Experiments for which no data could be read"
+labelNoData <- "Unavailable experiments"
 exptChoices <- setNames(vector("list", length=2), c(" ", labelNoData))
 for(expt in expts) {
   exptEntry <- structure(expt$name, names=expt$guiName)

@@ -11,11 +11,16 @@ if(!is.null(obsmonConfig$multiPlots)) {
   shinyjs::disable(selector="#multiPlotsMainArea li a[data-value=multiPlotsPlotlyTab]")
 }
 
-multiPlotChoices <- c()
+# Populate multiPlot choices in the UI
+mpLabelNoData <- "multiPlots for which data is unavailable"
+mpChoices <- setNames(vector("list", length=2), c(" ", mpLabelNoData))
 for(plotConfig in obsmonConfig$multiPlots) {
-  multiPlotChoices <- c(multiPlotChoices, plotConfig$displayName)
+  expt <- expts[[plotConfig$experiment]]
+  mpName <- plotConfig$displayName
+  if(expt$hasData) mpChoices[[" "]] <- c(mpChoices[[" "]], mpName)
+  else mpChoices[[mpLabelNoData]] <- c(mpChoices[[mpLabelNoData]], mpName)
 }
-updateSelectInput(session, "multiPlotTitle", choices=multiPlotChoices)
+updateSelectInput(session, "multiPlotTitle", choices=mpChoices)
 
 multiPlotConfigInfo <- eventReactive(input$multiPlotTitle, {
   pConfig <- NULL
