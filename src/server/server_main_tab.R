@@ -138,9 +138,8 @@ observeEvent({
 
 
 # Update available cycle choices when relevant fields change
-availableCycles <- reactiveVal()
-observe({
-  availableCycles(getAvailableCycles(req(activeDb()), req(selectedDates())))
+availableCycles <- reactive({
+  req(activeDb())$getAvailableCycles(req(selectedDates()))
 })
 observeEvent(availableCycles(), {
   updateSelectInputWrapper(session, "cycle", choices=req(availableCycles()))

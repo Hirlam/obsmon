@@ -8,18 +8,6 @@ getDtgs <- function(path, date=character(0)) {
   return(sort(dtgs))
 }
 
-getAvailableCycles <- function(db, dates) {
-  foundDtgs <- c()
-  for(date in dates) {
-    searchPattern <- sprintf("%s{1}[0-9]{2}", date)
-    newDtgs <- as.integer(dir(path=db$dir, pattern=searchPattern))
-    foundDtgs <- c(foundDtgs, newDtgs)
-  }
-  cycles <- c()
-  for(dtg in foundDtgs) cycles <- c(cycles, sprintf("%02d", dtg %% 100))
-  return(sort(unique(cycles)))
-}
-
 pathToDataFileForDtg <- function(exptDir, dbType, dtg) {
   dbpath <- tryCatch({
       fname <- gsub('_sfc', '', paste0(dbType, '.db'), fixed=TRUE)
@@ -68,15 +56,18 @@ obsmonDatabaseClass <- setRefClass("obsmonDatabase",
   methods=list(
     getDataFilePaths=function(selectedDtgs=NULL, assertExists=FALSE) {
        if(is.null(selectedDtgs)) selectedDtgs <- .self$dtgs
-
        # The filter below normally runs very quickly
        selectedDtgs <- selectedDtgs[selectedDtgs %in% .self$dtgs]
-
        rtn <- pathToDataFileForDtg(exptDir, dbType, selectedDtgs)
        # The file existence check can take a very long time depending on how
        # many there are or where they are located
        if(assertExists) rtn <- Filter(file.exists, rtn)
        return(rtn)
+    },
+    getAvailableCycles=function(dates) {
+      selecDtgs <- unlist(lapply(dates, partial(getDtgs, path=.self$dir)))
+      cycles <- lapply(selecDtgs, function(dtg) sprintf("%02d", dtg %% 100))
+      return(sort(unique(unlist(cycles))))
     }
   )
 )
