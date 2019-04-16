@@ -1,14 +1,11 @@
-getDtgs <- function(path) {
-  dtgs <- tryCatch({
-      foundDtgs <- as.integer(dir(path=path, pattern="[0-9]{10}"))
-      foundDtgs <- sort(unique(foundDtgs))
-      foundDtgs
-    },
-    error=function(e) {flog.error(e); integer(0)},
-    warning=function(w) {flog.warn(w); foundDtgs}
+getDtgs <- function(path, date=character(0)) {
+  searchPattern <- "[0-9]{10}"
+  if(length(date)>0) searchPattern <- sprintf("%s{1}[0-9]{2}", date)
+  dtgs <- tryCatch(
+    as.integer(dir(path=path, pattern=searchPattern)),
+    warning=function(w) integer(0)
   )
-  if(length(dtgs)==0) dtgs <- integer(0)
-  return(dtgs)
+  return(sort(dtgs))
 }
 
 getAvailableCycles <- function(db, dates) {
@@ -59,6 +56,7 @@ obsmonDatabaseClass <- setRefClass("obsmonDatabase",
     dtgs=function() {
       tDiffSec <- Sys.time() - dtgsLastUpdated
       rtn <- dtgsPrivate
+      # Update dtgs once every 60 seconds at most
       if(length(dtgsPrivate)==0 || tDiffSec>60) {
         rtn <- getDtgs(dir)
         dtgsPrivate <<- rtn
