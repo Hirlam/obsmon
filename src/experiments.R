@@ -1,13 +1,3 @@
-getDtgs <- function(path, date=character(0)) {
-  searchPattern <- "[0-9]{10}"
-  if(length(date)>0) searchPattern <- sprintf("%s{1}[0-9]{2}", date)
-  dtgs <- tryCatch(
-    as.integer(dir(path=path, pattern=searchPattern)),
-    warning=function(w) integer(0)
-  )
-  return(sort(dtgs))
-}
-
 dbType2DbDescription <- list(
   "ecma"="Upper Air (3D/4D-VAR) - Screening",
   "ccma"="Upper Air (3D/4D-VAR) - Minimization",
@@ -34,7 +24,7 @@ obsmonDatabaseClass <- setRefClass("obsmonDatabase",
       rtn <- dtgsPrivate
       # Update dtgs once every 60 seconds at most
       if(length(dtgsPrivate)==0 || tDiffSec>60) {
-        rtn <- getDtgs(dir)
+        rtn <- .self$getDtgs()
         dtgsPrivate <<- rtn
         dtgsLastUpdated <<- Sys.time()
       }
@@ -61,8 +51,14 @@ obsmonDatabaseClass <- setRefClass("obsmonDatabase",
       if(assertExists) dbPaths <- Filter(file.exists, dbPaths)
       return(dbPaths)
     },
+    getDtgs=function(dates=character(0)) {
+      searchPatts <- "[0-9]{10}"
+      if(length(dates)>0) searchPatts <- sprintf("%s{1}[0-9]{2}", dates)
+      rtn <- lapply(searchPatts, function(pt) dir(path=.self$dir, pattern=pt))
+      return(sort(as.integer(unlist(rtn))))
+    },
     getAvailableCycles=function(dates) {
-      selecDtgs <- unlist(lapply(dates, partial(getDtgs, path=.self$dir)))
+      selecDtgs <- .self$getDtgs(dates)
       cycles <- lapply(selecDtgs, function(dtg) sprintf("%02d", dtg %% 100))
       return(sort(unique(unlist(cycles))))
     }
