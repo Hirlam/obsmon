@@ -8,16 +8,6 @@ getDtgs <- function(path, date=character(0)) {
   return(sort(dtgs))
 }
 
-pathToDataFileForDtg <- function(exptDir, dbType, dtg) {
-  dbpath <- tryCatch({
-      fname <- gsub('_sfc', '', paste0(dbType, '.db'), fixed=TRUE)
-      file.path(exptDir, dbType, dtg, fname)
-    },
-    warning=function(w) character(0)
-  )
-  return(dbpath)
-}
-
 dbType2DbDescription <- list(
   "ecma"="Upper Air (3D/4D-VAR) - Screening",
   "ccma"="Upper Air (3D/4D-VAR) - Minimization",
@@ -55,14 +45,21 @@ obsmonDatabaseClass <- setRefClass("obsmonDatabase",
   ),
   methods=list(
     getDataFilePaths=function(selectedDtgs=NULL, assertExists=FALSE) {
-       if(is.null(selectedDtgs)) selectedDtgs <- .self$dtgs
-       # The filter below normally runs very quickly
-       selectedDtgs <- selectedDtgs[selectedDtgs %in% .self$dtgs]
-       rtn <- pathToDataFileForDtg(exptDir, dbType, selectedDtgs)
-       # The file existence check can take a very long time depending on how
-       # many there are or where they are located
-       if(assertExists) rtn <- Filter(file.exists, rtn)
-       return(rtn)
+      if(is.null(selectedDtgs)) selectedDtgs <- .self$dtgs
+      # The filter below normally runs very quickly
+      selectedDtgs <- selectedDtgs[selectedDtgs %in% .self$dtgs]
+
+      dbPaths <- tryCatch({
+        fname <- gsub('_sfc', '', paste0(.self$dbType, '.db'), fixed=TRUE)
+        file.path(.self$exptDir, .self$dbType, selectedDtgs, fname)
+        },
+        warning=function(w) character(0)
+      )
+
+      # The file existence check can take a very long time depending on how
+      # many there are or where they are located
+      if(assertExists) dbPaths <- Filter(file.exists, dbPaths)
+      return(dbPaths)
     },
     getAvailableCycles=function(dates) {
       selecDtgs <- unlist(lapply(dates, partial(getDtgs, path=.self$dir)))
@@ -81,7 +78,7 @@ experimentClass <- setRefClass("experiment",
     hasData=function() {!is.null(unlist(.self$dbs))},
     guiName=function() {
       nameCompl <- character(0)
-      if(!.self$hasData) nameCompl <- "(no data found)"
+      if(!.self$hasData) nameCompl <- "(could not read data)"
       return(trimws(paste(.self$name, nameCompl)))
     },
     cacheDir=function() {
