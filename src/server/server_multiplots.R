@@ -214,7 +214,7 @@ observeEvent(input$multiPlotsDoPlot, {
   catch(plotCleanup, function(e) {
     # This prevents printing the annoying "Unhandled promise error" msg when
     # plots are cancelled
-    if(!plotInterrupted()) flog.error(e)
+    if(!multiPlotInterrupted()) flog.error(e)
     NULL
   })
   # This NULL is necessary in order to avoid the future from blocking
