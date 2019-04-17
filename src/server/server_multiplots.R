@@ -130,7 +130,7 @@ observeEvent(input$multiPlotsDoPlot, {
   # All checks performed: We can now proceed with the multiPlot #
   ###############################################################
   # Prevent another plot from being requested
-  disableShinyInputs(input)
+  disableShinyInputs(input, pattern="^multiPlots*")
   shinyjs::hide("multiPlotsDoPlot")
 
   # Offer possibility to cancel multiPlot
@@ -206,7 +206,7 @@ observeEvent(input$multiPlotsDoPlot, {
     # Hide/show and disable/enable relevant inputs
     shinyjs::hide("multiPlotsCancelPlot")
     shinyjs::show("multiPlotsDoPlot")
-    enableShinyInputs(input)
+    enableShinyInputs(input, pattern="^multiPlots*")
     # Printing stdout produced during assync plot, if any
     if(isTRUE(trimws(tmpStdOut)!="")) cat(paste0(tmpStdOut, "\n"))
     close(tmpStdOutCon)
