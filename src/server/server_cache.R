@@ -181,7 +181,7 @@ reloadInfoFromCache <- eventReactive({
   Sys.time()
 },
   ignoreNULL=FALSE
-) %>% throttle(2000)
+) %>% throttle(1000)
 
 # Keep track of whether selected DTGs are cached or not
 observeEvent(reloadInfoFromCache(), {
