@@ -3,7 +3,7 @@
 ############################################################################
 
 # Show multiPlots tab if multiPlots are available
-if(!is.null(obsmonConfig$multiPlots)) {
+if(length(obsmonConfig$multiPlots)>0) {
   shinyjs::show(selector="#appNavbarPage li a[data-value=multiPlotsTab]")
   # Hide plotly output tab, as the multiplot outputs are generated dinamically
   # and can thus be included in the regular tab
@@ -12,7 +12,7 @@ if(!is.null(obsmonConfig$multiPlots)) {
 }
 
 # Populate multiPlot choices in the UI
-mpLabelNoData <- "multiPlots for which data is unavailable"
+mpLabelNoData <- "Unavailable multiPlots"
 mpChoices <- setNames(vector("list", length=2), c(" ", mpLabelNoData))
 for(plotConfig in obsmonConfig$multiPlots) {
   expt <- expts[[plotConfig$experiment]]
