@@ -82,11 +82,11 @@ experimentClass <- setRefClass("experiment",
     }
   ),
   methods=list(
-    initialize=function(name, path, dbTypes=dbTypesRecognised) {
-      .self$name <- name
-      .self$path <- path
+    initialize=function(name=NULL, path=NULL, dbTypes=dbTypesRecognised) {
+      .self$name <- ifelse(length(name)>0, as.character(name), character(0))
+      .self$path <- ifelse(length(path)>0, as.character(path), character(0))
       .self$dbs <- sapply(dbTypes, function(dbType) {
-        dbDir <- file.path(path, dbType)
+        dbDir <- file.path(.self$path, dbType)
         if(!isTRUE(file.access(dbDir, 4)==0)) {
           flog.debug("Cannot read dir %s", dbDir)
           return(NULL)
