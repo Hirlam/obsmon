@@ -1,9 +1,14 @@
-dbType2DbDescription <- list(
-  "ecma"="Upper Air (3D/4D-VAR) - Screening",
-  "ccma"="Upper Air (3D/4D-VAR) - Minimization",
-  "ecma_sfc"="Surface (CANARI)"
-)
-dbTypesRecognised <- names(dbType2DbDescription)
+dbTypesRecognised <- c("ecma", "ccma", "ecma_sfc")
+dbType2DbDescription <- function(dbType) {
+  dbType <- as.character(dbType)
+  rtn <- switch(dbType,
+    "ecma"="Upper Air (3D/4D-VAR) - Screening",
+    "ccma"="Upper Air (3D/4D-VAR) - Minimization",
+    "ecma_sfc"="Surface (CANARI)",
+    dbType
+  )
+  return(rtn)
+}
 
 obsmonDatabaseClass <- setRefClass("obsmonDatabase",
   fields=list(
@@ -71,7 +76,12 @@ experimentClass <- setRefClass("experiment",
     path="character",
     dbs="list",
     slugName=function() {slugify(name)},
-    hasData=function() {!is.null(unlist(.self$dbs))},
+    hasData=function() {
+      for(db in .self$dbs) {
+        if(dir.exists(db$dir)) return(TRUE)
+      }
+      return(FALSE)
+    },
     guiName=function() {
       nameCompl <- character(0)
       if(!.self$hasData) nameCompl <- "(could not read data)"
@@ -87,10 +97,6 @@ experimentClass <- setRefClass("experiment",
       .self$path <- ifelse(length(path)>0, as.character(path), character(0))
       .self$dbs <- sapply(dbTypes, function(dbType) {
         dbDir <- file.path(.self$path, dbType)
-        if(!isTRUE(file.access(dbDir, 4)==0)) {
-          flog.debug("Cannot read dir %s", dbDir)
-          return(NULL)
-        }
         obsmonDatabaseClass(dbType=dbType, dir=dbDir, cacheDir=.self$cacheDir)
       })
     }

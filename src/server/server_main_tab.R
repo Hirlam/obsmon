@@ -41,17 +41,16 @@ shinyjs::hide(id="loading-content", anim=TRUE, animType="fade")
 shinyjs::show("app-content")
 
 # Update database options according to chosen experiment
-observe({
+observeEvent({input$experiment}, {
+  disableShinyInputs(input, except=c("experiment", "^multiPlots*"))
   expDbs <- expts[[req(input$experiment)]]$dbs
   choices <- list()
-  for(dbType in names(dbType2DbDescription)) {
-    if(is.null(expDbs[[dbType]])) next
-    choices[[dbType2DbDescription[[dbType]]]] <- dbType
+  for(db in expDbs) {
+    if(!isTRUE(db$hasData)) next
+    choices[[dbType2DbDescription(db$dbType)]] <- db$dbType
   }
-
   updateSelectInputWrapper(session, "odbBase", choices=choices)
-  if(length(choices)==0) disableShinyInputs(input, except=c("experiment", "^multiPlots*"))
-  else enableShinyInputs(input, except="^multiPlots*")
+  if(length(choices)>0) enableShinyInputs(input, except="^multiPlots*")
 })
 
 activeDb <- reactive(expts[[req(input$experiment)]]$dbs[[req(input$odbBase)]])
