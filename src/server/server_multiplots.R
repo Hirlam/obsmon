@@ -7,18 +7,23 @@ if(length(obsmonConfig$multiPlots)>0) {
   shinyjs::show(selector="#appNavbarPage li a[data-value=multiPlotsTab]")
   # Hide plotly output tab, as the multiplot outputs are generated dinamically
   # and can thus be included in the regular tab
-  shinyjs::hide(selector="#multiPlotsMainArea li a[data-value=multiPlotsPlotlyTab]")
-  shinyjs::disable(selector="#multiPlotsMainArea li a[data-value=multiPlotsPlotlyTab]")
+  jsSelec <- "#multiPlotsMainArea li a[data-value=multiPlotsPlotlyTab]"
+  for(jsFunc in c(shinyjs::hide, shinyjs::disable)) jsFunc(selector=jsSelec)
 }
 
 # Populate multiPlot choices in the UI
-mpLabelNoData <- "Unavailable multiPlots"
-mpChoices <- setNames(vector("list", length=2), c(" ", mpLabelNoData))
+mpLabelUnavExpts <- "Unavailable multiPlots"
+mpChoices <- setNames(vector("list", length=2), c(" ", mpLabelUnavExpts))
 for(plotConfig in obsmonConfig$multiPlots) {
   expt <- expts[[plotConfig$experiment]]
   mpName <- plotConfig$displayName
-  if(expt$hasData) mpChoices[[" "]] <- c(mpChoices[[" "]], mpName)
-  else mpChoices[[mpLabelNoData]] <- c(mpChoices[[mpLabelNoData]], mpName)
+  if(isTRUE(expt$hasData)) mpChoices[[1]] <- c(mpChoices[[1]], mpName)
+  else mpChoices[[2]] <- c(mpChoices[[2]], mpName)
+}
+if(length(mpChoices[[1]])==0) {
+  mpChoices[[1]] <- structure(
+    " ", names="ERROR: Required experiments not loaded!"
+  )
 }
 updateSelectInput(session, "multiPlotTitle", choices=mpChoices)
 

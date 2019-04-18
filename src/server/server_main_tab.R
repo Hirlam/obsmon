@@ -17,18 +17,20 @@ output$showCacheOptions <- renderText({
 outputOptions(output, "showCacheOptions", suspendWhenHidden=FALSE)
 
 # Populate experiment choices
-exptPlaceholder <- "ERROR: Could not read experiments"
-if(length(expts)>0) {
-  exptPlaceholder <- "Please select experiment"
-  shinyjs::enable("experiment")
-}
-
-labelNoData <- "Unavailable experiments"
-exptChoices <- setNames(vector("list", length=2), c(" ", labelNoData))
+labelUnavExpts <- "Unavailable experiments"
+exptChoices <- setNames(vector("list", length=2), c(" ", labelUnavExpts))
 for(expt in expts) {
   exptEntry <- structure(expt$name, names=expt$guiName)
-  if(expt$hasData) exptChoices[[" "]] <- c(exptChoices[[" "]], exptEntry)
-  else exptChoices[[labelNoData]] <- c(exptChoices[[labelNoData]], exptEntry)
+  if(isTRUE(expt$hasData)) exptChoices[[1]] <- c(exptChoices[[1]], exptEntry)
+  else exptChoices[[2]] <- c(exptChoices[[2]], exptEntry)
+}
+exptPlaceholder <- "Please select experiment"
+if(length(exptChoices[[1]])==0) {
+  exptPlaceholder <- "ERROR: No experiment data found!"
+  if(sum(lengths(exptChoices))==0) {
+    exptPlaceholder <- "ERROR: No experiment configured!"
+  }
+  exptChoices[[1]] <- structure(" ", names=exptPlaceholder)
 }
 updateSelectizeInput(session, "experiment",
   choices=exptChoices, options=list(placeholder=exptPlaceholder)
