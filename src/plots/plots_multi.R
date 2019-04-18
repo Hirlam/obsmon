@@ -175,7 +175,7 @@ multiPlotExptValid <- function(plotConfig) {
   valid <- isTRUE(expt %in% toLowerTrimAndSingleSpaces(exptNamesInConfig))
   if(!valid) {
     flog.error(
-      'multiPlot "%s": experiment "%s" not recognised',
+      '\n  multiPlot "%s": experiment "%s" not recognised',
       plotConfig$displayName, plotConfig$experiment
     )
   }
@@ -187,7 +187,7 @@ multiPlotDbValid <- function(plotConfig) {
   valid <- isTRUE(db %in% tolower(dbTypesRecognised))
   if(!valid) {
     flog.error(
-      'multiPlot "%s": database "%s" not recognised',
+      '\n  multiPlot "%s": database "%s" not recognised',
       plotConfig$displayName, plotConfig$database
     )
   }
@@ -199,7 +199,7 @@ multiPlotPlotTypeValid <- function(plotConfig) {
   valid <- isTRUE(pType %in% toLowerTrimAndSingleSpaces(names(plotTypesFlat)))
   if(!valid) {
     flog.error(
-      'multiPlot "%s": plotType "%s" not recognised',
+      '\n  multiPlot "%s": plotType "%s" not recognised',
       plotConfig$displayName, plotConfig$plotType
     )
   }
@@ -224,7 +224,7 @@ datesCompatibleWithPlotType <- function(pConfig) {
     }
   }
   if(!compatible) {
-    flog.error('multiPlot "%s": %s', pConfig$displayName, msg)
+    flog.error('\n  multiPlot "%s": %s', pConfig$displayName, msg)
   }
   return(compatible)
 }
@@ -276,7 +276,7 @@ multiPlotsValidateConfig <- function(config) {
 
     if(!validConfig) {
       flog.warn(
-        'Failed to initialise multiPlot "%s". It will be ignored.',
+        '\n  multiPlot "%s": Failed to initialise. It will be ignored.',
         pc$displayName
       )
       config$multiPlots[[iConfig]] <- NA
@@ -412,7 +412,7 @@ multiPlotsValidateConfig <- function(config) {
         }
       } else if(!is.null(stationsConfig)) {
         pc$stations[[obname]] <- NULL
-        msg <- paste0('multiPlot "',pc$displayName,'": Plot "',pc$plotType,
+        msg<-paste0('\n  multiPlot "',pc$displayName,'": Plot "',pc$plotType,
           '" does not support station choices. Ignoring stations.'
         )
         flog.warn(msg)
@@ -426,8 +426,11 @@ multiPlotsValidateConfig <- function(config) {
 
 
   if(exists("invalidExpts")) {
-    msg <- "multiPlots: Please choose your experiment from:"
-    for(exptName in exptNamesInConfig) msg <- paste0(msg, "\n  > ", exptName)
+    msg <- "multiPlots: Required experiments not loaded!"
+    if(length(exptNamesInConfig)>0) {
+      msg <- "multiPlots: Please choose your experiment from:"
+      for(exptName in exptNamesInConfig) msg <- paste0(msg,"\n  > ",exptName)
+    }
     flog.warn(msg)
   }
   if(exists("invalidPlotNames")) {

@@ -124,7 +124,6 @@ fillInDefault <- function(config, key, default) {
 }
 
 getSuitableCacheDirDefault <- function() {
-
   cacheDirPath <- NA
   homeCacheDirPath <- file.path(homeAuxDir, "experiments_cache")
 
@@ -179,18 +178,18 @@ getValidConfigFilePath <- function(verbose=FALSE) {
 
   if(anyNA(configPath)) {
     msg <- paste0(
-      'Config file "', configFileDefBasename, '" not found.\n\n',
-      "Please put the config file under one of the following dir(s):\n"
+      'Config file "', configFileDefBasename, '" not found!\n',
+      "  Please put the config file under one of the following dir(s):\n"
     )
     for (fPath in confOrder) {
       fDir <- dirname(fPath)
       if(file.access(dirname(fPath), 2) != 0) next
-      msg <- paste0(msg, "  > ", fDir, "\n")
+      msg <- paste0(msg, "    > ", fDir, "\n")
     }
     msg <- paste0(msg,
-      "or use the environment variable OBSMON_CONFIG_FILE to provide the\n",
-      "full path (including file name) to an existing configuration file.\n\n",
-      "A config file template can be found at:\n",
+      "  or use the environment variable OBSMON_CONFIG_FILE to provide the\n",
+      "  full path (including file name) to an existing configuration file.",
+      "\n\n  A config file template can be found at:\n",
       "  > ", exampleConfigFilePath, "\n\n"
     )
     stop(msg)
