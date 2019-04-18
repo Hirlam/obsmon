@@ -34,7 +34,7 @@ multiPlotConfigInfo <- eventReactive(input$multiPlotTitle, {
 
 multiPlotExperiment <- eventReactive(multiPlotConfigInfo(), {
   pConfig <- multiPlotConfigInfo()
-  expts[[pConfig$experiment]]
+  expts[[req(pConfig$experiment)]]
 },
   ignoreNULL=FALSE
 )
