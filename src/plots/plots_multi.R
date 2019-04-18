@@ -138,11 +138,6 @@ prepareMultiPlots <- function(
 #############################
 # Validating setup of plots #
 #############################
-exptNamesInConfig <- c()
-for(config in obsmonConfig$experiments) {
-  exptNamesInConfig <- c(exptNamesInConfig, config$displayName)
-}
-
 dateInputFormat <- "%Y-%m-%d"
 dateIsValid <- function(date, format=dateInputFormat) {
   tryCatch(!anyNA(as.Date(date, format)),

@@ -228,11 +228,14 @@ assertCacheDirWritable <- function(config, verbose=FALSE) {
 }
 
 configure <- function() {
-  if (!exists("obsmonConfig")) {
+  if(!exists("obsmonConfig")) {
     config <- readConfig()
     assertCacheDirWritable(config, verbose=TRUE)
     setPackageOptions(config)
     obsmonConfig <<- config
+    confExpts <- obsmonConfig$experiments
+    exptNamesInConfig <<- unlist(lapply(confExpts, function(x) x$displayName))
+    if(length(exptNamesInConfig)==0) flog.error("No experiment configured!")
     sourceObsmonFiles()
   }
 }
