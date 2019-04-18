@@ -148,19 +148,24 @@ updateCheckboxGroup <- function(session, inputId, choices, select="NORMAL") {
 }
 
 # Enabling/disabling UI elements
+grepFilter <- function(x, pattern=NULL, except=NULL) {
+  rtn <- x
+  if(length(pattern)>0) {
+    for(patt in pattern) rtn <- grep(patt, rtn, value=TRUE)
+  }
+  if(length(except)>0) {
+    for(patt in except) rtn <- rtn[!(rtn %in% grep(patt, rtn, value=TRUE))]
+  }
+  return(rtn)
+}
+
 disableShinyInputs <- function(input, pattern=NULL, except=NULL) {
   inpNames <- isolate(names(reactiveValuesToList(input)))
-  if(!is.null(pattern)) inpNames <- grep(pattern, inpNames, value=TRUE)
-  if(!is.null(except)) {
-    inpNames <- inpNames[!(inpNames %in% grep(except, inpNames, value=TRUE))]
-  }
+  inpNames <- grepFilter(inpNames, pattern, except)
   for(inp in inpNames) shinyjs::disable(inp)
 }
 enableShinyInputs <- function(input, pattern=NULL, except=NULL) {
   inpNames <- isolate(names(reactiveValuesToList(input)))
-  if(!is.null(pattern)) inpNames <- grep(pattern, inpNames, value=TRUE)
-  if(!is.null(except)) {
-    inpNames <- inpNames[!(inpNames %in% grep(except, inpNames, value=TRUE))]
-  }
+  inpNames <- grepFilter(inpNames, pattern, except)
   for(inp in inpNames) shinyjs::enable(inp)
 }

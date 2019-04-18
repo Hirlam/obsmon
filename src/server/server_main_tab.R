@@ -1,10 +1,6 @@
 ############################################################################
 #                          Handling of main tab                            #
 ############################################################################
-# Start GUI with all inputs disabled.
-# They will be enabled once experiments are loaded
-disableShinyInputs(input)
-
 # Deciding whether to show or hide cache-related options.
 # It is advisable not to show them by default -- especially when running on
 # a web server for multiple users, as these options cause changes in the
@@ -52,8 +48,8 @@ observe({
   }
 
   updateSelectInputWrapper(session, "odbBase", choices=choices)
-  if(length(choices)==0) disableShinyInputs(input, except="experiment")
-  else enableShinyInputs(input)
+  if(length(choices)==0) disableShinyInputs(input, except=c("experiment", "^multiPlots*"))
+  else enableShinyInputs(input, except="^multiPlots*")
 })
 
 activeDb <- reactive(expts[[req(input$experiment)]]$dbs[[req(input$odbBase)]])
