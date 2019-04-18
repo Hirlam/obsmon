@@ -140,6 +140,7 @@ getSuitableCacheDirDefault <- function() {
 }
 
 fillInDefaults <- function(config) {
+  if(length(config)==0) config <- list(general=list())
   config <- fillInDefault(config, "cacheDir", getSuitableCacheDirDefault())
   config <- fillInDefault(config, "logLevel", "WARN")
   config <- fillInDefault(config, "initCheckDataExists", FALSE)
@@ -192,7 +193,8 @@ getValidConfigFilePath <- function(verbose=FALSE) {
       "\n\n  A config file template can be found at:\n",
       "  > ", exampleConfigFilePath, "\n\n"
     )
-    stop(msg)
+    flog.error("getValidConfigFilePath: %s", msg)
+    return(character(0))
   } 
 
   if(verbose) flog.info(paste("Config file found:", configPath, "\n"))
@@ -201,8 +203,14 @@ getValidConfigFilePath <- function(verbose=FALSE) {
 
 readConfig <- function() {
   configPath <- getValidConfigFilePath(verbose=TRUE)
-  config <- fillInDefaults(parseTOML(configPath))
-  config
+  config <- NULL
+  if(length(configPath)>0) {
+    config <- tryCatch(
+      parseTOML(configPath),
+      warning=function(w) {flog.error(w); NULL}
+    )
+  }
+  return(fillInDefaults(config))
 }
 
 assertCacheDirWritable <- function(config, verbose=FALSE) {
