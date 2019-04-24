@@ -20,6 +20,18 @@ multiPlotsGenId <- function(iPlot, type=NULL) {
 #################################################
 # Helper functions to produce plots in server.R #
 #################################################
+getMultiPlotConfig <- function(name, config=obsmonConfig) {
+  # Helper function to retrieve the appropriate piece of the config file
+  # given the name of a multiPlot
+  rtn <- NULL
+  for(pConf in config$multiPlots) {
+    if(!(pConf$displayName==name)) next
+    rtn <- pConf
+    break
+  }
+  return(rtn)
+}
+
 multiPlotsMakeShinyInputs <- function(pConfig) {
   # Create a "shiny input"-like list that will be passed to the
   # ordinary plotting routines

@@ -27,30 +27,6 @@ if(length(mpChoices[[1]])==0) {
 }
 updateSelectInput(session, "multiPlotTitle", choices=mpChoices)
 
-multiPlotConfigInfo <- eventReactive(input$multiPlotTitle, {
-  pConfig <- NULL
-  for(pConf in obsmonConfig$multiPlots) {
-    if(!pConf$displayName==input$multiPlotTitle) next
-    pConfig <- pConf
-    break
-  }
-  pConfig
-})
-
-multiPlotExperiment <- eventReactive(multiPlotConfigInfo(), {
-  pConfig <- multiPlotConfigInfo()
-  expts[[req(pConfig$experiment)]]
-},
-  ignoreNULL=FALSE
-)
-
-multiPlotActiveDb <- eventReactive(multiPlotExperiment(), {
-  pConfig <- multiPlotConfigInfo()
-  dbType <- pConfig$database
-  multiPlotExperiment()$dbs[[dbType]]
-},
-  ignoreNULL=FALSE
-)
 
 # Management of multiPlot progress bar
 multiPlotsProgressFile <- reactiveVal(NULL)
@@ -107,18 +83,20 @@ observeEvent(input$multiPlotsDoPlot, {
   # Erase any plot currently on display
   multiPlot(NULL)
 
-  pConfig <- multiPlotConfigInfo()
-  db <- tryCatch(
-    req(multiPlotActiveDb()),
+  pConfig <- getMultiPlotConfig(input$multiPlotTitle)
+  db <- req(tryCatch({
+      rtn <- expts[[req(pConfig$experiment)]]$dbs[[req(pConfig$database)]]
+      req(isTRUE(dir.exists(rtn$dir)))
+      rtn
+    },
     error=function(e) {
       signalError(title="Cannot produce multiPlot", sprintf(
         'Could not find files for database "%s" of experiment "%s"',
-        pConfig$database, multiPlotExperiment()$name
+        pConfig$database, pConfig$experiment
       ))
       NULL
     }
-  )
-  req(db)
+  ))
 
   # Making shiny-like inputs for each individual plot, to be passed to the
   # regular obsmon plotting routines
