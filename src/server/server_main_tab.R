@@ -16,44 +16,71 @@ output$showCacheOptions <- renderText({
 })
 outputOptions(output, "showCacheOptions", suspendWhenHidden=FALSE)
 
-# Populate experiment choices
-labelUnavExpts <- "Unavailable experiments"
-exptChoices <- setNames(vector("list", length=2), c(" ", labelUnavExpts))
-for(expt in expts) {
-  exptEntry <- structure(expt$name, names=expt$guiName)
-  if(isTRUE(expt$hasData)) exptChoices[[1]] <- c(exptChoices[[1]], exptEntry)
-  else exptChoices[[2]] <- c(exptChoices[[2]], exptEntry)
-}
-exptPlaceholder <- "Please select experiment"
-if(length(exptChoices[[1]])==0) {
-  exptPlaceholder <- "ERROR: No experiment data found!"
-  if(sum(lengths(exptChoices))==0) {
-    exptPlaceholder <- "ERROR: No experiment configured!"
+# Initial separation between available and unavailable experiments.
+avExpts <- reactiveVal()
+unavExpts <- reactiveVal()
+isolate({
+  for(expt in expts) {
+    if(isTRUE(expt$hasData)) avExpts(c(avExpts(), expt$name))
+    else unavExpts(c(unavExpts(), expt$name))
   }
-  exptChoices[[1]] <- structure(" ", names=exptPlaceholder)
-}
-updateSelectizeInput(session, "experiment",
-  choices=exptChoices, options=list(placeholder=exptPlaceholder)
-)
+})
+exptChoices <- reactive(list(av=avExpts(),unav=unavExpts())) %>% throttle(500)
+
+observeEvent(exptChoices(), {
+  choices <- vector("list", length=2)
+  # Present expt choices in same order as written in config file
+  for(expt in expts) {
+    newExptEntry <- list(expt$name); names(newExptEntry) <- expt$guiName
+    if(expt$name %in% avExpts()) choices[[1]] <- c(choices[[1]], newExptEntry)
+    else choices[[2]] <- c(choices[[2]], newExptEntry)
+  }
+
+  pHolder <- "Please select experiment"
+  if(length(choices[[1]])==0) {
+    pHolder <- "ERROR: No experiment data found!"
+    if(length(choices[[2]])==0) pHolder <- "ERROR: No experiment configured!"
+    choices[[1]] <- list(" "); names(choices[[1]]) <- pHolder
+  }
+  names(choices) <- c(" ", "Unavailable experiments")
+
+  selectedExpt <- input$experiment
+  if(selectedExpt=="") selectedExpt <- NULL
+  updateSelectizeInput(session, "experiment",
+    choices=choices, options=list(placeholder=pHolder),
+    selected=selectedExpt
+  )
+})
 
 # Hide "Loading Obsmon" screen and show the app
 shinyjs::hide(id="loading-content", anim=TRUE, animType="fade")
 shinyjs::show("app-content")
 
 # Update database options according to chosen experiment
-observeEvent({input$experiment}, {
+observeEvent(input$experiment, {
   disableShinyInputs(input, except=c("experiment", "^multiPlots*"))
-  expDbs <- expts[[req(input$experiment)]]$dbs
+  expt <- expts[[input$experiment]]
   choices <- list()
-  for(db in expDbs) {
+  for(db in expt$dbs) {
     if(!isTRUE(db$hasData)) next
     choices[[dbType2DbDescription(db$dbType)]] <- db$dbType
   }
   updateSelectInputWrapper(session, "odbBase", choices=choices)
-  if(length(choices)>0) enableShinyInputs(input, except="^multiPlots*")
-})
 
-activeDb <- reactive(expts[[req(input$experiment)]]$dbs[[req(input$odbBase)]])
+  # Update experiment choices if disponibility changes
+  foundUsableDb <- length(choices)>0
+  if(foundUsableDb) {
+    if(req(expt$name) %in% unavExpts()) {
+      unavExpts(unavExpts()[!(unavExpts()==expt$name)])
+      avExpts(c(avExpts(), expt$name))
+    }
+    enableShinyInputs(input, except="^multiPlots*")
+  } else if(req(expt$name) %in% avExpts()) {
+    avExpts(avExpts()[!(avExpts()==expt$name)])
+    unavExpts(c(unavExpts(), expt$name))
+  }
+})
+activeDb <- reactive(req(expts[[input$experiment]])$dbs[[req(input$odbBase)]])
 
 # DTG-related reactives and observers
 # Update available choices of dates when changing active database

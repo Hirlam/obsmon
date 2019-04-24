@@ -11,22 +11,45 @@ if(length(obsmonConfig$multiPlots)>0) {
   for(jsFunc in c(shinyjs::hide, shinyjs::disable)) jsFunc(selector=jsSelec)
 }
 
-# Populate multiPlot choices in the UI
-mpLabelUnavExpts <- "Unavailable multiPlots"
-mpChoices <- setNames(vector("list", length=2), c(" ", mpLabelUnavExpts))
-for(plotConfig in obsmonConfig$multiPlots) {
-  expt <- expts[[plotConfig$experiment]]
-  mpName <- plotConfig$displayName
-  if(isTRUE(expt$hasData)) mpChoices[[1]] <- c(mpChoices[[1]], mpName)
-  else mpChoices[[2]] <- c(mpChoices[[2]], mpName)
-}
-if(length(mpChoices[[1]])==0) {
-  mpChoices[[1]] <- structure(
-    " ", names="ERROR: Required experiments not loaded!"
+# Populate multiPlot choices in the UI.
+# Separate the available multiPlots from the unavailable ones to make it
+# easier for the users, and keep checking for availability changes.
+avMultiPlots <- reactiveVal()
+unavMultiPlots <- reactiveVal()
+mpChoices <- reactive(list(
+  " "=avMultiPlots(),
+  "Unavailable multiPlots (required data not found)"=unavMultiPlots()
+)) %>% throttle(500)
+observeEvent({
+  exptChoices()
+  input$multiPlotTitle
+  }, {
+  newAv <- c(); newUnav <- c()
+  for(plotConfig in obsmonConfig$multiPlots) {
+    expt <- expts[[plotConfig$experiment]]
+    db <- tryCatch(
+      expt$dbs[[plotConfig$database]],
+      warning=function(w) {flog.warn(w); NULL}
+    )
+    mpName <- plotConfig$displayName
+    if(isTRUE(dir.exists(db$dir))) newAv <- c(newAv, mpName)
+    else newUnav <- c(newUnav, mpName)
+  }
+  if(length(newAv)==0) {
+    newAv <- structure(
+      " ", names="ERROR: Required experiment databases not available!"
+    )
+  }
+  avMultiPlots(newAv)
+  unavMultiPlots(newUnav)
+})
+observeEvent(mpChoices(), {
+  mpCurrentSelected <- input$multiPlotTitle
+  if(mpCurrentSelected=="") mpCurrentSelected <- NULL
+  updateSelectInput(session, "multiPlotTitle", choices=mpChoices(),
+    selected=mpCurrentSelected
   )
-}
-updateSelectInput(session, "multiPlotTitle", choices=mpChoices)
-
+})
 
 # Management of multiPlot progress bar
 multiPlotsProgressFile <- reactiveVal(NULL)
