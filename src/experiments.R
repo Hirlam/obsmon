@@ -25,13 +25,14 @@ obsmonDatabaseClass <- setRefClass("obsmonDatabase",
     dtgsPrivate="numeric",
     dtgsLastUpdated="POSIXt",
     dtgs=function() {
-      tDiffSec <- Sys.time() - dtgsLastUpdated
-      rtn <- dtgsPrivate
-      # Update dtgs once every 60 seconds at most
-      if(length(dtgsPrivate)==0 || tDiffSec>60) {
+      tDiffSec <- Sys.time() - .self$dtgsLastUpdated
+      rtn <- .self$dtgsPrivate
+      # Update dtgs at most once every 1 second to avoid unnecessary
+      # repeated function calls (since other methods also use dtgs)
+      if(length(.self$dtgsPrivate)==0 || isTRUE(tDiffSec>1)) {
         rtn <- .self$getDtgs()
-        dtgsPrivate <<- rtn
-        dtgsLastUpdated <<- Sys.time()
+        .self$dtgsPrivate <- rtn
+        .self$dtgsLastUpdated <- Sys.time()
       }
       return(rtn)
     },
@@ -108,16 +109,17 @@ initExperiments <- function(exptNames=NULL) {
   experiments <- list()
   slugExptNames <- c()
   for(config in obsmonConfig$experiments) {
-    newExpt <- experimentClass(name=config$displayName, path=config$path)
-    if(!is.null(exptNames) && !(newExpt$slugName %in% exptNames)) next
-    if(newExpt$slugName %in% slugExptNames) {
+    slugName <- slugify(config$displayName)
+    if(!is.null(exptNames) && !(slugName %in% exptNames)) next
+    if(slugName %in% slugExptNames) {
       flog.error(
         'Conflicting name for experiment "%s". Skipping additional entry.',
-        newExpt$slugName
+        slugName
       )
       next
     }
-    slugExptNames <- c(slugExptNames, newExpt$slugName)
+    slugExptNames <- c(slugExptNames, slugName)
+    newExpt <- experimentClass(name=config$displayName, path=config$path)
     experiments[[newExpt$name]] <- newExpt
   }
   experiments
