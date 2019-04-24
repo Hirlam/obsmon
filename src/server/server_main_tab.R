@@ -16,26 +16,28 @@ output$showCacheOptions <- renderText({
 })
 outputOptions(output, "showCacheOptions", suspendWhenHidden=FALSE)
 
-# Initial separation between available and unavailable experiments.
+# Populate experiment choices
 avExpts <- reactiveVal()
 unavExpts <- reactiveVal()
-isolate({
+exptChoices <- reactive(list(
+  " "=avExpts(),
+  "Unavailable experiments"=unavExpts())
+) %>% throttle(500)
+currentExpt <- reactiveVal()
+observeEvent(input$experiment, {
+  # Update experiments' data availability status
+  newAv <- c(); newUnav <- c()
   for(expt in expts) {
-    if(isTRUE(expt$hasValidDbDirs)) avExpts(c(avExpts(), expt$name))
-    else unavExpts(c(unavExpts(), expt$name))
+    exptEntry <- list(expt$name); names(exptEntry) <- expt$guiName
+    if(isTRUE(expt$hasValidDbDirs)) newAv <- c(newAv, exptEntry)
+    else newUnav <- c(newUnav, exptEntry)
   }
+  avExpts(newAv)
+  unavExpts(newUnav)
+  currentExpt(req(expts[[input$experiment]]))
 })
-exptChoices <- reactive(list(av=avExpts(),unav=unavExpts())) %>% throttle(500)
-
 observeEvent(exptChoices(), {
-  choices <- vector("list", length=2)
-  # Present expt choices in same order as written in config file
-  for(expt in expts) {
-    newExptEntry <- list(expt$name); names(newExptEntry) <- expt$guiName
-    if(expt$name %in% avExpts()) choices[[1]] <- c(choices[[1]], newExptEntry)
-    else choices[[2]] <- c(choices[[2]], newExptEntry)
-  }
-
+  choices <- exptChoices()
   pHolder <- "Please select experiment"
   if(length(choices[[1]])==0) {
     pHolder <- "ERROR: No experiment data found!"
@@ -51,36 +53,26 @@ observeEvent(exptChoices(), {
     selected=selectedExpt
   )
 })
-
-# Hide "Loading Obsmon" screen and show the app
-shinyjs::hide(id="loading-content", anim=TRUE, animType="fade")
-shinyjs::show("app-content")
-
-# Update database options according to chosen experiment
-observeEvent(input$experiment, {
-  disableShinyInputs(input, except=c("experiment", "^multiPlots*"))
-  expt <- expts[[input$experiment]]
+# Update dB choices for currently selected experiment
+observeEvent(currentExpt(), {
+  disableShinyInputs(input, except=c("experiment", "odbBase", "^multiPlots*"))
+  expt <- currentExpt()
   choices <- list()
   for(db in expt$dbs) {
     if(!isTRUE(dir.exists(db$dir))) next
     choices[[dbType2DbDescription(db$dbType)]] <- db$dbType
   }
+  if(length(choices)>0) enableShinyInputs(input, except="^multiPlots*")
   updateSelectInputWrapper(session, "odbBase", choices=choices)
-
-  # Update experiment choices if disponibility changes
-  foundUsableDb <- length(choices)>0
-  if(foundUsableDb) {
-    if(req(expt$name) %in% unavExpts()) {
-      unavExpts(unavExpts()[!(unavExpts()==expt$name)])
-      avExpts(c(avExpts(), expt$name))
-    }
-    enableShinyInputs(input, except="^multiPlots*")
-  } else if(req(expt$name) %in% avExpts()) {
-    avExpts(avExpts()[!(avExpts()==expt$name)])
-    unavExpts(c(unavExpts(), expt$name))
-  }
 })
-activeDb <- reactive(req(expts[[input$experiment]])$dbs[[req(input$odbBase)]])
+activeDb <- reactive({
+  req(currentExpt())$dbs[[req(input$odbBase)]]
+}) %>% throttle(100)
+
+# Hide "Loading Obsmon" screen and show the app
+shinyjs::hide(id="loading-content", anim=TRUE, animType="fade")
+shinyjs::show("app-content")
+
 
 # DTG-related reactives and observers
 # Update available choices of dates when changing active database
