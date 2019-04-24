@@ -86,16 +86,31 @@ activeDb <- reactive(req(expts[[input$experiment]])$dbs[[req(input$odbBase)]])
 # Update available choices of dates when changing active database
 observeEvent(activeDb(), {
   db <- req(activeDb())
-  dbDateRange <- req(db$dateRange)
-  dbMinDate <- dbDateRange[1]
-  dbMaxDate <- dbDateRange[2]
-  start <- clamp(input$dateRange[1], dbMinDate, dbMaxDate, dbMinDate)
-  end <- clamp(input$dateRange[2], dbMinDate, dbMaxDate)
-  single <- clamp(input$date, dbMinDate, dbMaxDate)
+  hasDtgs <- isTRUE(db$hasDtgs)
+  shinyjs::toggle("doPlot", condition=hasDtgs)
+
+  dbMinDate <- Sys.Date(); dbMaxDate <- dbMinDate
+  single <- NA; start <- NA; end <- NA
+  errMsg <- "(ERROR: No DTGs found!)"
+  if(hasDtgs) {
+    errMsg <- character(0)
+    dbDateRange <- db$dateRange
+    dbMinDate <- dbDateRange[1]
+    dbMaxDate <- dbDateRange[2]
+    start <- clamp(input$dateRange[1], dbMinDate, dbMaxDate)
+    end <- clamp(input$dateRange[2], dbMinDate, dbMaxDate)
+    single <- clamp(input$date, dbMinDate, dbMaxDate)
+  }
+  labelSingle <- paste("Date", errMsg)
+  labelRange <- paste("Date Range", errMsg)
   updateDateRangeInput(
-    session, "dateRange", start=start, end=end, min=dbMinDate, max=dbMaxDate
+    session, "dateRange", label=labelRange,
+    start=start, end=end, min=dbMinDate, max=dbMaxDate
   )
-  updateDateInput(session, "date", value=single, min=dbMinDate, max=dbMaxDate)
+  updateDateInput(
+    session, "date", label=labelSingle,
+    value=single, min=dbMinDate, max=dbMaxDate
+  )
 })
 
 # Signal when required dateType of plot changes value
@@ -163,11 +178,14 @@ observeEvent({
 
 # Update available cycle choices when relevant fields change
 availableCycles <- reactive({
-  req(activeDb())$getAvailableCycles(req(selectedDates()))
+  tryCatch(
+    activeDb()$getAvailableCycles(req(selectedDates())),
+    error=function(w) character(0)
+  )
 })
 observeEvent(availableCycles(), {
-  updateSelectInputWrapper(session, "cycle", choices=req(availableCycles()))
-  updateCheckboxGroup(session, "cycles", req(availableCycles()))
+  updateSelectInputWrapper(session, "cycle", choices=availableCycles())
+  updateCheckboxGroup(session, "cycles", availableCycles())
 })
 observeEvent(input$cyclesSelectAll, {
   cycles <- req(availableCycles())

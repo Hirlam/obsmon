@@ -1,9 +1,9 @@
 clamp <- function(value, min, max, default=max) {
-  if (is.null(value)) {
+  if (anyNA(value) || length(value)==0) {
     default
-  } else if (value < min) {
+  } else if (isTRUE(value<min)) {
     min
-  } else if (value > max) {
+  } else if (isTRUE(value>max)) {
     max
   } else {
     value
@@ -40,6 +40,7 @@ dtg2date <- function(dtg) {
 }
 
 date2dtg <- function(date, cycle=NULL) {
+  if(anyNA(date) || length(date)==0) return(integer(0))
   year <- substr(date, 1, 4)
   month <- substr(date, 6, 7)
   day <- substr(date, 9, 10)
@@ -56,7 +57,8 @@ dtg2POSIXct <- function(dtg) {
 expandDateRange <- function(start, end, format="%Y%m%d") {
   start <- date2dtg(start)
   end <- date2dtg(end)
-  if(start>end) {
+  if(length(start)==0 || length(end)==0) return(integer(0))
+  if(isTRUE(start>end)) {
     temp <- start
     start <- end
     end <- temp
