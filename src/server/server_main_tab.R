@@ -21,7 +21,7 @@ avExpts <- reactiveVal()
 unavExpts <- reactiveVal()
 isolate({
   for(expt in expts) {
-    if(isTRUE(expt$hasData)) avExpts(c(avExpts(), expt$name))
+    if(isTRUE(expt$hasValidDbDirs)) avExpts(c(avExpts(), expt$name))
     else unavExpts(c(unavExpts(), expt$name))
   }
 })
@@ -62,7 +62,7 @@ observeEvent(input$experiment, {
   expt <- expts[[input$experiment]]
   choices <- list()
   for(db in expt$dbs) {
-    if(!isTRUE(db$hasData)) next
+    if(!isTRUE(dir.exists(db$dir))) next
     choices[[dbType2DbDescription(db$dbType)]] <- db$dbType
   }
   updateSelectInputWrapper(session, "odbBase", choices=choices)

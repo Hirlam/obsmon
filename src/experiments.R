@@ -36,7 +36,7 @@ obsmonDatabaseClass <- setRefClass("obsmonDatabase",
       return(rtn)
     },
     dateRange=function() {dtg2date(c(dtgs[1], dtgs[length(dtgs)]))},
-    hasData=function() {length(dtgs)>0}
+    hasDtgs=function() {length(dtgs)>0}
   ),
   methods=list(
     getDataFilePaths=function(selectedDtgs=NULL, assertExists=FALSE) {
@@ -76,7 +76,7 @@ experimentClass <- setRefClass("experiment",
     path="character",
     dbs="list",
     slugName=function() {slugify(name)},
-    hasData=function() {
+    hasValidDbDirs=function() {
       for(db in .self$dbs) {
         if(dir.exists(db$dir)) return(TRUE)
       }
@@ -84,7 +84,7 @@ experimentClass <- setRefClass("experiment",
     },
     guiName=function() {
       nameCompl <- character(0)
-      if(!.self$hasData) nameCompl <- "(could not read data)"
+      if(!.self$hasValidDbDirs) nameCompl <- "(could not read data)"
       return(trimws(paste(.self$name, nameCompl)))
     },
     cacheDir=function() {
