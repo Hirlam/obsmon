@@ -16,6 +16,15 @@ obsmonDatabaseClass <- setRefClass("obsmonDatabase",
     dir="character",
     cacheDir="character",
     exptName="character",
+    # dtgCache, dtgCacheExpiry and dtgCacheLastUpdated are auxiliary
+    # attributes for use in the getDtgs method.
+    # dtgCache is a (conveniently organised) copy of the last results returned
+    # by the "dir" command called inside the getDtgs method. These cached DTGs
+    # expire and are renewed if they get older than dtgCacheExpiry seconds.
+    # N.B.: This internal DTG cache has nothing to do with obsmon's sql cache.
+    dtgCache="list",
+    dtgCacheExpiry="numeric",
+    dtgCacheLastUpdated="POSIXt",
     # Attributes that use accessor functions
     exptDir=function() {dirname(dir)},
     cachePaths=function() {
@@ -24,20 +33,7 @@ obsmonDatabaseClass <- setRefClass("obsmonDatabase",
         usage=file.path(cacheDir, sprintf('%s_usage.db', dbType))
       )
     },
-    dtgsPrivate="numeric",
-    dtgsLastUpdated="POSIXt",
-    dtgs=function() {
-      tDiffSec <- Sys.time() - .self$dtgsLastUpdated
-      rtn <- .self$dtgsPrivate
-      # Update dtgs at most once every 1 second to avoid unnecessary
-      # repeated function calls (since other methods also use dtgs)
-      if(length(.self$dtgsPrivate)==0 || isTRUE(tDiffSec>1)) {
-        rtn <- .self$getDtgs()
-        .self$dtgsPrivate <- rtn
-        .self$dtgsLastUpdated <- Sys.time()
-      }
-      return(rtn)
-    },
+    dtgs=function() {.self$getDtgs()},
     dateRange=function() {dtg2date(c(dtgs[1], dtgs[length(dtgs)]))},
     hasDtgs=function() {length(dtgs)>0}
   ),
@@ -47,6 +43,8 @@ obsmonDatabaseClass <- setRefClass("obsmonDatabase",
       .self$dir <- dir
       .self$cacheDir <- cacheDir
       .self$exptName <- exptName
+      # dtgCacheExpiry is given in seconds
+      .self$dtgCacheExpiry <- abs(1.0 * dtgCacheExpiry)
     },
     getDataFilePaths=function(selectedDtgs=NULL, assertExists=FALSE) {
       if(is.null(selectedDtgs)) selectedDtgs <- .self$dtgs
@@ -65,11 +63,31 @@ obsmonDatabaseClass <- setRefClass("obsmonDatabase",
       if(assertExists) dbPaths <- Filter(file.exists, dbPaths)
       return(dbPaths)
     },
-    getDtgs=function(dates=character(0)) {
-      searchPatts <- "[0-9]{10}"
-      if(length(dates)>0) searchPatts <- sprintf("%s{1}[0-9]{2}", dates)
-      rtn <- lapply(searchPatts, function(pt) dir(path=.self$dir, pattern=pt))
-      return(sort(as.integer(unlist(rtn))))
+    getDtgs=function(dates=character(0), cacheExpiry=.self$dtgCacheExpiry) {
+      # Keep a cache of the dtgs to avoid unnecessary successive calls
+      # to the "dir" function, but update the cache if it is older than
+      # cacheExpiry seconds.
+      flog.debug("Getting %s DTGs for %s", .self$dbType, .self$exptName)
+      tDiffSec <- Sys.time() - .self$dtgCacheLastUpdated
+      if(length(.self$dtgCache)==0 || isTRUE(tDiffSec>abs(cacheExpiry))) {
+        # There is no much gain in running "dir" for only selected dates in
+        # comparison to just retrieving all available DTGs.
+        flog.debug("  > Refresh %s DTGs for %s", .self$dbType, .self$exptName)
+        searchPatt <- "[0-9]{10}"
+        allDtgs <- sort(dir(path=.self$dir, pattern=searchPatt))
+        .self$dtgCache <- list()
+        for(dtg in allDtgs) {
+          date <- substr(dtg, 1, 8)
+          .self$dtgCache[[date]] <- c(.self$dtgCache[[date]], as.integer(dtg))
+        }
+        .self$dtgCacheLastUpdated <- Sys.time()
+      }
+
+      if(length(dates)==0) rtn <- .self$dtgCache
+      else rtn <- .self$dtgCache[dates]
+      if(length(rtn)==0) rtn <- integer(0)
+      flog.debug("Done getting %s DTGs for %s\n",.self$dbType,.self$exptName)
+      return(unlist(rtn, use.names=FALSE))
     },
     getAvailableCycles=function(dates) {
       selecDtgs <- .self$getDtgs(dates)
