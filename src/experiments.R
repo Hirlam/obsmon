@@ -15,6 +15,8 @@ obsmonDatabaseClass <- setRefClass("obsmonDatabase",
     dbType="character",
     dir="character",
     cacheDir="character",
+    exptName="character",
+    # Attributes that use accessor functions
     exptDir=function() {dirname(dir)},
     cachePaths=function() {
       list(
@@ -40,6 +42,12 @@ obsmonDatabaseClass <- setRefClass("obsmonDatabase",
     hasDtgs=function() {length(dtgs)>0}
   ),
   methods=list(
+    initialize=function(dbType, dir, cacheDir, exptName=character(0)) {
+      .self$dbType <- dbType
+      .self$dir <- dir
+      .self$cacheDir <- cacheDir
+      .self$exptName <- exptName
+    },
     getDataFilePaths=function(selectedDtgs=NULL, assertExists=FALSE) {
       if(is.null(selectedDtgs)) selectedDtgs <- .self$dtgs
       # The filter below normally runs very quickly
@@ -98,7 +106,10 @@ experimentClass <- setRefClass("experiment",
       .self$path <- ifelse(length(path)>0, as.character(path), character(0))
       .self$dbs <- sapply(dbTypes, function(dbType) {
         dbDir <- file.path(.self$path, dbType)
-        obsmonDatabaseClass(dbType=dbType, dir=dbDir, cacheDir=.self$cacheDir)
+        obsmonDatabaseClass(
+          dbType=dbType, dir=dbDir, cacheDir=.self$cacheDir,
+          exptName=.self$name
+        )
       })
     }
   )
