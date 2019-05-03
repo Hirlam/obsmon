@@ -78,12 +78,16 @@ shinyjs::show("app-content")
 # Update available choices of dates when changing active database
 observeEvent(activeDb(), {
   db <- req(activeDb())
+  # Make sure user cannot request plots while updating DTGs
+  # or if DTGs are not found
+  disableShinyInputs(input, except=c("experiment", "odbBase", "^multiPlots*"))
+  notifID <- showNotification("Updating DTGs...", type="message")
+  on.exit(removeNotification(notifID))
   hasDtgs <- isTRUE(db$hasDtgs)
-  shinyjs::toggle("doPlot", condition=hasDtgs)
 
   dbMinDate <- Sys.Date(); dbMaxDate <- dbMinDate
   single <- NA; start <- NA; end <- NA
-  errMsg <- "(ERROR: No DTGs found!)"
+  errMsg <- sprintf("(%s has no DTGs!)", db$dbType)
   if(hasDtgs) {
     errMsg <- character(0)
     dbDateRange <- db$dateRange
@@ -92,6 +96,8 @@ observeEvent(activeDb(), {
     start <- clamp(input$dateRange[1], dbMinDate, dbMaxDate)
     end <- clamp(input$dateRange[2], dbMinDate, dbMaxDate)
     single <- clamp(input$date, dbMinDate, dbMaxDate)
+    # Allow users to plot now that we have updated DTGs with valid values
+    enableShinyInputs(input, except="^multiPlots*")
   }
   labelSingle <- paste("Date", errMsg)
   labelRange <- paste("Date Range", errMsg)
