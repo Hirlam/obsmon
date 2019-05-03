@@ -38,7 +38,9 @@ obsmonDatabaseClass <- setRefClass("obsmonDatabase",
     hasDtgs=function() {length(dtgs)>0}
   ),
   methods=list(
-    initialize=function(dbType, dir, cacheDir, exptName=character(0)) {
+    initialize=function(
+      dbType, dir, cacheDir, exptName=character(0), dtgCacheExpiry=Inf
+    ) {
       .self$dbType <- dbType
       .self$dir <- dir
       .self$cacheDir <- cacheDir
@@ -70,11 +72,10 @@ obsmonDatabaseClass <- setRefClass("obsmonDatabase",
       flog.debug("Getting %s DTGs for %s", .self$dbType, .self$exptName)
       tDiffSec <- Sys.time() - .self$dtgCacheLastUpdated
       if(length(.self$dtgCache)==0 || isTRUE(tDiffSec>abs(cacheExpiry))) {
+        flog.debug("  > Refresh %s DTGs for %s", .self$dbType, .self$exptName)
         # There is no much gain in running "dir" for only selected dates in
         # comparison to just retrieving all available DTGs.
-        flog.debug("  > Refresh %s DTGs for %s", .self$dbType, .self$exptName)
-        searchPatt <- "[0-9]{10}"
-        allDtgs <- sort(dir(path=.self$dir, pattern=searchPatt))
+        allDtgs <- sort(dir(path=.self$dir, pattern="[0-9]{10}"))
         .self$dtgCache <- list()
         for(dtg in allDtgs) {
           date <- substr(dtg, 1, 8)
@@ -119,14 +120,16 @@ experimentClass <- setRefClass("experiment",
     }
   ),
   methods=list(
-    initialize=function(name=NULL, path=NULL, dbTypes=dbTypesRecognised) {
+    initialize=function(
+      name=NULL, path=NULL, dbTypes=dbTypesRecognised, dtgCacheExpiry=Inf
+    ) {
       .self$name <- ifelse(length(name)>0, as.character(name), character(0))
       .self$path <- ifelse(length(path)>0, as.character(path), character(0))
       .self$dbs <- sapply(dbTypes, function(dbType) {
         dbDir <- file.path(.self$path, dbType)
         obsmonDatabaseClass(
           dbType=dbType, dir=dbDir, cacheDir=.self$cacheDir,
-          exptName=.self$name
+          exptName=.self$name, dtgCacheExpiry=dtgCacheExpiry
         )
       })
     }
