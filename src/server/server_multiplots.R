@@ -12,44 +12,10 @@ if(length(obsmonConfig$multiPlots)>0) {
 }
 
 # Populate multiPlot choices in the UI.
-# Separate the available multiPlots from the unavailable ones to make it
-# easier for the users, and keep checking for availability changes.
-avMultiPlots <- reactiveVal()
-unavMultiPlots <- reactiveVal()
-mpChoices <- reactive(list(
-  " "=avMultiPlots(),
-  "Unavailable multiPlots (required data not found)"=unavMultiPlots()
-)) %>% throttle(500)
-observeEvent({
-  exptChoices()
-  input$multiPlotTitle
-  }, {
-  newAv <- c(); newUnav <- c()
-  for(plotConfig in obsmonConfig$multiPlots) {
-    expt <- expts[[plotConfig$experiment]]
-    db <- tryCatch(
-      expt$dbs[[plotConfig$database]],
-      warning=function(w) {flog.warn(w); NULL}
-    )
-    mpName <- plotConfig$displayName
-    if(isTRUE(dir.exists(db$dir))) newAv <- c(newAv, mpName)
-    else newUnav <- c(newUnav, mpName)
-  }
-  if(length(newAv)==0) {
-    newAv <- structure(
-      " ", names="ERROR: Required experiment databases not available!"
-    )
-  }
-  avMultiPlots(newAv)
-  unavMultiPlots(newUnav)
-})
-observeEvent(mpChoices(), {
-  mpCurrentSelected <- input$multiPlotTitle
-  if(mpCurrentSelected=="") mpCurrentSelected <- NULL
-  updateSelectInput(session, "multiPlotTitle", choices=mpChoices(),
-    selected=mpCurrentSelected
-  )
-})
+mpChoices <- unlist(lapply(obsmonConfig$multiPlots, function(mpc) {
+  mpc$displayName
+}))
+updateSelectInput(session, "multiPlotTitle", choices=mpChoices)
 
 # Management of multiPlot progress bar
 multiPlotsProgressFile <- reactiveVal(NULL)
