@@ -79,7 +79,10 @@ observeEvent(input$doPlot, {
   # completion of the assync task (be it successfull or not)
   tmpStdOut <- vector('character')
   tmpStdOutCon <- textConnection('tmpStdOut', 'wr', local=TRUE)
-  sink(tmpStdOutCon, type="message")
+  tempSinkMsgs <- !isTRUE(
+    trimws(toupper(obsmonConfig$general$logLevel))=="DEBUG"
+  )
+  if(tempSinkMsgs) sink(tmpStdOutCon, type="message")
 
   # Prepare plot assyncronously
   newFutPlot <- futureCall(
@@ -89,7 +92,7 @@ observeEvent(input$doPlot, {
   currentPlotPid(newFutPlot$job$pid)
 
   # Cancel sink, so error/warning messages can be printed again
-  sink(type="message")
+  if(tempSinkMsgs) sink(type="message")
 
   then(newFutPlot,
     onFulfilled=function(value) {

@@ -79,9 +79,7 @@ setPackageOptions <- function(config) {
   options(shiny.usecairo=TRUE)
   pdf(NULL)
   flog.appender(appender.file(stderr()), 'ROOT')
-  logLevel <- parse(text=config$general$logLevel)[[1]]
-  if(exists("cmdLineArgs") && isTRUE(cmdLineArgs$debug)) logLevel <- DEBUG
-  flog.threshold(logLevel)
+  flog.threshold(parse(text=config$general$logLevel)[[1]])
   # Options controlling parallelism
   maxExtraParallelProcs <- as.integer(config$general$maxExtraParallelProcs)
   if(anyNA(maxExtraParallelProcs) || maxExtraParallelProcs<0) {
@@ -113,13 +111,18 @@ sourceObsmonFiles <- function() {
   source("src/shiny_wrappers.R")
 }
 
-fillInDefault <- function(config, key, default) {
-  if (is.null(config$general[[key]])) {
-    config$general[[key]] <- default
-  }
-  if(key=="cacheDir") {
-    config$general[[key]] <- normalizePath(config$general[[key]], mustWork=FALSE)
-  }
+configGeneralFillInDefault <- function(config, key, default) {
+  if (is.null(config$general[[key]])) config$general[[key]] <- default
+
+  currentVal <- config$general[[key]]
+  config$general[[key]] <- switch(key,
+    "cacheDir"=normalizePath(config$general[[key]], mustWork=FALSE),
+    "logLevel"={
+      if(exists("cmdLineArgs") && isTRUE(cmdLineArgs$debug)) "DEBUG"
+      else currentVal
+    },
+    currentVal
+  )
   config
 }
 
@@ -139,15 +142,20 @@ getSuitableCacheDirDefault <- function() {
   return(cacheDirPath)
 }
 
-fillInDefaults <- function(config) {
+configGeneralFillInDefaults <- function(config) {
   if(length(config)==0) config <- list(general=list())
-  config <- fillInDefault(config, "cacheDir", getSuitableCacheDirDefault())
-  config <- fillInDefault(config, "logLevel", "WARN")
-  config <- fillInDefault(config, "maxExtraParallelProcs",
+  config <- configGeneralFillInDefault(
+    config, "cacheDir", getSuitableCacheDirDefault()
+  )
+  config <- configGeneralFillInDefault(config, "logLevel", "WARN")
+  config <- configGeneralFillInDefault(config, "initCheckDataExists", FALSE)
+  config <- configGeneralFillInDefault(config, "maxExtraParallelProcs",
     Sys.getenv("OBSMON_MAX_N_EXTRA_PROCESSES")
   )
-  config <- fillInDefault(config, "showCacheOptions", FALSE)
-  config <- fillInDefault(config, "multiPlotsEnableInteractivity", FALSE)
+  config <- configGeneralFillInDefault(config, "showCacheOptions", FALSE)
+  config <- configGeneralFillInDefault(
+    config, "multiPlotsEnableInteractivity", FALSE
+  )
   config
 }
 
@@ -209,7 +217,7 @@ readConfig <- function() {
       warning=function(w) {flog.error(w); NULL}
     )
   }
-  return(fillInDefaults(config))
+  return(configGeneralFillInDefaults(config))
 }
 
 assertCacheDirWritable <- function(config, verbose=FALSE) {

@@ -122,7 +122,10 @@ observeEvent(input$multiPlotsDoPlot, {
   # See the analogous code in the input$doPlot observe
   tmpStdOut <- vector('character')
   tmpStdOutCon <- textConnection('tmpStdOut', 'wr', local=TRUE)
-  sink(tmpStdOutCon, type="message")
+  tempSinkMsgs <- !isTRUE(
+    trimws(toupper(obsmonConfig$general$logLevel))=="DEBUG"
+  )
+  if(tempSinkMsgs) sink(tmpStdOutCon, type="message")
 
   # Prepare individual plots assyncronously
   multiPlotsAsync <- futureCall(
@@ -136,7 +139,7 @@ observeEvent(input$multiPlotsDoPlot, {
   multiPlotCurrentPid(multiPlotsAsync$job$pid)
 
   # Cancel sink, so error/warning messages can be printed again
-  sink(type="message")
+  if(tempSinkMsgs) sink(type="message")
 
   then(multiPlotsAsync,
     onFulfilled=function(value) {
