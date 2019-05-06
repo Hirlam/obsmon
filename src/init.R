@@ -143,7 +143,6 @@ fillInDefaults <- function(config) {
   if(length(config)==0) config <- list(general=list())
   config <- fillInDefault(config, "cacheDir", getSuitableCacheDirDefault())
   config <- fillInDefault(config, "logLevel", "WARN")
-  config <- fillInDefault(config, "initCheckDataExists", FALSE)
   config <- fillInDefault(config, "maxExtraParallelProcs",
     Sys.getenv("OBSMON_MAX_N_EXTRA_PROCESSES")
   )

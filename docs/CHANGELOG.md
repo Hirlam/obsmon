@@ -4,6 +4,29 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
+## [Unreleased]
+### Added
+- Profile with Rprof when using "--debug" argument
+### Fixed
+- Issue that could prevent experiment data from being refreshed if a session (browser
+  window/tab) was left open by an user for prolonged periods of time. This was fixed by
+  the experiment initialisation changes described below.
+### Changed
+- Experiment initialisation made faster
+    - No longer checking existence of data files. Data file names are generated on
+      the fly as needed, and errors are handled if files do not exist.
+    - No longer performed assyncronously, given that it is very fast now
+- Each new session performs its own experiment initialisation
+    - This makes it possible to refresh available data for the configured experiments
+      by just refreshing the obsmon window, instead of having to kill and restart the code.
+      It is still necessary to kill and restart the code if new experiments are included
+      or if experiment paths are changed in the config file.
+- Lock UI while updating DTGs or if DTGs unavailable
+### Removed
+- Options deprecated by changes in experiment initialisation strategy:
+    - nRetriesMax
+    - initCheckDataExists
+
 ## [3.1.1] 2019-04-08
 ### Changed
 - Default paths for cacheDir and config file search
