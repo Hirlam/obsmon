@@ -9,7 +9,7 @@ dtgClause <- function(val) {
   if (n==1) {
     sprintf("(DTG = %d)", val)
   } else if (n==3) {
-    range <- expandDtgRange(val)
+    range <- summariseDtgRange(val)
     clause <- sprintf("(%d <= DTG) AND (DTG <= %d)", range[[1]], range[[2]])
     if(length(range[[3]])>0) {
       clause <- paste(clause,
@@ -82,11 +82,11 @@ dbConnectWrapper <- function(dbpath, read_only=FALSE, showWarnings=TRUE) {
       newCon
     },
     error=function(e) {
-      if(showWarnings) flog.error("dbConnectWrapper (file %s): %s", dbpath, e)
+      if(showWarnings) flog.error("dbConnectWrapper: %s (%s)", e, dbpath)
       NULL
     },
     warning=function(w) {
-      if(showWarnings) flog.error("dbConnectWrapper (file %s): %s", dbpath, w)
+      if(showWarnings) flog.error("dbConnectWrapper: %s (%s)", w, dbpath)
       NULL
     }
   )
@@ -94,58 +94,45 @@ dbConnectWrapper <- function(dbpath, read_only=FALSE, showWarnings=TRUE) {
 }
 
 dbDisconnectWrapper <- function(con) {
+  if(is.null(con)) return(NULL)
   tryCatch(dbDisconnect(con),
     error=function(e) flog.error("dbDisconnectWrapper: %s", e),
     warn=function(w) flog.warn("dbDisconnectWrapper: %s", w)
   )
 }
 
-makeSingleQuery <- function(query) {
-  function(dbpath) {
-    con <- dbConnectWrapper(dbpath, read_only=TRUE)
-    res <- tryCatch(dbGetQuery(con, query),
-                    error=function(e) {
-                      flog.warn(
-                        "makeSingleQuery: Error querying %s:\n%s\nIgnoring.",
-                        dbpath, e
-                      )
-                      NULL
-                    })
-    dbDisconnectWrapper(con)
-    res
-  }
+singleFileQuerier <- function(dbpath, query) {
+  con <- dbConnectWrapper(dbpath, read_only=TRUE)
+  # If con if NULL then we could not connect. Returning NULL silently here,
+  # as the dbConnectWrapper will have a better error message in this case.
+  if(is.null(con)) return(NULL)
+
+  res <- tryCatch(
+    dbGetQuery(con, query),
+    error=function(e) {
+      flog.warn(
+        "singleFileQuerier: Error querying %s:\n%s\nIgnoring.",
+        dbpath, e
+      )
+      NULL
+    }
+  )
+  dbDisconnectWrapper(con)
+  res
 }
 
-performQuery <- function(
-  db, query, dtgs=NULL, expandRange=TRUE, convertDTG=TRUE)
-{
-  if (is.null(dtgs)) {
-    dbpaths <- db$paths
-  } else {
-    if (expandRange) {
-      n = length(dtgs)
-      if (n==1) {
-        dbpaths <- db$paths[as.character(dtgs)]
-      } else if (n==3) {
-        range <- expandDtgRange(dtgs)
-        dbpaths <- db$paths[range[[1]] <= db$dtgs & db$dtgs <= range[[2]]]
-      } else {
-        flog.error("Invalid combination of expandRange and dtgs.")
-      }
-    } else {
-      dbpaths <- db$paths[as.character(dtgs)]
-    }
+performQuery <- function(db, query, dtgs) {
+  selectedDtgs <- dtgs
+  if(length(dtgs)>1) {
+    range <- summariseDtgRange(dtgs)
+    selectedDtgs <- expandDtgRange(range)
   }
-  dbpaths <- dbpaths[!is.null(dbpaths)]
-  dbpaths <- dbpaths[file.exists(dbpaths)]
-  if (length(dbpaths)==0) {
-    flog.error("performQuery: No usable database found. Please check paths.")
-    return(NULL)
-  }
-  singleQuery <- makeSingleQuery(query)
-  res <- lapply(dbpaths, singleQuery)
+  dbpaths <- db$getDataFilePaths(selectedDtgs)
+
+  res <- lapply(dbpaths, partial(singleFileQuerier, query=query))
   res <- do.call(rbind, res)
-  if(convertDTG & "DTG" %in% names(res)) {
+  if("DTG" %in% names(res)) {
+    # Convert DTGs from integers to POSIXct
     res$DTG <- as.POSIXct(as.character(res$DTG), format="%Y%m%d%H")
   }
   res

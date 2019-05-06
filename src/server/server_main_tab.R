@@ -1,10 +1,6 @@
 ############################################################################
 #                          Handling of main tab                            #
 ############################################################################
-# Start GUI with all inputs disabled.
-# They will be enabled once experiments are loaded
-isolate(disableShinyInputs(input, except="experiment"))
-
 # Deciding whether to show or hide cache-related options.
 # It is advisable not to show them by default -- especially when running on
 # a web server for multiple users, as these options cause changes in the
@@ -18,80 +14,75 @@ output$showCacheOptions <- renderText({
   file.exists(".obsmon_show_cache_options") ||
   obsmonConfig$general[["showCacheOptions"]]
 })
-outputOptions(output, "showCacheOptions", suspendWhenHidden = FALSE)
+outputOptions(output, "showCacheOptions", suspendWhenHidden=FALSE)
 
-# Initial population of experiments
-exptNames <- c("")
-experiments <- reactive ({
-  # Keep checking if experiments finished initialisation
-  if(!all(resolved(experimentsAsPromises))) invalidateLater(2000, session)
-  flagNotReadyExpts(experimentsAsPromises)
+# Populate experiment choices
+exptChoices <- unlist(lapply(expts, function(x) x$name))
+exptPholder <- "Please select experiment"
+if(length(exptChoices)==0) {
+  exptPholder <- "ERROR: Could not load experiments!"
+  exptChoices <- " "; names(exptChoices) <- exptPholder
+}
+updateSelectizeInput(session, "experiment", choices=exptChoices)
+
+# Update dB choices for currently selected experiment
+observeEvent(input$experiment, {
+  expt <- expts[[input$experiment]]
+  choices <- unlist(lapply(expt$dbs, function(db) {
+    if(isTRUE(dir.exists(db$dir))) db$dbType
+  }))
+  names(choices) <- unlist(lapply(choices, dbType2DbDescription))
+  if(length(choices)==0) choices <- c("ERROR: No usable database!"=" ")
+  updateSelectInputWrapper(session, "odbBase", choices=choices)
 })
-observe({
-    newExptNames <- names(experiments())
-    if(length(newExptNames)==0) {
-      exptPlaceholder <- "ERROR: Could not read experiment data"
-      disableShinyInputs(input)
-    } else {
-      exptPlaceholder <- "Please select experiment"
-      shinyjs::enable("experiment")
-    }
-    if((length(newExptNames) != length(exptNames)) ||
-       !all(exptNames==newExptNames)) {
-      selectedExpt <- tryCatch({
-        iExpt <- which(exptNames==input$experiment)[1]
-        if(anyNA(iExpt)) NULL else newExptNames[iExpt]
-        },
-        error=function(e) NULL
-      )
-      updateSelectizeInput(session, "experiment",
-        choices=newExptNames, selected=selectedExpt,
-        options=list(placeholder=exptPlaceholder)
-      )
-      exptNames <<- newExptNames
-    }
-})
+activeDb <- reactive({
+  showNotification(id="notifIDUpdDbs",
+    ui="Retrieving Db info...", type="message", duration=NULL
+  )
+  # Make sure user cannot request plots before we certify later on that there
+  # are available DTGs
+  disableShinyInputs(input, except=c("experiment", "odbBase", "^multiPlots*"))
+  expts[[input$experiment]]$dbs[[req(input$odbBase)]]
+}) %>% throttle(100)
 
 # Hide "Loading Obsmon" screen and show the app
-shinyjs::hide(id="loading-content", anim=TRUE, animType="fade")
+shinyjs::hide(id="loading-content", anim=FALSE, animType="fade")
 shinyjs::show("app-content")
-
-# Update database options according to chosen experiment
-observe({
-  expName <- req(input$experiment)
-  expDbs <- isolate(experiments()[[expName]]$dbs)
-  choices <- list()
-  for(dbType in names(dbType2DbDescription)) {
-    if(is.null(expDbs[[dbType]])) next
-    choices[[dbType2DbDescription[[dbType]]]] <- dbType
-  }
-
-  updateSelectInputWrapper(session, "odbBase", choices=choices)
-  if(length(choices)==0) disableShinyInputs(input, except="experiment")
-  else enableShinyInputs(input)
-})
-
-activeDb <- reactive({
-  expName <- req(input$experiment)
-  dbType <- req(input$odbBase)
-  isolate(experiments()[[expName]]$dbs[[dbType]])
-})
 
 # DTG-related reactives and observers
 # Update available choices of dates when changing active database
 observeEvent(activeDb(), {
-  db <- req(activeDb())
-  min <- db$maxDateRange[1]
-  max <- db$maxDateRange[2]
-  start <- clamp(input$dateRange[1], min, max, min)
-  end <- clamp(input$dateRange[2], min, max)
-  single <- clamp(input$date, min, max)
-  updateDateRangeInput(session, "dateRange",
-                       start = start, end = end,
-                       min = db$maxDateRange[1], max = db$maxDateRange[2])
-  updateDateInput(session, "date", value = single,
-                  min = db$maxDateRange[1], max = db$maxDateRange[2])
-})
+  on.exit(removeNotification("notifIDUpdDbs"))
+
+  dbMinDate <- Sys.Date(); dbMaxDate <- dbMinDate
+  single <- NA; start <- NA; end <- NA
+  errMsg <- ""
+  hasDtgs <- activeDb()$hasDtgs
+  if(isTRUE(hasDtgs)) {
+    errMsg <- character(0)
+    dbDateRange <- activeDb()$dateRange
+    dbMinDate <- dbDateRange[1]
+    dbMaxDate <- dbDateRange[2]
+    start <- clamp(input$dateRange[1], dbMinDate, dbMaxDate)
+    end <- clamp(input$dateRange[2], dbMinDate, dbMaxDate)
+    single <- clamp(input$date, dbMinDate, dbMaxDate)
+    # Allow users to plot now that we have updated DTGs with valid values
+    enableShinyInputs(input, except="^multiPlots*")
+  } else if(isFALSE(hasDtgs)) {
+    # Mind that isFALSE and isTRUE are not the opposite of each other
+    errMsg <- sprintf("(%s has no DTGs!)", activeDb()$dbType)
+  }
+  labelSingle <- paste("Date", errMsg)
+  labelRange <- paste("Date Range", errMsg)
+  updateDateRangeInput(
+    session, "dateRange", label=labelRange,
+    start=start, end=end, min=dbMinDate, max=dbMaxDate
+  )
+  updateDateInput(
+    session, "date", label=labelSingle,
+    value=single, min=dbMinDate, max=dbMaxDate
+  )
+}, ignoreNULL=FALSE)
 
 # Signal when required dateType of plot changes value
 dateTypeReqByPlotType <- reactiveVal("single")
@@ -134,10 +125,11 @@ observeEvent({
  }, {
   if(dateTypeReqByPlotType() %in% c("range")) {
     cycles <- input$cycles
+    if(length(cycles)==0) cycles <- sprintf("%02d", 0:24)
   } else {
     cycles <- input$cycle
+    if(trimws(cycles)=="") cycles <- NULL
   }
-  if(length(cycles)==0) cycles <- sprintf("%02d", 0:24)
   selectedCycles(sort(cycles, decreasing=FALSE))
 })
 selectedDtgs <- reactiveVal()
@@ -156,13 +148,15 @@ observeEvent({
 
 
 # Update available cycle choices when relevant fields change
-availableCycles <- reactiveVal()
-observe({
-  availableCycles(getAvailableCycles(req(activeDb()), req(selectedDates())))
+availableCycles <- reactive({
+  tryCatch(
+    activeDb()$getAvailableCycles(req(selectedDates())),
+    error=function(w) character(0)
+  )
 })
 observeEvent(availableCycles(), {
-  updateSelectInputWrapper(session, "cycle", choices=req(availableCycles()))
-  updateCheckboxGroup(session, "cycles", req(availableCycles()))
+  updateSelectInputWrapper(session, "cycle", choices=availableCycles())
+  updateCheckboxGroup(session, "cycles", availableCycles())
 })
 observeEvent(input$cyclesSelectAll, {
   cycles <- req(availableCycles())

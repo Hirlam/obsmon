@@ -52,7 +52,7 @@ observeEvent(input$doPlot, {
   # All checks performed: We can now proceed with the plot #
   ##########################################################
   # Prevent another plot from being requested
-  disableShinyInputs(input)
+  disableShinyInputs(input, except="^multiPlots*")
   shinyjs::hide("doPlot")
 
   # Offer possibility to cancel plot
@@ -144,7 +144,7 @@ observeEvent(input$doPlot, {
     removeNotification(plotStartedNotifId())
     shinyjs::hide("cancelPlot")
     shinyjs::show("doPlot")
-    enableShinyInputs(input)
+    enableShinyInputs(input, except="^multiPlots*")
     # Printing stdout produced during assync plot, if any
     if(isTRUE(trimws(tmpStdOut)!="")) cat(paste0(tmpStdOut, "\n"))
     close(tmpStdOutCon)
