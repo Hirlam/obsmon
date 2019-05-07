@@ -116,36 +116,25 @@ observeEvent(input$multiPlotsDoPlot, {
   multiPlotsProgressBar(progress)
   multiPlotsProgressFile(tempfile(pattern = "multiPlotsProgress"))
 
-
-  # Using sink to suppress two annoying blank lines that are sent to
-  # stdout whenever a multiPlot is cancelled.
-  # See the analogous code in the input$doPlot observe
-  tmpStdOut <- vector('character')
-  tmpStdOutCon <- textConnection('tmpStdOut', 'wr', local=TRUE)
-  sink(tmpStdOutCon, type="message")
-
   # Prepare individual plots assyncronously
-  multiPlotsAsync <- futureCall(
-    FUN=prepareMultiPlots,
+  multiPlotsAsyncAndOutput <- futureCall(
+    FUN=prepareMultiPlotsCapturingOutput,
     args=list(
       plotter=plotTypesFlat[[pConfig$plotType]],
       inputsForAllPlots=inputsForAllPlots, db=db,
       progressFile=multiPlotsProgressFile()
     )
   )
-  multiPlotCurrentPid(multiPlotsAsync$job$pid)
+  multiPlotCurrentPid(multiPlotsAsyncAndOutput$job$pid)
 
-  # Cancel sink, so error/warning messages can be printed again
-  sink(type="message")
-
-  then(multiPlotsAsync,
+  then(multiPlotsAsyncAndOutput,
     onFulfilled=function(value) {
       showNotification(
         "Preparing to render multiPlot", duration=1, type="message"
       )
-      multiPlot(value)
+      multiPlot(value$plots)
       somePlotHasMap <- FALSE
-      for(individualPlot in value) {
+      for(individualPlot in value$plots) {
         if(!is.null(individualPlot$obmap)) {
           somePlotHasMap <- TRUE
           break
@@ -168,7 +157,7 @@ observeEvent(input$multiPlotsDoPlot, {
       multiPlot(NULL)
     }
   )
-  plotCleanup <- finally(multiPlotsAsync, function() {
+  plotCleanup <- finally(multiPlotsAsyncAndOutput, function() {
     multiPlotCurrentPid(-1)
     # Reset items related to multiPlot progress bar
     unlink(multiPlotsProgressFile())
@@ -179,9 +168,10 @@ observeEvent(input$multiPlotsDoPlot, {
     shinyjs::hide("multiPlotsCancelPlot")
     shinyjs::show("multiPlotsDoPlot")
     enableShinyInputs(input, pattern="^multiPlots*")
-    # Printing stdout produced during assync plot, if any
-    if(isTRUE(trimws(tmpStdOut)!="")) cat(paste0(tmpStdOut, "\n"))
-    close(tmpStdOutCon)
+    # Printing output produced during assync plot, if any
+    resolvedValue <- value(multiPlotsAsyncAndOutput)
+    producedOutput <- resolvedValue$output
+    if(length(producedOutput)>0) cat(paste0(producedOutput, "\n"))
   })
   catch(plotCleanup, function(e) {
     # This prevents printing the annoying "Unhandled promise error" msg when

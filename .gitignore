@@ -25,6 +25,7 @@ R-libs/
 R-libs
 pre_compiled/
 batch_mode_plots/
+Rprof.out
 
 # Stuff we do NOT want to ignore
 !config.toml.example

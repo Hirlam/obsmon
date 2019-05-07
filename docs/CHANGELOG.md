@@ -8,11 +8,12 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 ### Added
 - Profile with Rprof when using "--debug" argument
 ### Fixed
+- Issue that prevented error messages produced during plots (if any) from being shown
 - Issue that could prevent experiment data from being refreshed if a session (browser
   window/tab) was left open by an user for prolonged periods of time. This was fixed by
   the experiment initialisation changes described below.
 ### Changed
-- Experiment initialisation made faster
+- Faster experiment initialisation
     - No longer checking existence of data files. Data file names are generated on
       the fly as needed, and errors are handled if files do not exist.
     - No longer performed assyncronously, given that it is very fast now
@@ -26,6 +27,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - Options deprecated by changes in experiment initialisation strategy:
     - nRetriesMax
     - initCheckDataExists
+
 
 ## [3.1.1] 2019-04-08
 ### Changed

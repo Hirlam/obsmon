@@ -146,6 +146,15 @@ prepareMultiPlots <- function(
   return(allPlots)
 }
 
+prepareMultiPlotsCapturingOutput <- function(...) {
+  # Same comments as in preparePlotsCapturingOutput (see plots.R) apply here.
+  output <- capture.output({
+    plots <- prepareMultiPlots(...)
+  }, type="message")
+  output <- trimws(paste(output, collapse="\n"))
+  if(output=="") output <- character(0)
+  return(list(plots=plots, output=output))
+}
 
 #############################
 # Validating setup of plots #
