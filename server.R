@@ -24,6 +24,12 @@ shinyServer(function(input, output, session) {
     }
   })
 
+  # Show code below the runApp is called with displayMode="showcase"
+  # This happens if using "--debug" when running obsmon in standalone mode
+  if(exists("cmdLineArgs") && isTRUE(cmdLineArgs$debug)) {
+    shinyjs::runjs('toggleCodePosition();')
+  }
+
   # Write code info to the log for every session when using a shiny server
   # This info is already printed in a banner when running standalone
   if(!runningAsStandalone) cat(obsmonBanner)
