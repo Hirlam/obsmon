@@ -73,32 +73,18 @@ observeEvent(input$doPlot, {
     "Gathering data for plot...", type="message", duration=NULL
   ))
 
-  # Using "sink" to suppress two annoying blank lines that are sent
-  # to the stdout whenever a plot is cancelled. If more than these
-  # empty lines are produced as output, then it will be shown upon
-  # completion of the assync task (be it successfull or not)
-  tmpStdOut <- vector('character')
-  tmpStdOutCon <- textConnection('tmpStdOut', 'wr', local=TRUE)
-  tempSinkMsgs <- !isTRUE(
-    trimws(toupper(obsmonConfig$general$logLevel))=="DEBUG"
-  )
-  if(tempSinkMsgs) sink(tmpStdOutCon, type="message")
-
   # Prepare plot assyncronously
-  newFutPlot <- futureCall(
-    FUN=preparePlots,
+  newFutPlotAndOutput <- futureCall(
+    FUN=preparePlotsCapturingOutput,
     args=list(plotter=plotter, plotRequest=plotRequest, db=db)
   )
-  currentPlotPid(newFutPlot$job$pid)
+  currentPlotPid(newFutPlotAndOutput$job$pid)
 
-  # Cancel sink, so error/warning messages can be printed again
-  if(tempSinkMsgs) sink(type="message")
-
-  then(newFutPlot,
+  then(newFutPlotAndOutput,
     onFulfilled=function(value) {
       # Enable/disable, show/hide appropriate inputs
       # (i) Maps tab
-      if(is.null(value$obmap)) {
+      if(is.null(value$plots$obmap)) {
         if(input$mainArea=="mapTab") {
           updateTabsetPanel(session, "mainArea", "plotTab")
         }
@@ -107,7 +93,7 @@ observeEvent(input$doPlot, {
         js$enableTab("mapTab")
       }
       # (ii) Interactive or regular plot tabs
-      interactive <- plotCanBeMadeInteractive(value$obplot)
+      interactive <- plotCanBeMadeInteractive(value$plots$obplot)
       shinyjs::toggle(
         condition=interactive, selector="#mainArea li a[data-value=plotlyTab]"
       )
@@ -123,7 +109,7 @@ observeEvent(input$doPlot, {
       }
 
       # Update readyPlot reactive
-      readyPlot(value)
+      readyPlot(value$plots)
     },
     onRejected=function(e) {
       if(!plotInterrupted()) {
@@ -142,15 +128,16 @@ observeEvent(input$doPlot, {
       readyPlot(NULL)
     }
   )
-  plotCleanup <- finally(newFutPlot, function() {
+  plotCleanup <- finally(newFutPlotAndOutput, function() {
     currentPlotPid(-1)
     removeNotification(plotStartedNotifId())
     shinyjs::hide("cancelPlot")
     shinyjs::show("doPlot")
     enableShinyInputs(input, except="^multiPlots*")
-    # Printing stdout produced during assync plot, if any
-    if(isTRUE(trimws(tmpStdOut)!="")) cat(paste0(tmpStdOut, "\n"))
-    close(tmpStdOutCon)
+    # Printing output produced during assync plot, if any
+    resolvedValue <- value(newFutPlotAndOutput)
+    producedOutput <- resolvedValue$output
+    if(length(producedOutput)>0) cat(paste0(producedOutput, "\n"))
   })
   catch(plotCleanup, function(e) {
     # This prevents printing the annoying "Unhandled promise error" msg when
