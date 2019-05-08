@@ -85,7 +85,7 @@ obsmonDatabaseClass <- setRefClass("obsmonDatabase",
       }
 
       if(length(dates)==0) rtn <- .self$dtgCache
-      else rtn <- .self$dtgCache[dates]
+      else rtn <- .self$dtgCache[as.character(dates)]
       if(length(rtn)==0) rtn <- integer(0)
       flog.debug("Done getting %s DTGs for %s\n",.self$dbType,.self$exptName)
       return(unlist(rtn, use.names=FALSE))

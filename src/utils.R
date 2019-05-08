@@ -57,21 +57,18 @@ dtg2POSIXct <- function(dtg) {
 expandDateRange <- function(start, end, format="%Y%m%d") {
   start <- date2dtg(start)
   end <- date2dtg(end)
-  if(length(start)==0 || length(end)==0) return(integer(0))
+  if(length(start)==0 || length(end)==0) return(character(0))
   if(isTRUE(start>end)) {
     temp <- start
     start <- end
     end <- temp
   }
-  startAsChar <- as.character(start)
-  endAsChar <- as.character(end)
   rtn <- seq(
-    as.Date(startAsChar, format=format),
-    as.Date(endAsChar, format=format),
+    as.Date(as.character(start), format=format),
+    as.Date(as.character(end), format=format),
     by="days"
   )
   rtn <- strftime(rtn, format=format)
-  if(is.numeric(c(start, end))) rtn <- as.integer(rtn)
   return(rtn)
 }
 
