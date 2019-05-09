@@ -68,17 +68,28 @@ buildWhereClause <- function(criteria) {
 dbConnectWrapper <- function(dbpath, read_only=FALSE, showWarnings=TRUE) {
   con <- tryCatch({
       if(read_only) {
-          newCon<-dbConnect(RSQLite::SQLite(),dbpath,flags=RSQLite::SQLITE_RO)
-          dbExecute(newCon, "PRAGMA  journal_mode=OFF")
-          dbExecute(newCon, "PRAGMA synchronous=off")
+          newCon <- dbConnect(
+            RSQLite::SQLite(),dbpath,flags=RSQLite::SQLITE_RO,
+            synchronous=NULL
+           )
+          tryCatch({
+              dbExecute(newCon, "PRAGMA synchronous=off")
+              dbExecute(newCon, "PRAGMA  journal_mode=OFF")
+            },
+            error=function(e) {flog.debug(e); NULL}
+          )
       } else {
           newCon<-dbConnect(RSQLite::SQLite(),dbpath,flags=RSQLite::SQLITE_RW)
           dbExecute(newCon, "PRAGMA foreign_keys=ON")
       }
-      dbExecute(newCon, sprintf("PRAGMA  mmap_size=%s", 1024**3))
-      dbExecute(newCon, sprintf("PRAGMA  cache_size=%s", 1024**3))
-      # Time in milliseconds to wait before signalling that a DB is busy
-      dbExecute(newCon, "PRAGMA  busy_timeout=1000")
+      tryCatch({
+          dbExecute(newCon, sprintf("PRAGMA  mmap_size=%s", 1024**3))
+          dbExecute(newCon, sprintf("PRAGMA  cache_size=%s", 1024**3))
+          # Time in milliseconds to wait before signalling that a DB is busy
+          dbExecute(newCon, "PRAGMA  busy_timeout=1000")
+        },
+        error=function(e) {flog.debug(e); NULL}
+      )
       newCon
     },
     error=function(e) {
