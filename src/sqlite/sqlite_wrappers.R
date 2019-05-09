@@ -132,15 +132,30 @@ singleFileQuerier <- function(dbpath, query) {
   res
 }
 
-performQuery <- function(db, query, dtgs) {
+performQuery <- function(db, query, dtgs, queryChunkSize=24) {
   selectedDtgs <- dtgs
   if(length(dtgs)>1) {
     range <- summariseDtgRange(dtgs)
     selectedDtgs <- expandDtgRange(range)
   }
   dbpaths <- db$getDataFilePaths(selectedDtgs)
+  if(length(dbpaths)>1) {
+    # Queries will be split in newNWorkers batches which will be processed
+    # simultaneously (in parallel). The number of queries in each batch will
+    # be approx queryChunkSize
+    originalNbrOfWorkers <- nbrOfWorkers()
+    newNWorkers <- 1 + ceiling(length(dbpaths)/abs(queryChunkSize))
+    plan(multiprocess, workers=newNWorkers)
+    on.exit({
+      plan(sequential)
+      plan(multiprocess, workers=originalNbrOfWorkers)
+    })
+  }
 
-  res <- lapply(dbpaths, partial(singleFileQuerier, query=query))
+  res <- future_lapply(dbpaths,
+    partial(singleFileQuerier, query=query),
+    future.chunk.size=queryChunkSize
+  )
   res <- do.call(rbind, res)
   if("DTG" %in% names(res)) {
     # Convert DTGs from integers to POSIXct

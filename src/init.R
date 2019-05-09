@@ -35,6 +35,7 @@ tryCatch(
     suppressPackageStartupMessages(library(flock))
     suppressPackageStartupMessages(library(futile.logger))
     suppressPackageStartupMessages(library(future))
+    suppressPackageStartupMessages(library(future.apply))
     suppressPackageStartupMessages(library(ggplot2))
     suppressPackageStartupMessages(library(grid))
     suppressPackageStartupMessages(library(gridExtra))
@@ -81,15 +82,7 @@ setPackageOptions <- function(config) {
   flog.appender(appender.file(stderr()), 'ROOT')
   flog.threshold(parse(text=config$general$logLevel)[[1]])
   # Options controlling parallelism
-  maxExtraParallelProcs <- as.integer(config$general$maxExtraParallelProcs)
-  if(anyNA(maxExtraParallelProcs) || maxExtraParallelProcs<0) {
-    maxExtraParallelProcs <- .Machine$integer.max
-  } else {
-    flog.info(sprintf("Limiting maxExtraParallelProcs to %s",
-      maxExtraParallelProcs
-    ))
-  }
-  plan(multiprocess, workers=maxExtraParallelProcs)
+  plan(multiprocess, workers=config$general$maxExtraParallelProcs)
 }
 
 sourceObsmonFiles <- function() {
@@ -120,6 +113,17 @@ configGeneralFillInDefault <- function(config, key, default) {
     "logLevel"={
       if(exists("cmdLineArgs") && isTRUE(cmdLineArgs$debug)) "DEBUG"
       else currentVal
+    },
+    "maxExtraParallelProcs"={
+      currentVal <- as.integer(currentVal)
+      if(anyNA(currentVal) || currentVal<0) {
+        currentVal <- .Machine$integer.max
+      } else {
+        flog.info(sprintf("Limiting maxExtraParallelProcs to %s",
+          currentVal
+        ))
+      }
+      currentVal
     },
     currentVal
   )
