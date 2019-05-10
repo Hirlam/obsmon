@@ -354,27 +354,27 @@ getCycleQueryString <- function(cycles=NULL) {
 
 dtgsAreCached <- function(db, dtgs) {
   # Get all cached DTGs
+  # Only consider a DTG to be cached if it is present in both
+  # "usage" and "obsmon" cache files
   cachedDtgs <- NULL
   for(cacheFilePath in db$cachePaths) {
     con <- dbConnectWrapper(cacheFilePath, read_only=TRUE, showWarnings=FALSE)
     if(is.null(con)) return(FALSE)
-    newCachedDtgs <- tryCatch({
-        dbGetQuery(con,
-          "SELECT DISTINCT date, cycle FROM cycles"
-        )
-      },
-      error=function(e) NULL,
-      warning=function(w) NULL
+    dtgsCachedInThisTable <- tryCatch(
+      dbGetQuery(con, "SELECT DISTINCT date, cycle FROM cycles"),
+      error=function(e) {flog.debug(e); NULL},
+      warning=function(w) {flog.debug(w); NULL}
     )
+    if(is.null(dtgsCachedInThisTable)) return(FALSE)
     if(is.null(cachedDtgs)) {
-      cachedDtgs <- newCachedDtgs
+      cachedDtgs <- dtgsCachedInThisTable
     } else {
-      # Only consider a DTG to be cached if it is present in both
-      # "usage" and "obsmon" cache files
-      cachedDtgs <- intersect(cachedDtgs, newCachedDtgs)
+      cachedDtgs <- tryCatch(
+        intersect(cachedDtgs, dtgsCachedInThisTable),
+        error=function(e) {flog.error("dtgsAreCached: %s", e); NULL}
+      )
     }
     dbDisconnectWrapper(con)
-    if(is.null(newCachedDtgs)) break
   }
   if(is.null(cachedDtgs) || ncol(cachedDtgs)==0) return(FALSE)
 
