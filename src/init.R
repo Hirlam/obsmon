@@ -118,13 +118,19 @@ configGeneralFillInDefault <- function(config, key, default) {
       else currentVal
     },
     "maxExtraParallelProcs"={
-      currentVal <- as.integer(currentVal)
+      currentVal <- round(as.numeric(currentVal))
       if(anyNA(currentVal) || currentVal<0) {
         currentVal <- .Machine$integer.max
       } else {
-        flog.info(sprintf("Limiting maxExtraParallelProcs to %s",
-          currentVal
-        ))
+        flog.info("Limiting maxExtraParallelProcs to %s", currentVal)
+      }
+      currentVal
+    },
+    "maxAvgQueriesPerProc"={
+      currentVal <- round(as.numeric(currentVal))
+      if(anyNA(currentVal) || currentVal<1) {
+        currentVal <- Inf
+        flog.info("WARN: Resetting maxAvgQueriesPerProc to %s", currentVal)
       }
       currentVal
     },
@@ -159,6 +165,7 @@ configGeneralFillInDefaults <- function(config) {
   config <- configGeneralFillInDefault(config, "maxExtraParallelProcs",
     Sys.getenv("OBSMON_MAX_N_EXTRA_PROCESSES")
   )
+  config <- configGeneralFillInDefault(config, "maxAvgQueriesPerProc", Inf)
   config <- configGeneralFillInDefault(config, "showCacheOptions", FALSE)
   config <- configGeneralFillInDefault(
     config, "multiPlotsEnableInteractivity", FALSE

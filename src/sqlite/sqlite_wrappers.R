@@ -142,7 +142,10 @@ singleFileQuerier <- function(dbpath, query) {
   res
 }
 
-performQuery <- function(db, query, dtgs, queryChunkSize=24) {
+performQuery <- function(
+  db, query, dtgs,
+  maxAvgQueriesPerProc=obsmonConfig$general$maxAvgQueriesPerProc
+) {
   startTime <- Sys.time() # For debug purposes
   selectedDtgs <- dtgs
   if(length(dtgs)>1) {
@@ -154,7 +157,7 @@ performQuery <- function(db, query, dtgs, queryChunkSize=24) {
   res <- tryCatch({
       queryResult <- future_lapply(dbpaths,
         partial(singleFileQuerier, query=query),
-        future.chunk.size=queryChunkSize
+        future.chunk.size=maxAvgQueriesPerProc
       )
       do.call(rbind, queryResult)
     },
@@ -164,12 +167,20 @@ performQuery <- function(db, query, dtgs, queryChunkSize=24) {
     # Convert DTGs from integers to POSIXct
     res$DTG <- as.POSIXct(as.character(res$DTG), format="%Y%m%d%H")
   }
+
+  nQueries <- length(dbpaths)
   avgQueryTime <- Inf
-  totQueryTime <- Sys.time() - startTime
-  if(length(dbpaths)>0) avgQueryTime <- totQueryTime / length(dbpaths)
+  elapsed <- Sys.time() - startTime
+  if(nQueries>0) avgQueryTime <- elapsed / nQueries
+
   flog.debug(
-    "preformQuery: %d queries in %.3f sec. Avg time per query: %.3f sec",
-    length(dbpaths), totQueryTime, avgQueryTime
+    paste(
+      "preformQuery: Split %d queries into %d processes.\n",
+      "  > Total elapsed time: %.3f sec. Avg time per query: %.3f sec."
+    ),
+    nQueries, max(1, ceiling(nQueries/maxAvgQueriesPerProc)),
+    elapsed, avgQueryTime
   )
-  res
+
+  return(res)
 }
