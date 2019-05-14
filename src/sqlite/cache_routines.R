@@ -358,9 +358,14 @@ dtgsAreCached <- function(db, dtgs) {
   # Only consider a DTG to be cached if it is present in both
   # "usage" and "obsmon" cache files
   cachedDtgs <- NULL
+  allDbConsCreatedHere <- c()
+  on.exit({
+    for(dbCon in allDbConsCreatedHere) dbDisconnectWrapper(dbCon)
+  })
   for(cacheFilePath in db$cachePaths) {
     con <- dbConnectWrapper(cacheFilePath, read_only=TRUE, showWarnings=FALSE)
     if(is.null(con)) return(FALSE)
+    allDbConsCreatedHere <- c(allDbConsCreatedHere, con)
     dtgsCachedInThisTable <- tryCatch(
       dbGetQuery(con, "SELECT DISTINCT date, cycle FROM cycles"),
       error=function(e) {
@@ -381,7 +386,6 @@ dtgsAreCached <- function(db, dtgs) {
         error=function(e) {flog.error("dtgsAreCached: %s", e); NULL}
       )
     }
-    dbDisconnectWrapper(con)
   }
   if(is.null(cachedDtgs) || ncol(cachedDtgs)==0) return(FALSE)
 

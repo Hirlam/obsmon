@@ -124,6 +124,7 @@ dbDisconnectWrapper <- function(con) {
 
 singleFileQuerier <- function(dbpath, query) {
   con <- dbConnectWrapper(dbpath, read_only=TRUE)
+  on.exit(dbDisconnectWrapper(con))
   # If con if NULL then we could not connect. Returning NULL silently here,
   # as the dbConnectWrapper will have a better error message in this case.
   if(is.null(con)) return(NULL)
@@ -138,7 +139,6 @@ singleFileQuerier <- function(dbpath, query) {
       NULL
     }
   )
-  dbDisconnectWrapper(con)
   res
 }
 
