@@ -50,7 +50,7 @@ createCacheFiles <- function(cacheDir, dbType=dbTypesRecognised, reset=FALSE){
       file.copy(cacheTemplate, cacheFilePaths, overwrite=FALSE)
       0
     },
-    error=function(e) {flog.error(e); -1}
+    error=function(e) {flog.error("createCacheFiles: %s", e); -1}
   )
   return(rtn)
 }
@@ -91,6 +91,8 @@ cacheObsFromFile <- function(sourceDbPath, cacheDir, replaceExisting=FALSE) {
           "DELETE FROM cycles WHERE date=%d AND cycle=%d", date, cycle
         ))
       }
+    } else {
+      flog.trace("Caching: Done with file %s\n", sourceDbPath)
     }
     allDbConsCreatedHere <- c(allDbConsCreatedHere, cacheDbConsCreatedHere)
     for(dbCon in allDbConsCreatedHere) dbDisconnectWrapper(dbCon)
@@ -179,7 +181,12 @@ cacheObsFromFile <- function(sourceDbPath, cacheDir, replaceExisting=FALSE) {
       warning=function(w) FALSE,
       error=function(e) FALSE
     )
-    if(alreadyCached) next
+    if(alreadyCached) {
+      flog.trace("Already cached %s table of file %s\n",db_table,sourceDbPath)
+      next
+    } else {
+      flog.trace("Caching %s table of file %s\n", db_table, sourceDbPath)
+    }
 
     # Register experiment as existing, if not previously done
     exptDir <- dirname(dirname(dirname(sourceDbPath)))
@@ -346,7 +353,8 @@ getCycleQueryString <- function(cycles=NULL) {
 
 
 dtgsAreCached <- function(db, dtgs) {
-  # Get all cached DTGs
+  # Determine whether a set of dtgs is present in the cached data for a
+  # particular database db belonging to an obsmon experiment.
   # Only consider a DTG to be cached if it is present in both
   # "usage" and "obsmon" cache files
   cachedDtgs <- NULL
@@ -355,8 +363,14 @@ dtgsAreCached <- function(db, dtgs) {
     if(is.null(con)) return(FALSE)
     dtgsCachedInThisTable <- tryCatch(
       dbGetQuery(con, "SELECT DISTINCT date, cycle FROM cycles"),
-      error=function(e) {flog.debug(e); NULL},
-      warning=function(w) {flog.debug(w); NULL}
+      error=function(e) {
+        flog.trace("dtgsAreCached: %s (%s)", e, cacheFilePath)
+        NULL
+      },
+      warning=function(w) {
+        flog.trace("dtgsAreCached: %s (%s)", w, cacheFilePath)
+        NULL
+      }
     )
     if(is.null(dtgsCachedInThisTable)) return(FALSE)
     if(is.null(cachedDtgs)) {

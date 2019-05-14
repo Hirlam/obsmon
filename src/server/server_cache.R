@@ -100,14 +100,14 @@ observeEvent({
   req(length(fPaths)>0)
   db <- req(activeDb())
 
-  cacheProc <- suppressWarnings(futureCall(
+  cacheProc <- futureCall(
     FUN=putObsInCache,
     args=list(
       sourceDbPaths=fPaths,
       cacheDir=db$cacheDir,
       replaceExisting=isRecache
     )
-  ))
+  )
   # Register caching as "onging" for the relevant files
   cacheIsOngoing(TRUE)
   for(fPath in fPaths) assyncCachingProcs[[fPath]] <<- cacheProc

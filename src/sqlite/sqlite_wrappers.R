@@ -71,12 +71,17 @@ dbConnectWrapper <- function(dbpath, read_only=FALSE, showWarnings=TRUE) {
           newCon <- dbConnect(
             RSQLite::SQLite(),dbpath,flags=RSQLite::SQLITE_RO,
             synchronous=NULL
-           )
+          )
           tryCatch({
               dbExecute(newCon, "PRAGMA synchronous=off")
               dbExecute(newCon, "PRAGMA  journal_mode=OFF")
             },
-            error=function(e) {flog.debug(e); NULL}
+            error=function(e) {
+              flog.trace(
+                "WARN (dbConnectWrapper, RO): PRAGMAs not set for dB %s: %s",
+                dbpath, e
+              )
+            }
           )
       } else {
           newCon<-dbConnect(RSQLite::SQLite(),dbpath,flags=RSQLite::SQLITE_RW)
@@ -88,7 +93,12 @@ dbConnectWrapper <- function(dbpath, read_only=FALSE, showWarnings=TRUE) {
           # Time in milliseconds to wait before signalling that a DB is busy
           dbExecute(newCon, "PRAGMA  busy_timeout=1000")
         },
-        error=function(e) {flog.debug(e); NULL}
+        error=function(e) {
+          flog.trace(
+            "WARN (dbConnectWrapper, RW): PRAGMAs not set for dB %s: %s",
+            dbpath, e
+          )
+        }
       )
       newCon
     },
@@ -133,6 +143,7 @@ singleFileQuerier <- function(dbpath, query) {
 }
 
 performQuery <- function(db, query, dtgs, queryChunkSize=24) {
+  startTime <- Sys.time() # For debug purposes
   selectedDtgs <- dtgs
   if(length(dtgs)>1) {
     range <- summariseDtgRange(dtgs)
@@ -152,14 +163,25 @@ performQuery <- function(db, query, dtgs, queryChunkSize=24) {
     })
   }
 
-  res <- future_lapply(dbpaths,
-    partial(singleFileQuerier, query=query),
-    future.chunk.size=queryChunkSize
+  res <- tryCatch({
+      queryResult <- future_lapply(dbpaths,
+        partial(singleFileQuerier, query=query),
+        future.chunk.size=queryChunkSize
+      )
+      do.call(rbind, queryResult)
+    },
+    error=function(e) {flog.error("preformQuery: %s", e); NULL}
   )
-  res <- do.call(rbind, res)
   if("DTG" %in% names(res)) {
     # Convert DTGs from integers to POSIXct
     res$DTG <- as.POSIXct(as.character(res$DTG), format="%Y%m%d%H")
   }
+  avgQueryTime <- Inf
+  totQueryTime <- Sys.time() - startTime
+  if(length(dbpaths)>0) avgQueryTime <- totQueryTime / length(dbpaths)
+  flog.debug(
+    "preformQuery: %d queries in %.3f sec. Avg time per query: %.3f sec",
+    length(dbpaths), totQueryTime, avgQueryTime
+  )
   res
 }
