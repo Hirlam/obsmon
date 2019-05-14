@@ -4,7 +4,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
-## [Unreleased]
+## [3.2.0] 2019-05-14
 ### Added
 - New config file option: maxAvgQueriesPerProc
     - Possibility to make plots faster by parallelising underlying database queries
