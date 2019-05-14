@@ -73,7 +73,12 @@ observeEvent({
   filesToCacheInThisBatch <- filesPendingCache()[1:2]
   filesToCacheInThisBatch <- Filter(Negate(anyNA), filesToCacheInThisBatch)
   newBatchFilesToCache(filesToCacheInThisBatch)
-})
+},
+  # Give caching lower priority than other observers, as it will keep running
+  # on the background for as long as needed and we don't want the app to slow
+  # down as a result
+  priority=-1
+)
 # Prepare and send, if requested, batches of data files to be re-cached
 observeEvent({
   filesPendingRecache()
@@ -83,7 +88,9 @@ observeEvent({
   filesToRecacheInThisBatch <- filesPendingRecache()[1:2]
   filesToRecacheInThisBatch <- Filter(Negate(anyNA), filesToRecacheInThisBatch)
   newBatchFilesToRecache(filesToRecacheInThisBatch)
-})
+},
+  priority=-1
+)
 
 # Cache (or recache) observations as new batches of file paths arrive
 observeEvent({
@@ -133,7 +140,9 @@ observeEvent({
 
   # This NULL is necessary in order to avoid the future from blocking
   NULL
-})
+},
+  priority=-1
+)
 
 # Re-cache observations if requested by user
 observeEvent(input$recacheCacheButton, {
