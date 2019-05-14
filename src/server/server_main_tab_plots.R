@@ -73,7 +73,7 @@ observeEvent(input$doPlot, {
     "Gathering data for plot...", type="message", duration=NULL
   ))
 
-  # Prepare plot assyncronously
+  # Prepare plot asyncronously
   newFutPlotAndOutput <- futureCall(
     FUN=preparePlotsCapturingOutput,
     args=list(plotter=plotter, plotRequest=plotRequest, db=db)
@@ -134,7 +134,7 @@ observeEvent(input$doPlot, {
     shinyjs::hide("cancelPlot")
     shinyjs::show("doPlot")
     enableShinyInputs(input, except="^multiPlots*")
-    # Printing output produced during assync plot, if any
+    # Printing output produced during async plot, if any
     resolvedValue <- value(newFutPlotAndOutput)
     producedOutput <- resolvedValue$output
     if(length(producedOutput)>0) cat(paste0(producedOutput, "\n"))

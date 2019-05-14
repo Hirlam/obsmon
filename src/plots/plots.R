@@ -303,12 +303,12 @@ preparePlots <- function(plotter, plotRequest, db) {
 }
 
 preparePlotsCapturingOutput <- function(...) {
-  # We call preparePlots assyncronously in the shiny app to make it possible
+  # We call preparePlots asyncronously in the shiny app to make it possible
   # to cancel plots. Catching the output is useful in this case because we
   # want to suppress an annoying blank line that is printed out every time a
   # plot is cancelled, but we don't want to prevent any error message from
   # being shown. The output produced by preparePlots will, if not empty, be
-  # printed out upon completion of the assync task.
+  # printed out upon completion of the async task.
   output <- capture.output({
     plots <- preparePlots(...)
   }, type="message")
