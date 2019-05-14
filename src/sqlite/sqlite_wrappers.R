@@ -150,18 +150,6 @@ performQuery <- function(db, query, dtgs, queryChunkSize=24) {
     selectedDtgs <- expandDtgRange(range)
   }
   dbpaths <- db$getDataFilePaths(selectedDtgs)
-  if(length(dbpaths)>1) {
-    # Queries will be split in newNWorkers batches which will be processed
-    # simultaneously (in parallel). The number of queries in each batch will
-    # be approx queryChunkSize
-    originalNbrOfWorkers <- nbrOfWorkers()
-    newNWorkers <- 1 + ceiling(length(dbpaths)/abs(queryChunkSize))
-    plan(multiprocess, workers=newNWorkers)
-    on.exit({
-      plan(sequential)
-      plan(multiprocess, workers=originalNbrOfWorkers)
-    })
-  }
 
   res <- tryCatch({
       queryResult <- future_lapply(dbpaths,

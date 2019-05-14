@@ -82,7 +82,10 @@ setPackageOptions <- function(config) {
   flog.appender(appender.file(stderr()), 'ROOT')
   flog.threshold(parse(text=config$general$logLevel)[[1]])
   # Options controlling parallelism
-  plan(multiprocess, workers=config$general$maxExtraParallelProcs)
+  plan(list(
+    tweak(multiprocess, workers=config$general$maxExtraParallelProcs),
+    tweak(multiprocess, workers=config$general$maxExtraParallelProcs)
+  ))
 }
 
 sourceObsmonFiles <- function() {
@@ -225,24 +228,19 @@ readConfig <- function() {
 }
 
 assertCacheDirWritable <- function(config, verbose=FALSE) {
-
   cacheDirPath <- config$general[["cacheDir"]]
-
   dir.create(cacheDirPath, recursive=TRUE, showWarnings=FALSE, mode="0755")
   writable <- tryCatch(
     file.access(cacheDirPath, mode=2)==0,
     error=function(e) FALSE
   )
-
   if(!writable) {
     msg <- paste("Cannot write to cacheDir", cacheDirPath, "\n")
     msg <- paste(msg, "Please specify a valid cacheDir value under the\n")
     msg <- paste(msg, '"[general]" section in your config file.\n')
     stop(msg)
   }
-
   if(verbose) flog.info(paste("cacheDir set to:", cacheDirPath, "\n"))
-
 }
 
 configure <- function() {
