@@ -1,9 +1,9 @@
 clamp <- function(value, min, max, default=max) {
-  if (is.null(value)) {
+  if (anyNA(value) || length(value)==0) {
     default
-  } else if (value < min) {
+  } else if (isTRUE(value<min)) {
     min
-  } else if (value > max) {
+  } else if (isTRUE(value>max)) {
     max
   } else {
     value
@@ -33,10 +33,14 @@ toLowerTrimAndSingleSpaces <- function(str) {
 }
 
 dtg2date <- function(dtg) {
-  paste(substr(dtg, 1, 4), substr(dtg, 5, 6), substr(dtg, 7, 8), sep="-")
+  dtgAsPOSIXlt <- strptime(dtg, format="%Y%m%d%H", tz="GMT")
+  rtn <- strftime(dtgAsPOSIXlt, format="%Y-%m-%d", tz="GMT")
+  if(anyNA(rtn) || length(rtn)==0) rtn <- character(0)
+  return(rtn)
 }
 
 date2dtg <- function(date, cycle=NULL) {
+  if(anyNA(date) || length(date)==0) return(integer(0))
   year <- substr(date, 1, 4)
   month <- substr(date, 6, 7)
   day <- substr(date, 9, 10)
@@ -53,29 +57,30 @@ dtg2POSIXct <- function(dtg) {
 expandDateRange <- function(start, end, format="%Y%m%d") {
   start <- date2dtg(start)
   end <- date2dtg(end)
-  if(start>end) {
+  if(length(start)==0 || length(end)==0) return(character(0))
+  if(isTRUE(start>end)) {
     temp <- start
     start <- end
     end <- temp
   }
-  startAsChar <- as.character(start)
-  endAsChar <- as.character(end)
   rtn <- seq(
-    as.Date(startAsChar, format=format),
-    as.Date(endAsChar, format=format),
+    as.Date(as.character(start), format=format),
+    as.Date(as.character(end), format=format),
     by="days"
   )
   rtn <- strftime(rtn, format=format)
-  if(is.numeric(c(start, end))) rtn <- as.integer(rtn)
   return(rtn)
 }
 
-expandDtgRange <- function(dateRange) {
+summariseDtgRange <- function(dateRange) {
   startDate <- dateRange[[1]]
   endDate <- dateRange[[2]]
-  cycles <- as.integer(dateRange[[3]])
+  cycles <- tryCatch(
+    as.integer(dateRange[[3]]),
+    error=function(e) {flog.error("summariseDtgRange: %s", e); integer(0)}
+  )
   if(length(cycles)==0) {
-    cycles <- NULL
+    cycles <- integer(0)
     minCycle <- 0
     maxCycle <- 24
   } else {
@@ -85,6 +90,16 @@ expandDtgRange <- function(dateRange) {
   startDtg <- date2dtg(startDate, minCycle)
   endDtg <- date2dtg(endDate, maxCycle)
   list(startDtg, endDtg, cycles)
+}
+
+expandDtgRange <- function(range, cycles=NULL) {
+  startDtg <- strptime(range[[1]], format="%Y%m%d%H", tz="GMT")
+  endDtg <- strptime(range[[2]], format="%Y%m%d%H", tz="GMT")
+  dateTimes <- seq(from=startDtg, to=endDtg, by="hour")
+
+  rtn <- as.integer(strftime(dateTimes, format="%Y%m%d%H", tz="GMT"))
+  if(length(cycles)>0) rtn <- rtn[(rtn %% 100) %in% as.integer(cycles)]
+  return(rtn)
 }
 
 formatDtg <- function(dtg) {

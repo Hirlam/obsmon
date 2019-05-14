@@ -3,44 +3,19 @@
 ############################################################################
 
 # Show multiPlots tab if multiPlots are available
-if(!is.null(obsmonConfig$multiPlots)) {
+if(length(obsmonConfig$multiPlots)>0) {
   shinyjs::show(selector="#appNavbarPage li a[data-value=multiPlotsTab]")
   # Hide plotly output tab, as the multiplot outputs are generated dinamically
   # and can thus be included in the regular tab
-  shinyjs::hide(selector="#multiPlotsMainArea li a[data-value=multiPlotsPlotlyTab]")
-  shinyjs::disable(selector="#multiPlotsMainArea li a[data-value=multiPlotsPlotlyTab]")
+  jsSelec <- "#multiPlotsMainArea li a[data-value=multiPlotsPlotlyTab]"
+  for(jsFunc in c(shinyjs::hide, shinyjs::disable)) jsFunc(selector=jsSelec)
 }
 
-multiPlotChoices <- c()
-for(plotConfig in obsmonConfig$multiPlots) {
-  multiPlotChoices <- c(multiPlotChoices, plotConfig$displayName)
-}
-updateSelectInput(session, "multiPlotTitle", choices=multiPlotChoices)
-
-multiPlotConfigInfo <- eventReactive(input$multiPlotTitle, {
-  pConfig <- NULL
-  for(pConf in obsmonConfig$multiPlots) {
-    if(!pConf$displayName==input$multiPlotTitle) next
-    pConfig <- pConf
-    break
-  }
-  pConfig
-})
-
-multiPlotExperiment <- eventReactive(multiPlotConfigInfo(), {
-  pConfig <- multiPlotConfigInfo()
-  experiments()[[pConfig$experiment]]
-},
-  ignoreNULL=FALSE
-)
-
-multiPlotActiveDb <- eventReactive(multiPlotExperiment(), {
-  pConfig <- multiPlotConfigInfo()
-  dbType <- pConfig$database
-  multiPlotExperiment()$dbs[[dbType]]
-},
-  ignoreNULL=FALSE
-)
+# Populate multiPlot choices in the UI.
+mpChoices <- unlist(lapply(obsmonConfig$multiPlots, function(mpc) {
+  mpc$displayName
+}))
+updateSelectInput(session, "multiPlotTitle", choices=mpChoices)
 
 # Management of multiPlot progress bar
 multiPlotsProgressFile <- reactiveVal(NULL)
@@ -71,7 +46,7 @@ observeEvent(multiPlotsProgressStatus()(), {
   multiPlotsProgressBar(progress)
 })
 
-# Keep track of multiPlot assync process PID in case user wants to cancel it
+# Keep track of multiPlot async process PID in case user wants to cancel it
 multiPlotCurrentPid <- reactiveVal(-1)
 
 # Management of "Cancel multiPlot" button
@@ -97,22 +72,20 @@ observeEvent(input$multiPlotsDoPlot, {
   # Erase any plot currently on display
   multiPlot(NULL)
 
-  pConfig <- multiPlotConfigInfo()
-  db <- tryCatch(
-    req(multiPlotActiveDb()),
+  pConfig <- getMultiPlotConfig(input$multiPlotTitle)
+  db <- req(tryCatch({
+      rtn <- expts[[req(pConfig$experiment)]]$dbs[[req(pConfig$database)]]
+      req(isTRUE(dir.exists(rtn$dir)))
+      rtn
+    },
     error=function(e) {
-      exptName <- pConfig$experiment
-      exptNames <- gsub(": Loading experiment...$", "", names(experiments))
-      if(exptName %in% exptNames) {
-        errMsg <- "Experiment still loading. Please try again later."
-      } else {
-        errMsg <- sprintf('Cannot find files for experiment "%s"', exptName)
-      }
-      signalError(title="Cannot produce multiPlot", errMsg)
+      signalError(title="Cannot produce multiPlot", sprintf(
+        'Could not find files for database "%s" of experiment "%s"',
+        pConfig$database, pConfig$experiment
+      ))
       NULL
     }
-  )
-  req(db)
+  ))
 
   # Making shiny-like inputs for each individual plot, to be passed to the
   # regular obsmon plotting routines
@@ -129,7 +102,7 @@ observeEvent(input$multiPlotsDoPlot, {
   # All checks performed: We can now proceed with the multiPlot #
   ###############################################################
   # Prevent another plot from being requested
-  disableShinyInputs(input)
+  disableShinyInputs(input, pattern="^multiPlots*")
   shinyjs::hide("multiPlotsDoPlot")
 
   # Offer possibility to cancel multiPlot
@@ -143,36 +116,25 @@ observeEvent(input$multiPlotsDoPlot, {
   multiPlotsProgressBar(progress)
   multiPlotsProgressFile(tempfile(pattern = "multiPlotsProgress"))
 
-
-  # Using sink to suppress two annoying blank lines that are sent to
-  # stdout whenever a multiPlot is cancelled.
-  # See the analogous code in the input$doPlot observe
-  tmpStdOut <- vector('character')
-  tmpStdOutCon <- textConnection('tmpStdOut', 'wr', local=TRUE)
-  sink(tmpStdOutCon, type="message")
-
-  # Prepare individual plots assyncronously
-  multiPlotsAsync <- futureCall(
-    FUN=prepareMultiPlots,
+  # Prepare individual plots asyncronously
+  multiPlotsAsyncAndOutput <- futureCall(
+    FUN=prepareMultiPlotsCapturingOutput,
     args=list(
       plotter=plotTypesFlat[[pConfig$plotType]],
       inputsForAllPlots=inputsForAllPlots, db=db,
       progressFile=multiPlotsProgressFile()
     )
   )
-  multiPlotCurrentPid(multiPlotsAsync$job$pid)
+  multiPlotCurrentPid(multiPlotsAsyncAndOutput$job$pid)
 
-  # Cancel sink, so error/warning messages can be printed again
-  sink(type="message")
-
-  then(multiPlotsAsync,
+  then(multiPlotsAsyncAndOutput,
     onFulfilled=function(value) {
       showNotification(
         "Preparing to render multiPlot", duration=1, type="message"
       )
-      multiPlot(value)
+      multiPlot(value$plots)
       somePlotHasMap <- FALSE
-      for(individualPlot in value) {
+      for(individualPlot in value$plots) {
         if(!is.null(individualPlot$obmap)) {
           somePlotHasMap <- TRUE
           break
@@ -195,7 +157,7 @@ observeEvent(input$multiPlotsDoPlot, {
       multiPlot(NULL)
     }
   )
-  plotCleanup <- finally(multiPlotsAsync, function() {
+  plotCleanup <- finally(multiPlotsAsyncAndOutput, function() {
     multiPlotCurrentPid(-1)
     # Reset items related to multiPlot progress bar
     unlink(multiPlotsProgressFile())
@@ -205,15 +167,16 @@ observeEvent(input$multiPlotsDoPlot, {
     # Hide/show and disable/enable relevant inputs
     shinyjs::hide("multiPlotsCancelPlot")
     shinyjs::show("multiPlotsDoPlot")
-    enableShinyInputs(input)
-    # Printing stdout produced during assync plot, if any
-    if(isTRUE(trimws(tmpStdOut)!="")) cat(paste0(tmpStdOut, "\n"))
-    close(tmpStdOutCon)
+    enableShinyInputs(input, pattern="^multiPlots*")
+    # Printing output produced during async plot, if any
+    resolvedValue <- value(multiPlotsAsyncAndOutput)
+    producedOutput <- resolvedValue$output
+    if(length(producedOutput)>0) cat(paste0(producedOutput, "\n"))
   })
   catch(plotCleanup, function(e) {
     # This prevents printing the annoying "Unhandled promise error" msg when
     # plots are cancelled
-    if(!plotInterrupted()) flog.error(e)
+    if(!multiPlotInterrupted()) flog.error(e)
     NULL
   })
   # This NULL is necessary in order to avoid the future from blocking

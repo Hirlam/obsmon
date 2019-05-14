@@ -35,6 +35,7 @@ tryCatch(
     suppressPackageStartupMessages(library(flock))
     suppressPackageStartupMessages(library(futile.logger))
     suppressPackageStartupMessages(library(future))
+    suppressPackageStartupMessages(library(future.apply))
     suppressPackageStartupMessages(library(ggplot2))
     suppressPackageStartupMessages(library(grid))
     suppressPackageStartupMessages(library(gridExtra))
@@ -79,19 +80,12 @@ setPackageOptions <- function(config) {
   options(shiny.usecairo=TRUE)
   pdf(NULL)
   flog.appender(appender.file(stderr()), 'ROOT')
-  logLevel <- parse(text=config$general$logLevel)[[1]]
-  if(exists("cmdLineArgs") && isTRUE(cmdLineArgs$debug)) logLevel <- DEBUG
-  flog.threshold(logLevel)
+  flog.threshold(parse(text=config$general$logLevel)[[1]])
   # Options controlling parallelism
-  maxExtraParallelProcs <- as.integer(config$general$maxExtraParallelProcs)
-  if(anyNA(maxExtraParallelProcs) || maxExtraParallelProcs<0) {
-    maxExtraParallelProcs <- .Machine$integer.max
-  } else {
-    flog.info(sprintf("Limiting maxExtraParallelProcs to %s",
-      maxExtraParallelProcs
-    ))
-  }
-  plan(multiprocess, workers=maxExtraParallelProcs)
+  plan(list(
+    tweak(multiprocess, workers=config$general$maxExtraParallelProcs),
+    tweak(multiprocess, workers=config$general$maxExtraParallelProcs)
+  ))
 }
 
 sourceObsmonFiles <- function() {
@@ -113,18 +107,39 @@ sourceObsmonFiles <- function() {
   source("src/shiny_wrappers.R")
 }
 
-fillInDefault <- function(config, key, default) {
-  if (is.null(config$general[[key]])) {
-    config$general[[key]] <- default
-  }
-  if(key=="cacheDir") {
-    config$general[[key]] <- normalizePath(config$general[[key]], mustWork=FALSE)
-  }
+configGeneralFillInDefault <- function(config, key, default) {
+  if (is.null(config$general[[key]])) config$general[[key]] <- default
+
+  currentVal <- config$general[[key]]
+  config$general[[key]] <- switch(key,
+    "cacheDir"=normalizePath(config$general[[key]], mustWork=FALSE),
+    "logLevel"={
+      if(exists("cmdLineArgs") && isTRUE(cmdLineArgs$debug)) "DEBUG"
+      else currentVal
+    },
+    "maxExtraParallelProcs"={
+      currentVal <- round(as.numeric(currentVal))
+      if(anyNA(currentVal) || currentVal<0) {
+        currentVal <- .Machine$integer.max
+      } else {
+        flog.info("Limiting maxExtraParallelProcs to %s", currentVal)
+      }
+      currentVal
+    },
+    "maxAvgQueriesPerProc"={
+      currentVal <- round(as.numeric(currentVal))
+      if(anyNA(currentVal) || currentVal<1) {
+        currentVal <- Inf
+        flog.info("WARN: Resetting maxAvgQueriesPerProc to %s", currentVal)
+      }
+      currentVal
+    },
+    currentVal
+  )
   config
 }
 
 getSuitableCacheDirDefault <- function() {
-
   cacheDirPath <- NA
   homeCacheDirPath <- file.path(homeAuxDir, "experiments_cache")
 
@@ -140,15 +155,21 @@ getSuitableCacheDirDefault <- function() {
   return(cacheDirPath)
 }
 
-fillInDefaults <- function(config) {
-  config <- fillInDefault(config, "cacheDir", getSuitableCacheDirDefault())
-  config <- fillInDefault(config, "logLevel", "WARN")
-  config <- fillInDefault(config, "initCheckDataExists", FALSE)
-  config <- fillInDefault(config, "maxExtraParallelProcs",
+configGeneralFillInDefaults <- function(config) {
+  if(length(config)==0) config <- list(general=list())
+  config <- configGeneralFillInDefault(
+    config, "cacheDir", getSuitableCacheDirDefault()
+  )
+  config <- configGeneralFillInDefault(config, "logLevel", "WARN")
+  config <- configGeneralFillInDefault(config, "initCheckDataExists", FALSE)
+  config <- configGeneralFillInDefault(config, "maxExtraParallelProcs",
     Sys.getenv("OBSMON_MAX_N_EXTRA_PROCESSES")
   )
-  config <- fillInDefault(config, "showCacheOptions", FALSE)
-  config <- fillInDefault(config, "multiPlotsEnableInteractivity", FALSE)
+  config <- configGeneralFillInDefault(config, "maxAvgQueriesPerProc", Inf)
+  config <- configGeneralFillInDefault(config, "showCacheOptions", FALSE)
+  config <- configGeneralFillInDefault(
+    config, "multiPlotsEnableInteractivity", FALSE
+  )
   config
 }
 
@@ -179,21 +200,22 @@ getValidConfigFilePath <- function(verbose=FALSE) {
 
   if(anyNA(configPath)) {
     msg <- paste0(
-      'Config file "', configFileDefBasename, '" not found.\n\n',
-      "Please put the config file under one of the following dir(s):\n"
+      'Config file "', configFileDefBasename, '" not found!\n',
+      "  Please put the config file under one of the following dir(s):\n"
     )
     for (fPath in confOrder) {
       fDir <- dirname(fPath)
       if(file.access(dirname(fPath), 2) != 0) next
-      msg <- paste0(msg, "  > ", fDir, "\n")
+      msg <- paste0(msg, "    > ", fDir, "\n")
     }
     msg <- paste0(msg,
-      "or use the environment variable OBSMON_CONFIG_FILE to provide the\n",
-      "full path (including file name) to an existing configuration file.\n\n",
-      "A config file template can be found at:\n",
+      "  or use the environment variable OBSMON_CONFIG_FILE to provide the\n",
+      "  full path (including file name) to an existing configuration file.",
+      "\n\n  A config file template can be found at:\n",
       "  > ", exampleConfigFilePath, "\n\n"
     )
-    stop(msg)
+    flog.error("getValidConfigFilePath: %s", msg)
+    return(character(0))
   } 
 
   if(verbose) flog.info(paste("Config file found:", configPath, "\n"))
@@ -202,43 +224,48 @@ getValidConfigFilePath <- function(verbose=FALSE) {
 
 readConfig <- function() {
   configPath <- getValidConfigFilePath(verbose=TRUE)
-  config <- fillInDefaults(parseTOML(configPath))
-  config
+  config <- NULL
+  if(length(configPath)>0) {
+    config <- tryCatch(
+      parseTOML(configPath),
+      warning=function(w) {flog.error(w); NULL}
+    )
+  }
+  return(configGeneralFillInDefaults(config))
 }
 
 assertCacheDirWritable <- function(config, verbose=FALSE) {
-
   cacheDirPath <- config$general[["cacheDir"]]
-
   dir.create(cacheDirPath, recursive=TRUE, showWarnings=FALSE, mode="0755")
   writable <- tryCatch(
     file.access(cacheDirPath, mode=2)==0,
     error=function(e) FALSE
   )
-
   if(!writable) {
     msg <- paste("Cannot write to cacheDir", cacheDirPath, "\n")
     msg <- paste(msg, "Please specify a valid cacheDir value under the\n")
     msg <- paste(msg, '"[general]" section in your config file.\n')
     stop(msg)
   }
-
   if(verbose) flog.info(paste("cacheDir set to:", cacheDirPath, "\n"))
-
 }
 
 configure <- function() {
-  if (!exists("obsmonConfig")) {
+  if(!exists("obsmonConfig")) {
     config <- readConfig()
     assertCacheDirWritable(config, verbose=TRUE)
     setPackageOptions(config)
     obsmonConfig <<- config
+    confExpts <- obsmonConfig$experiments
+    exptNamesInConfig <<- unlist(lapply(confExpts, function(x) x$displayName))
+    if(length(exptNamesInConfig)==0) flog.error("No experiment configured!")
     sourceObsmonFiles()
   }
 }
 
 runObsmonStandAlone <- function(cmdLineArgs) {
   exitMsg <- paste(
+    "",
     "===============",
     "Exiting Obsmon.",
     "===============",
@@ -252,26 +279,18 @@ runObsmonStandAlone <- function(cmdLineArgs) {
   } else {
     # Running the shinny app. The runAppHandlingBusyPort routine is defined in
     # the file src/shiny_wrappers.R
+    displayMode <- NULL
     if(cmdLineArgs$debug) {
+      Rprof()
       options(shiny.reactlog=TRUE)
-      runAppHandlingBusyPort(
-        appDir=obsmonSrcDir, defaultPort=cmdLineArgs$port,
-        launch.browser=cmdLineArgs$launch, quiet=TRUE,
-        display.mode="showcase"
-      )
-    } else {
-      runAppHandlingBusyPort(
-        appDir=obsmonSrcDir, defaultPort=cmdLineArgs$port,
-        launch.browser=cmdLineArgs$launch, quiet=TRUE
-      )
+      displayMode <- "showcase"
     }
+    runAppHandlingBusyPort(
+      appDir=obsmonSrcDir, defaultPort=cmdLineArgs$port,
+      launch.browser=cmdLineArgs$launch, quiet=TRUE,
+      display.mode=displayMode
+    )
   }
 }
 
 configure()
-# Initialise experiments only if not running in batch mode
-# In batch mode, only the required experiments will be initialised, and
-# initialisation will be performed when it is needed.
-if(!runningAsStandalone || !isTRUE(cmdLineArgs$batch)) {
-  experimentsAsPromises <- initExperimentsAsPromises()
-}

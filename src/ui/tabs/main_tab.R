@@ -36,9 +36,8 @@ mainTab <- function() {fluidPage(
         options=list(placeholder='Loading experiments...'),
         choices=c()
       ),
-      selectizeInput("odbBase",
+      selectInput("odbBase",
         label=getDefLabel("odbBase"),
-        options=list(placeholder='Awaiting experiment initialisation...'),
         multiple=FALSE,
         choices=c()
       ),

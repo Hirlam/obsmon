@@ -212,7 +212,7 @@ registerPlotType(
                "Observation Usage", "single",
                paste("SELECT",
                      "latitude, longitude, statid,",
-                     "active, rejected, passive, blacklisted, anflag",
+                     "active, rejected, passive, blacklisted, anflag, obsvalue",
                      "FROM usage WHERE %s"),
                list("obnumber", "obname"))
 )
@@ -240,7 +240,7 @@ registerPlotType(
                paste("SELECT",
                      "latitude, longitude, level, statid, obsvalue,",
                      "(%s) as plotValues",
-                     "FROM usage WHERE %s"),
+                     "FROM usage WHERE %s AND fg_dep NOT NULL"),
                list("obnumber", "obname"),
                dataColumn="fg_dep")
 )
@@ -251,7 +251,7 @@ registerPlotType(
                paste("SELECT",
                      "latitude, longitude, level, statid,",
                      "(%s) as plotValues",
-                     "FROM usage WHERE %s"),
+                     "FROM usage WHERE %s AND fg_dep NOT NULL"),
                list("obnumber", "obname"),
                dataColumn="fg_dep+biascrl")
 )
@@ -262,7 +262,7 @@ registerPlotType(
                paste("SELECT",
                      "latitude, longitude, level, statid, obsvalue,",
                      "(%s) as plotValues",
-                     "FROM usage WHERE %s"),
+                     "FROM usage WHERE %s AND an_dep NOT NULL"),
                list("obnumber", "obname"),
                dataColumn="an_dep")
 )
@@ -274,7 +274,7 @@ registerPlotType(
                      "latitude, longitude, level, statid,",
                      "obsvalue, fg_dep, an_dep,",
                      "(%s) as plotValues",
-                     "FROM usage WHERE %s"),
+                     "FROM usage WHERE %s AND fg_dep NOT NULL AND an_dep NOT NULL"),
                list("obnumber", "obname"),
                dataColumn="fg_dep-an_dep")
 )
@@ -343,7 +343,7 @@ registerPlotType(
                paste("SELECT",
                      "latitude, longitude, level, statid, obsvalue,",
                      "(%s) as plotValues",
-                     "FROM usage WHERE %s"),
+                     "FROM usage WHERE %s AND fg_dep NOT NULL"),
                list("obnumber", "obname"),
                dataColumn="fg_dep")
 )
@@ -354,7 +354,7 @@ registerPlotType(
                paste("SELECT",
                      "latitude, longitude, level, statid, obsvalue,",
                      "(%s) as plotValues",
-                     "FROM usage WHERE %s"),
+                     "FROM usage WHERE %s an_dep NOT NULL"),
                list("obnumber", "obname"),
                dataColumn="an_dep")
 )
@@ -366,7 +366,7 @@ registerPlotType(
                      "latitude, longitude, level, statid,",
                      "obsvalue, fg_dep, an_dep,",
                      "(%s) as plotValues",
-                     "FROM usage WHERE %s"),
+                     "FROM usage WHERE %s AND fg_dep NOT NULL AND an_dep NOT NULL"),
                list("obnumber", "obname"),
                dataColumn="fg_dep-an_dep")
 )
