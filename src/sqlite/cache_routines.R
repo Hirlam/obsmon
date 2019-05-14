@@ -50,7 +50,7 @@ createCacheFiles <- function(cacheDir, dbType=dbTypesRecognised, reset=FALSE){
       file.copy(cacheTemplate, cacheFilePaths, overwrite=FALSE)
       0
     },
-    error=function(e) {flog.error(e); -1}
+    error=function(e) {flog.error("createCacheFiles: %s", e); -1}
   )
   return(rtn)
 }
@@ -80,29 +80,28 @@ cacheObsFromFile <- function(sourceDbPath, cacheDir, replaceExisting=FALSE) {
   fPathsLockedHere <- c()
 
   on.exit({
-      if(anyFailedCachingAttmpt) {
-        errMsg <- sprintf("Problems caching file %s\n", sourceDbPath)
-        errMsg <- paste(errMsg, "  > Removing incomplete cache entries\n")
-        flog.warn(errMsg)
-        for(con_cache in cacheDbConsCreatedHere) {
-          # The foreign key contraints+triggers in con_cache will make sure all
-          # eventual data cached for this (date, cycle) combination is removed
-          dbExecute(con_cache, sprintf(
-            "DELETE FROM cycles WHERE date=%d AND cycle=%d", date, cycle
-          ))
-        }
-      } else {
-        flog.debug(sprintf("Caching: Done with file %s\n", sourceDbPath))
+    if(anyFailedCachingAttmpt) {
+      errMsg <- sprintf("Problems caching file %s\n", sourceDbPath)
+      errMsg <- paste(errMsg, "  > Removing incomplete cache entries\n")
+      flog.warn("cacheObsFromFile: %s", errMsg)
+      for(con_cache in cacheDbConsCreatedHere) {
+        # The foreign key contraints+triggers in con_cache will make sure all
+        # eventual data cached for this (date, cycle) combination is removed
+        dbExecute(con_cache, sprintf(
+          "DELETE FROM cycles WHERE date=%d AND cycle=%d", date, cycle
+        ))
       }
-      allDbConsCreatedHere <- c(allDbConsCreatedHere, cacheDbConsCreatedHere)
-      for(dbCon in allDbConsCreatedHere) dbDisconnectWrapper(dbCon)
-      for(lockedFName in fPathsLockedHere) unlockCacheFile(lockedFName)
+    } else {
+      flog.trace("Caching: Done with file %s\n", sourceDbPath)
     }
-  )
+    allDbConsCreatedHere <- c(allDbConsCreatedHere, cacheDbConsCreatedHere)
+    for(dbCon in allDbConsCreatedHere) dbDisconnectWrapper(dbCon)
+    for(lockedFName in fPathsLockedHere) unlockCacheFile(lockedFName)
+  })
 
   con <- dbConnectWrapper(sourceDbPath, read_only=TRUE)
   if(is.null(con)) {
-    flog.error(sprintf("Could not connect to file %s. Not caching.", sourceDbPath))
+    flog.error("Could not connect to file %s. Not caching.", sourceDbPath)
     return(-1)
   }
   allDbConsCreatedHere <- c(allDbConsCreatedHere, con)
@@ -147,8 +146,8 @@ cacheObsFromFile <- function(sourceDbPath, cacheDir, replaceExisting=FALSE) {
     con_cache <- dbConnectWrapper(cacheFilePath)
     cacheDbConsCreatedHere <- c(cacheDbConsCreatedHere, con_cache)
 
-    # The user may want to re-cache observation (e.g., if they think that the cached
-    # information is incomplete)
+    # The user may want to re-cache observation (e.g., if they think that the
+    # cached information is incomplete)
     if(replaceExisting) {
       flog.debug(sprintf(
         "Recaching (%s). Removing DTG=%d%02d from %s cache.",
@@ -164,10 +163,10 @@ cacheObsFromFile <- function(sourceDbPath, cacheDir, replaceExisting=FALSE) {
         warning=function(w) {flog.debug(w); FALSE}
       )
       if(!removalSuccess) {
-        flog.debug(sprintf(
-          "Recaching warning (%s): DTG=%d%02d may not have been removed from %s cache.",
+        flog.debug(
+          "WARN, recache (%s): DTG=%d%02d may not have been rm from %s cache",
           sourceDbPath, date, cycle, cacheFileName
-        ))
+        )
       }
     }
 
@@ -183,10 +182,10 @@ cacheObsFromFile <- function(sourceDbPath, cacheDir, replaceExisting=FALSE) {
       error=function(e) FALSE
     )
     if(alreadyCached) {
-      flog.debug(sprintf("Already cached %s table of file %s\n", db_table, sourceDbPath))
+      flog.trace("Already cached %s table of file %s\n",db_table,sourceDbPath)
       next
     } else {
-      flog.debug(sprintf("Caching %s table of file %s\n", db_table, sourceDbPath))
+      flog.trace("Caching %s table of file %s\n", db_table, sourceDbPath)
     }
 
     # Register experiment as existing, if not previously done
@@ -327,14 +326,15 @@ cacheObsFromFile <- function(sourceDbPath, cacheDir, replaceExisting=FALSE) {
 
 # Useful wrappers
 putObsInCache <- function(sourceDbPaths, cacheDir, replaceExisting=FALSE) {
-    for(sourceDbPath in sourceDbPaths) {
-      tryCatch({
-          cacheObsFromFile(sourceDbPath, cacheDir=cacheDir, replaceExisting=replaceExisting)
-        },
-          warning=function(w) flog.warn(w$message),
-          error=function(e) flog.error(e$message)
-      )
-    }
+  for(sourceDbPath in sourceDbPaths) {
+    tryCatch(
+      cacheObsFromFile(
+        sourceDbPath, cacheDir=cacheDir, replaceExisting=replaceExisting
+      ),
+      warning=function(w) flog.warn("putObsInCache: %s", w),
+      error=function(e) flog.error("putObsInCache: %s", e)
+    )
+  }
 }
 
 getDateQueryString <- function(dates=NULL) {
@@ -353,28 +353,39 @@ getCycleQueryString <- function(cycles=NULL) {
 
 
 dtgsAreCached <- function(db, dtgs) {
-  # Get all cached DTGs
+  # Determine whether a set of dtgs is present in the cached data for a
+  # particular database db belonging to an obsmon experiment.
+  # Only consider a DTG to be cached if it is present in both
+  # "usage" and "obsmon" cache files
   cachedDtgs <- NULL
+  allDbConsCreatedHere <- c()
+  on.exit({
+    for(dbCon in allDbConsCreatedHere) dbDisconnectWrapper(dbCon)
+  })
   for(cacheFilePath in db$cachePaths) {
     con <- dbConnectWrapper(cacheFilePath, read_only=TRUE, showWarnings=FALSE)
     if(is.null(con)) return(FALSE)
-    newCachedDtgs <- tryCatch({
-        dbGetQuery(con,
-          "SELECT DISTINCT date, cycle FROM cycles"
-        )
+    allDbConsCreatedHere <- c(allDbConsCreatedHere, con)
+    dtgsCachedInThisTable <- tryCatch(
+      dbGetQuery(con, "SELECT DISTINCT date, cycle FROM cycles"),
+      error=function(e) {
+        flog.trace("dtgsAreCached: %s (%s)", e, cacheFilePath)
+        NULL
       },
-      error=function(e) NULL,
-      warning=function(w) NULL
+      warning=function(w) {
+        flog.trace("dtgsAreCached: %s (%s)", w, cacheFilePath)
+        NULL
+      }
     )
+    if(is.null(dtgsCachedInThisTable)) return(FALSE)
     if(is.null(cachedDtgs)) {
-      cachedDtgs <- newCachedDtgs
+      cachedDtgs <- dtgsCachedInThisTable
     } else {
-      # Only consider a DTG to be cached if it is present in both
-      # "usage" and "obsmon" cache files
-      cachedDtgs <- intersect(cachedDtgs, newCachedDtgs)
+      cachedDtgs <- tryCatch(
+        intersect(cachedDtgs, dtgsCachedInThisTable),
+        error=function(e) {flog.error("dtgsAreCached: %s", e); NULL}
+      )
     }
-    dbDisconnectWrapper(con)
-    if(is.null(newCachedDtgs)) break
   }
   if(is.null(cachedDtgs) || ncol(cachedDtgs)==0) return(FALSE)
 

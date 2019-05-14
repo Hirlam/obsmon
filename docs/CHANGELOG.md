@@ -6,23 +6,30 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 ### Added
+- New config file option: maxAvgQueriesPerProc
+    - Possibility to make plots faster by parallelising underlying database queries
 - Profile with Rprof when using "--debug" argument
+
 ### Fixed
 - Issue that prevented error messages produced during plots (if any) from being shown
 - Issue that could prevent experiment data from being refreshed if a session (browser
   window/tab) was left open by an user for prolonged periods of time. This was fixed by
   the experiment initialisation changes described below.
+- Issue that could cause the code to crash when trying to check whether DTGs selected
+  in the UI were cached (issue would appear when cache files were locked by sqlite)
+
 ### Changed
 - Faster experiment initialisation
     - No longer checking existence of data files. Data file names are generated on
       the fly as needed, and errors are handled if files do not exist.
-    - No longer performed assyncronously, given that it is very fast now
+    - No longer performed asyncronously, given that it is very fast now
 - Each new session performs its own experiment initialisation
     - This makes it possible to refresh available data for the configured experiments
       by just refreshing the obsmon window, instead of having to kill and restart the code.
       It is still necessary to kill and restart the code if new experiments are included
       or if experiment paths are changed in the config file.
 - Lock UI while updating DTGs or if DTGs unavailable
+
 ### Removed
 - Options deprecated by changes in experiment initialisation strategy:
     - nRetriesMax
@@ -37,6 +44,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 ## [3.1.0] 2019-04-05
 ### Added
 - Batch mode
+
 ### Fixed
 - Issue that would cause cache to end up in incorrect files in some occasions
 - Issue that would prevent caching from being triggered in some occasions

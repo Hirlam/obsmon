@@ -68,17 +68,38 @@ buildWhereClause <- function(criteria) {
 dbConnectWrapper <- function(dbpath, read_only=FALSE, showWarnings=TRUE) {
   con <- tryCatch({
       if(read_only) {
-          newCon<-dbConnect(RSQLite::SQLite(),dbpath,flags=RSQLite::SQLITE_RO)
-          dbExecute(newCon, "PRAGMA  journal_mode=OFF")
-          dbExecute(newCon, "PRAGMA synchronous=off")
+          newCon <- dbConnect(
+            RSQLite::SQLite(),dbpath,flags=RSQLite::SQLITE_RO,
+            synchronous=NULL
+          )
+          tryCatch({
+              dbExecute(newCon, "PRAGMA synchronous=off")
+              dbExecute(newCon, "PRAGMA  journal_mode=OFF")
+            },
+            error=function(e) {
+              flog.trace(
+                "WARN (dbConnectWrapper, RO): PRAGMAs not set for dB %s: %s",
+                dbpath, e
+              )
+            }
+          )
       } else {
           newCon<-dbConnect(RSQLite::SQLite(),dbpath,flags=RSQLite::SQLITE_RW)
           dbExecute(newCon, "PRAGMA foreign_keys=ON")
       }
-      dbExecute(newCon, sprintf("PRAGMA  mmap_size=%s", 1024**3))
-      dbExecute(newCon, sprintf("PRAGMA  cache_size=%s", 1024**3))
-      # Time in milliseconds to wait before signalling that a DB is busy
-      dbExecute(newCon, "PRAGMA  busy_timeout=1000")
+      tryCatch({
+          dbExecute(newCon, sprintf("PRAGMA  mmap_size=%s", 1024**3))
+          dbExecute(newCon, sprintf("PRAGMA  cache_size=%s", 1024**3))
+          # Time in milliseconds to wait before signalling that a DB is busy
+          dbExecute(newCon, "PRAGMA  busy_timeout=1000")
+        },
+        error=function(e) {
+          flog.trace(
+            "WARN (dbConnectWrapper, RW): PRAGMAs not set for dB %s: %s",
+            dbpath, e
+          )
+        }
+      )
       newCon
     },
     error=function(e) {
@@ -103,6 +124,7 @@ dbDisconnectWrapper <- function(con) {
 
 singleFileQuerier <- function(dbpath, query) {
   con <- dbConnectWrapper(dbpath, read_only=TRUE)
+  on.exit(dbDisconnectWrapper(con))
   # If con if NULL then we could not connect. Returning NULL silently here,
   # as the dbConnectWrapper will have a better error message in this case.
   if(is.null(con)) return(NULL)
@@ -117,11 +139,14 @@ singleFileQuerier <- function(dbpath, query) {
       NULL
     }
   )
-  dbDisconnectWrapper(con)
   res
 }
 
-performQuery <- function(db, query, dtgs) {
+performQuery <- function(
+  db, query, dtgs,
+  maxAvgQueriesPerProc=obsmonConfig$general$maxAvgQueriesPerProc
+) {
+  startTime <- Sys.time() # For debug purposes
   selectedDtgs <- dtgs
   if(length(dtgs)>1) {
     range <- summariseDtgRange(dtgs)
@@ -129,11 +154,33 @@ performQuery <- function(db, query, dtgs) {
   }
   dbpaths <- db$getDataFilePaths(selectedDtgs)
 
-  res <- lapply(dbpaths, partial(singleFileQuerier, query=query))
-  res <- do.call(rbind, res)
+  res <- tryCatch({
+      queryResult <- future_lapply(dbpaths,
+        partial(singleFileQuerier, query=query),
+        future.chunk.size=maxAvgQueriesPerProc
+      )
+      do.call(rbind, queryResult)
+    },
+    error=function(e) {flog.error("preformQuery: %s", e); NULL}
+  )
   if("DTG" %in% names(res)) {
     # Convert DTGs from integers to POSIXct
     res$DTG <- as.POSIXct(as.character(res$DTG), format="%Y%m%d%H")
   }
-  res
+
+  nQueries <- length(dbpaths)
+  avgQueryTime <- Inf
+  elapsed <- Sys.time() - startTime
+  if(nQueries>0) avgQueryTime <- elapsed / nQueries
+
+  flog.debug(
+    paste(
+      "preformQuery: Split %d queries into %d processes.\n",
+      "  > Total elapsed time: %.3f sec. Avg time per query: %.3f sec."
+    ),
+    nQueries, max(1, ceiling(nQueries/maxAvgQueriesPerProc)),
+    elapsed, avgQueryTime
+  )
+
+  return(res)
 }

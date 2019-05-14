@@ -1,7 +1,7 @@
 ##########################################################################
 #                Caching-related observers/reactives                     #
 ##########################################################################
-# Perform caching assyncronously as the user selects new DTGs and/or dBs.
+# Perform caching asyncronously as the user selects new DTGs and/or dBs.
 # The reactive/observers defined here stablish a queue/schedule for the
 # files to be cached. Once the user selects new DTGs/databases, the
 # associated files are put in a queue to be cached. The files in that
@@ -38,16 +38,16 @@ dataFilesForDbAndDtgs <- eventReactive({
   return(db$getDataFilePaths(dtgs))
 })
 
-# "assyncCachingProcs" keeps track of the ongoing processes for the caching
+# "asyncCachingProcs" keeps track of the ongoing processes for the caching
 # of the various data files. These processes are "Future" objects (from R
 # pkg "future").
-assyncCachingProcs <- list()
+asyncCachingProcs <- list()
 
 # Establish/update queue of files that need to be cached
 observeEvent(dataFilesForDbAndDtgs(), {
   newFiles <- dataFilesForDbAndDtgs()
   # Remove files for which caching is ongoing
-  filesNotCachingNow <- newFiles[!(newFiles %in% names(assyncCachingProcs))]
+  filesNotCachingNow <- newFiles[!(newFiles %in% names(asyncCachingProcs))]
   filesPendingCache(unique(c(filesNotCachingNow, filesPendingCache())))
 })
 
@@ -73,7 +73,12 @@ observeEvent({
   filesToCacheInThisBatch <- filesPendingCache()[1:2]
   filesToCacheInThisBatch <- Filter(Negate(anyNA), filesToCacheInThisBatch)
   newBatchFilesToCache(filesToCacheInThisBatch)
-})
+},
+  # Give caching lower priority than other observers, as it will keep running
+  # on the background for as long as needed and we don't want the app to slow
+  # down as a result
+  priority=-1
+)
 # Prepare and send, if requested, batches of data files to be re-cached
 observeEvent({
   filesPendingRecache()
@@ -83,7 +88,9 @@ observeEvent({
   filesToRecacheInThisBatch <- filesPendingRecache()[1:2]
   filesToRecacheInThisBatch <- Filter(Negate(anyNA), filesToRecacheInThisBatch)
   newBatchFilesToRecache(filesToRecacheInThisBatch)
-})
+},
+  priority=-1
+)
 
 # Cache (or recache) observations as new batches of file paths arrive
 observeEvent({
@@ -100,17 +107,17 @@ observeEvent({
   req(length(fPaths)>0)
   db <- req(activeDb())
 
-  cacheProc <- suppressWarnings(futureCall(
+  cacheProc <- futureCall(
     FUN=putObsInCache,
     args=list(
       sourceDbPaths=fPaths,
       cacheDir=db$cacheDir,
       replaceExisting=isRecache
     )
-  ))
+  )
   # Register caching as "onging" for the relevant files
   cacheIsOngoing(TRUE)
-  for(fPath in fPaths) assyncCachingProcs[[fPath]] <<- cacheProc
+  for(fPath in fPaths) asyncCachingProcs[[fPath]] <<- cacheProc
 
   then(cacheProc,
     onRejected=function(e) {flog.error(e)}
@@ -118,7 +125,7 @@ observeEvent({
   finally(cacheProc, function() {
     triggerReadCache()
     # Clean up entries from list of ongoing cache processes
-    assyncCachingProcs[fPaths] <<- NULL
+    asyncCachingProcs[fPaths] <<- NULL
     if(isRecache) {
       recacheQueue <- filesPendingRecache()
       newRecacheQueue <- recacheQueue[!(recacheQueue %in% fPaths)]
@@ -133,7 +140,9 @@ observeEvent({
 
   # This NULL is necessary in order to avoid the future from blocking
   NULL
-})
+},
+  priority=-1
+)
 
 # Re-cache observations if requested by user
 observeEvent(input$recacheCacheButton, {

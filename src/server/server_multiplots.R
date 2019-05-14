@@ -46,7 +46,7 @@ observeEvent(multiPlotsProgressStatus()(), {
   multiPlotsProgressBar(progress)
 })
 
-# Keep track of multiPlot assync process PID in case user wants to cancel it
+# Keep track of multiPlot async process PID in case user wants to cancel it
 multiPlotCurrentPid <- reactiveVal(-1)
 
 # Management of "Cancel multiPlot" button
@@ -116,7 +116,7 @@ observeEvent(input$multiPlotsDoPlot, {
   multiPlotsProgressBar(progress)
   multiPlotsProgressFile(tempfile(pattern = "multiPlotsProgress"))
 
-  # Prepare individual plots assyncronously
+  # Prepare individual plots asyncronously
   multiPlotsAsyncAndOutput <- futureCall(
     FUN=prepareMultiPlotsCapturingOutput,
     args=list(
@@ -168,7 +168,7 @@ observeEvent(input$multiPlotsDoPlot, {
     shinyjs::hide("multiPlotsCancelPlot")
     shinyjs::show("multiPlotsDoPlot")
     enableShinyInputs(input, pattern="^multiPlots*")
-    # Printing output produced during assync plot, if any
+    # Printing output produced during async plot, if any
     resolvedValue <- value(multiPlotsAsyncAndOutput)
     producedOutput <- resolvedValue$output
     if(length(producedOutput)>0) cat(paste0(producedOutput, "\n"))

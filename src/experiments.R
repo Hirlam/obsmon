@@ -69,10 +69,9 @@ obsmonDatabaseClass <- setRefClass("obsmonDatabase",
       # Keep a cache of the dtgs to avoid unnecessary successive calls
       # to the "dir" function, but update the cache if it is older than
       # cacheExpiry seconds.
-      flog.debug("Getting %s DTGs for %s", .self$dbType, .self$exptName)
       tDiffSec <- Sys.time() - .self$dtgCacheLastUpdated
       if(length(.self$dtgCache)==0 || isTRUE(tDiffSec>abs(cacheExpiry))) {
-        flog.debug("  > Refresh %s DTGs for %s", .self$dbType, .self$exptName)
+        flog.debug("Getting %s DTGs for %s", .self$dbType, .self$exptName)
         # There is no much gain in running "dir" for only selected dates in
         # comparison to just retrieving all available DTGs.
         allDtgs <- sort(dir(path=.self$dir, pattern="[0-9]{10}"))
@@ -82,12 +81,12 @@ obsmonDatabaseClass <- setRefClass("obsmonDatabase",
           .self$dtgCache[[date]] <- c(.self$dtgCache[[date]], as.integer(dtg))
         }
         .self$dtgCacheLastUpdated <- Sys.time()
+        flog.debug("Done getting %s DTGs for %s\n",.self$dbType,.self$exptName)
       }
 
       if(length(dates)==0) rtn <- .self$dtgCache
       else rtn <- .self$dtgCache[as.character(dates)]
       if(length(rtn)==0) rtn <- integer(0)
-      flog.debug("Done getting %s DTGs for %s\n",.self$dbType,.self$exptName)
       return(unlist(rtn, use.names=FALSE))
     },
     getAvailableCycles=function(dates) {

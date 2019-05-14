@@ -35,6 +35,7 @@ tryCatch(
     suppressPackageStartupMessages(library(flock))
     suppressPackageStartupMessages(library(futile.logger))
     suppressPackageStartupMessages(library(future))
+    suppressPackageStartupMessages(library(future.apply))
     suppressPackageStartupMessages(library(ggplot2))
     suppressPackageStartupMessages(library(grid))
     suppressPackageStartupMessages(library(gridExtra))
@@ -81,15 +82,10 @@ setPackageOptions <- function(config) {
   flog.appender(appender.file(stderr()), 'ROOT')
   flog.threshold(parse(text=config$general$logLevel)[[1]])
   # Options controlling parallelism
-  maxExtraParallelProcs <- as.integer(config$general$maxExtraParallelProcs)
-  if(anyNA(maxExtraParallelProcs) || maxExtraParallelProcs<0) {
-    maxExtraParallelProcs <- .Machine$integer.max
-  } else {
-    flog.info(sprintf("Limiting maxExtraParallelProcs to %s",
-      maxExtraParallelProcs
-    ))
-  }
-  plan(multiprocess, workers=maxExtraParallelProcs)
+  plan(list(
+    tweak(multiprocess, workers=config$general$maxExtraParallelProcs),
+    tweak(multiprocess, workers=config$general$maxExtraParallelProcs)
+  ))
 }
 
 sourceObsmonFiles <- function() {
@@ -120,6 +116,23 @@ configGeneralFillInDefault <- function(config, key, default) {
     "logLevel"={
       if(exists("cmdLineArgs") && isTRUE(cmdLineArgs$debug)) "DEBUG"
       else currentVal
+    },
+    "maxExtraParallelProcs"={
+      currentVal <- round(as.numeric(currentVal))
+      if(anyNA(currentVal) || currentVal<0) {
+        currentVal <- .Machine$integer.max
+      } else {
+        flog.info("Limiting maxExtraParallelProcs to %s", currentVal)
+      }
+      currentVal
+    },
+    "maxAvgQueriesPerProc"={
+      currentVal <- round(as.numeric(currentVal))
+      if(anyNA(currentVal) || currentVal<1) {
+        currentVal <- Inf
+        flog.info("WARN: Resetting maxAvgQueriesPerProc to %s", currentVal)
+      }
+      currentVal
     },
     currentVal
   )
@@ -152,6 +165,7 @@ configGeneralFillInDefaults <- function(config) {
   config <- configGeneralFillInDefault(config, "maxExtraParallelProcs",
     Sys.getenv("OBSMON_MAX_N_EXTRA_PROCESSES")
   )
+  config <- configGeneralFillInDefault(config, "maxAvgQueriesPerProc", Inf)
   config <- configGeneralFillInDefault(config, "showCacheOptions", FALSE)
   config <- configGeneralFillInDefault(
     config, "multiPlotsEnableInteractivity", FALSE
@@ -221,24 +235,19 @@ readConfig <- function() {
 }
 
 assertCacheDirWritable <- function(config, verbose=FALSE) {
-
   cacheDirPath <- config$general[["cacheDir"]]
-
   dir.create(cacheDirPath, recursive=TRUE, showWarnings=FALSE, mode="0755")
   writable <- tryCatch(
     file.access(cacheDirPath, mode=2)==0,
     error=function(e) FALSE
   )
-
   if(!writable) {
     msg <- paste("Cannot write to cacheDir", cacheDirPath, "\n")
     msg <- paste(msg, "Please specify a valid cacheDir value under the\n")
     msg <- paste(msg, '"[general]" section in your config file.\n')
     stop(msg)
   }
-
   if(verbose) flog.info(paste("cacheDir set to:", cacheDirPath, "\n"))
-
 }
 
 configure <- function() {
