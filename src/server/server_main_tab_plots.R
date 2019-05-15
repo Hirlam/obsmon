@@ -79,6 +79,13 @@ observeEvent(input$doPlot, {
     args=list(plotter=plotter, plotRequest=plotRequest, db=db)
   )
   currentPlotPid(newFutPlotAndOutput$job$pid)
+  session$onSessionEnded(function() {
+    flog.debug(
+      "Session finished: Making sure plot task with PID=%s is killed",
+      newFutPlotAndOutput$job$pid
+    )
+    tools::pskill(newFutPlotAndOutput$job$pid)
+  })
 
   then(newFutPlotAndOutput,
     onFulfilled=function(value) {

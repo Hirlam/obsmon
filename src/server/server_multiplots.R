@@ -126,6 +126,13 @@ observeEvent(input$multiPlotsDoPlot, {
     )
   )
   multiPlotCurrentPid(multiPlotsAsyncAndOutput$job$pid)
+  session$onSessionEnded(function() {
+    flog.debug(
+      "Session finished: Making sure multiPlot task with PID=%s is killed",
+      multiPlotsAsyncAndOutput$job$pid
+    )
+    tools::pskill(multiPlotsAsyncAndOutput$job$pid)
+  })
 
   then(multiPlotsAsyncAndOutput,
     onFulfilled=function(value) {
