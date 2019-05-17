@@ -8,7 +8,7 @@ docTab <- function(docPath) {
   )
   # Try to embedded the pdf doc in the page itself, and offer a download
   # option if this fails.
-  fluidPage(
+  bootstrapPage(
     tags$object(
       HTML(
         "Could not open documentation. Your browser may not have a PDF",
@@ -18,6 +18,7 @@ docTab <- function(docPath) {
       downloadButton("downloadDoc", "Download doc file"),
       data=docUrl,
       type="application/pdf",
+      border=3,
       style="position:absolute; height:90%; width:98.5%;"
     )
   )
