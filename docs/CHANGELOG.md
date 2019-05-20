@@ -10,6 +10,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ### Fixed
 - Annoying prompt to download doc file in browsers without a working pdf reader plugin
+- Issue that, in some occasions, would prevent stations from being cleared in plots that
+  did not need picking a station, causing queries to return no data
 - Issue that would cause station choices to become intermittently unavailable while caching
 
 

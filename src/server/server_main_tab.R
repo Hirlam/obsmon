@@ -406,7 +406,10 @@ updateStations <- reactive({
   input$variable
 }) %>% throttle(100)
 observeEvent(updateStations(), {
-  if(!allowChoosingStation()) return(c("Any"=""))
+  if(!allowChoosingStation()) {
+    updateSelectInputWrapper(session, "station", choices=c("Any"=""))
+    updateSelectInputWrapper(session, "stationSingle", choices=c("Any"=""))
+  }
   req(allowChoosingStation())
 
   db <- req(activeDb())
