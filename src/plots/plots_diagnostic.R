@@ -20,15 +20,15 @@ statisticsPanel <- function(data, column, bw, fill) {
 }
 
 plotTitle.plotDiagnostic <- function(p, plotRequest, plotData) {
-  dtg <- formatDtg(plotRequest$criteria$dtg)
-  expName <- plotRequest$expName
-  obtype <- plotRequest$criteria$obname
-  station <- plotRequest$criteria$station
-  stationLabel <- plotData$statLabel
-  if(length(stationLabel)==0) stationLabel <- station
-  title <- sprintf("%s: %s %s %s",
-                   expName, p$name, stationLabel, dtg)
-  title
+  crit <- plotRequest$criteria
+  stationLabel <- getStationsForPlotTitle(plotRequest, plotData)
+  title <- sprintf(
+    "%s: %s\nstation=%s\ndb=%s, DTG=%s, obname=%s, varname=%s",
+    plotRequest$expName, p$name,
+    stationLabel,
+    plotRequest$dbType, formatDtg(crit$dtg), crit$obname, crit$varname
+  )
+  return(title)
 }
 
 doPlot.plotDiagnostic <- function(p, plotRequest, plotData) {

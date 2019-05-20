@@ -51,6 +51,7 @@ tryCatch(
     suppressPackageStartupMessages(library(shinycssloaders))
     suppressPackageStartupMessages(library(shinyjs))
     suppressPackageStartupMessages(library(stringi))
+    suppressPackageStartupMessages(library(stringr))
     suppressPackageStartupMessages(library(V8))
   },
   error=function(e) stop(paste(e, libPathsMsg[['error']], sep="\n"))

@@ -1,28 +1,5 @@
 registerPlotCategory("Statistical")
 
-plotTitle.plotStatistical <- function(p, plotRequest, plotData) {
-  dtg <- formatDtg(plotRequest$criteria$dtg)
-  titleStub <- sprintf("%s: %s %%s %s", plotRequest$expName, p$name, dtg)
-  switch(
-      as.character(plotRequest$criteria$obnumber),
-      "1"=,
-      "4"=,
-      "9"={
-        detail <- plotRequest$criteria$varname
-      },
-      "7"={
-        detail <- paste(plotRequest$criteria$obname,
-                        plotRequest$criteria$satname)
-      },
-      {
-        detail <- paste(plotRequest$criteria$obname,
-                        plotRequest$criteria$varname)
-      }
-  )
-  title <- sprintf(titleStub, detail)
-  title
-}
-
 doPlot.plotStatistical <- function(p, plotRequest, plotData) {
   switch(
       as.character(plotRequest$criteria$obnumber),
