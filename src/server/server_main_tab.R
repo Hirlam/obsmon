@@ -210,7 +210,7 @@ observeEvent({
 updateObnames <- reactive({
   req(input$obtype)
   reloadInfoFromCache()
-}) %>% throttle(100)
+}) %>% throttle(500)
 observeEvent(updateObnames(), {
   if(input$obtype=="satem") {
     updateSelectInputWrapper(session, "obname", choices=c("satem"))
@@ -241,7 +241,7 @@ updateVariables <- reactive({
   req(input$obtype!="satem")
   updateObnames()
   req(input$obname)
-}) %>% throttle(100)
+}) %>% throttle(500)
 observeEvent(updateVariables(), {
   db <- req(activeDb())
 
@@ -262,7 +262,7 @@ observeEvent(updateVariables(), {
 updateLevels <- reactive({
   updateVariables()
   req(input$variable)
-}) %>% throttle(100)
+}) %>% throttle(500)
 availableLevels <- eventReactive(updateLevels(), {
   db <- activeDb()
   obname <- input$obname
@@ -293,7 +293,7 @@ observeEvent(input$levelsSelectAny, {
 updateSensor <- reactive({
   reloadInfoFromCache()
   req(input$obtype=="satem")
-})  %>% throttle(100)
+})  %>% throttle(500)
 observeEvent(updateSensor(), {
   db <- req(activeDb())
   sens <- getAvailableSensornames(db, selectedDates(), selectedCycles())
@@ -313,7 +313,7 @@ observeEvent(updateSensor(), {
 updateSatellite <- reactive({
   updateSensor()
   req(input$sensor)
-})  %>% throttle(100)
+})  %>% throttle(500)
 observeEvent(updateSatellite(), {
   db <- req(activeDb())
   sens <- input$sensor
@@ -335,7 +335,7 @@ observeEvent(updateSatellite(), {
 updateChannels <- reactive({
   updateSatellite()
   req(input$satellite)
-})  %>% throttle(100)
+})  %>% throttle(500)
 channels <- eventReactive(updateChannels(), {
   db <- req(activeDb())
   dates <- req(selectedDates())
@@ -371,7 +371,7 @@ updatePlotType <- reactive({
   req(!is.null(input$variable) ||
     (!is.null(input$satellite) && !is.null(input$sensor))
   )
-}) %>% throttle(100)
+}) %>% throttle(500)
 observeEvent(updatePlotType(), {
   choices <- applicablePlots(req(plotsBuildCriteria(input)))
   updateSelectInputWrapper(session, "plottype", choices=choices)
@@ -404,7 +404,7 @@ updateStations <- reactive({
   input$obtype
   input$obname
   input$variable
-}) %>% throttle(100)
+}) %>% throttle(500)
 observeEvent(updateStations(), {
   if(!allowChoosingStation()) {
     updateSelectInputWrapper(session, "station", choices=c("Any"=""))

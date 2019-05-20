@@ -196,15 +196,3 @@ reloadInfoFromCache <- eventReactive({
 observeEvent(reloadInfoFromCache(), {
     selectedDtgsAreCached(dtgsAreCached(req(activeDb()),req(selectedDtgs())))
 })
-
-# Periodically attempt to cache DTGs if they remain uncached even
-# after the processes responsible for caching them have finished.
-# This is useful to retry caching if former attempts fail
-observeEvent({if(!selectedDtgsAreCached()) invalidateLater(10000)}, {
-  req(!selectedDtgsAreCached())
-  req(!cacheIsOngoing())
-  showNotification("Attempting to recache", type="warning", duration=1)
-  recacheRequested(TRUE)
-},
-  ignoreInit=TRUE
-)
