@@ -20,19 +20,47 @@ plotCanBeMadeInteractive <- function(myPlot) {
   return(rtn)
 }
 
+getStationsForPlotTitle <- function(plotRequest, plotData, limit=5) {
+  crit <- plotRequest$criteria
+  if(length(crit$station)==0) {
+    stations <- character(0)
+  } else {
+    stations <- paste(sort(unique(plotData$statLabel)), collapse=", ")
+    if(stations=="") stations<-paste(sort(unique(crit$station)),collapse=", ")
+    if(stations=="") stations <- character(0)
+  }
+  if(length(stations)>limit) stations <- character(0)
+  return(stations)
+}
+
 addTitleToPlot <- function(myPlot, title) {
   if(is.null(myPlot) || is.null(title)) return(myPlot)
   newPlot <- tryCatch({
     if(is.ggplot(myPlot)) {
-      myPlot + ggtitle(title)
+      myPlot + ggtitle(title) + theme(plot.title=element_text(hjust=0.5))
     } else if("plotly" %in% class(myPlot)) {
-      myPlot %>% layout(title=title, margin=list(t=50))
+      # ggplotly in (plotly v4.8.0) has an issue that causes multiline titles
+      # to overlap with graphs. As a workaround, we use annotations instead of
+      # titles, and add a margin at the top which is proportional to the
+      # number of lines in the title. Not very practical, but plotly does not
+      # seem to have a native solution for this.
+      nLineBreaks <- str_count(title, "\n")
+      myPlot %>% add_annotations(
+        yref="paper",
+        xref="paper",
+        yanchor = "bottom",
+        y=1.035,
+        x=0.5,
+        text=title,
+        showarrow=F,
+        font=list(size=20)
+      ) %>% layout(title=FALSE, margin=list(t=(50 + nLineBreaks*27.5)))
     } else {
-      grid.arrange(myPlot, top=textGrob(title))
+      grid.arrange(myPlot, top=textGrob(title, gp=gpar(fontsize=13)))
     }
     },
     error=function(e) {
-      flog.error("Problems setting plot title: %s", e)
+      flog.error("(addTitleToPlot) Problems setting plot title: %s", e)
       myPlot
     }
   )
@@ -175,22 +203,18 @@ plotIsApplicable.default <- function(p, criteria) {
 }
 
 plotTitle.default <- function(p, plotRequest, plotData) {
-  dtg <- formatDtg(plotRequest$criteria$dtg)
-  titleStub <- sprintf("%s: %s %%s %s", plotRequest$expName, p$name, dtg)
-  switch(
-      as.character(plotRequest$criteria$obnumber),
-      "7"={
-        title <- sprintf(titleStub,
-                         paste(plotRequest$criteria$obname,
-                               plotRequest$criteria$satname))
-      },
-      {
-        title <- sprintf(titleStub,
-                         paste(plotRequest$criteria$obname,
-                               plotRequest$criteria$varname))
-      }
+  crit <- plotRequest$criteria
+  if(as.character(crit$obnumber)=="7") {
+    detail <- sprintf("sensor=%s, satname=%s", crit$obname, crit$satname)
+  } else {
+    detail <- sprintf("obname=%s, varname=%s", crit$obname, crit$varname)
+  }
+  title <- sprintf(
+    "%s: %s\ndb=%s, DTG=%s, %s",
+    plotRequest$expName, p$name,
+    plotRequest$dbType, formatDtg(crit$dtg), detail
   )
-  title
+  return(title)
 }
 
 doMap.default <- function(p, plotRequest, plotData) {
@@ -209,7 +233,7 @@ plotCreate <- function(clazz, name, dateType, queryStub, requiredFields, ...) {
 }
 
 
-postProcessQueriedPlotData <- 
+postProcessQueriedPlotData <-
   function(plotter, plotData) UseMethod("postProcessQueriedPlotData")
 
 postProcessQueriedPlotData.default <- function(plotter, plotData) {

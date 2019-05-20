@@ -632,7 +632,7 @@ getStationsFromCache <- function(db, dates, cycles, obname, variable) {
         queryResult <- dbGetQuery(con, query)
         rtn <- c(rtn, queryResult[['statid']])
       },
-      error=function(e) NULL,
+      error=function(e) {flog.trace("getStationsFromCache: %s", e); NULL},
       warning=function(w) NULL
     )
     dbDisconnectWrapper(con)

@@ -1,23 +1,28 @@
 registerPlotCategory("Maps")
 
 plotTitle.plotMap <- function(p, plotRequest, plotData) {
-  if(as.character(plotRequest$criteria$obnumber)=="7") {
-    varLabel <- plotRequest$criteria$satname
+  crit <- plotRequest$criteria
+  stationLabel <- getStationsForPlotTitle(plotRequest, plotData)
+  if(as.character(crit$obnumber)=="7") {
     levelLabel <- "channels"
+    detail <- sprintf("sensor=%s, satname=%s", crit$obname, crit$satname)
   } else {
-    varLabel <- plotRequest$criteria$varname
     levelLabel <- "levels"
+    detail <- sprintf("obname=%s, varname=%s", crit$obname, crit$varname)
   }
-  title <- sprintf("%s: %s %s %s",
-    plotRequest$expName, p$name,
-    paste(plotRequest$criteria$obname, varLabel),
-    formatDtg(plotRequest$criteria$dtg)
+
+  title <- sprintf("%s: %s", plotRequest$expName, p$name)
+  if(length(stationLabel)>0 && stationLabel!="") {
+    title <- sprintf("%s\nstation=%s", title, stationLabel)
+  }
+  title <- sprintf(
+    "%s\ndb=%s, DTG=%s, %s",
+    title,
+    plotRequest$dbType, formatDtg(crit$dtg), detail
   )
-  if(length(plotRequest$criteria$levels)>0) {
-    levels <- paste(plotRequest$criteria$levels, collapse=", ")
-    title <- paste(title, sprintf("%s: %s", levelLabel, levels), sep="\n")
-  }
-  title
+  levels <- paste(crit$levels, collapse=", ")
+  if(levels!="") title <- sprintf("%s\n%s: %s", title, levelLabel, levels)
+  return(title)
 }
 
 

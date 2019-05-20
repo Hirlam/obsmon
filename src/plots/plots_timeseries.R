@@ -1,22 +1,5 @@
 registerPlotCategory("Timeseries")
 
-plotTitle.plotTimeseries <- function(p, plotRequest, plotData) {
-  dtg <- formatDtg(plotRequest$criteria$dtg)
-  titleStub <- sprintf("%s: %s %%s %s", plotRequest$expName, p$name, dtg)
-  switch(
-      as.character(plotRequest$criteria$obnumber),
-      "7"={
-        detail <- paste(plotRequest$criteria$obname,
-                        plotRequest$criteria$satname)
-      },
-      {
-        detail <- paste(plotRequest$criteria$obname,
-                        plotRequest$criteria$varname)
-      }
-  )
-  title <- sprintf(titleStub, detail)
-}
-
 doPlot.plotTimeseries <- function(p, plotRequest, plotData,
                                   maskColumns=character(0),
                                   colours=NULL, shapes=NULL) {

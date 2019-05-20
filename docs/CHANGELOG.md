@@ -4,6 +4,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
+## [Unreleased]
+### Changed
+- White background, instead of gray, for figures
+
+### Fixed
+- Annoying prompt to download doc file in browsers without a working pdf reader plugin
+- Issue that, in some occasions, would prevent stations from being cleared in plots that
+  did not need picking a station, causing queries to return no data
+- Issue that would cause station choices to become intermittently unavailable while caching
+
+
 ## [3.2.0] 2019-05-14
 ### Added
 - New config file option: maxAvgQueriesPerProc

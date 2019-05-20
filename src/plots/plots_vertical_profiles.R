@@ -1,9 +1,14 @@
 registerPlotCategory("VerticalProfiles")
 
 plotTitle.plotVerticalObsProfile <- function(p, plotRequest, plotData) {
-  dtg <- formatDtg(plotRequest$criteria$dtg)
-  station <- plotRequest$criteria$station
-  title <- sprintf("%s: %s %s %s", plotRequest$expName, p$name, station, dtg)
+  crit <- plotRequest$criteria
+  stationLabel <- getStationsForPlotTitle(plotRequest, plotData)
+  title <- sprintf(
+    "%s: %s\nstation=%s\ndb=%s, DTG=%s, obname=%s, varname=%s",
+    plotRequest$expName, p$name,
+    stationLabel,
+    plotRequest$dbType, formatDtg(crit$dtg), crit$obname, crit$varname
+  )
 }
 
 doPlot.plotVerticalObsProfile <- function(p, plotRequest, plotData) {

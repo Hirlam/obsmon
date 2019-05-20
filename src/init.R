@@ -51,6 +51,7 @@ tryCatch(
     suppressPackageStartupMessages(library(shinycssloaders))
     suppressPackageStartupMessages(library(shinyjs))
     suppressPackageStartupMessages(library(stringi))
+    suppressPackageStartupMessages(library(stringr))
     suppressPackageStartupMessages(library(V8))
   },
   error=function(e) stop(paste(e, libPathsMsg[['error']], sep="\n"))
@@ -81,6 +82,8 @@ setPackageOptions <- function(config) {
   pdf(NULL)
   flog.appender(appender.file(stderr()), 'ROOT')
   flog.threshold(parse(text=config$general$logLevel)[[1]])
+  # ggplot2 theme: set globally. theme_bw sets figure backgrounds to white
+  theme_set(theme_bw())
   # Options controlling parallelism
   plan(list(
     tweak(multiprocess, workers=config$general$maxExtraParallelProcs),
