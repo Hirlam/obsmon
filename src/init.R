@@ -51,6 +51,7 @@ tryCatch(
     suppressPackageStartupMessages(library(shinycssloaders))
     suppressPackageStartupMessages(library(shinyjs))
     suppressPackageStartupMessages(library(stringi))
+    suppressPackageStartupMessages(library(stringr))
     suppressPackageStartupMessages(library(V8))
   },
   error=function(e) stop(paste(e, libPathsMsg[['error']], sep="\n"))
@@ -81,6 +82,8 @@ setPackageOptions <- function(config) {
   pdf(NULL)
   flog.appender(appender.file(stderr()), 'ROOT')
   flog.threshold(parse(text=config$general$logLevel)[[1]])
+  # ggplot2 theme: set globally. theme_bw sets figure backgrounds to white
+  theme_set(theme_bw())
   # Options controlling parallelism
   plan(list(
     tweak(multiprocess, workers=config$general$maxExtraParallelProcs),
@@ -112,7 +115,19 @@ configGeneralFillInDefault <- function(config, key, default) {
 
   currentVal <- config$general[[key]]
   config$general[[key]] <- switch(key,
-    "cacheDir"=normalizePath(config$general[[key]], mustWork=FALSE),
+    "cacheDir"={
+      # Append code version information to the cacheDir path. Useful to
+      # prevent conflict when updating the code. Discarding patch, though,
+      # as changes to cache cannot be considered as patches. This avoids the
+      # creation of too many cache directories as obsmon gets updated.
+      obsmonVersionMajorMinor <- paste(
+        unlist(strsplit(obsmonVersion, "\\."))[1:2],
+        collapse="."
+      )
+      normalizePath(
+        file.path(currentVal, paste0("obsmon_v", obsmonVersionMajorMinor)),
+        mustWork=FALSE)
+    },
     "logLevel"={
       if(exists("cmdLineArgs") && isTRUE(cmdLineArgs$debug)) "DEBUG"
       else currentVal
@@ -247,7 +262,7 @@ assertCacheDirWritable <- function(config, verbose=FALSE) {
     msg <- paste(msg, '"[general]" section in your config file.\n')
     stop(msg)
   }
-  if(verbose) flog.info(paste("cacheDir set to:", cacheDirPath, "\n"))
+  if(verbose) flog.info("cacheDir set to: %s\n", cacheDirPath)
 }
 
 configure <- function() {

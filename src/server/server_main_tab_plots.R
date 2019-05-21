@@ -171,19 +171,19 @@ output$queryAndTableContainer <- renderUI(
 # (i) Rendering plots
 # (i.i) Interactive plot, if plot supports it
 output$plotly <- renderPlotly({
-  req(plotCanBeMadeInteractive(readyPlot()$obplot))
+  myPlot <- readyPlot()$obplot
+  req(plotCanBeMadeInteractive(myPlot))
   notifId <- showNotification(
     "Rendering plot...", duration=NULL, type="message"
   )
   on.exit(removeNotification(notifId))
-  myPlot <- addTitleToPlot(readyPlot()$obplot, readyPlot()$title)
   # Convert ggplot object to plotly and customise
   myPlot <- ggplotly(req(myPlot), tooltip = c("x","y")) %>%
     config(
       displaylogo=FALSE, collaborate=FALSE, cloud=FALSE,
       scrollZoom=TRUE
     )
-
+  myPlot <- addTitleToPlot(myPlot, readyPlot()$title)
   myPlot
 })
 # (i.ii) Non-interactive plot, if plot does not support interactivity

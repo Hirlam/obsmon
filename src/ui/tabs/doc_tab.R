@@ -4,13 +4,22 @@ docTab <- function(docPath) {
   addResourcePath('docDir', dirname(docPath))
   docUrl <- sprintf(
     "docDir/%s#view=FitH&pagemode=bookmarks",
-    basename(docPath
-  ))
-  fluidPage(
-    # Embed PDF file to show it using the browser's viewer
-    tags$iframe(
-      src=docUrl,
-      style="position: absolute; height:90%; width:98.5%;"
+    basename(docPath)
+  )
+  # Try to embedded the pdf doc in the page itself, and offer a download
+  # option if this fails.
+  bootstrapPage(
+    tags$object(
+      HTML(
+        "Could not open documentation. Your browser may not have a PDF",
+        "reader plugin, or it may have been disabled.<br><br>",
+        "Please download the documentation file instead.<br>"
+      ),
+      downloadButton("downloadDoc", "Download doc file"),
+      data=docUrl,
+      type="application/pdf",
+      border=3,
+      style="position:absolute; height:90%; width:98.5%;"
     )
   )
 }
