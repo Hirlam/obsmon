@@ -4,14 +4,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
-## [Unreleased]
+## [3.3.0] 2019-05-21
+### Added
+- Option to download doc file for browsers without a working PDF plugin
+
 ### Changed
-- White background, instead of gray, for figures
+- More informative plot titles
+- White background for plots (instead of grey)
 
 ### Fixed
-- Annoying prompt to download doc file in browsers without a working pdf reader plugin
-- Issue that, in some occasions, would prevent stations from being cleared in plots that
-  did not need picking a station, causing queries to return no data
+- Annoying prompt to download doc file in browsers without a working pdf plugin
+- Issue that would prevent station choice from being cleared when changing from plots
+  that require station(s) to others that do not, causing query to return empty.
 - Issue that would cause station choices to become intermittently unavailable while caching
 
 
