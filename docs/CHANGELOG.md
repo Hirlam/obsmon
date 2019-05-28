@@ -4,6 +4,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
+## [3.3.1] 2019-05-28
+### Added
+- Help script to install system dependences on Ubuntu
+    - utils/build/install_sys_deps_ubuntu.sh
+### Changed
+- Name of help script to install system dependencies on RHEL/CentOS
+    - utils/build/install_sys_deps_centOS_or_rhel.sh
+
 ## [3.3.0] 2019-05-21
 ### Added
 - Option to download doc file for browsers without a working PDF plugin
