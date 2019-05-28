@@ -16,5 +16,7 @@ Server](https://www.rstudio.com/products/shiny/shiny-server/).
 
 For instructions on how to configure and run obsmon, please read the
 [obsmon_documentation.pdf file](./docs/obsmon_documentation.pdf) located
-under the `docs` directory. Noteworthy changes to the code are listed in
-the [CHANGELOG.md file](./docs/CHANGELOG.md) located under the same directory.
+under the `docs` directory. *Please pay special attention to the section
+on the installation of system dependencies*. Noteworthy changes to the
+code are listed in the [CHANGELOG.md file](./docs/CHANGELOG.md) located
+under the same directory.
