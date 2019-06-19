@@ -252,8 +252,7 @@ observeEvent(multiPlot(), {
         plotCanBeMadeInteractive(multiPlot()[[pName]]$obplot)
       ) {
         output[[plotOutId]] <- renderPlotly({
-          myPlot <- multiPlot()[[pName]]
-          myPlot <- addTitleToPlot(myPlot$obplot, myPlot$title)
+          myPlot <- multiPlot()[[pName]]$obplot
           # Convert ggplot object to plotly and customise
           myPlot <- ggplotly(req(myPlot), tooltip = c("x","y")) %>%
             config(
@@ -265,6 +264,7 @@ observeEvent(multiPlot(), {
                 height=720
               )
             )
+          myPlot <- addTitleToPlot(myPlot, multiPlot()[[pName]]$title)
           myPlot
         })
       } else {
