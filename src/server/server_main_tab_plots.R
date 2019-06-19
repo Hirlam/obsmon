@@ -184,6 +184,7 @@ output$plotly <- renderPlotly({
       displaylogo=FALSE, collaborate=FALSE, cloud=FALSE,
       scrollZoom=TRUE,
       toImageButtonOptions = list(
+        filename="obsmon_plot",
         format="png",
         width=1280,
         height=720
