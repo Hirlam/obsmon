@@ -258,7 +258,12 @@ observeEvent(multiPlot(), {
           myPlot <- ggplotly(req(myPlot), tooltip = c("x","y")) %>%
             config(
               displaylogo=FALSE, collaborate=FALSE, cloud=FALSE,
-              scrollZoom=TRUE
+              scrollZoom=TRUE,
+              toImageButtonOptions = list(
+                format="png",
+                width=1280,
+                height=720
+              )
             )
           myPlot
         })
