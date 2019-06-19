@@ -45,6 +45,16 @@ registerPlotType(
                list("obnumber", "obname"))
 )
 
+registerPlotType(
+    "Timeseries",
+    plotCreate("plotTimeseries",
+      name="Observation Value",
+      dateType="range",
+      queryStub="SELECT DTG, level, obsvalue FROM usage WHERE %s",
+      requiredFields=list("station", "obnumber", "obname", "varname")
+    )
+)
+
 doPlot.obsFit <- function(p, plotRequest, plotData) {
   fgColor <- "blue"
   anColor <- "red"
