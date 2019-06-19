@@ -4,6 +4,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
+## [3.3.2] 2019-06-19
+### Added
+- "Observation Value" plot
+
+### Changed
+- File name for exported interactive plots/multiPlots. Used to be "newplot.png", now it is:
+    - obsmon_plot.png, for regular plots
+    - obsmon_multiplot_N.png, for the N-th plot inside a multiPlot
+
+### Fixed
+- Size of saved figure for interactive plots/multiPlots exported as png
+- Overlap between title and graph in interactive multiPlots
+
 ## [3.3.1] 2019-05-28
 ### Added
 - Help script to install system dependences on Ubuntu

@@ -178,10 +178,17 @@ output$plotly <- renderPlotly({
   )
   on.exit(removeNotification(notifId))
   # Convert ggplot object to plotly and customise
+  # See <https://plotly-r.com/control-modebar.html>
   myPlot <- ggplotly(req(myPlot), tooltip = c("x","y")) %>%
     config(
       displaylogo=FALSE, collaborate=FALSE, cloud=FALSE,
-      scrollZoom=TRUE
+      scrollZoom=TRUE,
+      toImageButtonOptions = list(
+        filename="obsmon_plot",
+        format="png",
+        width=1280,
+        height=720
+      )
     )
   myPlot <- addTitleToPlot(myPlot, readyPlot()$title)
   myPlot

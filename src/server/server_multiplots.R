@@ -252,14 +252,20 @@ observeEvent(multiPlot(), {
         plotCanBeMadeInteractive(multiPlot()[[pName]]$obplot)
       ) {
         output[[plotOutId]] <- renderPlotly({
-          myPlot <- multiPlot()[[pName]]
-          myPlot <- addTitleToPlot(myPlot$obplot, myPlot$title)
+          myPlot <- multiPlot()[[pName]]$obplot
           # Convert ggplot object to plotly and customise
           myPlot <- ggplotly(req(myPlot), tooltip = c("x","y")) %>%
             config(
               displaylogo=FALSE, collaborate=FALSE, cloud=FALSE,
-              scrollZoom=TRUE
+              scrollZoom=TRUE,
+              toImageButtonOptions = list(
+                filename=sprintf("obsmon_multiPlot_%s", iPlot),
+                format="png",
+                width=1280,
+                height=720
+              )
             )
+          myPlot <- addTitleToPlot(myPlot, multiPlot()[[pName]]$title)
           myPlot
         })
       } else {
