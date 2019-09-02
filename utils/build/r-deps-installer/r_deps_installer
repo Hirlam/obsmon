@@ -14,6 +14,11 @@ getArgVal <- function(argName) {
   return(argVal)
 }
 
+printInstallStatus <- function(newStatus) {
+  blankLine <- strrep(" ", getOption("width"))
+  cat(paste0("\r", blankLine, "\r", newStatus))
+}
+
 showDepsAndQuit <- "--listdeps" %in% args
 buildOnly <- "--build" %in% args # Just build, do not install
 rebuildAll <- "--rebuild-all" %in% args
@@ -22,7 +27,7 @@ rebuildAll <- "--rebuild-all" %in% args
 resetLocalRepo <- "--reset-local-repo" %in% args
 allowSrcDownload <- "--allow-downloads" %in% args | resetLocalRepo
 # --pedantic: Requires all srcs and builds all missing binaries.
-pedanticBuild <- "--pedantic" %in% args 
+pedanticBuild <- "--pedantic" %in% args
 # --local-install is useful whenever minimum interference with current R setup
 # is desirable
 localReinstallRequested <- "--local-reinstall" %in% args
@@ -30,14 +35,14 @@ localInstallRequested <- "--local-install" %in% args || localReinstallRequested
 # The sf R library is only needed as a "requires" dependency and is not
 # installed be default, as it depends on gdal v2, which is not available
 # in some systems yet.
-sfSuggestsSupport <- "--sf-suggests-support" %in% args 
+sfSuggestsSupport <- "--sf-suggests-support" %in% args
 # Optional user-specified workDir
 workDirUserArg <- getArgVal("--workdir")
 # Path to the local R library directory (relative to workDir)
 # (to replace the default localRLibDir, optionally)
 localRLibDirUserArg <- getArgVal("--local-R-lib-dir")
 
-# List here packages that can be ignored
+# List here R-libraries that can be ignored
 pkgsSafeToIgnore <- c("RadarBE")
 excludeFromSuggests <- c("sf")
 
@@ -77,7 +82,7 @@ envVarPreCompiledPkgsDir <- file.path(
   sysInfoStringLong
 )
 
-# Remove locally installed packages if localReinstallRequested
+# Remove locally installed R-libraries if localReinstallRequested
 if(localReinstallRequested) {
   cat(sprintf(
     'Option "--local-reinstall" passed.\n  > Resetting directory %s\n',
@@ -119,7 +124,7 @@ if(!dir.exists(localPreCompiledPkgsDir)) dir.create(localPreCompiledPkgsDir, rec
 
 availablePkgsLocalRepo <- available.packages(repos=localRepo)
 
-cat('Gathering packages used in the ".R" files in current dir and subdirs...')
+cat('Gathering R-libraries used in the ".R" files in current dir and subdirs...')
 # These may have been imported explicitly using "library" or "require",
 # or used without explicit import (double-colon syntax).
 allFiles <- list.files(path=".", recursive=TRUE, full.names=TRUE)
@@ -129,7 +134,7 @@ allFiles <- allFiles[!grepl(basename(localInstallRLib), allFiles)]
 allRFiles <- allFiles[filesAreR(allFiles)]
 mainPkgs <- getExplicitlyUsedRPkgs(allRFiles)
 
-cat("Done.\n  > The following",length(mainPkgs),"main packages were found:\n")
+cat("Done.\n  > The following",length(mainPkgs),"main R-libraries were found:\n")
 for (pkg in mainPkgs) {
   cat("    *", pkg, "\n")
 }
@@ -139,11 +144,11 @@ cat("Getting recursive dependency list: \n")
 # Doing this manually because we've had too many problems with somewhat erratic
 # behaviour of the install.packages own dependency resolution
 pkgsDeps <- list()
-# Having separate lists with the names of essencial packages and packages that
+# Having separate lists with the names of essential R-libs and libs that
 # are only needed as "Suggests"-type dependencies (and recursive dependencies
 # of these) will allow us, later on, to decide what to do in case a package
 # fails to be installed
-allEssencialDeps <- c()
+allEssentialDeps <- c()
 allSuggestsDeps <- c()
 allPkgDeps <- c()
 essentialDepsTypes <- c("Depends", "Imports", "LinkingTo")
@@ -160,7 +165,7 @@ if(resetLocalRepo | length(mainPkgsNotAvailableLocally)>0) {
   availablePkgsRemoteRepo <- available.packages(repos=remoteRepo)
 }
 pkgsDbForDepsRefresh <- availablePkgsLocalRepo
-if(resetLocalRepo) pkgsDbForDepsRefresh <- availablePkgsRemoteRepo 
+if(resetLocalRepo) pkgsDbForDepsRefresh <- availablePkgsRemoteRepo
 
 for (pkg in mainPkgs) {
   cat("  >", pkg, "... ")
@@ -170,7 +175,7 @@ for (pkg in mainPkgs) {
   } else {
     pkgsDbForDepsRefresh <- availablePkgsLocalRepo
   }
-  essencialDeps <- dependencies(pkg, db=pkgsDbForDepsRefresh,
+  essentialDeps <- dependencies(pkg, db=pkgsDbForDepsRefresh,
                      levelOneDepsType=essentialDepsTypes,
                      exclude_from_suggests=excludeFromSuggests
                    )
@@ -179,49 +184,49 @@ for (pkg in mainPkgs) {
                     exclude_from_suggests=excludeFromSuggests
                   )
   # A Suggests type dependency may also end up being a recursive non-suggests
-  # dependency of the essencial packages. We don't want to have these
+  # dependency of the essential R-libraries. We don't want to have these
   # considered as optional.
-  suggestsDeps <- suggestsDeps[!(suggestsDeps %in% essencialDeps)]
-  pkgsDeps[[pkg]] <- list(essencial=essencialDeps, Suggests=suggestsDeps)
+  suggestsDeps <- suggestsDeps[!(suggestsDeps %in% essentialDeps)]
+  pkgsDeps[[pkg]] <- list(essential=essentialDeps, Suggests=suggestsDeps)
 
-  thisPkgDeps <-c(pkgsDeps[[pkg]][["essencial"]],pkgsDeps[[pkg]][["Suggests"]])
+  thisPkgDeps <-c(pkgsDeps[[pkg]][["essential"]],pkgsDeps[[pkg]][["Suggests"]])
   newDeps <-setdiff(thisPkgDeps,intersect(thisPkgDeps,c(mainPkgs, allPkgDeps)))
   cat("nDependencies =", length(thisPkgDeps), "(", length(newDeps),"new)\n")
-  allEssencialDeps <- c(allEssencialDeps, pkgsDeps[[pkg]][["essencial"]])
+  allEssentialDeps <- c(allEssentialDeps, pkgsDeps[[pkg]][["essential"]])
   allSuggestsDeps <- c(allSuggestsDeps, pkgsDeps[[pkg]][["Suggests"]])
-  allPkgDeps <- c(allPkgDeps, allEssencialDeps, allSuggestsDeps)
+  allPkgDeps <- c(allPkgDeps, allEssentialDeps, allSuggestsDeps)
 }
 
 # At last, building the full list of pkgs to be installed
 allPkgs <- unique(c(allPkgDeps, mainPkgs))
-allEssencialDeps <- unique(allEssencialDeps[!(allEssencialDeps %in% mainPkgs)])
+allEssentialDeps <- unique(allEssentialDeps[!(allEssentialDeps %in% mainPkgs)])
 allSuggestsDeps <- unique(
                      allSuggestsDeps[
-                       !(allSuggestsDeps %in% c(allEssencialDeps, mainPkgs))
+                       !(allSuggestsDeps %in% c(allEssentialDeps, mainPkgs))
                      ]
                    )
 
 cat("\n")
-msg <- "In addition to the main packages listed above,"
+msg <- "In addition to the main R-libraries listed above,"
 msg <- paste(msg, "the following dependencies should also", sep=" ")
 msg <- paste(msg, "be available after a successful full install:\n", sep="\n")
 cat(msg)
-cat("* Essencial dependencies:\n")
-for (pkg in sort(allEssencialDeps)) {
+cat("* Essential dependencies:\n")
+for (pkg in sort(allEssentialDeps)) {
   cat("  >", pkg, "\n")
 }
 cat("* Suggests-type dependencies:\n")
 for (pkg in sort(allSuggestsDeps)) {
   cat("  >", pkg, "\n")
 }
-cat("Total:", length(allPkgs), "packages.\n")
-cat("  Main packages:", length(mainPkgs), "\n")
-cat("  Essencial dependencies:", length(allEssencialDeps), "\n")
+cat("Total:", length(allPkgs), "R-libraries.\n")
+cat("  Main R-libraries:", length(mainPkgs), "\n")
+cat("  Essential dependencies:", length(allEssentialDeps), "\n")
 cat("  Suggests-type dependencies:", length(allSuggestsDeps), "\n")
 cat("\n")
 
 if(showDepsAndQuit) {
-  cat('Option "--listdeps" passed. Not installing packages. \n')
+  cat('Option "--listdeps" passed. Not installing R-libraries. \n')
   cat('Stopping now.\n')
   quit()
 }
@@ -233,13 +238,13 @@ pkgsToBeInstalledMask <- !(allPkgs %in% installedPkgs)
 pkgsToBeInstalledMask <- pkgsToBeInstalledMask | (allPkgs %in% pkgsToBeUpdated)
 pkgsToBeInstalled <- allPkgs[pkgsToBeInstalledMask]
 # If the "--pedantic" command line option is passed, then the script will
-# require that the repo contains all source files for the packages used in 
+# require that the repo contains all source files for the R-libs used in
 # the code, even if they are already installed in the system.
 # This is to ensure that distributing the code as part of a package (such
 # as an RPM, for instance) is done in a consistent fashion.
 #
 # If that command line option is not passed, then the script will only require
-# the existence of sources for packages that are not yet installed.
+# the existence of sources for R-libraries that are not yet installed.
 srcsReqInRepo <- pkgsToBeInstalled
 if(pedanticBuild | rebuildAll) srcsReqInRepo <- allPkgs
 
@@ -269,8 +274,8 @@ errMsgSolveMissingPkgs <- paste(
 if(length(missingSrcsReqPkgs)>0) {
   # Deciding whether or not to download needed source files that are missing.
   errMsg <- "The local R repo does not contain all required sources!\n"
-  errMsg <- paste(errMsg, 
-              "Sources are missing for the following packages:\n",
+  errMsg <- paste(errMsg,
+              "Sources are missing for the following R-libraries:\n",
                sep=""
             )
   for(pkgName in missingSrcsReqPkgs) {
@@ -315,7 +320,7 @@ if(length(missingSrcsReqPkgs)>0) {
 
     if(length(ignoredPkgs)>0) {
       cat("\n")
-      cat('Ignoring the following missing packages (see variable "pkgsSafeToIgnore"):\n')
+      cat('Ignoring the following missing R-libs (see variable "pkgsSafeToIgnore"):\n')
       for (pkg in pkgsSafeToIgnore) {
         cat("    *", pkg, "\n")
       }
@@ -335,7 +340,7 @@ if(length(missingSrcsReqPkgs)>0) {
 }
 
 # Build step
-# At this point, sources for all required packages should be available locally
+# At this point, sources for all required R-libs should be available locally
 binSearchPaths <- c(localPreCompiledPkgsDir, envVarPreCompiledPkgsDir)
 cat("Looking for pre-compiled binaries at:\n")
 for(dir in binSearchPaths) cat(paste("  >", dir, "\n"))
@@ -347,7 +352,7 @@ if(rebuildAll | length(binFilePaths)==0) {
   for (pkgName in srcsReqInRepo) {
     pkgVer <- availablePkgsLocalRepo[pkgName, "Version"]
     fPath <- pathToBinary(
-               pkgName, pkgVer, platform=sysInfoStringShort, 
+               pkgName, pkgVer, platform=sysInfoStringShort,
                fullBinList=binFilePaths
              )
     if(anyNA(fPath)) binsToBeBuilt <- c(binsToBeBuilt, pkgName)
@@ -358,12 +363,12 @@ if(length(binsToBeBuilt)==0) {
   cat("All needed binaries are available. No binaries need to be built.\n")
 } else {
   cat("\n")
-  cat("The following packages are marked to be built:\n")
+  cat("The following R-libraries are marked to be built:\n")
   for (pkgName in binsToBeBuilt) {
     pkgVer <- availablePkgsLocalRepo[pkgName, "Version"]
     cat("  >", pkgName, paste("(v", pkgVer, ")", sep=''), "\n")
   }
-  cat("Total:", length(binsToBeBuilt), "packages to be built.\n")
+  cat("Total:", length(binsToBeBuilt), "R-libraries to be built.\n")
 
   cat("\n")
   # If we do not do this, then install.packages may download these pkgs
@@ -373,7 +378,18 @@ if(length(binsToBeBuilt)==0) {
   cat("Building now...\n")
   # Moving to a tempdir so that the work dir doesn't get full of tarballs
   setwd(tmpDirForBuild)
+
+  iLib <- 0
   for (pkgName in binsToBeBuilt) {
+    iLib <- iLib+ 1
+    pkgVer <- availablePkgsLocalRepo[pkgName, "Version"]
+    cat(sprintf(
+      paste0(
+        '\n############################################################################\n',
+        '                    Building (%d/%d): %s-%s\n',
+        '############################################################################\n'
+      iLib, length(binsToBeBuilt), pkgName, pkgVer
+    ))
     tryCatch(
       install.packages(pkgName, lib=tmpLibForBuild,
         repos=localRepo, type="source", INSTALL_opts="--build",
@@ -383,6 +399,7 @@ if(length(binsToBeBuilt)==0) {
       # Copying compiled binaries, so they are available next time
       finally=mvPkgsBinsToRepo(tmpDirForBuild, localPreCompiledPkgsDir)
     )
+    cat("\n")
   }
   # Back to the original dir
   setwd(workDir)
@@ -411,26 +428,38 @@ if(length(pkgsToBeInstalled)==0) {
 
 if(length(pkgsToBeUpdated)>0) {
   cat("\n")
-  cat("The following packages will be updated:\n")
+  cat("The following R-libraries will be updated:\n")
   for (pkg in pkgsToBeUpdated) {
     cat("  >", pkg, "\n")
   }
-  cat("Total:", length(pkgsToBeUpdated), "packages to be updated.\n")
+  cat("Total:", length(pkgsToBeUpdated), "R-libraries to be updated.\n")
 }
 
 binFilePaths <- listBinFiles(binSearchPaths)
+iLib <- 0
 for (pkgName in pkgsToBeInstalled) {
-  installAction <- "  > Installing"
-  if(pkgName %in% pkgsToBeUpdated) installAction <- "  > Updating"
-  cat(paste(installAction, " ", pkgName, '... ', sep=""))
   pkgVer <- availablePkgsLocalRepo[pkgName, "Version"]
+  installAction <- "Installing"
+  if(pkgName %in% pkgsToBeUpdated) installAction <- "Updating"
+  installStatus <- sprintf(
+    "Installation (%.0f%%): %s R-lib %s-%s...",
+    100*(iLib / length(pkgsToBeInstalled)), installAction, pkgName, pkgVer
+  )
+  printInstallStatus(installStatus)
+
   preCompPkgPath <- pathToBinary(
-                      pkgName, pkgVer, platform=sysInfoStringShort, 
+                      pkgName, pkgVer, platform=sysInfoStringShort,
                       fullBinList=binFilePaths
                     )
   install_binaries(fPaths=preCompPkgPath, lib=lib, overwrite=TRUE)
-  cat("Done.\n")
+  iLib <- iLib + 1
 }
 
+printInstallStatus(sprintf(
+  "Installation: %d R-libraries have been installed.\n",
+  length(pkgsToBeInstalled)
+))
 cat("\n")
-cat("The R-pkgs installer script has finished. \n")
+cat("############################################\n")
+cat("# The R-libs installer script has finished #\n")
+cat("############################################\n")
