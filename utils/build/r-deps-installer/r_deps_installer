@@ -20,6 +20,7 @@ printInstallStatus <- function(newStatus) {
 }
 
 showDepsAndQuit <- "--listdeps" %in% args
+ignoreBuildFail <- "--ignore-build-fail" %in% args
 buildOnly <- "--build" %in% args # Just build, do not install
 rebuildAll <- "--rebuild-all" %in% args
 # Options that control whether downloads can be made from CRAN or not
@@ -359,6 +360,7 @@ if(rebuildAll | length(binFilePaths)==0) {
   }
 }
 
+libsFailedToBuild <- c()
 if(length(binsToBeBuilt)==0) {
   cat("All needed binaries are available. No binaries need to be built.\n")
 } else {
@@ -388,16 +390,24 @@ if(length(binsToBeBuilt)==0) {
         '\n############################################################################\n',
         '                    Building (%d/%d): %s-%s\n',
         '############################################################################\n'
+      ),
       iLib, length(binsToBeBuilt), pkgName, pkgVer
     ))
-    tryCatch(
-      install.packages(pkgName, lib=tmpLibForBuild,
-        repos=localRepo, type="source", INSTALL_opts="--build",
-        configure.args=c(udunits2='--with-udunits2-include=/usr/include/udunits2')
-      ),
-      warning = function(w) handleInstallFailure(w, okToProceed=allSuggestsDeps),
-      # Copying compiled binaries, so they are available next time
-      finally=mvPkgsBinsToRepo(tmpDirForBuild, localPreCompiledPkgsDir)
+    tryCatch({
+        install.packages(pkgName, lib=tmpLibForBuild,
+          repos=localRepo, type="source", INSTALL_opts="--build",
+          dependencies=FALSE,
+          configure.args=c(udunits2='--with-udunits2-include=/usr/include/udunits2')
+        )
+      },
+        warning = function(w) {
+          handleInstallFailure(
+            w, pkgName, okToProceed=allSuggestsDeps,ignoreBuildFail=ignoreBuildFail
+          )
+          libsFailedToBuild <<- c(libsFailedToBuild, pkgName)
+        },
+        # Copying compiled binaries, so they are available next time
+        finally=mvPkgsBinsToRepo(tmpDirForBuild, localPreCompiledPkgsDir)
     )
     cat("\n")
   }
@@ -418,14 +428,26 @@ symlinkTarget <- gsub(paste("^", workDir, "{1}/*", sep=""), "", localInstallRLib
 unlink(basename(localInstallRLib))
 symlinkCreated <- file.symlink(symlinkTarget, basename(localInstallRLib))
 
-cat("R libraries will (if needed) be installed to: ", lib, "\n")
-cat("\n")
+pkgsToBeInstalled <- pkgsToBeInstalled[!(pkgsToBeInstalled %in% libsFailedToBuild)]
 if(length(pkgsToBeInstalled)==0) {
- cat("The listed packages seem to have already been installed.\n")
- cat("Nothing to do.\n")
- quit()
+  cat("###############################################################\n")
+  cat("Nothing to be installed.\n")
+  if(length(libsFailedToBuild)==0) {
+    cat("  > The listed R-libraries seem to already be in place.\n")
+  } else {
+    cat("  > WARN: The following libraries failed to build, please doube-check:\n")
+    for (pkg in libsFailedToBuild) {
+      cat("  >", pkg, "\n")
+    }
+  }
+  cat("###############################################################\n")
+  quit()
+} else {
+  cat("R libraries will (if needed) be installed to: ", lib, "\n")
+  cat("\n")
 }
 
+pkgsToBeUpdated <- pkgsToBeUpdated[!(pkgsToBeUpdated %in% libsFailedToBuild)]
 if(length(pkgsToBeUpdated)>0) {
   cat("\n")
   cat("The following R-libraries will be updated:\n")
