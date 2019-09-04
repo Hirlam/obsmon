@@ -48,7 +48,7 @@ install_binaries <- function(fPaths, lib, overwrite=TRUE) {
     if(!dir.exists(pkgDir) | overwrite) {
       # The R doc says "Not deleting a non-existent file is not a failure"
       unlink(pkgDir, recursive=TRUE)
-      utils::untar(fPath, exdir=lib, compressed=TRUE)
+      utils::untar(fPath, exdir=lib)
     }
   }
 }

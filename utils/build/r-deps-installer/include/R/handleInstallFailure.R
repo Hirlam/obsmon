@@ -1,22 +1,19 @@
 
-handleInstallFailure <- function(callAndErrorMsg, okToProceed){
-  # 'Warning' function to be used along with "withCallingHandlers" when calling
-  # install.packages. The function will only issue warnings "Suggests"-type
-  # dependencies fail to be installed, but will stop installation if any falure
-  # occurs with the other types of dependencies.
-  msg <- callAndErrorMsg[["message"]]
-  pattBackticks <- "‘+.+’+"
-  offendingFile <- gsub("‘*’*", "",
-                     regmatches(msg, gregexpr(pattBackticks, msg))
-                   )
-  offendingPkg <- grep("\\.tar\\.gz$|\\.tgz$",
-                    unlist(strsplit(offendingFile, split="/")),
-                    value=TRUE
-                  )
-  offendingPkg <- gsub("_.+\\.tar\\.gz$|_.+\\.tgz$", "", offendingPkg)
-  if(length(offendingPkg)==0) stop(callAndErrorMsg)
-  if(offendingPkg %in% okToProceed) {
-    warning(callAndErrorMsg)
+handleInstallFailure <- function(
+  pkgName, callAndErrorMsg, okToProceed, ignoreBuildFail=FALSE
+){
+  # 'Warning' function to be used along with "tryCatch" when calling
+  # install.packages. Only warnings will be issued if "Suggests"-type
+  # dependencies fail to be installed, but installation will be stopped
+  # if failure occurs with any other types of dependencies.
+
+  if(ignoreBuildFail || pkgName %in% okToProceed) {
+    warningCompl <- 'R-lib listed as "ok to proceed" in case of failure'
+    if(ignoreBuildFail) warningCompl <- 'option "--ignoreBuildFail" passed'
+    warning(sprintf(
+      '%s\n> Ignoring failure with R-lib "%s": %s\n\n',
+      callAndErrorMsg, pkgName, warningCompl
+    ))
   } else {
     stop(callAndErrorMsg)
   }
