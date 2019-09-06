@@ -149,6 +149,17 @@ configGeneralFillInDefault <- function(config, key, default) {
       }
       currentVal
     },
+    "sessionTimeout"={
+      currentVal <- as.numeric(currentVal)
+      if(anyNA(currentVal) || currentVal<0) {
+        flog.warn("Invalid sessionTimeout. Resetting to %s s.", default)
+        currentVal <- default
+      }
+      if(currentVal<60) {
+        flog.warn("sessionTimeout is set to only %ss!", currentVal)
+      }
+      currentVal
+    },
     currentVal
   )
   config
@@ -185,11 +196,12 @@ configGeneralFillInDefaults <- function(config) {
   config <- configGeneralFillInDefault(
     config, "multiPlotsEnableInteractivity", FALSE
   )
+  config <- configGeneralFillInDefault(config, "sessionTimeout", Inf)
   config
 }
 
 getValidConfigFilePath <- function(verbose=FALSE) {
-  
+
   configFileDefBasename <- "config.toml"
   exampleConfigFilePath <- file.path(thisAppDir,"docs","config.toml.example")
 
@@ -231,7 +243,7 @@ getValidConfigFilePath <- function(verbose=FALSE) {
     )
     flog.error("getValidConfigFilePath: %s", msg)
     return(character(0))
-  } 
+  }
 
   if(verbose) flog.info(paste("Config file found:", configPath, "\n"))
   return(configPath)

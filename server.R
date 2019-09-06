@@ -33,9 +33,28 @@ shinyServer(function(input, output, session) {
   # Write code info to the log for every session when using a shiny server
   # This info is already printed in a banner when running standalone
   if(!runningAsStandalone) cat(obsmonBanner)
-
   # Loading info about configured experiments
   expts <- initExperiments()
+
+  # Watching for timeout
+  # Code adapted from
+  # <https://stackoverflow.com/questions/33839543/shiny-server-session-time-out-doesnt-work>
+  observeEvent(input$timeOut, {
+    sysTimeUTC <- strftime(Sys.time(),format="%Y-%m-%d %H:%M:%S %Z",tz="UTC")
+    flog.warn(
+      "Session %s timed out after %ss of inactivity",
+      session$token, input$timeOut
+    )
+    showModal(modalDialog(
+      title = "Timeout",
+      sprintf(
+        "Session timed out at %s after %ss of inactivity",
+        sysTimeUTC, input$timeOut
+      ),
+      footer = NULL
+    ))
+    session$close()
+  })
 
   # Separating the logic for these sections, as they are quite distinct
   source("src/server/server_main_tab.R", local=TRUE)

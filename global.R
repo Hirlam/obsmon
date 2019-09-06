@@ -2,6 +2,33 @@
 # to both ui.R and server.R
 if(!exists("initFileSourced")) source("src/init.R")
 
+# Code to enable timing sessions out
+# Adapted from
+# <https://stackoverflow.com/questions/33839543/shiny-server-session-time-out-doesnt-work>
+timeoutSeconds <- abs(obsmonConfig$general$sessionTimeout)
+inactivity <- sprintf("function idleTimer() {
+  var tInSec = %s;
+  var t = setTimeout(logout, 1000*tInSec);
+  window.onmousemove = resetTimer; // catches mouse movements
+  window.onmousedown = resetTimer; // catches mouse movements
+  window.onclick = resetTimer;     // catches mouse clicks
+  window.onscroll = resetTimer;    // catches scrolling
+  window.onkeypress = resetTimer;  //catches keyboard actions
+
+  function logout() {
+    Shiny.setInputValue('timeOut', tInSec)
+  }
+
+  function resetTimer() {
+    clearTimeout(t);
+    t = setTimeout(logout, 1000*tInSec);  // time is in milliseconds;
+  }
+}
+idleTimer();",
+  timeoutSeconds
+)
+
+
 defaultMenuLabels <- list(
   experiment="Experiment",
   odbBase="Data Assimilation Category/Database",
