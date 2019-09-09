@@ -85,9 +85,13 @@ setPackageOptions <- function(config) {
   # ggplot2 theme: set globally. theme_bw sets figure backgrounds to white
   theme_set(theme_bw())
   # Options controlling parallelism
+  maxNWorkers <- 1 + config$general$maxExtraParallelProcs
+  if(maxNWorkers > availableCores()) maxProcsSecLayer <- availableCores()
+  else maxProcsSecLayer <- 1
+  maxProcsFirstLayer <- floor(maxNWorkers / maxProcsSecLayer)
   plan(list(
-    tweak(multiprocess, workers=config$general$maxExtraParallelProcs),
-    tweak(multiprocess, workers=config$general$maxExtraParallelProcs)
+    tweak(multiprocess, workers=maxProcsFirstLayer),
+    tweak(multiprocess, workers=maxProcsSecLayer)
   ))
 }
 
@@ -135,7 +139,7 @@ configGeneralFillInDefault <- function(config, key, default) {
     "maxExtraParallelProcs"={
       currentVal <- round(as.numeric(currentVal))
       if(anyNA(currentVal) || currentVal<0) {
-        currentVal <- .Machine$integer.max
+        currentVal <- 4 * availableCores()
       } else {
         flog.info("Limiting maxExtraParallelProcs to %s", currentVal)
       }
@@ -144,8 +148,8 @@ configGeneralFillInDefault <- function(config, key, default) {
     "maxAvgQueriesPerProc"={
       currentVal <- round(as.numeric(currentVal))
       if(anyNA(currentVal) || currentVal<1) {
-        currentVal <- Inf
-        flog.info("WARN: Resetting maxAvgQueriesPerProc to %s", currentVal)
+        flog.warn("Resetting maxAvgQueriesPerProc to %s", default)
+        currentVal <- default
       }
       currentVal
     },
