@@ -10,6 +10,7 @@ plotInterrupted <- reactiveVal()
 onclick("cancelPlot", {
   showNotification("Cancelling plot", type="warning", duration=1)
   plotInterrupted(TRUE)
+  pidsToKill <- c(currentPlotPid(), getChildPIDs(currentPlotPid()))
   tools::pskill(currentPlotPid(), tools::SIGINT)
 })
 
@@ -78,13 +79,15 @@ observeEvent(input$doPlot, {
     FUN=preparePlotsCapturingOutput,
     args=list(plotter=plotter, plotRequest=plotRequest, db=db)
   )
-  currentPlotPid(newFutPlotAndOutput$job$pid)
+  plotPID <- newFutPlotAndOutput$job$pid
+  currentPlotPid(plotPID)
   session$onSessionEnded(function() {
     flog.debug(
       "Session finished: Making sure plot task with PID=%s is killed",
-      newFutPlotAndOutput$job$pid
+      plotPID
     )
-    tools::pskill(newFutPlotAndOutput$job$pid)
+    pidsToKill <- c(plotPID, getChildPIDs(plotPID))
+    tools::pskill(pidsToKill)
   })
 
   then(newFutPlotAndOutput,
@@ -141,6 +144,9 @@ observeEvent(input$doPlot, {
     shinyjs::hide("cancelPlot")
     shinyjs::show("doPlot")
     enableShinyInputs(input, except="^multiPlots*")
+    # Force-kill forked processes
+    pidsToKill <- c(plotPID, getChildPIDs(plotPID))
+    tools::pskill(pidsToKill)
     # Printing output produced during async plot, if any
     resolvedValue <- value(newFutPlotAndOutput)
     producedOutput <- resolvedValue$output
@@ -152,7 +158,7 @@ observeEvent(input$doPlot, {
     if(!plotInterrupted()) flog.error(e)
     NULL
   })
-  # This NULL is necessary in order to avoid the future from blocking
+  # This NULL is necessary in order to prevent the future from blocking
   NULL
 })
 
