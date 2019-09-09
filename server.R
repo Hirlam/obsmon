@@ -46,10 +46,35 @@ shinyServer(function(input, output, session) {
   # Loading info about configured experiments
   expts <- initExperiments()
 
-  # Watching for timeout
-  # Code adapted from
+  ####################################
+  # Timeout-related server-side code #
+  ####################################
+  # Inform user if timeout is near
+  timeoutTimerReset <- reactive(input$timeoutTimerReset) %>% throttle(500)
+  nextTimeout <- eventReactive(timeoutTimerReset(), {
+    Sys.time() + timeoutSeconds
+  }, ignoreNULL=FALSE)
+  observe({
+    howLongToTimeout <- as.numeric(nextTimeout() - Sys.time(), units="secs")
+    if(howLongToTimeout>timeoutWarnInSec || howLongToTimeout<0) {
+      invalidateLater(1000 * (howLongToTimeout-timeoutWarnInSec), session)
+      removeNotification(id="timeoutNearNotifID")
+    } else {
+      invalidateLater(500, session)
+      timeoutWarnMsg <- sprintf(
+        paste(
+          "WARNING: The session will time out in %.0fs if it",
+          "remains inactive! Move mouse and/or click somewhere to cancel."
+        ),
+        howLongToTimeout
+      )
+      showNotification(timeoutWarnMsg, type="error", id="timeoutNearNotifID")
+    }
+  })
+  # Close session upon timeout. Code adapted from
   # <https://stackoverflow.com/questions/33839543/shiny-server-session-time-out-doesnt-work>
   observeEvent(input$timeOut, {
+    removeNotification(id="timeoutNearNotifID")
     sysTimeUTC <- strftime(Sys.time(),format="%Y-%m-%d %H:%M:%S %Z",tz="UTC")
     flog.warn(
       "Session %s timed out after %ss of inactivity",

@@ -6,6 +6,7 @@ if(!exists("initFileSourced")) source("src/init.R")
 # Adapted from
 # <https://stackoverflow.com/questions/33839543/shiny-server-session-time-out-doesnt-work>
 timeoutSeconds <- abs(obsmonConfig$general$sessionTimeout)
+timeoutWarnInSec <- 60 # Warn users at least 60s prior to scheduled timeout
 inactivity <- sprintf("function idleTimer() {
   var tInSec = %s;
   var t = setTimeout(logout, 1000*tInSec);
@@ -21,6 +22,7 @@ inactivity <- sprintf("function idleTimer() {
 
   function resetTimer() {
     clearTimeout(t);
+    Shiny.setInputValue('timeoutTimerReset', 'true', {priority: 'event'});
     t = setTimeout(logout, 1000*tInSec);  // time is in milliseconds;
   }
 }
