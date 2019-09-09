@@ -3,6 +3,19 @@ sessionsConnected <- reactiveVal(0)
 
 # The server
 shinyServer(function(input, output, session) {
+  # Log the session ID, as well as start end end times, to help when debugging
+  sessionStartTime <- Sys.time()
+  flog.info("New session started. Session token: %s", session$token)
+  session$onSessionEnded(function() {
+    flog.info(
+      "Session %s ended after %.0fs.",
+      session$token, as.numeric(Sys.time()-sessionStartTime, units="secs")
+    )
+  })
+  # Write code info to the log for every session when using a shiny server
+  # This info is already printed in a banner when running standalone
+  if(!runningAsStandalone) message(obsmonBanner)
+
   # Increment global connected sessions count when session starts
   isolate(sessionsConnected(sessionsConnected() + 1))
   # Decrement global connected sessions count once session finishes
@@ -30,9 +43,6 @@ shinyServer(function(input, output, session) {
     shinyjs::runjs('toggleCodePosition();')
   }
 
-  # Write code info to the log for every session when using a shiny server
-  # This info is already printed in a banner when running standalone
-  if(!runningAsStandalone) cat(obsmonBanner)
   # Loading info about configured experiments
   expts <- initExperiments()
 

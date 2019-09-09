@@ -184,7 +184,7 @@ observeEvent(input$multiPlotsDoPlot, {
     # Printing output produced during async plot, if any
     resolvedValue <- value(multiPlotsAsyncAndOutput)
     producedOutput <- resolvedValue$output
-    if(length(producedOutput)>0) cat(paste0(producedOutput, "\n"))
+    if(length(producedOutput)>0) message(paste0(producedOutput, "\n"))
   })
   catch(plotCleanup, function(e) {
     # This prevents printing the annoying "Unhandled promise error" msg when
