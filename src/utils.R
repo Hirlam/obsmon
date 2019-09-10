@@ -32,6 +32,24 @@ toLowerTrimAndSingleSpaces <- function(str) {
   trimws(gsub(' +',' ',tolower(str)))
 }
 
+getChildPIDs <- function(pid) {
+  cmd <- sprintf('pstree -pn %s', pid)
+  patt <- "\\([[:digit:]]*\\)"
+  childPIDs <- tryCatch({
+      cmdStdOut <- system(cmd, intern=TRUE, ignore.stderr=TRUE)
+      cPIDs <- unlist(regmatches(cmdStdOut, gregexpr(patt, cmdStdOut)))
+      cPIDs <- gsub("[\\(\\)]", "", cPIDs)
+      cPIDs <- as.integer(cPIDs[!cPIDs %in% as.character(pid)])
+      cPIDs
+    },
+    warning=function(w) {
+      flog.debug(sprintf("getChildPIDs: %s", w))
+      return(integer(0))
+    }
+  )
+  return(childPIDs)
+}
+
 dtg2date <- function(dtg) {
   dtgAsPOSIXlt <- strptime(dtg, format="%Y%m%d%H", tz="GMT")
   rtn <- strftime(dtgAsPOSIXlt, format="%Y-%m-%d", tz="GMT")

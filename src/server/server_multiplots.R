@@ -54,7 +54,8 @@ multiPlotInterrupted <- reactiveVal(FALSE)
 onclick("multiPlotsCancelPlot", {
   showNotification("Cancelling multiPlot", type="warning", duration=1)
   multiPlotInterrupted(TRUE)
-  tools::pskill(multiPlotCurrentPid(), tools::SIGINT)
+  pidsToKill <- c(multiPlotCurrentPid(), getChildPIDs(multiPlotCurrentPid()))
+  tools::pskill(pidsToKill, tools::SIGINT)
 })
 
 # Producing multiPlots
@@ -125,13 +126,15 @@ observeEvent(input$multiPlotsDoPlot, {
       progressFile=multiPlotsProgressFile()
     )
   )
-  multiPlotCurrentPid(multiPlotsAsyncAndOutput$job$pid)
+  multiPlotPID <- multiPlotsAsyncAndOutput$job$pid
+  multiPlotCurrentPid(multiPlotPID)
   session$onSessionEnded(function() {
     flog.debug(
       "Session finished: Making sure multiPlot task with PID=%s is killed",
-      multiPlotsAsyncAndOutput$job$pid
+      multiPlotPID
     )
-    tools::pskill(multiPlotsAsyncAndOutput$job$pid)
+    pidsToKill <- c(multiPlotPID, getChildPIDs(multiPlotPID))
+    tools::pskill(pidsToKill)
   })
 
   then(multiPlotsAsyncAndOutput,
@@ -171,6 +174,9 @@ observeEvent(input$multiPlotsDoPlot, {
     multiPlotsProgressBar()$close()
     multiPlotsProgressFile(NULL)
     multiPlotsProgressBar(NULL)
+    # Force-kill forked processes
+    pidsToKill <- c(multiPlotPID, getChildPIDs(multiPlotPID))
+    tools::pskill(pidsToKill)
     # Hide/show and disable/enable relevant inputs
     shinyjs::hide("multiPlotsCancelPlot")
     shinyjs::show("multiPlotsDoPlot")
@@ -178,7 +184,7 @@ observeEvent(input$multiPlotsDoPlot, {
     # Printing output produced during async plot, if any
     resolvedValue <- value(multiPlotsAsyncAndOutput)
     producedOutput <- resolvedValue$output
-    if(length(producedOutput)>0) cat(paste0(producedOutput, "\n"))
+    if(length(producedOutput)>0) message(paste0(producedOutput, "\n"))
   })
   catch(plotCleanup, function(e) {
     # This prevents printing the annoying "Unhandled promise error" msg when
@@ -186,7 +192,7 @@ observeEvent(input$multiPlotsDoPlot, {
     if(!multiPlotInterrupted()) flog.error(e)
     NULL
   })
-  # This NULL is necessary in order to avoid the future from blocking
+  # This NULL is necessary in order to prevent the future from blocking
   NULL
 })
 
