@@ -91,13 +91,32 @@ DROP TABLE IF EXISTS cycles;
 CREATE TABLE cycles(
   date INTEGER NOT NULL,
   cycle INTEGER NOT NULL CONSTRAINT valid_cycle CHECK((cycle>=0) AND (cycle<24)),
+  /* Keeping track of when the record was created */
+  cdate_utc INTEGER NOT NULL DEFAULT 0,
   FOREIGN KEY (date) REFERENCES dates(date) ON UPDATE CASCADE ON DELETE CASCADE
   PRIMARY KEY (date, cycle)
 );
-CREATE TRIGGER cannot_update_cycles
-BEFORE UPDATE ON cycles
+CREATE TRIGGER cannot_update_dtgs_on_table_cycles
+BEFORE UPDATE OF date, cycle ON cycles
 BEGIN
   SELECT RAISE(FAIL, "Updates to selected column(s) not allowed in table cycles");
+END;
+/* Making it difficult to manually alter cdate */
+CREATE TRIGGER cycles_cannot_update_timestamps
+BEFORE UPDATE OF cdate_utc ON cycles
+BEGIN
+  SELECT CASE
+  WHEN (SELECT allow_edit_timestamps FROM params ORDER BY allow_edit_timestamps ASC LIMIT 1) <> 1 THEN
+    RAISE(FAIL, "Cannot update timestamps in table cycles")
+  END;
+END;
+/* Trigger to set cdate of cycles upon insertion */
+CREATE TRIGGER cycles_set_cdate
+AFTER INSERT ON cycles
+BEGIN
+  UPDATE params SET allow_edit_timestamps = 1;
+  UPDATE cycles SET cdate_utc=STRFTIME('%Y%m%d%H%M%S', DATETIME('now')) WHERE ROWID=NEW.ROWID;
+  UPDATE params set allow_edit_timestamps = 0;
 END;
 
 /* Relations regarding observations */
