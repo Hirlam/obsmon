@@ -379,7 +379,10 @@ observeEvent(updatePlotType(), {
 
 # Decide whether to allow users to select stations
 allowChoosingStation <- reactive({
-   plotSupportsChoosingStations(req(input$plottype), req(input$obtype))
+   return(
+     obSupportsStationChoice(req(input$obname)) &&
+     plotSupportsChoosingStations(req(input$plottype), req(input$obtype))
+   )
 })
 requireSingleStation <- reactive({
    plotRequiresSingleStation(req(input$plottype))

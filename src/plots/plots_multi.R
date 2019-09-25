@@ -426,14 +426,19 @@ multiPlotsValidateConfig <- function(config) {
       # (ii) Parsing station choices
       stationsConfig <- pc$stations[[obname]]
       obtype <- getAttrFromMetadata("category", obname=obname)
-      if(plotSupportsChoosingStations(pc$plotType, obtype)) {
+      allowStationChoice <- (
+        obSupportsStationChoice(obname) &&
+        plotSupportsChoosingStations(pc$plotType, obtype)
+      )
+      if(allowStationChoice) {
         if(!is.null(stationsConfig) && !is.list(stationsConfig)) {
           # If users set, e.g., "aircraft = 10" for levels in the config file
           pc$stations[[obname]] <- list(allVars=stationsConfig)
         }
       } else if(!is.null(stationsConfig)) {
         pc$stations[[obname]] <- NULL
-        msg<-paste0('\n  multiPlot "',pc$displayName,'": Plot "',pc$plotType,
+        msg<-paste0('\n multiPlot "',pc$displayName,'": Combination of plot="',
+          pc$plotType,'" and obname="', obname,
           '" does not support station choices. Ignoring stations.'
         )
         flog.warn(msg)

@@ -1,5 +1,10 @@
 #!/usr/bin/env Rscript
 
+obSupportsStationChoice <- function(obname=character(0)){
+  if(isTRUE(obname %in% c("satem", "aeolus"))) return(FALSE)
+  return(TRUE)
+}
+
 joinWithDotAsSep <- function(myList) {
   # Joins the elements of myList in a single string, with dots
   # as separators
