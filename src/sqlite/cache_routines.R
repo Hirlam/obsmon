@@ -2,16 +2,6 @@
 # Routines that are related to caching in obsmon #
 ##################################################
 
-# Define attributes that will be cached and which will be used, along with
-# a DTG, to identify the observations
-obsKeyAttributes <- list(
-  upper_air=c('statid', 'obname', 'varname', 'level'),
-  surface=c('statid', 'obname', 'varname'),
-  satem=c('satname', 'obname', 'level'),
-  scatt=c('statid', 'varname'),
-  radar=c('statid', 'varname', 'level'),
-  unknown_type=c('statid', 'obname', 'varname', 'satname', 'level')
-)
 # Cache file locking
 cacheFileLocks <- list()
 lockSignalingFpath <- function(fpath) sprintf("%s.lock", fpath)
@@ -237,10 +227,21 @@ cacheObsFromFile <- function(sourceDbPath, cacheDir, replaceExisting=FALSE) {
       error=function(e) {flog.error(e$message); NULL}
     )
 
-    for(obCategory in names(obsKeyAttributes)) {
-      columns <- paste0(obsKeyAttributes[[obCategory]], collapse=', ')
-      cache_table <- paste(obCategory, '_obs', sep='')
+    # Get the observation-related tables present in the cache file
+    # NB.: This assumes that the names of such tables end with "_obs"
+    cache_tab_names <- dbListTables(con_cache)
+    cache_obs_tab_names <- cache_tab_names[endsWith(cache_tab_names, "_obs")]
 
+    for(cache_table in cache_obs_tab_names) {
+      obCategory <- gsub("_obs$", "", cache_table)
+
+      # Get, from the cache file, the non-DTG-related attributes
+      # that should be cached
+      cols <- dbListFields(con_cache, cache_table)
+      non_dtg_cols <- cols[!(cols %in% c("date", "cycle"))]
+
+      # Account for differences between usage and obsmon tables w.r.t. statid
+      columns <- paste0(non_dtg_cols, collapse=', ')
       if(db_table=='obsmon') {
         usedCols <- gsub('statid', 'NULL as statid', columns, fixed=TRUE)
       } else {
