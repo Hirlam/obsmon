@@ -136,11 +136,24 @@ cacheObsFromFile <- function(sourceDbPath, cacheDir, replaceExisting=FALSE) {
     con_cache <- dbConnectWrapper(cacheFilePath)
     cacheDbConsCreatedHere <- c(cacheDbConsCreatedHere, con_cache)
 
-    # The user may want to re-cache observation (e.g., if they think that the
-    # cached information is incomplete)
-    if(replaceExisting) {
-      flog.debug(sprintf(
-        "Recaching (%s). Removing DTG=%d%02d from %s cache.",
+    # Resetting cache information if any of the following applyes:
+    # (1) The user has requested it via the replaceExisting argument
+    # (2) The cache entry is out-of-date, i.e., the last-modified date of the
+    #     source DB file is more recent that the date when the corresponding
+    #     cache entry was created
+    mtimeSourceDb <- as.numeric(strftime(
+      file.info(sourceDbPath)$mtime, format="%Y%m%d%H%M%S", tz="UTC"
+    ))
+    ctimeDTGEntry <- dbGetQuery(con_cache,
+      paste('SELECT cdate_utc as cdate FROM cycles WHERE',
+      sprintf('date=%d AND cycle=%d', date, cycle)
+    ))
+    ctimeDTGEntry <- as.numeric(ctimeDTGEntry$cdate[1])
+    entryExpired <- mtimeSourceDb > ctimeDTGEntry
+    overwriteCacheForDTG <- replaceExisting || isTRUE(entryExpired)
+    if(overwriteCacheForDTG) {
+      flog.info(sprintf(
+        'Recaching (%s): Resetting data for DTG=%d%02d in cache file %s.',
         sourceDbPath, date, cycle, cacheFileName
       ))
       removalSuccess <- tryCatch({
@@ -153,8 +166,8 @@ cacheObsFromFile <- function(sourceDbPath, cacheDir, replaceExisting=FALSE) {
         warning=function(w) {flog.debug(w); FALSE}
       )
       if(!removalSuccess) {
-        flog.debug(
-          "WARN, recache (%s): DTG=%d%02d may not have been rm from %s cache",
+        flog.warn(
+          "Recache (%s): DTG=%d%02d may not have been reset in cache file %s",
           sourceDbPath, date, cycle, cacheFileName
         )
       }
