@@ -106,7 +106,7 @@ DROP TABLE IF EXISTS upper_air_obs;
 CREATE TABLE upper_air_obs(
   date INTEGER NOT NULL,
   cycle INTEGER NOT NULL,
-  /* Allowing statid to be NULL, as data in the "obsmon" table do not currently contain statid info */
+  /* Allowing statid to be NULL, as the "obsmon" table does not currently contain statid info */
   statid TEXT DEFAULT NULL,
   obname TEXT NOT NULL,
   varname TEXT NOT NULL,
@@ -125,7 +125,7 @@ DROP TABLE IF EXISTS surface_obs;
 CREATE TABLE surface_obs(
   date INTEGER NOT NULL,
   cycle INTEGER NOT NULL,
-  /* Allowing statid to be NULL, as data in the "obsmon" table do not currently contain statid info */
+  /* Allowing statid to be NULL, as the "obsmon" table does not currently contain statid info */
   statid TEXT DEFAULT NULL,
   obname TEXT NOT NULL,
   varname TEXT NOT NULL,
@@ -143,7 +143,6 @@ DROP TABLE IF EXISTS satem_obs;
 CREATE TABLE satem_obs(
   date INTEGER NOT NULL,
   cycle INTEGER NOT NULL,
-  /* Allowing statid to be NULL, as data in the "obsmon" table do not currently contain statid info */
   satname TEXT NOT NULL,
   /* obsmon backend writes sensor names in obname */
   obname TEXT NOT NULL,
@@ -163,7 +162,7 @@ DROP TABLE IF EXISTS scatt_obs;
 CREATE TABLE scatt_obs(
   date INTEGER NOT NULL,
   cycle INTEGER NOT NULL,
-  /* Allowing statid to be NULL, as data in the "obsmon" table do not currently contain statid info */
+  /* Allowing statid to be NULL, as the "obsmon" table does not currently contain statid info */
   statid TEXT DEFAULT NULL,
   varname TEXT NOT NULL,
   FOREIGN KEY (date, cycle) REFERENCES cycles(date, cycle) ON UPDATE CASCADE ON DELETE CASCADE
@@ -180,7 +179,7 @@ DROP TABLE IF EXISTS radar_obs;
 CREATE TABLE radar_obs(
   date INTEGER NOT NULL,
   cycle INTEGER NOT NULL,
-  /* Allowing statid to be NULL, as data in the "obsmon" table do not currently contain statid info */
+  /* Allowing statid to be NULL, as the "obsmon" table does not currently contain statid info */
   statid TEXT DEFAULT NULL,
   varname TEXT NOT NULL,
   level INTEGER NOT NULL,
@@ -193,12 +192,29 @@ BEGIN
   SELECT RAISE(FAIL, "Updates not allowed in table radar_obs");
 END;
 
+/* (v) Lidar observations, obnumber=15 */
+DROP TABLE IF EXISTS lidar_obs;
+CREATE TABLE lidar_obs(
+  date INTEGER NOT NULL,
+  cycle INTEGER NOT NULL,
+  obname TEXT NOT NULL,
+  varname TEXT NOT NULL,
+  level INTEGER NOT NULL,
+  FOREIGN KEY (date, cycle) REFERENCES cycles(date, cycle) ON UPDATE CASCADE ON DELETE CASCADE
+  PRIMARY KEY (date, cycle, obname, varname, level)
+);
+CREATE TRIGGER cannot_update_lidar_obs
+BEFORE UPDATE ON lidar_obs
+BEGIN
+  SELECT RAISE(FAIL, "Updates not allowed in table lidar_obs");
+END;
+
 /* (vi) Finally, eventual observations that don't belong to any of the above types */
 DROP TABLE IF EXISTS unknown_type_obs;
 CREATE TABLE unknown_type_obs(
   date INTEGER NOT NULL,
   cycle INTEGER NOT NULL,
-  /* Allowing statid to be NULL, as data in the "obsmon" table do not currently contain statid info */
+  /* Allowing statid to be NULL, as the "obsmon" table does not currently contain statid info */
   statid TEXT DEFAULT NULL,
   obname TEXT NOT NULL,
   varname TEXT DEFAULT NULL,
