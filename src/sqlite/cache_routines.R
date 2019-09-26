@@ -263,19 +263,27 @@ cacheObsFromFile <- function(sourceDbPath, cacheDir, replaceExisting=FALSE) {
         usedCols <- gsub('statid', substStr, columns, fixed=TRUE)
       }
 
+      # We'll now query the source DB for new observations to be cached
+      queryNewObs <- sprintf(
+        'SELECT DISTINCT %s FROM %s WHERE dtg="%s"',
+        usedCols, db_table, dtg
+      )
+      if('nobs_total' %in% dbListFields(con, db_table)) {
+        # Obsmon-backend sometimes writes obs data in the "obsmon" table
+        # even when they have nobs_total==0. Do not add these to cache.
+        queryNewObs <- paste(queryNewObs, "AND nobs_total>0")
+      }
       if(obCategory=='unknown_type') {
+        # Separate obs that have been registered using registerObservation
+        # (see observation_definitions.R file) from those that have not
         obnumbers <- getAttrFromMetadata('obnumber')
-        queryNewObs <- paste(
-          'SELECT DISTINCT', usedCols, 'FROM', db_table,
-          'WHERE', sprintf('dtg="%s"', dtg), 'AND',
-          'obnumber NOT IN (', paste0(obnumbers, collapse=', '), ')'
+        queryNewObs <- paste(queryNewObs, 'AND obnumber NOT IN (',
+          paste0(obnumbers, collapse=', '), ')'
         )
       } else {
         obnumbers <- getAttrFromMetadata('obnumber', category=obCategory)
-        queryNewObs <- paste(
-          'SELECT DISTINCT', usedCols, 'FROM', db_table,
-          'WHERE', sprintf('dtg="%s"', dtg), 'AND',
-          'obnumber IN (', paste0(obnumbers, collapse=', '), ')'
+        queryNewObs <- paste(queryNewObs, 'AND obnumber IN (',
+          paste0(obnumbers, collapse=', '), ')'
         )
       }
       newObs <- dbGetQuery(con, queryNewObs)
