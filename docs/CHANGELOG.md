@@ -4,6 +4,23 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
+## [3.4.0] 2019-09-27
+### Added
+- Support to aeolus observations
+- Session timeout capability (new sessionTimeout config file option)
+- New "--ignore-build-fail" option in install script
+
+### Changed
+- More limit on the max number of processes a session can spawn
+- Do not put observations on cache if nobs_total==0
+
+### Fixed
+- Reset cache entries if they were created prior to the last-modified
+  date of the corresponding source databases
+- Update available levels shown in the GUI also as a function of the
+  currently selected station(s), when applicable.
+
+
 ## [3.3.2] 2019-06-19
 ### Added
 - "Observation Value" plot
@@ -17,6 +34,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - Size of saved figure for interactive plots/multiPlots exported as png
 - Overlap between title and graph in interactive multiPlots
 
+
 ## [3.3.1] 2019-05-28
 ### Added
 - Help script to install system dependences on Ubuntu
@@ -24,6 +42,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 ### Changed
 - Name of help script to install system dependencies on RHEL/CentOS
     - utils/build/install_sys_deps_centOS_or_rhel.sh
+
 
 ## [3.3.0] 2019-05-21
 ### Added
@@ -214,6 +233,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - Environment variables for configuration
 
 
+[3.4.0]: https://git.smhi.se/foum/obsmon/compare/obsmon-3.3.2...obsmon-3.4.0
+[3.3.2]: https://git.smhi.se/foum/obsmon/compare/obsmon-3.3.0...obsmon-3.3.2
+[3.3.0]: https://git.smhi.se/foum/obsmon/compare/obsmon-3.2.1...obsmon-3.3.0
+[3.2.1]: https://git.smhi.se/foum/obsmon/compare/obsmon-3.1.1...obsmon-3.2.1
 [3.1.1]: https://git.smhi.se/foum/obsmon/compare/obsmon-3.1.0...obsmon-3.1.1
 [3.1.0]: https://git.smhi.se/foum/obsmon/compare/obsmon-3.0.0...obsmon-3.1.0
 [3.0.0]: https://git.smhi.se/foum/obsmon/compare/obsmon-2.3.0...obsmon-3.0.0

@@ -258,37 +258,6 @@ observeEvent(updateVariables(), {
   )
 })
 
-# Update level choice for given variable
-updateLevels <- reactive({
-  updateVariables()
-  req(input$variable)
-}) %>% throttle(500)
-availableLevels <- eventReactive(updateLevels(), {
-  db <- activeDb()
-  obname <- input$obname
-  var <- input$variable
-
-  levels <- getAvailableLevels(db, selectedDates(), selectedCycles(), obname, var)
-  if(length(levels$all)==0) {
-    levels$all <- c("Any (cache info not available)"="")
-  } else if(!selectedDtgsAreCached()) {
-    levels$all <- c("Any (cache info incomplete)"="", levels$all)
-  }
-  if(!selectedDtgsAreCached()) delay(1000, triggerReadCache())
-  return(levels)
-})
-observe({
-  updateSelectInputWrapper(session,"levels",choices=availableLevels()$all)
-})
-observeEvent(input$levelsSelectStandard, {
-  updateSelectInput(session, "levels",
-    choices=availableLevels()$all, selected=availableLevels()$obsmon)
-})
-observeEvent(input$levelsSelectAny, {
-  updateSelectInput(session, "levels",
-    choices=availableLevels()$all, selected=character(0))
-})
-
 # Update sensornames
 updateSensor <- reactive({
   reloadInfoFromCache()
@@ -343,7 +312,7 @@ channels <- eventReactive(updateChannels(), {
   sat <- input$satellite
   sens <- input$sensor
 
-  newChannels <- getAvailableChannels(
+  newChannels <- getChannelsFromCache(
     db, dates, cycles, satname=sat, sensorname=sens
   )
   if(length(newChannels)==0) {
@@ -379,7 +348,10 @@ observeEvent(updatePlotType(), {
 
 # Decide whether to allow users to select stations
 allowChoosingStation <- reactive({
-   plotSupportsChoosingStations(req(input$plottype), req(input$obtype))
+   return(
+     obSupportsStationChoice(req(input$obname)) &&
+     plotSupportsChoosingStations(req(input$plottype), req(input$obtype))
+   )
 })
 requireSingleStation <- reactive({
    plotRequiresSingleStation(req(input$plottype))
@@ -446,3 +418,56 @@ observeEvent(updateStations(), {
 },
   ignoreNULL=TRUE
 )
+# Keep track of selected stations
+selectedStations <- reactiveVal(character(0))
+observeEvent({
+  input$station
+  input$stationSingle
+}, {
+  if(allowChoosingStation()) {
+    if(requireSingleStation()) selectedStations(input$stationSingle)
+    else selectedStations(input$station[trimws(input$station) != ""])
+  } else {
+    selectedStations(character(0))
+  }
+},
+  ignoreNULL=TRUE
+)
+
+# Update level choices for selected station(s) and variable
+updateLevels <- reactive({
+  selectedStations()
+  updateVariables()
+  req(input$variable)
+}) %>% throttle(500)
+availableLevels <- eventReactive({
+  updateLevels()
+  }, {
+  db <- activeDb()
+  obname <- input$obname
+  var <- input$variable
+
+  stations <- NULL
+  if(allowChoosingStation()) stations <- selectedStations()
+  levels <- getLevelsFromCache(
+    db, selectedDates(), selectedCycles(), obname, var, stations
+  )
+  if(length(levels$all)==0) {
+    levels$all <- c("Any (cache info not available)"="")
+  } else if(!selectedDtgsAreCached()) {
+    levels$all <- c("Any (cache info incomplete)"="", levels$all)
+  }
+  if(!selectedDtgsAreCached()) delay(1000, triggerReadCache())
+  return(levels)
+})
+observe({
+  updateSelectInputWrapper(session,"levels",choices=availableLevels()$all)
+})
+observeEvent(input$levelsSelectStandard, {
+  updateSelectInput(session, "levels",
+    choices=availableLevels()$all, selected=availableLevels()$obsmon)
+})
+observeEvent(input$levelsSelectAny, {
+  updateSelectInput(session, "levels",
+    choices=availableLevels()$all, selected=character(0))
+})

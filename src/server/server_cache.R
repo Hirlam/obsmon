@@ -138,7 +138,7 @@ observeEvent({
     cacheIsOngoing(FALSE)
   })
 
-  # This NULL is necessary in order to avoid the future from blocking
+  # This NULL is necessary in order to prevent the future from blocking
   NULL
 },
   priority=-1

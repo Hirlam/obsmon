@@ -1,5 +1,24 @@
 #!/usr/bin/env Rscript
 
+obSupportsStationChoice <- function(obname=character(0)){
+  if(isTRUE(obname %in% c("satem", "aeolus"))) return(FALSE)
+  return(TRUE)
+}
+
+joinWithDotAsSep <- function(myList) {
+  # Joins the elements of myList in a single string, with dots
+  # as separators
+  rtn <- c()
+  for(key in names(myList)) {
+    rtn <- c(rtn, paste(key, myList[[key]], sep='.'))
+  }
+  return(rtn)
+}
+
+# Registering general metadata about commonly used observation types
+# These are used:
+#    (i) To populate fields in the GUI when cache is incomplete or unavailable
+#   (ii) To define defaults in multiPlots/batchModePlots
 refPressures <- c(
   1500, 2500, 4000, 6500, 8500, 12500, 17500, 22500, 27500, 35000, 45000,
   60000,80000,92500,100000
@@ -9,13 +28,6 @@ refHeights <- c(
   10000,20000
 )
 
-joinWithDotAsSep <- function(myList) {
-  rtn <- c()
-  for(key in names(myList)) {
-    rtn <- c(rtn, paste(key, myList[[key]], sep='.'))
-  }
-  return(rtn)
-}
 sensorToSats=list(
   amsua=c(
     'noaa15', 'noaa16', 'noaa17', 'noaa18', 'noaa19',
@@ -25,12 +37,11 @@ sensorToSats=list(
     'noaa15', 'noaa16', 'noaa17', 'noaa18', 'noaa19',
     'metop1', 'metop2'
   ),
-  mhs=c('noaa19', 'metop1', 'metop2'),
   atms=c('jpss0'),
-  iasi=c('metop1', 'metop2')
+  iasi=c('metop1', 'metop2'),
+  mhs=c('noaa19', 'metop1', 'metop2')
 )
 
-# Registering general metadata about known observation types
 generalObsMetadata <- data.frame(
   obname=character(),
   category=character(),
@@ -119,6 +130,12 @@ generalObsMetadata <- registerObservation(generalObsMetadata,
   category='radar',
   obnumber=13,
   variables=c('radv', 'dbz', 'rh')
+)
+generalObsMetadata <- registerObservation(generalObsMetadata,
+  obname='aeolus',
+  category='lidar',
+  obnumber=15,
+  variables=c('hlos')
 )
 
 # Function to extract info from generalObsMetadata
