@@ -511,7 +511,9 @@ getVariablesFromCache <- function(db, dates, cycles, obname) {
   return(sort(unique(rtn)))
 }
 
-getLevelsFromCache <- function(db, dates, cycles, obname, varname) {
+getLevelsFromCache <- function(
+  db, dates, cycles, obname, varname, stations=NULL
+) {
   rtn <- list(obsmon=NULL, usage=NULL, all=NULL)
 
   dateQueryString <- getDateQueryString(dates)
@@ -520,14 +522,21 @@ getLevelsFromCache <- function(db, dates, cycles, obname, varname) {
   tableName <- sprintf("%s_obs", category)
 
   for(odbTable in c("obsmon", "usage")) {
+    if(odbTable=="obsmon" && !is.null(stations)) next
     cacheFilePath <- db$cachePaths[[odbTable]]
     con <- dbConnectWrapper(cacheFilePath, read_only=TRUE, showWarnings=FALSE)
     if(is.null(con)) next
     rtn[[odbTable]] <- tryCatch({
         tableCols <- dbListFields(con, tableName)
-        query <- sprintf("SELECT DISTINCT level FROM %s WHERE %s AND %s AND varname='%s'",
+        query <- sprintf(
+          "SELECT DISTINCT level FROM %s WHERE %s AND %s AND varname='%s'",
           tableName, dateQueryString, cycleQueryString, varname
         )
+        if(("statid" %in% tableCols) && length(stations)>0) {
+            statidQueryPart <- paste0("statid like '%%%", stations, "%%%'")
+            statidQueryPart <- paste(statidQueryPart, collapse=" OR ")
+            query <- sprintf("%s AND (%s)", query, statidQueryPart)
+        }
         if("obname" %in% tableCols) {
           query <- sprintf("%s AND obname='%s'", query, obname)
         }
@@ -685,14 +694,6 @@ getVariables <- function(db, dates, cycles, obname) {
   cached <- getVariablesFromCache(db, dates, cycles, obname)
   general <- getAttrFromMetadata('variables', obname=obname)
   return(list(cached=cached, general=general))
-}
-
-getAvailableChannels <- function(db, dates, cycles, satname, sensorname) {
-  return(getChannelsFromCache(db, dates, cycles, satname, sensorname))
-}
-
-getAvailableLevels <- function(db, dates, cycles, obname, varname) {
-  return(getLevelsFromCache(db, dates, cycles, obname, varname))
 }
 
 getAvailableSensornames <- function(db, dates, cycles) {
