@@ -91,13 +91,32 @@ DROP TABLE IF EXISTS cycles;
 CREATE TABLE cycles(
   date INTEGER NOT NULL,
   cycle INTEGER NOT NULL CONSTRAINT valid_cycle CHECK((cycle>=0) AND (cycle<24)),
+  /* Keeping track of when the record was created */
+  cdate_utc INTEGER NOT NULL DEFAULT 0,
   FOREIGN KEY (date) REFERENCES dates(date) ON UPDATE CASCADE ON DELETE CASCADE
   PRIMARY KEY (date, cycle)
 );
-CREATE TRIGGER cannot_update_cycles
-BEFORE UPDATE ON cycles
+CREATE TRIGGER cannot_update_dtgs_on_table_cycles
+BEFORE UPDATE OF date, cycle ON cycles
 BEGIN
   SELECT RAISE(FAIL, "Updates to selected column(s) not allowed in table cycles");
+END;
+/* Making it difficult to manually alter cdate */
+CREATE TRIGGER cycles_cannot_update_timestamps
+BEFORE UPDATE OF cdate_utc ON cycles
+BEGIN
+  SELECT CASE
+  WHEN (SELECT allow_edit_timestamps FROM params ORDER BY allow_edit_timestamps ASC LIMIT 1) <> 1 THEN
+    RAISE(FAIL, "Cannot update timestamps in table cycles")
+  END;
+END;
+/* Trigger to set cdate of cycles upon insertion */
+CREATE TRIGGER cycles_set_cdate
+AFTER INSERT ON cycles
+BEGIN
+  UPDATE params SET allow_edit_timestamps = 1;
+  UPDATE cycles SET cdate_utc=STRFTIME('%Y%m%d%H%M%S', DATETIME('now')) WHERE ROWID=NEW.ROWID;
+  UPDATE params set allow_edit_timestamps = 0;
 END;
 
 /* Relations regarding observations */
@@ -106,7 +125,7 @@ DROP TABLE IF EXISTS upper_air_obs;
 CREATE TABLE upper_air_obs(
   date INTEGER NOT NULL,
   cycle INTEGER NOT NULL,
-  /* Allowing statid to be NULL, as data in the "obsmon" table do not currently contain statid info */
+  /* Allowing statid to be NULL, as the "obsmon" table does not currently contain statid info */
   statid TEXT DEFAULT NULL,
   obname TEXT NOT NULL,
   varname TEXT NOT NULL,
@@ -125,7 +144,7 @@ DROP TABLE IF EXISTS surface_obs;
 CREATE TABLE surface_obs(
   date INTEGER NOT NULL,
   cycle INTEGER NOT NULL,
-  /* Allowing statid to be NULL, as data in the "obsmon" table do not currently contain statid info */
+  /* Allowing statid to be NULL, as the "obsmon" table does not currently contain statid info */
   statid TEXT DEFAULT NULL,
   obname TEXT NOT NULL,
   varname TEXT NOT NULL,
@@ -143,7 +162,6 @@ DROP TABLE IF EXISTS satem_obs;
 CREATE TABLE satem_obs(
   date INTEGER NOT NULL,
   cycle INTEGER NOT NULL,
-  /* Allowing statid to be NULL, as data in the "obsmon" table do not currently contain statid info */
   satname TEXT NOT NULL,
   /* obsmon backend writes sensor names in obname */
   obname TEXT NOT NULL,
@@ -163,7 +181,7 @@ DROP TABLE IF EXISTS scatt_obs;
 CREATE TABLE scatt_obs(
   date INTEGER NOT NULL,
   cycle INTEGER NOT NULL,
-  /* Allowing statid to be NULL, as data in the "obsmon" table do not currently contain statid info */
+  /* Allowing statid to be NULL, as the "obsmon" table does not currently contain statid info */
   statid TEXT DEFAULT NULL,
   varname TEXT NOT NULL,
   FOREIGN KEY (date, cycle) REFERENCES cycles(date, cycle) ON UPDATE CASCADE ON DELETE CASCADE
@@ -180,7 +198,7 @@ DROP TABLE IF EXISTS radar_obs;
 CREATE TABLE radar_obs(
   date INTEGER NOT NULL,
   cycle INTEGER NOT NULL,
-  /* Allowing statid to be NULL, as data in the "obsmon" table do not currently contain statid info */
+  /* Allowing statid to be NULL, as the "obsmon" table does not currently contain statid info */
   statid TEXT DEFAULT NULL,
   varname TEXT NOT NULL,
   level INTEGER NOT NULL,
@@ -193,12 +211,29 @@ BEGIN
   SELECT RAISE(FAIL, "Updates not allowed in table radar_obs");
 END;
 
+/* (v) Lidar observations, obnumber=15 */
+DROP TABLE IF EXISTS lidar_obs;
+CREATE TABLE lidar_obs(
+  date INTEGER NOT NULL,
+  cycle INTEGER NOT NULL,
+  obname TEXT NOT NULL,
+  varname TEXT NOT NULL,
+  level INTEGER NOT NULL,
+  FOREIGN KEY (date, cycle) REFERENCES cycles(date, cycle) ON UPDATE CASCADE ON DELETE CASCADE
+  PRIMARY KEY (date, cycle, obname, varname, level)
+);
+CREATE TRIGGER cannot_update_lidar_obs
+BEFORE UPDATE ON lidar_obs
+BEGIN
+  SELECT RAISE(FAIL, "Updates not allowed in table lidar_obs");
+END;
+
 /* (vi) Finally, eventual observations that don't belong to any of the above types */
 DROP TABLE IF EXISTS unknown_type_obs;
 CREATE TABLE unknown_type_obs(
   date INTEGER NOT NULL,
   cycle INTEGER NOT NULL,
-  /* Allowing statid to be NULL, as data in the "obsmon" table do not currently contain statid info */
+  /* Allowing statid to be NULL, as the "obsmon" table does not currently contain statid info */
   statid TEXT DEFAULT NULL,
   obname TEXT NOT NULL,
   varname TEXT DEFAULT NULL,

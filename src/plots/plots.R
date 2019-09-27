@@ -119,7 +119,7 @@ applicablePlots <- function(criteria) {
 }
 
 plotSupportsChoosingStations <- function(plottype=NULL, obtype=NULL) {
-  if(is.null(plottype) || isTRUE(obtype=="satem")) return(FALSE)
+  if(is.null(plottype)) return(FALSE)
   infoAboutSelectedPlotType <- plotTypesFlat[[plottype]]
   query <- infoAboutSelectedPlotType$queryStub
   # StationIDs are not stored in the "obsmon" table, only in "usage"
@@ -262,8 +262,7 @@ plotsBuildCriteria <- function(input) {
   obname <- input$obname
   res$obnumber <- getAttrFromMetadata('obnumber', obname=obname)
   if (isTRUE(obname=='satem')) {
-    sensor <- input$sensor
-    res$obname <- sensor
+    res$obname <- input$sensor
     res$satname <- input$satellite
     levels <- input$channels
     excludeLevels <- input$excludeChannels
@@ -272,17 +271,20 @@ plotsBuildCriteria <- function(input) {
     res$varname <- input$variable
     levels <- input$levels
     excludeLevels <- input$excludeLevels
-
-    station <- input$station
-    if(plotRequiresSingleStation(input$plottype)) station<-input$stationSingle
-    if(is.null(station) || "" %in% station) station <- character(0)
-    res$station <- station
   }
+
   res$levels <- list()
   if(length(levels)>0 && levels!="") res$levels <- levels
   res$excludeLevels <- list()
   if(length(excludeLevels)>0 && excludeLevels!="") {
     res$excludeLevels <- excludeLevels
+  }
+
+  if(obSupportsStationChoice(obname)) {
+    station <- input$station
+    if(plotRequiresSingleStation(input$plottype)) station<-input$stationSingle
+    if(is.null(station) || "" %in% station) station <- character(0)
+    res$station <- station
   }
 
   res$dtg <- getPlotDtgCriteriaFromUiInput(input)

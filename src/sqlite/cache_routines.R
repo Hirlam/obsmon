@@ -2,16 +2,6 @@
 # Routines that are related to caching in obsmon #
 ##################################################
 
-# Define attributes that will be cached and which will be used, along with
-# a DTG, to identify the observations
-obsKeyAttributes <- list(
-  upper_air=c('statid', 'obname', 'varname', 'level'),
-  surface=c('statid', 'obname', 'varname'),
-  satem=c('satname', 'obname', 'level'),
-  scatt=c('statid', 'varname'),
-  radar=c('statid', 'varname', 'level'),
-  unknown_type=c('statid', 'obname', 'varname', 'satname', 'level')
-)
 # Cache file locking
 cacheFileLocks <- list()
 lockSignalingFpath <- function(fpath) sprintf("%s.lock", fpath)
@@ -146,11 +136,24 @@ cacheObsFromFile <- function(sourceDbPath, cacheDir, replaceExisting=FALSE) {
     con_cache <- dbConnectWrapper(cacheFilePath)
     cacheDbConsCreatedHere <- c(cacheDbConsCreatedHere, con_cache)
 
-    # The user may want to re-cache observation (e.g., if they think that the
-    # cached information is incomplete)
-    if(replaceExisting) {
-      flog.debug(sprintf(
-        "Recaching (%s). Removing DTG=%d%02d from %s cache.",
+    # Resetting cache information if any of the following applyes:
+    # (1) The user has requested it via the replaceExisting argument
+    # (2) The cache entry is out-of-date, i.e., the last-modified date of the
+    #     source DB file is more recent that the date when the corresponding
+    #     cache entry was created
+    mtimeSourceDb <- as.numeric(strftime(
+      file.info(sourceDbPath)$mtime, format="%Y%m%d%H%M%S", tz="UTC"
+    ))
+    ctimeDTGEntry <- dbGetQuery(con_cache,
+      paste('SELECT cdate_utc as cdate FROM cycles WHERE',
+      sprintf('date=%d AND cycle=%d', date, cycle)
+    ))
+    ctimeDTGEntry <- as.numeric(ctimeDTGEntry$cdate[1])
+    entryExpired <- mtimeSourceDb > ctimeDTGEntry
+    overwriteCacheForDTG <- replaceExisting || isTRUE(entryExpired)
+    if(overwriteCacheForDTG) {
+      flog.info(sprintf(
+        'Recaching (%s): Resetting data for DTG=%d%02d in cache file %s.',
         sourceDbPath, date, cycle, cacheFileName
       ))
       removalSuccess <- tryCatch({
@@ -163,8 +166,8 @@ cacheObsFromFile <- function(sourceDbPath, cacheDir, replaceExisting=FALSE) {
         warning=function(w) {flog.debug(w); FALSE}
       )
       if(!removalSuccess) {
-        flog.debug(
-          "WARN, recache (%s): DTG=%d%02d may not have been rm from %s cache",
+        flog.warn(
+          "Recache (%s): DTG=%d%02d may not have been reset in cache file %s",
           sourceDbPath, date, cycle, cacheFileName
         )
       }
@@ -237,10 +240,21 @@ cacheObsFromFile <- function(sourceDbPath, cacheDir, replaceExisting=FALSE) {
       error=function(e) {flog.error(e$message); NULL}
     )
 
-    for(obCategory in names(obsKeyAttributes)) {
-      columns <- paste0(obsKeyAttributes[[obCategory]], collapse=', ')
-      cache_table <- paste(obCategory, '_obs', sep='')
+    # Get the observation-related tables present in the cache file
+    # NB.: This assumes that the names of such tables end with "_obs"
+    cache_tab_names <- dbListTables(con_cache)
+    cache_obs_tab_names <- cache_tab_names[endsWith(cache_tab_names, "_obs")]
 
+    for(cache_table in cache_obs_tab_names) {
+      obCategory <- gsub("_obs$", "", cache_table)
+
+      # Get, from the cache file, the non-DTG-related attributes
+      # that should be cached
+      cols <- dbListFields(con_cache, cache_table)
+      non_dtg_cols <- cols[!(cols %in% c("date", "cycle"))]
+
+      # Account for differences between usage and obsmon tables w.r.t. statid
+      columns <- paste0(non_dtg_cols, collapse=', ')
       if(db_table=='obsmon') {
         usedCols <- gsub('statid', 'NULL as statid', columns, fixed=TRUE)
       } else {
@@ -249,19 +263,27 @@ cacheObsFromFile <- function(sourceDbPath, cacheDir, replaceExisting=FALSE) {
         usedCols <- gsub('statid', substStr, columns, fixed=TRUE)
       }
 
+      # We'll now query the source DB for new observations to be cached
+      queryNewObs <- sprintf(
+        'SELECT DISTINCT %s FROM %s WHERE dtg="%s"',
+        usedCols, db_table, dtg
+      )
+      if('nobs_total' %in% dbListFields(con, db_table)) {
+        # Obsmon-backend sometimes writes obs data in the "obsmon" table
+        # even when they have nobs_total==0. Do not add these to cache.
+        queryNewObs <- paste(queryNewObs, "AND nobs_total>0")
+      }
       if(obCategory=='unknown_type') {
+        # Separate obs that have been registered using registerObservation
+        # (see observation_definitions.R file) from those that have not
         obnumbers <- getAttrFromMetadata('obnumber')
-        queryNewObs <- paste(
-          'SELECT DISTINCT', usedCols, 'FROM', db_table,
-          'WHERE', sprintf('dtg="%s"', dtg), 'AND',
-          'obnumber NOT IN (', paste0(obnumbers, collapse=', '), ')'
+        queryNewObs <- paste(queryNewObs, 'AND obnumber NOT IN (',
+          paste0(obnumbers, collapse=', '), ')'
         )
       } else {
         obnumbers <- getAttrFromMetadata('obnumber', category=obCategory)
-        queryNewObs <- paste(
-          'SELECT DISTINCT', usedCols, 'FROM', db_table,
-          'WHERE', sprintf('dtg="%s"', dtg), 'AND',
-          'obnumber IN (', paste0(obnumbers, collapse=', '), ')'
+        queryNewObs <- paste(queryNewObs, 'AND obnumber IN (',
+          paste0(obnumbers, collapse=', '), ')'
         )
       }
       newObs <- dbGetQuery(con, queryNewObs)
@@ -489,7 +511,9 @@ getVariablesFromCache <- function(db, dates, cycles, obname) {
   return(sort(unique(rtn)))
 }
 
-getLevelsFromCache <- function(db, dates, cycles, obname, varname) {
+getLevelsFromCache <- function(
+  db, dates, cycles, obname, varname, stations=NULL
+) {
   rtn <- list(obsmon=NULL, usage=NULL, all=NULL)
 
   dateQueryString <- getDateQueryString(dates)
@@ -498,14 +522,21 @@ getLevelsFromCache <- function(db, dates, cycles, obname, varname) {
   tableName <- sprintf("%s_obs", category)
 
   for(odbTable in c("obsmon", "usage")) {
+    if(odbTable=="obsmon" && !is.null(stations)) next
     cacheFilePath <- db$cachePaths[[odbTable]]
     con <- dbConnectWrapper(cacheFilePath, read_only=TRUE, showWarnings=FALSE)
     if(is.null(con)) next
     rtn[[odbTable]] <- tryCatch({
         tableCols <- dbListFields(con, tableName)
-        query <- sprintf("SELECT DISTINCT level FROM %s WHERE %s AND %s AND varname='%s'",
+        query <- sprintf(
+          "SELECT DISTINCT level FROM %s WHERE %s AND %s AND varname='%s'",
           tableName, dateQueryString, cycleQueryString, varname
         )
+        if(("statid" %in% tableCols) && length(stations)>0) {
+            statidQueryPart <- paste0("statid like '%%%", stations, "%%%'")
+            statidQueryPart <- paste(statidQueryPart, collapse=" OR ")
+            query <- sprintf("%s AND (%s)", query, statidQueryPart)
+        }
         if("obname" %in% tableCols) {
           query <- sprintf("%s AND obname='%s'", query, obname)
         }
@@ -663,14 +694,6 @@ getVariables <- function(db, dates, cycles, obname) {
   cached <- getVariablesFromCache(db, dates, cycles, obname)
   general <- getAttrFromMetadata('variables', obname=obname)
   return(list(cached=cached, general=general))
-}
-
-getAvailableChannels <- function(db, dates, cycles, satname, sensorname) {
-  return(getChannelsFromCache(db, dates, cycles, satname, sensorname))
-}
-
-getAvailableLevels <- function(db, dates, cycles, obname, varname) {
-  return(getLevelsFromCache(db, dates, cycles, obname, varname))
 }
 
 getAvailableSensornames <- function(db, dates, cycles) {
