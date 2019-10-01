@@ -674,6 +674,16 @@ getStationsFromCache <- function(db, dates, cycles, obname, variable) {
 
 # Routines to be used in server.R to get cached values if available
 # or return defaults otherwise
+combineCachedAndGeneralChoices <- function(attr) {
+  combinedChoices <- c(attr$cached, attr$general)
+  if(is.null(names(combinedChoices))) {
+    combinedChoices <- unique(combinedChoices)
+  } else {
+    combinedChoices <- combinedChoices[!duplicated(names(combinedChoices))]
+  }
+  return(combinedChoices)
+}
+
 getObnames <- function(db, category, dates, cycles) {
   cached <- getObnamesFromCache(db, category, dates, cycles)
   general <- getAttrFromMetadata('obname', category=category)

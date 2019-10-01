@@ -197,7 +197,7 @@ observeEvent({
     if(isCached) {
       newChoices <- obtypes$cached
     } else {
-      newChoices <- obtypes$general
+      newChoices <- combineCachedAndGeneralChoices(obtypes)
       delay(1000, triggerReadCache())
     }
     updateSelectInputWrapper(
@@ -224,7 +224,7 @@ observeEvent(updateObnames(), {
   if(isCached) {
     newChoices <- obnames$cached
   } else {
-    newChoices <- obnames$general
+    newChoices <- combineCachedAndGeneralChoices(obnames)
     if(!(obsCategory %in% c("radar", "scatt"))) {
       # In these cases obnames$cached will always be NULL, since
       # obname=obsCategory and this info is therefore not stored in cache
@@ -250,7 +250,7 @@ observeEvent(updateVariables(), {
   if(isCached) {
     newChoices <- variables$cached
   } else {
-    newChoices <- variables$general
+    newChoices <- combineCachedAndGeneralChoices(variables)
     delay(1000, triggerReadCache())
   }
   updateSelectInputWrapper(
@@ -270,7 +270,7 @@ observeEvent(updateSensor(), {
   if(isCached) {
     newChoices <- sens$cached
   } else {
-    newChoices <- sens$general
+    newChoices <- combineCachedAndGeneralChoices(sens)
     delay(1000, triggerReadCache())
   }
   updateSelectInputWrapper(
@@ -292,7 +292,7 @@ observeEvent(updateSatellite(), {
   if(isCached) {
     newChoices <- sats$cached
   } else {
-    newChoices <- sats$general
+    newChoices <- combineCachedAndGeneralChoices(sats)
     delay(1000, triggerReadCache())
   }
   updateSelectInputWrapper(
