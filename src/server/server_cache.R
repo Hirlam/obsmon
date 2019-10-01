@@ -48,7 +48,7 @@ observeEvent(dataFilesForDbAndDtgs(), {
   newFiles <- dataFilesForDbAndDtgs()
   # Remove files for which caching is ongoing
   filesNotCachingNow <- newFiles[!(newFiles %in% names(asyncCachingProcs))]
-  filesPendingCache(unique(c(filesNotCachingNow, filesPendingCache())))
+  filesPendingCache(filesNotCachingNow)
 })
 
 # recacheRequested: To be used if the user manually requests recache or if
