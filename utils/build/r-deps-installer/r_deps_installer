@@ -328,7 +328,10 @@ if(length(missingSrcsReqPkgs)>0) {
     }
 
     if(length(pkgsCannotBeIgnored)>0) {
-      errMsg <- 'The following pkg sources are missing and cannot be ignored:\n'
+      errMsg <- sprintf(
+        'The following %d pkg sources are missing and cannot be ignored:\n',
+        length(pkgsCannotBeIgnored)
+      )
       for(pkg in pkgsCannotBeIgnored) {
         errMsg <- paste(errMsg, "  >", pkg, "\n")
       }
@@ -345,8 +348,9 @@ if(length(missingSrcsReqPkgs)>0) {
 binSearchPaths <- c(localPreCompiledPkgsDir, envVarPreCompiledPkgsDir)
 cat("Looking for pre-compiled binaries at:\n")
 for(dir in binSearchPaths) cat(paste("  >", dir, "\n"))
-binFilePaths <- listBinFiles(binSearchPaths)
-if(rebuildAll | length(binFilePaths)==0) {
+pathsAllBinFilesFound <- listBinFiles(binSearchPaths)
+pathsToBinsThatAreReady <- c()
+if(rebuildAll | length(pathsAllBinFilesFound)==0) {
   binsToBeBuilt <- allPkgs
 } else {
   binsToBeBuilt <- c()
@@ -354,9 +358,13 @@ if(rebuildAll | length(binFilePaths)==0) {
     pkgVer <- availablePkgsLocalRepo[pkgName, "Version"]
     fPath <- pathToBinary(
                pkgName, pkgVer, platform=sysInfoStringShort,
-               fullBinList=binFilePaths
+               fullBinList=pathsAllBinFilesFound
              )
-    if(anyNA(fPath)) binsToBeBuilt <- c(binsToBeBuilt, pkgName)
+    if(anyNA(fPath)) {
+      binsToBeBuilt <- c(binsToBeBuilt, pkgName)
+    } else {
+      pathsToBinsThatAreReady <- c(pathsToBinsThatAreReady, fPath)
+    }
   }
 }
 
@@ -373,10 +381,15 @@ if(length(binsToBeBuilt)==0) {
   cat("Total:", length(binsToBeBuilt), "R-libraries to be built.\n")
 
   cat("\n")
-  # If we do not do this, then install.packages may download these pkgs
-  cat("Handling eventual pre-compiled but not installed R-pkg dependencies...")
-  install_binaries(fPaths=binFilePaths, lib=tmpLibForBuild, overwrite=FALSE)
-  cat(" Done.\n")
+  if(length(pathsToBinsThatAreReady)>0) {
+    # If we do not do this, then install.packages may download these pkgs
+    cat(sprintf(
+      "Copying %d already compiled R-pkg deps to temp build area...",
+      length(pathsToBinsThatAreReady)
+    ))
+    install_binaries(fPaths=pathsToBinsThatAreReady, lib=tmpLibForBuild, overwrite=FALSE)
+    cat(" Done.\n")
+  }
   cat("Building now...\n")
   # Moving to a tempdir so that the work dir doesn't get full of tarballs
   setwd(tmpDirForBuild)
@@ -457,13 +470,13 @@ if(length(pkgsToBeUpdated)>0) {
   cat("Total:", length(pkgsToBeUpdated), "R-libraries to be updated.\n")
 }
 
-binFilePaths <- listBinFiles(binSearchPaths)
 # Convenience function to help printing install progress
 printInstallStatus <- function(newStatus) {
   blankLine <- strrep(" ", getOption("width"))
   cat(paste0("\r", blankLine, "\r", newStatus))
 }
 
+pathsAllBinFilesFound <- listBinFiles(binSearchPaths)
 iLib <- 0
 for (pkgName in pkgsToBeInstalled) {
   pkgVer <- availablePkgsLocalRepo[pkgName, "Version"]
@@ -477,7 +490,7 @@ for (pkgName in pkgsToBeInstalled) {
 
   preCompPkgPath <- pathToBinary(
                       pkgName, pkgVer, platform=sysInfoStringShort,
-                      fullBinList=binFilePaths
+                      fullBinList=pathsAllBinFilesFound
                     )
   install_binaries(fPaths=preCompPkgPath, lib=lib, overwrite=TRUE)
   iLib <- iLib + 1
