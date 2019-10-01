@@ -4,6 +4,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
+## [3.4.1] 2019-10-01
+### Changed
+- Show "Pressure (Pa)" or "Height (m)" in plot labels instead of just "Level"
+### Fixed
+- Inverted sign in Analysis Increment maps
+- Mixup in height/pressure labels in First-guess & departure plots
+- Minor fixes to filtering of suggests-type dependencies in install script
+
+
 ## [3.4.0] 2019-09-27
 ### Added
 - Support to aeolus observations
@@ -233,6 +242,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - Environment variables for configuration
 
 
+[3.4.1]: https://git.smhi.se/foum/obsmon/compare/obsmon-3.4.0...obsmon-3.4.1
 [3.4.0]: https://git.smhi.se/foum/obsmon/compare/obsmon-3.3.2...obsmon-3.4.0
 [3.3.2]: https://git.smhi.se/foum/obsmon/compare/obsmon-3.3.0...obsmon-3.3.2
 [3.3.0]: https://git.smhi.se/foum/obsmon/compare/obsmon-3.2.1...obsmon-3.3.0

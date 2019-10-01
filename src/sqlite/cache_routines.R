@@ -683,8 +683,10 @@ getObnames <- function(db, category, dates, cycles) {
 }
 
 getObtypes <- function(db, dates, cycles) {
-  cached <- getObtypesFromCache(db, dates, cycles)
-  general <- getAttrFromMetadata('category')
+  # Sort in decreasing order so that, for instance, "Upper air" will be shown
+  # before "Radar"
+  cached <- sort(getObtypesFromCache(db, dates, cycles), decreasing=TRUE)
+  general <- sort(getAttrFromMetadata('category'), decreasing=TRUE)
   if(!is.null(general)) names(general) <- lapply(general, strLowDashToTitle)
   if(!is.null(cached)) names(cached) <- lapply(cached, strLowDashToTitle)
   return(list(cached=cached, general=general))
