@@ -281,7 +281,7 @@ registerPlotType(
                      "(%s) as plotValues",
                      "FROM usage WHERE %s AND fg_dep NOT NULL AND an_dep NOT NULL"),
                list("obnumber", "obname"),
-               dataColumn="fg_dep-an_dep")
+               dataColumn="an_dep-fg_dep")
 )
 registerPlotType(
     "Maps",
@@ -373,5 +373,5 @@ registerPlotType(
                      "(%s) as plotValues",
                      "FROM usage WHERE %s AND fg_dep NOT NULL AND an_dep NOT NULL"),
                list("obnumber", "obname"),
-               dataColumn="fg_dep-an_dep")
+               dataColumn="an_dep-fg_dep")
 )
