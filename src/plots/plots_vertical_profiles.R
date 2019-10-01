@@ -14,19 +14,21 @@ plotTitle.plotVerticalObsProfile <- function(p, plotRequest, plotData) {
 doPlot.plotVerticalObsProfile <- function(p, plotRequest, plotData) {
   df <- data.frame(level=plotData$level, obsvalue=plotData$obsvalue)
   varname <- plotRequest$criteria$varname
+  xlab <- levelsLableForPlots(plotRequest$criteria$obnumber, varname)
   ylab <- sprintf("%s [%s]", varname, units[[varname]])
   obplot <- ggplot(data=df) +
     aes(x=level, y=obsvalue) +
     geom_line(colour="black") +
     geom_point(size=2, colour="black") +
     coord_flip_wrapper(default=TRUE) +
-    labs(x="Level", y=ylab)
+    labs(x=xlab, y=ylab)
   return(obplot)
 }
 
 doPlot.plotVerticalAnalysisProfile <- function(p, plotRequest, plotData) {
   localPlotData <- melt(plotData, id=c("level"))
   varname <- plotRequest$criteria$varname
+  xlab <- levelsLableForPlots(plotRequest$criteria$obnumber, varname)
   ylab <- sprintf("%s [%s]", varname, units[[varname]])
   obplot <- ggplot(data=localPlotData) +
     aes(x=level, y=value, group=variable, colour=variable, shape=variable) +
@@ -34,13 +36,14 @@ doPlot.plotVerticalAnalysisProfile <- function(p, plotRequest, plotData) {
     geom_point(size=2) +
     scale_colour_manual(values=c("black", "blue", "red")) +
     coord_flip_wrapper(default=TRUE) +
-    labs(x="Level", y=ylab)
+    labs(x=xlab, y=ylab)
   return(obplot)
 }
 
 doPlot.plotVerticalBiasProfile <- function(p, plotRequest, plotData) {
   localPlotData <- melt(plotData, id=c("level"))
   varname <- plotRequest$criteria$varname
+  xlab <- levelsLableForPlots(plotRequest$criteria$obnumber, varname)
   ylab <- sprintf("%s [%s]", varname, units[[varname]])
   obplot <- ggplot(data=localPlotData) +
     aes(x=level, y=value, group=variable, colour=variable, shape=variable) +
@@ -48,7 +51,7 @@ doPlot.plotVerticalBiasProfile <- function(p, plotRequest, plotData) {
     geom_point(size=2) +
     scale_colour_manual(values=c("black", "blue")) +
     coord_flip_wrapper(default=TRUE) +
-    labs(x="Level", y=ylab)
+    labs(x=xlab, y=ylab)
   return(obplot)
 }
 
