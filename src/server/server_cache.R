@@ -196,3 +196,30 @@ reloadInfoFromCache <- eventReactive({
 observeEvent(reloadInfoFromCache(), {
     selectedDtgsAreCached(dtgsAreCached(req(activeDb()),req(selectedDtgs())))
 })
+
+# Notify progress of caching
+observeEvent({
+  reloadInfoFromCache()
+},{
+  cacheNotifId="guiCacheNotif"
+  if(isTRUE(selectedDtgsAreCached())) {
+    removeNotification(cacheNotifId)
+  } else {
+    cacheProgressMsg <- tryCatch({
+      totalNFiles <- length(dataFilesForDbAndDtgs())
+      nFilesPendingCache <- length(unique(c(
+        filesPendingCache(), filesPendingRecache())
+      ))
+      nCachedFiles <- totalNFiles - nFilesPendingCache
+      sprintf(
+        "Caching selected DTGs: %d%%",
+        round(100.0 * nCachedFiles / totalNFiles)
+      )
+    },
+      warning=function(w) {flog.warn(w); return("Caching selected DTGs...")}
+    )
+    showNotification(
+      id=cacheNotifId, ui=cacheProgressMsg, type="message", duration=NULL
+    )
+  }
+})
