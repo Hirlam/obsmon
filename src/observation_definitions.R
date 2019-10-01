@@ -39,7 +39,8 @@ sensorToSats=list(
   ),
   atms=c('jpss0'),
   iasi=c('metop1', 'metop2'),
-  mhs=c('noaa19', 'metop1', 'metop2')
+  mhs=c('noaa19', 'metop1', 'metop2'),
+  mwhs2=c('fy3c', 'fy3d')
 )
 
 generalObsMetadata <- data.frame(
