@@ -1,3 +1,13 @@
+levelsLableForPlots <- function(obnumber, varname=character(0)) {
+  strObnumber <- as.character(obnumber)
+  quantity <- "Pressure"
+  if(isTRUE(strObnumber=="13") && !isTRUE(varname=="rh")) {
+    quantity <- "Height"
+  }
+  label <- sprintf("%s [%s]", quantity, units[[tolower(quantity)]])
+  return(label)
+}
+
 coord_flip_wrapper <- function(..., default=FALSE) {
   # Adds the argument "default" to the original ggplot's coord_flip.
   # This gets rid of the annoying "Coordinate system already present. Adding
