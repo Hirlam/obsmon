@@ -1,5 +1,10 @@
 #!/usr/bin/env Rscript
 
+# Some rudimentary parsing of command line options
+# We don't want to use any package for this, as the whole idea
+# is that this script should not depend on any non-base package
+# at all (you don't want to have to install packages before being
+# able to run a package installer)
 args <- commandArgs(trailingOnly=FALSE)
 
 getArgVal <- function(argName) {
@@ -12,11 +17,6 @@ getArgVal <- function(argName) {
     if(anyNA(argVal) | argVal=="") argVal <- NULL
   }
   return(argVal)
-}
-
-printInstallStatus <- function(newStatus) {
-  blankLine <- strrep(" ", getOption("width"))
-  cat(paste0("\r", blankLine, "\r", newStatus))
 }
 
 showDepsAndQuit <- "--listdeps" %in% args
@@ -177,18 +177,18 @@ for (pkg in mainPkgs) {
     pkgsDbForDepsRefresh <- availablePkgsLocalRepo
   }
   essentialDeps <- dependencies(pkg, db=pkgsDbForDepsRefresh,
-                     levelOneDepsType=essentialDepsTypes,
-                     exclude_from_suggests=excludeFromSuggests
+                     levelOneDepsType=essentialDepsTypes
                    )
   suggestsDeps <- dependencies(pkg, db=pkgsDbForDepsRefresh,
-                    levelOneDepsType="Suggests",
-                    exclude_from_suggests=excludeFromSuggests
+                    levelOneDepsType="Suggests"
                   )
   # A Suggests type dependency may also end up being a recursive non-suggests
   # dependency of the essential R-libraries. We don't want to have these
   # considered as optional.
-  suggestsDeps <- suggestsDeps[!(suggestsDeps %in% essentialDeps)]
-  pkgsDeps[[pkg]] <- list(essential=essentialDeps, Suggests=suggestsDeps)
+  depsOnlyOfSuggestsType <- suggestsDeps[
+    !(suggestsDeps %in% unique(c(essentialDeps, excludeFromSuggests)))
+  ]
+  pkgsDeps[[pkg]] <- list(essential=essentialDeps, Suggests=depsOnlyOfSuggestsType)
 
   thisPkgDeps <-c(pkgsDeps[[pkg]][["essential"]],pkgsDeps[[pkg]][["Suggests"]])
   newDeps <-setdiff(thisPkgDeps,intersect(thisPkgDeps,c(mainPkgs, allPkgDeps)))
@@ -458,6 +458,12 @@ if(length(pkgsToBeUpdated)>0) {
 }
 
 binFilePaths <- listBinFiles(binSearchPaths)
+# Convenience function to help printing install progress
+printInstallStatus <- function(newStatus) {
+  blankLine <- strrep(" ", getOption("width"))
+  cat(paste0("\r", blankLine, "\r", newStatus))
+}
+
 iLib <- 0
 for (pkgName in pkgsToBeInstalled) {
   pkgVer <- availablePkgsLocalRepo[pkgName, "Version"]
