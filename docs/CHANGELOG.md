@@ -6,11 +6,13 @@ and this project adheres to [Semantic Versioning](http://semver.org).
 
 ## [Unreleased]
 ### Added
+- "Station Vertical Profile: FG & Analysis Departure" plot
 - Notify caching progress in the GUI
 - Use defaults + partial cache data to populate menus while cache is not complete
 
 ### Changed
 - Show "Pressure (Pa)" or "Height (m)" in plot labels instead of just "Level"
+- Vertical profile plots now show zero-pressure level at the top
 
 ### Fixed
 - Bug in query stub which would cause "Average Analysis Departure Map" plots

@@ -60,7 +60,7 @@ doPlot.plotStatistical <- function(p, plotRequest, plotData) {
         } else {
           if(startsWith(tolower(xlab), "pressure")) {
             # Using xlim causes ggplotly to omit either the shape or the line
-            # (whichever is not added first) from the legend. Not a big deal,
+            # (whichever is added later) from the legend. Not a big deal,
             # but worth pointing out, as this but may be solved in later
             # releases of the plotly package
             obplot <- obplot + xlim(max(refPressures,localPlotData[[xVar]]),0)
