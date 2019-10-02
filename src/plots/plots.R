@@ -178,7 +178,7 @@ plotGenerate.default <- function(p, plotRequest, plotData) {
   }
   result <- list(title=plotTitle(p, plotRequest, plotData))
   if(length(result$title)==0) flog.warn("plotGenerate: Empty plot title")
-  if (is.null(plotData) || nrow(plotData)==0) {
+  if (!isTRUE(nrow(plotData)>0)) {
     result$obmap=NULL
     if(is.null(plotData)) {
       msg <- paste0(
@@ -317,7 +317,7 @@ preparePlots <- function(plotter, plotRequest, db) {
       # picked date range.
       plotData <- postProcessQueriedPlotData(plotter, plotData)
     }
-    if(!is.null(plotData) && nrow(plotData)>0) {
+    if(isTRUE(nrow(plotData)>0)) {
       statIds <- c()
       for(statid in plotData$statid) {
         statid <- gsub(" ", "", gsub("'", "", statid))
