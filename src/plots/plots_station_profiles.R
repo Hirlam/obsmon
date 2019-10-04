@@ -1,6 +1,6 @@
-registerPlotCategory("VerticalProfiles")
+registerPlotCategory("StationProfiles")
 
-plotTitle.plotVerticalProfile <- function(p, plotRequest, plotData) {
+plotTitle.plotStationProfile <- function(p, plotRequest, plotData) {
   crit <- plotRequest$criteria
   stationLabel <- getStationsForPlotTitle(plotRequest, plotData)
   title <- sprintf(
@@ -11,7 +11,7 @@ plotTitle.plotVerticalProfile <- function(p, plotRequest, plotData) {
   )
 }
 
-doPlot.plotVerticalProfile <- function(p, plotRequest, plotData) {
+doPlot.plotStationProfile <- function(p, plotRequest, plotData) {
   scaleColors <- c(
     "obsvalue"="black", "fg_dep"="blue", "an_dep"="red",
     "first_guess"="blue", "analysis"="red",
@@ -44,9 +44,9 @@ doPlot.plotVerticalProfile <- function(p, plotRequest, plotData) {
   return(obplot)
 }
 
-registerPlotType("VerticalProfiles",
-  plotCreate("plotVerticalProfile",
-    name="Station Vertical Profile: Obsvalue",
+registerPlotType("StationProfiles",
+  plotCreate("plotStationProfile",
+    name="Station Obsvalues",
     dateType="single",
     queryStub=paste(
       "SELECT DISTINCT level, obsvalue FROM usage WHERE %s AND",
@@ -59,9 +59,9 @@ registerPlotType("VerticalProfiles",
   )
 )
 
-registerPlotType("VerticalProfiles",
-  plotCreate(c("plotVerticalProfile"),
-    name="Station Vertical Profile: Obs, FG & Analysis",
+registerPlotType("StationProfiles",
+  plotCreate(c("plotStationProfile"),
+    name="Station Obs, FG & Analysis",
     dateType="single",
     queryStub=paste(
       "SELECT DISTINCT level, obsvalue,",
@@ -77,9 +77,9 @@ registerPlotType("VerticalProfiles",
   )
 )
 
-registerPlotType("VerticalProfiles",
-  plotCreate(c("plotVerticalProfile"),
-    name="Station Vertical Profile: FG & Analysis Departure",
+registerPlotType("StationProfiles",
+  plotCreate(c("plotStationProfile"),
+    name="Station FG & Analysis Departure",
     dateType="single",
     queryStub=paste(
       "SELECT DISTINCT level, fg_dep, an_dep",
@@ -93,9 +93,9 @@ registerPlotType("VerticalProfiles",
   )
 )
 
-registerPlotType("VerticalProfiles",
-  plotCreate(c("plotVerticalProfile"),
-    name="Station Vertical Profile: Bias",
+registerPlotType("StationProfiles",
+  plotCreate(c("plotStationProfile"),
+    name="Station Bias",
     dateType="single",
     queryStub=paste(
       "SELECT DISTINCT level,",
