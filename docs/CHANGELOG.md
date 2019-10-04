@@ -20,7 +20,7 @@ and this project adheres to [Semantic Versioning](http://semver.org).
   to fail
 - Inverted sign in Analysis Increment maps
 - Mixup in height/pressure labels in First-guess & departure plots
-- Minor fixes to filtering of suggests-type dependencies in install script
+- Minor fixes to install script
 
 
 ## [3.4.0] 2019-09-27

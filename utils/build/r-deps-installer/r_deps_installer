@@ -83,6 +83,20 @@ envVarPreCompiledPkgsDir <- file.path(
   sysInfoStringLong
 )
 
+if(resetLocalRepo) {
+  cat(paste0('WARNING: Flag "--reset-local-repo" passed.\n',
+    '         The local R source repo will be reset using CRAN!\n'
+   ))
+  unlink(pkgSrcDir, recursive=TRUE)
+}
+# Initialising local repo if it doesn't exist
+# This could be either because it's the first time the install
+# script is run, or because resetLocalRepo is TRUE
+if(!dir.exists(pkgSrcDir)) {
+  dir.create(pkgSrcDir, recursive=TRUE)
+  file.create(file.path(pkgSrcDir, "PACKAGES"))
+}
+
 # Remove locally installed R-libraries if localReinstallRequested
 if(localReinstallRequested) {
   cat(sprintf(
@@ -92,7 +106,7 @@ if(localReinstallRequested) {
   unlink(localInstallRLib, recursive=TRUE)
 }
 
-remoteRepo <- c("http://cran.ma.imperial.ac.uk/")
+remoteRepo <- c("http://cran.ma.imperial.ac.uk")
 localRepo <- c(file.path("file:", localRLibDir))
 # Configuring library search paths
 originalLibPaths <- .libPaths()
@@ -116,14 +130,7 @@ for(dir in .libPaths()) {
 }
 cat("\n")
 
-# Initialising local repo if it doesn't exist
-if(!dir.exists(pkgSrcDir)) {
-  dir.create(pkgSrcDir, recursive=TRUE)
-  file.create(file.path(pkgSrcDir, "PACKAGES"))
-}
 if(!dir.exists(localPreCompiledPkgsDir)) dir.create(localPreCompiledPkgsDir, recursive=TRUE)
-
-availablePkgsLocalRepo <- available.packages(repos=localRepo)
 
 cat('Gathering R-libraries used in the ".R" files in current dir and subdirs...')
 # These may have been imported explicitly using "library" or "require",
@@ -161,27 +168,45 @@ if(sfSuggestsSupport) {
   excludeFromSuggests <- excludeFromSuggests[!(excludeFromSuggests %in% "sf")]
 }
 
-mainPkgsNotAvailableLocally <- mainPkgs[!(mainPkgs %in% rownames(availablePkgsLocalRepo))]
-if(resetLocalRepo | length(mainPkgsNotAvailableLocally)>0) {
-  availablePkgsRemoteRepo <- available.packages(repos=remoteRepo)
-}
-pkgsDbForDepsRefresh <- availablePkgsLocalRepo
-if(resetLocalRepo) pkgsDbForDepsRefresh <- availablePkgsRemoteRepo
+availablePkgsLocalRepo <- available.packages(repos=localRepo)
+availablePkgsRemoteRepo <- tryCatch(
+  available.packages(repos=remoteRepo),
+  warning=function(w) {
+  if(allowSrcDownload) {
+    msg <- sprintf(
+      "WARN: Could not read available packages from <%s>\n",
+      remoteRepo
+    )
+    msg <- paste0(msg, sprintf("      %s\n", w$message))
+    cat(msg)
+  }
+    return(NULL)
+  }
+)
 
+# Build a database "pkgsDbToGetDepsFrom" with info about available packages.
+# This will be used to resolve dependencies. Start with info about packages
+# available in the local CRAN-like repo (if any) and then complement it with
+# info obtained from CRAN (if possible). Not updating from CRAN info on packages
+# that already exist in the local repo.
+availablePkgsRemoteMinusLocal <- availablePkgsRemoteRepo[
+  !(rownames(availablePkgsRemoteRepo) %in% rownames(availablePkgsLocalRepo)),
+]
+pkgsDbToGetDepsFrom <- rbind(
+  availablePkgsLocalRepo,
+  availablePkgsRemoteMinusLocal
+)
+
+# Working out dependencies
 for (pkg in mainPkgs) {
   cat("  >", pkg, "... ")
-
-  if(resetLocalRepo | (pkg %in% mainPkgsNotAvailableLocally)) {
-    pkgsDbForDepsRefresh <- availablePkgsRemoteRepo
-  } else {
-    pkgsDbForDepsRefresh <- availablePkgsLocalRepo
-  }
-  essentialDeps <- dependencies(pkg, db=pkgsDbForDepsRefresh,
+  essentialDeps <- dependencies(pkg, db=pkgsDbToGetDepsFrom,
                      levelOneDepsType=essentialDepsTypes
                    )
-  suggestsDeps <- dependencies(pkg, db=pkgsDbForDepsRefresh,
+  suggestsDeps <- dependencies(pkg, db=pkgsDbToGetDepsFrom,
                     levelOneDepsType="Suggests"
                   )
+
   # A Suggests type dependency may also end up being a recursive non-suggests
   # dependency of the essential R-libraries. We don't want to have these
   # considered as optional.
@@ -249,19 +274,19 @@ pkgsToBeInstalled <- allPkgs[pkgsToBeInstalledMask]
 srcsReqInRepo <- pkgsToBeInstalled
 if(pedanticBuild | rebuildAll) srcsReqInRepo <- allPkgs
 
-if(resetLocalRepo) {
-  cat('WARNING: Flag "--reset-local-repo" passed. The local R source repo will be reset using CRAN!')
-  unlink(pkgSrcDir, recursive=TRUE)
-  dir.create(pkgSrcDir, recursive=TRUE)
-  missingSrcsReqPkgs <- srcsReqInRepo
+if(allowSrcDownload) {
+  errMsgSolveMissingPkgs <- paste(
+    '>>> Could not find missing package(s) on CRAN!\n',
+    '    Please double-check that the package names are correct.'
+  )
 } else {
-  missingSrcsReqPkgs <- srcsReqInRepo[!(srcsReqInRepo %in% rownames(availablePkgsLocalRepo))]
+  errMsgSolveMissingPkgs <- paste(
+    '>>> If you wish the missing sources to be downloaded automatically, please\n',
+    '    run the installation script with the option "--allow-downloads'
+  )
 }
-
-
 errMsgSolveMissingPkgs <- paste(
-  '>>> If you wish the missing sources to be downloaded automatically, please\n',
-  '    run the installation script with the option "--allow-downloads',
+  errMsgSolveMissingPkgs,
   '\n \n',
   "You can also manually add the missing package tarballs to the\n",
   pkgSrcDir, "\n",
@@ -272,13 +297,14 @@ errMsgSolveMissingPkgs <- paste(
   "to update the repo, and try again.\n"
 )
 
+missingSrcsReqPkgs <- srcsReqInRepo[!(srcsReqInRepo %in% rownames(availablePkgsLocalRepo))]
 if(length(missingSrcsReqPkgs)>0) {
   # Deciding whether or not to download needed source files that are missing.
   errMsg <- "The local R repo does not contain all required sources!\n"
-  errMsg <- paste(errMsg,
-              "Sources are missing for the following R-libraries:\n",
-               sep=""
-            )
+  errMsg <- paste0(errMsg, sprintf(
+    "Sources are missing for the following %d R-libraries:\n",
+    length(missingSrcsReqPkgs))
+  )
   for(pkgName in missingSrcsReqPkgs) {
     errMsg <- paste(errMsg, "  >", pkgName, "\n")
   }
