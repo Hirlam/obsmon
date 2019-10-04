@@ -35,7 +35,11 @@ dependencies <- function(pkgName, db,
     return(character(0))
   } else {
     deps <- unique(c(
-      dependencies(deps, db=db, recDepth=recDepth+1, exclude=exclude),
+      dependencies(
+        deps, db=db, recDepth=recDepth+1,
+        levelOneDepsType=levelOneDepsType, levelTwoDepsType=levelTwoDepsType,
+        exclude=exclude
+      ),
       deps
     ))
     return(deps)
