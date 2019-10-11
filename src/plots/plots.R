@@ -1,7 +1,8 @@
 levelsLableForPlots <- function(obnumber, varname=character(0)) {
   strObnumber <- as.character(obnumber)
+  obstype <- getAttrFromMetadata("category", obnumber=obnumber)
   quantity <- "Pressure"
-  if(isTRUE(strObnumber=="13") && !isTRUE(varname=="rh")) {
+  if(obstype=="surface" || (isTRUE(strObnumber=="13") && !isTRUE(varname=="rh"))) {
     quantity <- "Height"
   }
   label <- sprintf("%s [%s]", quantity, units[[tolower(quantity)]])
