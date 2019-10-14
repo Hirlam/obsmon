@@ -285,6 +285,19 @@ multiPlotsValidateConfig <- function(config) {
           break
         }
       }
+
+      # Making sure stations are present if they are needed
+      if(plotRequiresSingleStation(pc$plotType) && length(pc$stations)==0) {
+        flog.error(
+          paste(
+            '\n  multiPlot "%s": Missing choice of stations',
+            '(required by plotType "%s")'),
+          pc$displayName, pc$plotType
+        )
+        validConfig <- FALSE
+        missingStations <- TRUE
+      }
+
       # Process dates
       pc$date <- validateStartDate(pc$date)
       pc$startDate <- validateStartDate(pc$startDate)

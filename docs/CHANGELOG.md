@@ -1,8 +1,28 @@
 # Change Log
 All notable changes to this project will be documented in this file.
 
-The format is based on [Keep a Changelog](http://keepachangelog.com/)
-and this project adheres to [Semantic Versioning](http://semver.org/).
+The format is based on [Keep a Changelog](http://keepachangelog.com)
+and this project adheres to [Semantic Versioning](http://semver.org).
+
+## [Unreleased]
+### Added
+- "Station Vertical Profile: FG & Analysis Departure" plot
+- Notify caching progress in the GUI
+- Use defaults + partial cache data to populate menus while cache is not complete
+
+### Changed
+- Show "Pressure (Pa)" or "Height (m)" in plot labels instead of just "Level"
+- Vertical profile plots:
+    - Now show zero-pressure level at the top
+    - Solid lines now pass through mean values instead of through all data points
+
+### Fixed
+- Bug in query stub which would cause "Average Analysis Departure Map" plots
+  to fail
+- Inverted sign in Analysis Increment maps
+- Mixup in height/pressure labels in First-guess & departure plots
+- Minor fixes to install script
+
 
 ## [3.4.0] 2019-09-27
 ### Added

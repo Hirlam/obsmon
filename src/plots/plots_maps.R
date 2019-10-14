@@ -281,7 +281,7 @@ registerPlotType(
                      "(%s) as plotValues",
                      "FROM usage WHERE %s AND fg_dep NOT NULL AND an_dep NOT NULL"),
                list("obnumber", "obname"),
-               dataColumn="fg_dep-an_dep")
+               dataColumn="an_dep-fg_dep")
 )
 registerPlotType(
     "Maps",
@@ -318,7 +318,7 @@ mapThresholdWithRangeAggregateAndApplyFunction <-
   ) {
   # Grouping data by the colnames specified in aggregateBy, 
   # then applying function FUN within each group
-  if(nrow(plotData) > 0) {
+  if(isTRUE(nrow(plotData)>0)) {
     aggregateByList = plotData[, aggregateBy]
     columnsNotToBeAggreg <- which(colnames(plotData) %in% 
                                 c("DTG", aggregateBy)
@@ -359,7 +359,7 @@ registerPlotType(
                paste("SELECT",
                      "latitude, longitude, level, statid, obsvalue,",
                      "(%s) as plotValues",
-                     "FROM usage WHERE %s an_dep NOT NULL"),
+                     "FROM usage WHERE %s AND an_dep NOT NULL"),
                list("obnumber", "obname"),
                dataColumn="an_dep")
 )
@@ -373,5 +373,5 @@ registerPlotType(
                      "(%s) as plotValues",
                      "FROM usage WHERE %s AND fg_dep NOT NULL AND an_dep NOT NULL"),
                list("obnumber", "obname"),
-               dataColumn="fg_dep-an_dep")
+               dataColumn="an_dep-fg_dep")
 )
