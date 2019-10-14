@@ -12,8 +12,9 @@ and this project adheres to [Semantic Versioning](http://semver.org).
 
 ### Changed
 - Show "Pressure (Pa)" or "Height (m)" in plot labels instead of just "Level"
-- "Vertical Profile" plots have been renamed to "Station Profile"
-    - Also, they now show zero-pressure level at the top
+- Vertical profile plots:
+    - Now show zero-pressure level at the top
+    - Solid lines now pass through mean values instead of through all data points
 
 ### Fixed
 - Bug in query stub which would cause "Average Analysis Departure Map" plots
