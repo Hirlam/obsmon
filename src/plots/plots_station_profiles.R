@@ -21,31 +21,24 @@ doPlot.plotStationProfile <- function(p, plotRequest, plotData) {
   localPlotData <- plotData %>%
     group_by(level) %>%
     melt(id="level", na.rm=TRUE)
-  localPlotDataMean <- plotData %>%
+  plotDataSummary <- plotData %>%
     group_by(level) %>%
-    summarize_all(mean, na.rm=TRUE) %>%
-    melt(id="level", na.rm=TRUE)
+    gather(key="variable", value="value", -level) %>%
+    group_by(level, variable) %>%
+    summarize_all(list(~mean(.), ~min(.), ~max(.)))
 
-  obplot <- ggplot(localPlotData) +
-    aes(x=level, y=value, group=variable, colour=variable, shape=variable) +
+  obplot <- ggplot() +
+    aes(x=level, group=variable, colour=variable, shape=variable) +
     scale_colour_manual(values=scaleColors) +
-    geom_point(size=2) +
+    # Scatter plot with all data points
+    geom_point(data=localPlotData, aes(y=value), size=2) +
     # Draw line through mean values instead of actual data point values
-    geom_line(data=localPlotDataMean, size=1.15)
-  # For clarity: Connect groups of points belonging to the same level
-  if(nrow(localPlotData) != nrow(localPlotDataMean)) {
-    # ggplot doesn't seem to like this when localPlotData==localPlotDataMean
-    # The smaller-sized geom_point added below, for instance, mess up the
-    # legends. Also, for whatever reason, this causes the above added
-    # geom_line to vanish sometimes.
-    obplot <- obplot +
-      # This helps plotly show the mean value. Otherwise, plotly's tooltip
-      # shows "value=NA"
-      geom_point(data=localPlotDataMean, size=0.01) +
-      stat_summary(
-        fun.y=mean, fun.ymin=min, fun.ymax=max, geom="linerange", alpha=0.25
-      )
-  }
+    geom_line(data=plotDataSummary, aes(y=mean), size=1.15) +
+    # For clarity: Connect groups of points belonging to the same level
+    geom_linerange(
+      data=plotDataSummary, aes(ymin=min, ymax=max),
+      linetype="dashed", alpha=0.25
+    )
 
   # Axes' labels
   varname <- plotRequest$criteria$varname
