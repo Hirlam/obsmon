@@ -1,12 +1,21 @@
 #!/usr/bin/env Rscript
-
-# Some rudimentary parsing of command line options
+# Scans the current directory recursively looking for files containing
+# R code. Parse these files to identify used libraries. Determine and
+# install these packages and their dependencies.
+#
 # We don't want to use any package for this, as the whole idea
 # is that this script should not depend on any non-base package
 # at all (you don't want to have to install packages before being
 # able to run a package installer)
-args <- commandArgs(trailingOnly=FALSE)
 
+# List here R-libraries that can be ignored
+# pkgsSafeToIgnore: Will be ignored altogether
+# excludeFromSuggests: Will be ignored only if listed as type "suggests"
+pkgsSafeToIgnore <- c("RadarBE")
+excludeFromSuggests <- c("sf")
+
+# Some rudimentary parsing of command line options
+args <- commandArgs(trailingOnly=FALSE)
 getArgVal <- function(argName) {
   argPatt <- paste(argName, "={1}", sep="")
   argStr <- grep(argPatt, args, value=TRUE)
@@ -43,9 +52,26 @@ workDirUserArg <- getArgVal("--workdir")
 # (to replace the default localRLibDir, optionally)
 localRLibDirUserArg <- getArgVal("--local-R-lib-dir")
 
-# List here R-libraries that can be ignored
-pkgsSafeToIgnore <- c("RadarBE")
-excludeFromSuggests <- c("sf")
+addConfigArgs <- function(configArgs) {
+  # Creates (or appends new items to) a named array "addConfigArgs"
+  # in the global scope, containing options to be later on passed to
+  # the "configure.args" argument of the "install.packages" function.
+  # We're doing this via a function to prevent inadvertent deletion
+  # of existing items
+  if(!exists("installPkgsConfigArgs")) installPkgsConfigArgs <<- c()
+  installPkgsConfigArgs <<- c(installPkgsConfigArgs, configArgs)
+}
+
+# The udunits2 R-library requires some special handling. Giving users
+# an option to set the path to the headers needed for compilation, but
+# provide a reasonable default to try in case the user doesn't specify it.
+udunits2IncludePath <- getArgVal("--with-udunits2-include")
+if(is.null(udunits2IncludePath)) {
+  udunits2IncludePath <- "/usr/include/udunits2"
+}
+addConfigArgs(
+  c(udunits2=paste0('--with-udunits2-include=', udunits2IncludePath))
+)
 
 # Getting file path and defining workDir
 thisFileRelPath <- getArgVal("--file")
@@ -436,7 +462,7 @@ if(length(binsToBeBuilt)==0) {
         install.packages(pkgName, lib=tmpLibForBuild,
           repos=localRepo, type="source", INSTALL_opts="--build",
           dependencies=FALSE,
-          configure.args=c(udunits2='--with-udunits2-include=/usr/include/udunits2')
+          configure.args=installPkgsConfigArgs
         )
       },
         warning = function(w) {
