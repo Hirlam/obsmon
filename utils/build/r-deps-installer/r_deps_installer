@@ -182,6 +182,7 @@ pkgsDeps <- list()
 # fails to be installed
 allEssentialDeps <- c()
 allSuggestsDeps <- c()
+allDepsNeededBySuggests <- c()
 allPkgDeps <- c()
 essentialDepsTypes <- c("Depends", "Imports", "LinkingTo")
 
@@ -223,49 +224,89 @@ for (pkg in mainPkgs) {
   suggestsDeps <- dependencies(pkg, db=pkgsDbToGetDepsFrom,
                     levelOneDepsType="Suggests"
                   )
+  suggestsDeps <- suggestsDeps[!(suggestsDeps %in% excludeFromSuggests)]
 
   # A Suggests type dependency may also end up being a recursive non-suggests
   # dependency of the essential R-libraries. We don't want to have these
   # considered as optional.
-  depsOnlyOfSuggestsType <- suggestsDeps[
-    !(suggestsDeps %in% unique(c(essentialDeps, excludeFromSuggests)))
-  ]
-  pkgsDeps[[pkg]] <- list(essential=essentialDeps, Suggests=depsOnlyOfSuggestsType)
+  suggestsDeps <- suggestsDeps[!(suggestsDeps %in% essentialDeps)]
 
-  thisPkgDeps <-c(pkgsDeps[[pkg]][["essential"]],pkgsDeps[[pkg]][["Suggests"]])
+  # Now, we have to account for the fact that some suggests-type dependencies
+  # have themselves some imports, linkingTo, etc that should be installed if
+  # we decide to install such suggests deps. These cannot be ignored.
+  depsNeededBySuggests <- dependencies(
+    suggestsDeps,
+    db=pkgsDbToGetDepsFrom, levelOneDepsType=essentialDepsTypes
+  )
+  depsNeededBySuggests <- depsNeededBySuggests[!(
+    depsNeededBySuggests %in% c(essentialDeps, suggestsDeps)
+  )]
+
+  pkgsDeps[[pkg]] <- list(
+    essential=essentialDeps,
+    Suggests=suggestsDeps,
+    neededBySuggests=depsNeededBySuggests
+  )
+
+  thisPkgDeps <-c(
+    pkgsDeps[[pkg]][["essential"]],
+    pkgsDeps[[pkg]][["Suggests"]],
+    pkgsDeps[[pkg]][["neededBySuggests"]]
+  )
   newDeps <-setdiff(thisPkgDeps,intersect(thisPkgDeps,c(mainPkgs, allPkgDeps)))
   cat("nDependencies =", length(thisPkgDeps), "(", length(newDeps),"new)\n")
   allEssentialDeps <- c(allEssentialDeps, pkgsDeps[[pkg]][["essential"]])
   allSuggestsDeps <- c(allSuggestsDeps, pkgsDeps[[pkg]][["Suggests"]])
-  allPkgDeps <- c(allPkgDeps, allEssentialDeps, allSuggestsDeps)
+  allDepsNeededBySuggests <- c(allDepsNeededBySuggests,
+    pkgsDeps[[pkg]][["neededBySuggests"]]
+  )
+  allPkgDeps <- c(
+    allPkgDeps, allEssentialDeps,
+    allDepsNeededBySuggests, allSuggestsDeps
+  )
 }
-
 # At last, building the full list of pkgs to be installed
 allPkgs <- unique(c(allPkgDeps, mainPkgs))
 allEssentialDeps <- unique(allEssentialDeps[!(allEssentialDeps %in% mainPkgs)])
 allSuggestsDeps <- unique(
-                     allSuggestsDeps[
-                       !(allSuggestsDeps %in% c(allEssentialDeps, mainPkgs))
-                     ]
-                   )
+  allSuggestsDeps[
+    !(allSuggestsDeps %in% c(allEssentialDeps, mainPkgs))
+  ]
+)
+allDepsNeededBySuggests <- unique(
+  allDepsNeededBySuggests[
+    !(allDepsNeededBySuggests %in% c(allEssentialDeps, allSuggestsDeps, mainPkgs))
+  ]
+)
 
-cat("\n")
-msg <- "In addition to the main R-libraries listed above,"
-msg <- paste(msg, "the following dependencies should also", sep=" ")
-msg <- paste(msg, "be available after a successful full install:\n", sep="\n")
-cat(msg)
-cat("* Essential dependencies:\n")
-for (pkg in sort(allEssentialDeps)) {
-  cat("  >", pkg, "\n")
+if(length(c(allEssentialDeps, allSuggestsDeps, allDepsNeededBySuggests))>0) {
+  cat("\n")
+  msg <- "In addition to the main R-libraries listed above,"
+  msg <- paste(msg, "the following dependencies should also", sep=" ")
+  msg <- paste(msg, "be available after a successful full install:\n", sep="\n")
+  cat(msg)
+  if(length(allEssentialDeps)>0) {
+    cat("* Essential dependencies for the main libraries:\n")
+    for (pkg in sort(allEssentialDeps)) cat("  >", pkg, "\n")
+  }
+  if(length(allSuggestsDeps)>0) {
+    cat('* Suggests-type dependencies:\n')
+    for (pkg in sort(allSuggestsDeps)) cat("  >", pkg, "\n")
+  }
+  if(length(allDepsNeededBySuggests)>0) {
+    cat("* Extra deps needed in order to install the suggests-type deps:\n")
+    for (pkg in sort(allDepsNeededBySuggests)) cat("  >", pkg, "\n")
+  }
 }
-cat("* Suggests-type dependencies:\n")
-for (pkg in sort(allSuggestsDeps)) {
-  cat("  >", pkg, "\n")
-}
+
 cat("Total:", length(allPkgs), "R-libraries.\n")
 cat("  Main R-libraries:", length(mainPkgs), "\n")
-cat("  Essential dependencies:", length(allEssentialDeps), "\n")
-cat("  Suggests-type dependencies:", length(allSuggestsDeps), "\n")
+cat("  Essential dependencies for the main R-libs:", length(allEssentialDeps), "\n")
+cat('  Suggests-type dependencies:', length(allSuggestsDeps), "\n")
+cat(
+  "  Extra deps needed to install the suggests-type deps:",
+  length(allDepsNeededBySuggests), "\n"
+)
 cat("\n")
 
 if(showDepsAndQuit) {
