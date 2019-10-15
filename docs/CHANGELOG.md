@@ -23,6 +23,8 @@ and this project adheres to [Semantic Versioning](http://semver.org).
 - Mixup in height/pressure labels in First-guess & departure plots
 - Minor fixes to install script
 
+### Removed
+- Command line option "--sf-suggests-support" from install script
 
 ## [3.4.0] 2019-09-27
 ### Added
