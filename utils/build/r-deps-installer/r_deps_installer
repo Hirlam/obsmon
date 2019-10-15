@@ -10,7 +10,9 @@
 
 # List here R-libraries that can be ignored
 # pkgsSafeToIgnore: Will be ignored altogether
-# excludeFromSuggests: Will be ignored only if listed as type "suggests"
+# excludeFromSuggests: Will be ignored only if listed as type "suggests".
+#                      Use this, e.g., for optional libraries that prove
+#                      tricky to install.
 pkgsSafeToIgnore <- c("RadarBE")
 excludeFromSuggests <- c("sf")
 
@@ -42,10 +44,6 @@ pedanticBuild <- "--pedantic" %in% args
 # is desirable
 localReinstallRequested <- "--local-reinstall" %in% args
 localInstallRequested <- "--local-install" %in% args || localReinstallRequested
-# The sf R library is only needed as a "requires" dependency and is not
-# installed be default, as it depends on gdal v2, which is not available
-# in some systems yet.
-sfSuggestsSupport <- "--sf-suggests-support" %in% args
 # Optional user-specified workDir
 workDirUserArg <- getArgVal("--workdir")
 # Path to the local R library directory (relative to workDir)
@@ -186,13 +184,6 @@ allEssentialDeps <- c()
 allSuggestsDeps <- c()
 allPkgDeps <- c()
 essentialDepsTypes <- c("Depends", "Imports", "LinkingTo")
-# Warning user if sf is to be installed as a suggests-type dependency, as this
-# may cause installation to fail in some systems due to the lack of gdal v2
-if(sfSuggestsSupport) {
-  cat("WARNING: Support to the sf R library requires gdal>2.0.\n")
-  cat("         The build will fail if your system doesn't have gdal v2.\n")
-  excludeFromSuggests <- excludeFromSuggests[!(excludeFromSuggests %in% "sf")]
-}
 
 availablePkgsLocalRepo <- available.packages(repos=localRepo)
 availablePkgsRemoteRepo <- tryCatch(
