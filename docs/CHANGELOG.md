@@ -4,7 +4,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com)
 and this project adheres to [Semantic Versioning](http://semver.org).
 
-## [Unreleased]
+## [3.5.0] 2019-10-16
 ### Added
 - "Station Vertical Profile: FG & Analysis Departure" plot
 - Notify caching progress in the GUI
@@ -255,6 +255,7 @@ and this project adheres to [Semantic Versioning](http://semver.org).
 - Environment variables for configuration
 
 
+[3.5.0]: https://git.smhi.se/foum/obsmon/compare/obsmon-3.4.0...obsmon-3.5.0
 [3.4.0]: https://git.smhi.se/foum/obsmon/compare/obsmon-3.3.2...obsmon-3.4.0
 [3.3.2]: https://git.smhi.se/foum/obsmon/compare/obsmon-3.3.0...obsmon-3.3.2
 [3.3.0]: https://git.smhi.se/foum/obsmon/compare/obsmon-3.2.1...obsmon-3.3.0
