@@ -1,7 +1,23 @@
 #!/usr/bin/env Rscript
+# Scans the current directory recursively looking for files containing
+# R code. Parse these files to identify used libraries. Determine and
+# install these packages and their dependencies.
+#
+# We don't want to use any package for this, as the whole idea
+# is that this script should not depend on any non-base package
+# at all (you don't want to have to install packages before being
+# able to run a package installer)
 
+# List here R-libraries that can be ignored
+# pkgsSafeToIgnore: Will be ignored altogether
+# excludeFromSuggests: Will be ignored only if listed as type "suggests".
+#                      Use this, e.g., for optional libraries that prove
+#                      tricky to install.
+pkgsSafeToIgnore <- c("RadarBE")
+excludeFromSuggests <- c("sf", "units", "udunits2")
+
+# Some rudimentary parsing of command line options
 args <- commandArgs(trailingOnly=FALSE)
-
 getArgVal <- function(argName) {
   argPatt <- paste(argName, "={1}", sep="")
   argStr <- grep(argPatt, args, value=TRUE)
@@ -12,11 +28,6 @@ getArgVal <- function(argName) {
     if(anyNA(argVal) | argVal=="") argVal <- NULL
   }
   return(argVal)
-}
-
-printInstallStatus <- function(newStatus) {
-  blankLine <- strrep(" ", getOption("width"))
-  cat(paste0("\r", blankLine, "\r", newStatus))
 }
 
 showDepsAndQuit <- "--listdeps" %in% args
@@ -33,19 +44,32 @@ pedanticBuild <- "--pedantic" %in% args
 # is desirable
 localReinstallRequested <- "--local-reinstall" %in% args
 localInstallRequested <- "--local-install" %in% args || localReinstallRequested
-# The sf R library is only needed as a "requires" dependency and is not
-# installed be default, as it depends on gdal v2, which is not available
-# in some systems yet.
-sfSuggestsSupport <- "--sf-suggests-support" %in% args
 # Optional user-specified workDir
 workDirUserArg <- getArgVal("--workdir")
 # Path to the local R library directory (relative to workDir)
 # (to replace the default localRLibDir, optionally)
 localRLibDirUserArg <- getArgVal("--local-R-lib-dir")
 
-# List here R-libraries that can be ignored
-pkgsSafeToIgnore <- c("RadarBE")
-excludeFromSuggests <- c("sf")
+addConfigArgs <- function(configArgs) {
+  # Creates (or appends new items to) a named array "addConfigArgs"
+  # in the global scope, containing options to be later on passed to
+  # the "configure.args" argument of the "install.packages" function.
+  # We're doing this via a function to prevent inadvertent deletion
+  # of existing items
+  if(!exists("installPkgsConfigArgs")) installPkgsConfigArgs <<- c()
+  installPkgsConfigArgs <<- c(installPkgsConfigArgs, configArgs)
+}
+
+# The udunits2 R-library requires some special handling. Giving users
+# an option to set the path to the headers needed for compilation, but
+# provide a reasonable default to try in case the user doesn't specify it.
+udunits2IncludePath <- getArgVal("--with-udunits2-include")
+if(is.null(udunits2IncludePath)) {
+  udunits2IncludePath <- "/usr/include/udunits2"
+}
+addConfigArgs(
+  c(udunits2=paste0('--with-udunits2-include=', udunits2IncludePath))
+)
 
 # Getting file path and defining workDir
 thisFileRelPath <- getArgVal("--file")
@@ -83,6 +107,20 @@ envVarPreCompiledPkgsDir <- file.path(
   sysInfoStringLong
 )
 
+if(resetLocalRepo) {
+  cat(paste0('WARNING: Flag "--reset-local-repo" passed.\n',
+    '         The local R source repo will be reset using CRAN!\n'
+   ))
+  unlink(pkgSrcDir, recursive=TRUE)
+}
+# Initialising local repo if it doesn't exist
+# This could be either because it's the first time the install
+# script is run, or because resetLocalRepo is TRUE
+if(!dir.exists(pkgSrcDir)) {
+  dir.create(pkgSrcDir, recursive=TRUE)
+  file.create(file.path(pkgSrcDir, "PACKAGES"))
+}
+
 # Remove locally installed R-libraries if localReinstallRequested
 if(localReinstallRequested) {
   cat(sprintf(
@@ -92,7 +130,7 @@ if(localReinstallRequested) {
   unlink(localInstallRLib, recursive=TRUE)
 }
 
-remoteRepo <- c("http://cran.ma.imperial.ac.uk/")
+remoteRepo <- c("http://cran.ma.imperial.ac.uk")
 localRepo <- c(file.path("file:", localRLibDir))
 # Configuring library search paths
 originalLibPaths <- .libPaths()
@@ -116,14 +154,7 @@ for(dir in .libPaths()) {
 }
 cat("\n")
 
-# Initialising local repo if it doesn't exist
-if(!dir.exists(pkgSrcDir)) {
-  dir.create(pkgSrcDir, recursive=TRUE)
-  file.create(file.path(pkgSrcDir, "PACKAGES"))
-}
 if(!dir.exists(localPreCompiledPkgsDir)) dir.create(localPreCompiledPkgsDir, recursive=TRUE)
-
-availablePkgsLocalRepo <- available.packages(repos=localRepo)
 
 cat('Gathering R-libraries used in the ".R" files in current dir and subdirs...')
 # These may have been imported explicitly using "library" or "require",
@@ -151,79 +182,131 @@ pkgsDeps <- list()
 # fails to be installed
 allEssentialDeps <- c()
 allSuggestsDeps <- c()
+allDepsNeededBySuggests <- c()
 allPkgDeps <- c()
 essentialDepsTypes <- c("Depends", "Imports", "LinkingTo")
-# Warning user if sf is to be installed as a suggests-type dependency, as this
-# may cause installation to fail in some systems due to the lack of gdal v2
-if(sfSuggestsSupport) {
-  cat("WARNING: Support to the sf R library requires gdal>2.0.\n")
-  cat("         The build will fail if your system doesn't have gdal v2.\n")
-  excludeFromSuggests <- excludeFromSuggests[!(excludeFromSuggests %in% "sf")]
-}
 
-mainPkgsNotAvailableLocally <- mainPkgs[!(mainPkgs %in% rownames(availablePkgsLocalRepo))]
-if(resetLocalRepo | length(mainPkgsNotAvailableLocally)>0) {
-  availablePkgsRemoteRepo <- available.packages(repos=remoteRepo)
-}
-pkgsDbForDepsRefresh <- availablePkgsLocalRepo
-if(resetLocalRepo) pkgsDbForDepsRefresh <- availablePkgsRemoteRepo
+availablePkgsLocalRepo <- available.packages(repos=localRepo)
+availablePkgsRemoteRepo <- tryCatch(
+  available.packages(repos=remoteRepo),
+  warning=function(w) {
+  if(allowSrcDownload) {
+    msg <- sprintf(
+      "WARN: Could not read available packages from <%s>\n",
+      remoteRepo
+    )
+    msg <- paste0(msg, sprintf("      %s\n", w$message))
+    cat(msg)
+  }
+    return(NULL)
+  }
+)
 
+# Build a database "pkgsDbToGetDepsFrom" with info about available packages.
+# This will be used to resolve dependencies. Start with info about packages
+# available in the local CRAN-like repo (if any) and then complement it with
+# info obtained from CRAN (if possible). Not updating from CRAN info on packages
+# that already exist in the local repo.
+availablePkgsRemoteMinusLocal <- availablePkgsRemoteRepo[
+  !(rownames(availablePkgsRemoteRepo) %in% rownames(availablePkgsLocalRepo)),
+]
+pkgsDbToGetDepsFrom <- rbind(
+  availablePkgsLocalRepo,
+  availablePkgsRemoteMinusLocal
+)
+
+# Working out dependencies
 for (pkg in mainPkgs) {
   cat("  >", pkg, "... ")
-
-  if(resetLocalRepo | (pkg %in% mainPkgsNotAvailableLocally)) {
-    pkgsDbForDepsRefresh <- availablePkgsRemoteRepo
-  } else {
-    pkgsDbForDepsRefresh <- availablePkgsLocalRepo
-  }
-  essentialDeps <- dependencies(pkg, db=pkgsDbForDepsRefresh,
-                     levelOneDepsType=essentialDepsTypes,
-                     exclude_from_suggests=excludeFromSuggests
+  essentialDeps <- dependencies(pkg, db=pkgsDbToGetDepsFrom,
+                     levelOneDepsType=essentialDepsTypes
                    )
-  suggestsDeps <- dependencies(pkg, db=pkgsDbForDepsRefresh,
-                    levelOneDepsType="Suggests",
-                    exclude_from_suggests=excludeFromSuggests
+  suggestsDeps <- dependencies(pkg, db=pkgsDbToGetDepsFrom,
+                    levelOneDepsType="Suggests"
                   )
+  suggestsDeps <- suggestsDeps[!(suggestsDeps %in% excludeFromSuggests)]
+
   # A Suggests type dependency may also end up being a recursive non-suggests
   # dependency of the essential R-libraries. We don't want to have these
   # considered as optional.
   suggestsDeps <- suggestsDeps[!(suggestsDeps %in% essentialDeps)]
-  pkgsDeps[[pkg]] <- list(essential=essentialDeps, Suggests=suggestsDeps)
 
-  thisPkgDeps <-c(pkgsDeps[[pkg]][["essential"]],pkgsDeps[[pkg]][["Suggests"]])
+  # Now, we have to account for the fact that some suggests-type dependencies
+  # have themselves some imports, linkingTo, etc that should be installed if
+  # we decide to install such suggests deps. These cannot be ignored.
+  depsNeededBySuggests <- dependencies(
+    suggestsDeps,
+    db=pkgsDbToGetDepsFrom, levelOneDepsType=essentialDepsTypes
+  )
+  depsNeededBySuggests <- depsNeededBySuggests[!(
+    depsNeededBySuggests %in% c(essentialDeps, suggestsDeps)
+  )]
+
+  pkgsDeps[[pkg]] <- list(
+    essential=essentialDeps,
+    Suggests=suggestsDeps,
+    neededBySuggests=depsNeededBySuggests
+  )
+
+  thisPkgDeps <-c(
+    pkgsDeps[[pkg]][["essential"]],
+    pkgsDeps[[pkg]][["Suggests"]],
+    pkgsDeps[[pkg]][["neededBySuggests"]]
+  )
   newDeps <-setdiff(thisPkgDeps,intersect(thisPkgDeps,c(mainPkgs, allPkgDeps)))
   cat("nDependencies =", length(thisPkgDeps), "(", length(newDeps),"new)\n")
   allEssentialDeps <- c(allEssentialDeps, pkgsDeps[[pkg]][["essential"]])
   allSuggestsDeps <- c(allSuggestsDeps, pkgsDeps[[pkg]][["Suggests"]])
-  allPkgDeps <- c(allPkgDeps, allEssentialDeps, allSuggestsDeps)
+  allDepsNeededBySuggests <- c(allDepsNeededBySuggests,
+    pkgsDeps[[pkg]][["neededBySuggests"]]
+  )
+  allPkgDeps <- c(
+    allPkgDeps, allEssentialDeps,
+    allDepsNeededBySuggests, allSuggestsDeps
+  )
 }
-
 # At last, building the full list of pkgs to be installed
 allPkgs <- unique(c(allPkgDeps, mainPkgs))
 allEssentialDeps <- unique(allEssentialDeps[!(allEssentialDeps %in% mainPkgs)])
 allSuggestsDeps <- unique(
-                     allSuggestsDeps[
-                       !(allSuggestsDeps %in% c(allEssentialDeps, mainPkgs))
-                     ]
-                   )
+  allSuggestsDeps[
+    !(allSuggestsDeps %in% c(allEssentialDeps, mainPkgs))
+  ]
+)
+allDepsNeededBySuggests <- unique(
+  allDepsNeededBySuggests[
+    !(allDepsNeededBySuggests %in% c(allEssentialDeps, allSuggestsDeps, mainPkgs))
+  ]
+)
 
-cat("\n")
-msg <- "In addition to the main R-libraries listed above,"
-msg <- paste(msg, "the following dependencies should also", sep=" ")
-msg <- paste(msg, "be available after a successful full install:\n", sep="\n")
-cat(msg)
-cat("* Essential dependencies:\n")
-for (pkg in sort(allEssentialDeps)) {
-  cat("  >", pkg, "\n")
+if(length(c(allEssentialDeps, allSuggestsDeps, allDepsNeededBySuggests))>0) {
+  cat("\n")
+  msg <- "In addition to the main R-libraries listed above,"
+  msg <- paste(msg, "the following dependencies should also", sep=" ")
+  msg <- paste(msg, "be available after a successful full install:\n", sep="\n")
+  cat(msg)
+  if(length(allEssentialDeps)>0) {
+    cat("* Essential dependencies for the main libraries:\n")
+    for (pkg in sort(allEssentialDeps)) cat("  >", pkg, "\n")
+  }
+  if(length(allSuggestsDeps)>0) {
+    cat('* Suggests-type dependencies:\n')
+    for (pkg in sort(allSuggestsDeps)) cat("  >", pkg, "\n")
+  }
+  if(length(allDepsNeededBySuggests)>0) {
+    cat("* Extra deps needed in order to install the suggests-type deps:\n")
+    for (pkg in sort(allDepsNeededBySuggests)) cat("  >", pkg, "\n")
+  }
 }
-cat("* Suggests-type dependencies:\n")
-for (pkg in sort(allSuggestsDeps)) {
-  cat("  >", pkg, "\n")
-}
+
 cat("Total:", length(allPkgs), "R-libraries.\n")
 cat("  Main R-libraries:", length(mainPkgs), "\n")
-cat("  Essential dependencies:", length(allEssentialDeps), "\n")
-cat("  Suggests-type dependencies:", length(allSuggestsDeps), "\n")
+cat("  Essential dependencies for the main R-libs:", length(allEssentialDeps), "\n")
+cat('  Suggests-type dependencies:', length(allSuggestsDeps), "\n")
+cat(
+  "  Extra deps needed to install the suggests-type deps:",
+  length(allDepsNeededBySuggests), "\n"
+)
 cat("\n")
 
 if(showDepsAndQuit) {
@@ -249,19 +332,19 @@ pkgsToBeInstalled <- allPkgs[pkgsToBeInstalledMask]
 srcsReqInRepo <- pkgsToBeInstalled
 if(pedanticBuild | rebuildAll) srcsReqInRepo <- allPkgs
 
-if(resetLocalRepo) {
-  cat('WARNING: Flag "--reset-local-repo" passed. The local R source repo will be reset using CRAN!')
-  unlink(pkgSrcDir, recursive=TRUE)
-  dir.create(pkgSrcDir, recursive=TRUE)
-  missingSrcsReqPkgs <- srcsReqInRepo
+if(allowSrcDownload) {
+  errMsgSolveMissingPkgs <- paste(
+    '>>> Could not find missing package(s) on CRAN!\n',
+    '    Please double-check that the package names are correct.'
+  )
 } else {
-  missingSrcsReqPkgs <- srcsReqInRepo[!(srcsReqInRepo %in% rownames(availablePkgsLocalRepo))]
+  errMsgSolveMissingPkgs <- paste(
+    '>>> If you wish the missing sources to be downloaded automatically, please\n',
+    '    run the installation script with the option "--allow-downloads'
+  )
 }
-
-
 errMsgSolveMissingPkgs <- paste(
-  '>>> If you wish the missing sources to be downloaded automatically, please\n',
-  '    run the installation script with the option "--allow-downloads',
+  errMsgSolveMissingPkgs,
   '\n \n',
   "You can also manually add the missing package tarballs to the\n",
   pkgSrcDir, "\n",
@@ -272,13 +355,14 @@ errMsgSolveMissingPkgs <- paste(
   "to update the repo, and try again.\n"
 )
 
+missingSrcsReqPkgs <- srcsReqInRepo[!(srcsReqInRepo %in% rownames(availablePkgsLocalRepo))]
 if(length(missingSrcsReqPkgs)>0) {
   # Deciding whether or not to download needed source files that are missing.
   errMsg <- "The local R repo does not contain all required sources!\n"
-  errMsg <- paste(errMsg,
-              "Sources are missing for the following R-libraries:\n",
-               sep=""
-            )
+  errMsg <- paste0(errMsg, sprintf(
+    "Sources are missing for the following %d R-libraries:\n",
+    length(missingSrcsReqPkgs))
+  )
   for(pkgName in missingSrcsReqPkgs) {
     errMsg <- paste(errMsg, "  >", pkgName, "\n")
   }
@@ -328,7 +412,10 @@ if(length(missingSrcsReqPkgs)>0) {
     }
 
     if(length(pkgsCannotBeIgnored)>0) {
-      errMsg <- 'The following pkg sources are missing and cannot be ignored:\n'
+      errMsg <- sprintf(
+        'The following %d pkg sources are missing and cannot be ignored:\n',
+        length(pkgsCannotBeIgnored)
+      )
       for(pkg in pkgsCannotBeIgnored) {
         errMsg <- paste(errMsg, "  >", pkg, "\n")
       }
@@ -345,8 +432,9 @@ if(length(missingSrcsReqPkgs)>0) {
 binSearchPaths <- c(localPreCompiledPkgsDir, envVarPreCompiledPkgsDir)
 cat("Looking for pre-compiled binaries at:\n")
 for(dir in binSearchPaths) cat(paste("  >", dir, "\n"))
-binFilePaths <- listBinFiles(binSearchPaths)
-if(rebuildAll | length(binFilePaths)==0) {
+pathsAllBinFilesFound <- listBinFiles(binSearchPaths)
+pathsToBinsThatAreReady <- c()
+if(rebuildAll | length(pathsAllBinFilesFound)==0) {
   binsToBeBuilt <- allPkgs
 } else {
   binsToBeBuilt <- c()
@@ -354,9 +442,13 @@ if(rebuildAll | length(binFilePaths)==0) {
     pkgVer <- availablePkgsLocalRepo[pkgName, "Version"]
     fPath <- pathToBinary(
                pkgName, pkgVer, platform=sysInfoStringShort,
-               fullBinList=binFilePaths
+               fullBinList=pathsAllBinFilesFound
              )
-    if(anyNA(fPath)) binsToBeBuilt <- c(binsToBeBuilt, pkgName)
+    if(anyNA(fPath)) {
+      binsToBeBuilt <- c(binsToBeBuilt, pkgName)
+    } else {
+      pathsToBinsThatAreReady <- c(pathsToBinsThatAreReady, fPath)
+    }
   }
 }
 
@@ -373,10 +465,15 @@ if(length(binsToBeBuilt)==0) {
   cat("Total:", length(binsToBeBuilt), "R-libraries to be built.\n")
 
   cat("\n")
-  # If we do not do this, then install.packages may download these pkgs
-  cat("Handling eventual pre-compiled but not installed R-pkg dependencies...")
-  install_binaries(fPaths=binFilePaths, lib=tmpLibForBuild, overwrite=FALSE)
-  cat(" Done.\n")
+  if(length(pathsToBinsThatAreReady)>0) {
+    # If we do not do this, then install.packages may download these pkgs
+    cat(sprintf(
+      "Copying %d already compiled R-pkg deps to temp build area...",
+      length(pathsToBinsThatAreReady)
+    ))
+    install_binaries(fPaths=pathsToBinsThatAreReady, lib=tmpLibForBuild, overwrite=FALSE)
+    cat(" Done.\n")
+  }
   cat("Building now...\n")
   # Moving to a tempdir so that the work dir doesn't get full of tarballs
   setwd(tmpDirForBuild)
@@ -397,7 +494,7 @@ if(length(binsToBeBuilt)==0) {
         install.packages(pkgName, lib=tmpLibForBuild,
           repos=localRepo, type="source", INSTALL_opts="--build",
           dependencies=FALSE,
-          configure.args=c(udunits2='--with-udunits2-include=/usr/include/udunits2')
+          configure.args=installPkgsConfigArgs
         )
       },
         warning = function(w) {
@@ -457,7 +554,13 @@ if(length(pkgsToBeUpdated)>0) {
   cat("Total:", length(pkgsToBeUpdated), "R-libraries to be updated.\n")
 }
 
-binFilePaths <- listBinFiles(binSearchPaths)
+# Convenience function to help printing install progress
+printInstallStatus <- function(newStatus) {
+  blankLine <- strrep(" ", getOption("width"))
+  cat(paste0("\r", blankLine, "\r", newStatus))
+}
+
+pathsAllBinFilesFound <- listBinFiles(binSearchPaths)
 iLib <- 0
 for (pkgName in pkgsToBeInstalled) {
   pkgVer <- availablePkgsLocalRepo[pkgName, "Version"]
@@ -471,7 +574,7 @@ for (pkgName in pkgsToBeInstalled) {
 
   preCompPkgPath <- pathToBinary(
                       pkgName, pkgVer, platform=sysInfoStringShort,
-                      fullBinList=binFilePaths
+                      fullBinList=pathsAllBinFilesFound
                     )
   install_binaries(fPaths=preCompPkgPath, lib=lib, overwrite=TRUE)
   iLib <- iLib + 1

@@ -1,3 +1,14 @@
+levelsLableForPlots <- function(obnumber, varname=character(0)) {
+  strObnumber <- as.character(obnumber)
+  obstype <- getAttrFromMetadata("category", obnumber=obnumber)
+  quantity <- "Pressure"
+  if(obstype=="surface" || (isTRUE(strObnumber=="13") && !isTRUE(varname=="rh"))) {
+    quantity <- "Height"
+  }
+  label <- sprintf("%s [%s]", quantity, units[[tolower(quantity)]])
+  return(label)
+}
+
 coord_flip_wrapper <- function(..., default=FALSE) {
   # Adds the argument "default" to the original ggplot's coord_flip.
   # This gets rid of the annoying "Coordinate system already present. Adding
@@ -168,7 +179,7 @@ plotGenerate.default <- function(p, plotRequest, plotData) {
   }
   result <- list(title=plotTitle(p, plotRequest, plotData))
   if(length(result$title)==0) flog.warn("plotGenerate: Empty plot title")
-  if (is.null(plotData) || nrow(plotData)==0) {
+  if (!isTRUE(nrow(plotData)>0)) {
     result$obmap=NULL
     if(is.null(plotData)) {
       msg <- paste0(
@@ -307,7 +318,7 @@ preparePlots <- function(plotter, plotRequest, db) {
       # picked date range.
       plotData <- postProcessQueriedPlotData(plotter, plotData)
     }
-    if(!is.null(plotData) && nrow(plotData)>0) {
+    if(isTRUE(nrow(plotData)>0)) {
       statIds <- c()
       for(statid in plotData$statid) {
         statid <- gsub(" ", "", gsub("'", "", statid))

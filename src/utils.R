@@ -176,5 +176,7 @@ units <- list(
     "radv" = "m/s",
     "dbz"  = "db",
     "rh"   = "%",
-    "bend_angle" = "rad"
+    "bend_angle" = "rad",
+    "pressure" = "Pa",
+    "height" = "m"
 )
