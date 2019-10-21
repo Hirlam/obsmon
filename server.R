@@ -44,6 +44,24 @@ shinyServer(function(input, output, session) {
 
   # Loading info about configured experiments
   expts <- initExperiments()
+  allExptNames <- unlist(lapply(expts, function(x) x$name))
+  # Helper function to populate experiment choices in the GUI
+  getNewExptChoices <- function(
+    currentChoices=NULL, markAsAv=NULL, markAsUnav=NULL
+  ) {
+    unavExptsLabel <- "Experiments that could not be loaded"
+    av <- NULL; unav <- NULL
+    for(eName in allExptNames) {
+      if(eName %in% markAsUnav) unav <- c(unav, eName)
+      else if (eName %in% markAsAv) av <- c(av, eName)
+      else if (eName %in% currentChoices[[unavExptsLabel]])unav<-c(unav,eName)
+      else av <- c(av, eName)
+    }
+    if(length(av)==0) av <- c("ERROR: Could not load any experiment!"=" ")
+    newChoices <- list(as.list(av), as.list(unav))
+    names(newChoices) <- c(" ", unavExptsLabel)
+    return(newChoices)
+  }
 
   ####################################
   # Timeout-related server-side code #

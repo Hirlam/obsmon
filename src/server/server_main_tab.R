@@ -17,13 +17,12 @@ output$showCacheOptions <- renderText({
 outputOptions(output, "showCacheOptions", suspendWhenHidden=FALSE)
 
 # Populate experiment choices
-exptChoices <- unlist(lapply(expts, function(x) x$name))
-exptPholder <- "Please select experiment"
-if(length(exptChoices)==0) {
-  exptPholder <- "ERROR: Could not load experiments!"
-  exptChoices <- " "; names(exptChoices) <- exptPholder
-}
-updateSelectizeInput(session, "experiment", choices=exptChoices)
+exptChoices <- reactiveVal(getNewExptChoices())
+observeEvent(exptChoices(), {
+  updateSelectizeInput(session, "experiment", choices=exptChoices())
+},
+  ignoreNULL=FALSE
+)
 
 # Update dB choices for currently selected experiment
 observeEvent(input$experiment, {
@@ -32,8 +31,25 @@ observeEvent(input$experiment, {
     if(isTRUE(dir.exists(db$dir))) db$dbType
   }))
   names(choices) <- unlist(lapply(choices, dbType2DbDescription))
-  if(length(choices)==0) choices <- c("ERROR: No usable database!"=" ")
+  exptHasData <- TRUE
+  if(length(choices)==0) {
+    choices <- c("ERROR: No usable database!"=" ")
+    exptHasData <- FALSE
+  }
   updateSelectInputWrapper(session, "odbBase", choices=choices)
+
+  # Refresh expt choices to reflect their available/unavailable status
+  if(!exptHasData) {
+    newExptChoices <- getNewExptChoices(exptChoices(), markAsUnav=expt$name)
+    if(length(expt$name)>0) {
+      showNotification(
+        ui=sprintf('Expt "%s" unavailable',expt$name),type="error",duration=2
+      )
+    }
+  } else {
+    newExptChoices <- getNewExptChoices(exptChoices(), markAsAv=expt$name)
+  }
+  exptChoices(newExptChoices)
 })
 activeDb <- reactive({
   showNotification(id="notifIDUpdDbs",
