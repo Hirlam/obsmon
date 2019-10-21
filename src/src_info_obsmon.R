@@ -62,11 +62,16 @@ obsmonNameForBanner <- paste(
 "  \\____/|_.__/|___/_| |_| |_|\\___/|_| |_|",
 sep="\n"
 )
-obsmonNameForBanner <- paste(obsmonNameForBanner, "\n", sep="")
-obsmonVersionForBanner <- paste("                  v",obsmonVersion,sep="")
+obsmonNameForBanner <- paste0(obsmonNameForBanner, "\n")
+obsmonVersionForBanner <- paste0("                  v", obsmonVersion)
 bannerDelim <- "=================================================="
 obsmonBanner <- paste(
-  bannerDelim, obsmonNameForBanner, obsmonVersionForBanner, "", gitInfo,
-  bannerDelim, "\n",
+  bannerDelim,
+  obsmonNameForBanner,
+  obsmonVersionForBanner,
+  "",
+  gitInfo,
+  bannerDelim,
+  "\n",
   sep="\n"
 )

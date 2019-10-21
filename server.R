@@ -14,9 +14,6 @@ shinyServer(function(input, output, session) {
       session$token, as.numeric(Sys.time()-sessionStartTime, units="secs")
     )
   })
-  # Write code info to the log for every session when using a shiny server
-  # This info is already printed in a banner when running standalone
-  if(!runningAsStandalone) message(obsmonBanner)
 
   # Increment global connected sessions count when session starts
   isolate(sessionsConnected(sessionsConnected() + 1))
