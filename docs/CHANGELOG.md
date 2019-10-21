@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com)
 and this project adheres to [Semantic Versioning](http://semver.org).
 
+## [Unreleased]
+### Fixed
+- Issue that could cause the code to leave orphan processes behind
+  after cancelling plots/multiPlots, which would lead to memory leaks
+
+
 ## [3.5.0] 2019-10-16
 ### Added
 - "Station Vertical Profile: FG & Analysis Departure" plot

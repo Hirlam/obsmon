@@ -3,6 +3,8 @@ sessionsConnected <- reactiveVal(0)
 
 # The server
 shinyServer(function(input, output, session) {
+  # Force garbage collection at the end of every session
+  session$onSessionEnded(function() {gc()})
   # Log the session ID, as well as start end end times, to help when debugging
   sessionStartTime <- Sys.time()
   flog.info("New session started. Session token: %s", session$token)

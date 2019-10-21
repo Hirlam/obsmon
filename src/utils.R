@@ -50,6 +50,17 @@ getChildPIDs <- function(pid) {
   return(childPIDs)
 }
 
+killProcessTree <- function(pid, warnFail=FALSE) {
+  pidsToKill <- c(pid, getChildPIDs(pid))
+  killSuccess <- tools::pskill(pidsToKill, tools::SIGTERM)
+  gc()
+  if(warnFail && !all(killSuccess)) {
+    msg <- "killProcessTree: Failed to kill procs with the following PIDs:"
+    for(pid in pidsToKill[!killSuccess]) msg <- paste0(msg, "\n  > ", pid)
+    flog.warn(msg)
+  }
+}
+
 dtg2date <- function(dtg) {
   dtgAsPOSIXlt <- strptime(dtg, format="%Y%m%d%H", tz="GMT")
   rtn <- strftime(dtgAsPOSIXlt, format="%Y-%m-%d", tz="GMT")
