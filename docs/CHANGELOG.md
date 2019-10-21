@@ -8,6 +8,8 @@ and this project adheres to [Semantic Versioning](http://semver.org).
 ### Fixed
 - Issue that could cause the code to leave orphan processes behind
   after cancelling plots/multiPlots, which would lead to memory leaks
+- Issue that could occasionally cause the code to crash if attempting
+  to select an experiment that contained no valid data
 
 
 ## [3.5.0] 2019-10-16
