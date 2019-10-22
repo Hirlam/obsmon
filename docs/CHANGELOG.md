@@ -4,7 +4,8 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com)
 and this project adheres to [Semantic Versioning](http://semver.org).
 
-## [Unreleased]
+
+## [3.6.0] 2019-10-22
 ### Added
 - Issue a notification and mark experiments as unavailable when they
   are selected in the GUI but the code is unable to read data from them
