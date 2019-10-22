@@ -8,6 +8,12 @@ and this project adheres to [Semantic Versioning](http://semver.org).
 ### Added
 - Issue a notification and mark experiments as unavailable when they
   are selected in the GUI but the code is unable to read data from them
+
+### Changed
+- Observation Usage plot: Change colours, shapes and fills for better
+  print results (especially for stations with status="passive", which
+  used to be markes in yellow and could be difficult to see sometimes)
+
 ### Fixed
 - Issue that could cause the code to leave orphan processes behind
   after cancelling plots/multiPlots, which would lead to memory leaks

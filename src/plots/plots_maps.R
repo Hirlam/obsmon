@@ -172,7 +172,7 @@ doMap.mapUsage <- function(p, plotRequest, plotData) {
       zoomLevel <- i+3
     }
   }
-  pal <- colorFactor(c("green", "blue", "black", "grey", "yellow", "red"),
+  pal <- colorFactor(c("green", "blue", "black", "grey", "magenta3", "red"),
                      domain=c("Active", "Active(2)",
                               "Blacklisted", "NA", "Passive", "Rejected"))
   plotData$popup <- paste("Station: ", plotData$statLabel, "<br>Anflag: ",
@@ -203,11 +203,21 @@ doPlot.mapUsage <- function(p, plotRequest, plotData) {
   plotData$status <- status
   NextMethod() +
     geom_point(data=plotData[rev(order(status)),],
-               aes(x=longitude, y=latitude, colour=status),
-               size=2, alpha=.5, stroke=0.) +
+               aes(x=longitude, y=latitude,
+                 colour=status, shape=status, fill=status
+               ),
+               size=2, alpha=.75) +
+    scale_shape_manual(name="Legend",
+                        values=c("Active"=21, "Active(2)"=21,
+                                 "Rejected"=22, "Passive"=23,
+                                 "Blacklisted"=24, "NA"=13)) +
+    scale_fill_manual(name="Legend",
+                        values=c("Active"="green", "Active(2)"="blue",
+                                 "Rejected"="red", "Passive"="magenta3",
+                                 "Blacklisted"="black", "NA"=NA)) +
     scale_colour_manual(name="Legend",
                         values=c("Active"="green", "Active(2)"="blue",
-                                 "Rejected"="red", "Passive"="yellow",
+                                 "Rejected"="red", "Passive"="black",
                                  "Blacklisted"="black", "NA"="grey"))
 }
 
