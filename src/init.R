@@ -14,6 +14,9 @@ if(!exists("runningAsStandalone") || runningAsStandalone==FALSE) {
   source('src/lib_paths_config.R')
   runningAsStandalone <- FALSE
   dirObsmonWasCalledFrom <- thisAppDir
+  # Write code info to the log for every session when using a shiny server
+  # This info is already printed in a banner when running standalone
+  message(obsmonBanner)
 }
 
 getUserName <- function() {
@@ -314,7 +317,7 @@ runObsmonStandAlone <- function(cmdLineArgs) {
     displayMode <- NULL
     if(cmdLineArgs$debug) {
       Rprof()
-      options(shiny.reactlog=TRUE)
+      options(shiny.reactlog=TRUE, error=traceback)
       displayMode <- "showcase"
     }
     runAppHandlingBusyPort(

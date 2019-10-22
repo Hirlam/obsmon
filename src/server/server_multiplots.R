@@ -54,8 +54,7 @@ multiPlotInterrupted <- reactiveVal(FALSE)
 onclick("multiPlotsCancelPlot", {
   showNotification("Cancelling multiPlot", type="warning", duration=1)
   multiPlotInterrupted(TRUE)
-  pidsToKill <- c(multiPlotCurrentPid(), getChildPIDs(multiPlotCurrentPid()))
-  tools::pskill(pidsToKill, tools::SIGINT)
+  killProcessTree(multiPlotCurrentPid(), warnFail=TRUE)
 })
 
 # Producing multiPlots
@@ -133,8 +132,7 @@ observeEvent(input$multiPlotsDoPlot, {
       "Session finished: Making sure multiPlot task with PID=%s is killed",
       multiPlotPID
     )
-    pidsToKill <- c(multiPlotPID, getChildPIDs(multiPlotPID))
-    tools::pskill(pidsToKill)
+    killProcessTree(multiPlotPID)
   })
 
   then(multiPlotsAsyncAndOutput,
@@ -175,8 +173,7 @@ observeEvent(input$multiPlotsDoPlot, {
     multiPlotsProgressFile(NULL)
     multiPlotsProgressBar(NULL)
     # Force-kill forked processes
-    pidsToKill <- c(multiPlotPID, getChildPIDs(multiPlotPID))
-    tools::pskill(pidsToKill)
+    killProcessTree(multiPlotPID)
     # Hide/show and disable/enable relevant inputs
     shinyjs::hide("multiPlotsCancelPlot")
     shinyjs::show("multiPlotsDoPlot")

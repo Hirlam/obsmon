@@ -1,5 +1,5 @@
 # obsmonVersion is shown in the GUI and also printed along with the banner
-obsmonVersion <- "3.5.0"
+obsmonVersion <- "3.6.0"
 
 # Having the git info gathered below is useful when providing support to users
 readGitInfoFromFile <- function(fPath=".obsmon_git_info") {
@@ -62,11 +62,16 @@ obsmonNameForBanner <- paste(
 "  \\____/|_.__/|___/_| |_| |_|\\___/|_| |_|",
 sep="\n"
 )
-obsmonNameForBanner <- paste(obsmonNameForBanner, "\n", sep="")
-obsmonVersionForBanner <- paste("                  v",obsmonVersion,sep="")
+obsmonNameForBanner <- paste0(obsmonNameForBanner, "\n")
+obsmonVersionForBanner <- paste0("                  v", obsmonVersion)
 bannerDelim <- "=================================================="
 obsmonBanner <- paste(
-  bannerDelim, obsmonNameForBanner, obsmonVersionForBanner, "", gitInfo,
-  bannerDelim, "\n",
+  bannerDelim,
+  obsmonNameForBanner,
+  obsmonVersionForBanner,
+  "",
+  gitInfo,
+  bannerDelim,
+  "\n",
   sep="\n"
 )

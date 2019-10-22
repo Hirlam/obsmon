@@ -205,8 +205,8 @@ observeEvent({
   if(isTRUE(selectedDtgsAreCached())) {
     removeNotification(cacheNotifId)
   } else {
+    totalNFiles <- length(req(dataFilesForDbAndDtgs()))
     cacheProgressMsg <- tryCatch({
-      totalNFiles <- length(dataFilesForDbAndDtgs())
       nFilesPendingCache <- length(unique(c(
         filesPendingCache(), filesPendingRecache())
       ))
@@ -216,7 +216,8 @@ observeEvent({
         round(100.0 * nCachedFiles / totalNFiles)
       )
     },
-      warning=function(w) {flog.warn(w); return("Caching selected DTGs...")}
+      warning=function(w) {return("Caching selected DTGs...")},
+      error=function(e) {return("Caching selected DTGs...")}
     )
     showNotification(
       id=cacheNotifId, ui=cacheProgressMsg, type="message", duration=NULL

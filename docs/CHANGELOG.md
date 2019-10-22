@@ -4,6 +4,25 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com)
 and this project adheres to [Semantic Versioning](http://semver.org).
 
+
+## [3.6.0] 2019-10-22
+### Added
+- Issue a notification and mark experiments as unavailable when they
+  are selected in the GUI but the code is unable to read data from them
+
+### Changed
+- Observation Usage plot: Change colours, shapes and fills for better
+  print results (especially for stations with status="passive", which
+  used to be markes in yellow and could be difficult to see sometimes)
+
+### Fixed
+- Issue that could cause the code to leave orphan processes behind
+  after cancelling plots/multiPlots, which would lead to memory leaks
+- Issue that could occasionally cause the code to crash if attempting
+  to select an experiment that contained no valid data
+- Mixup in latitude/longitude axis labels in map plots
+
+
 ## [3.5.0] 2019-10-16
 ### Added
 - "Station Vertical Profile: FG & Analysis Departure" plot
@@ -255,6 +274,7 @@ and this project adheres to [Semantic Versioning](http://semver.org).
 - Environment variables for configuration
 
 
+[3.6.0]: https://git.smhi.se/foum/obsmon/compare/obsmon-3.5.0...obsmon-3.6.0
 [3.5.0]: https://git.smhi.se/foum/obsmon/compare/obsmon-3.4.0...obsmon-3.5.0
 [3.4.0]: https://git.smhi.se/foum/obsmon/compare/obsmon-3.3.2...obsmon-3.4.0
 [3.3.2]: https://git.smhi.se/foum/obsmon/compare/obsmon-3.3.0...obsmon-3.3.2
