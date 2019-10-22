@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](http://semver.org).
   after cancelling plots/multiPlots, which would lead to memory leaks
 - Issue that could occasionally cause the code to crash if attempting
   to select an experiment that contained no valid data
+- Mixup in latitude/longitude axis labels in map plots
 
 
 ## [3.5.0] 2019-10-16
@@ -266,6 +267,7 @@ and this project adheres to [Semantic Versioning](http://semver.org).
 - Environment variables for configuration
 
 
+[3.6.0]: https://git.smhi.se/foum/obsmon/compare/obsmon-3.5.0...obsmon-3.6.0
 [3.5.0]: https://git.smhi.se/foum/obsmon/compare/obsmon-3.4.0...obsmon-3.5.0
 [3.4.0]: https://git.smhi.se/foum/obsmon/compare/obsmon-3.3.2...obsmon-3.4.0
 [3.3.2]: https://git.smhi.se/foum/obsmon/compare/obsmon-3.3.0...obsmon-3.3.2

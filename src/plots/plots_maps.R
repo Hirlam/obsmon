@@ -36,7 +36,7 @@ doPlot.plotMap <- function(p, plotRequest, plotData) {
               aes(long, lat, group=group),
               colour="gray50") +
     coord_map("stereographic", xlim=c(x1, x2), ylim=c(y1, y2)) +
-    labs(x="lat", y="lon")
+    labs(x="Longitude", y="Latitude")
 }
 
 doMap.plotMap <- function(p, plotRequest, plotData) {
