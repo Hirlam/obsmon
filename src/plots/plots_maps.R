@@ -131,10 +131,9 @@ doMap.mapThreshold <- function(p, plotRequest, plotData) {
   }else{
     plotData$radius=5
   }
-  cm <- colormapContinuous(min(plotData$plotValues),
-                           max(plotData$plotValues))
-  dataPal <- colorNumeric(palette=cm$palette, domain=cm$domain, reverse=cm$reverse)
-  legendPal <- colorNumeric(palette=cm$palette, domain=cm$domain, reverse=!cm$reverse)
+  cm <- getSuitableColorScale(plotData)
+  dataPal <- colorNumeric(palette=cm$palette, domain=cm$domain)
+  legendPal <- colorNumeric(palette=rev(cm$palette), domain=cm$domain)
   clusterOptions <- markerClusterOptions(disableClusteringAtZoom=zoomLevel)
   obMap <- leaflet(plotData) %>%
     addProviderTiles("Esri.WorldStreetMap",
@@ -239,12 +238,12 @@ plotBuildQuery.mapThreshold <- function(p, plotRequest) {
 doPlot.mapThreshold <- function(p, plotRequest, plotData) {
   minval <- min(plotData$plotValues)
   maxval <- max(plotData$plotValues)
-  cm <- colormapContinuous(minval, maxval)
+  cm <- getSuitableColorScale(plotData)
   NextMethod() +
     geom_point(data=plotData,
                aes(x=longitude, y=latitude, fill=plotValues),
                size=3, shape=21, colour="gray50", alpha=.5, stroke=0.) +
-    scale_fill_distiller(p$dataColumn, type=cm$type, palette=cm$palette,
+    scale_fill_distiller(p$dataColumn, palette=cm$name,
                          direction=cm$direction, limits=cm$domain)
 }
 
@@ -323,17 +322,17 @@ registerPlotType(
 registerPlotCategory("AverageMaps")
 
 mapThresholdWithRangeAggregateAndApplyFunction <-
-  function(plotter, plotData, FUN='mean', 
+  function(plotter, plotData, FUN='mean',
     aggregateBy=c("statid", "latitude", "longitude", "level")
   ) {
-  # Grouping data by the colnames specified in aggregateBy, 
+  # Grouping data by the colnames specified in aggregateBy,
   # then applying function FUN within each group
   if(isTRUE(nrow(plotData)>0)) {
     aggregateByList = plotData[, aggregateBy]
-    columnsNotToBeAggreg <- which(colnames(plotData) %in% 
+    columnsNotToBeAggreg <- which(colnames(plotData) %in%
                                 c("DTG", aggregateBy)
                               )
-    plotData <- aggregate(plotData[, -columnsNotToBeAggreg], 
+    plotData <- aggregate(plotData[, -columnsNotToBeAggreg],
                   by=aggregateByList,
                   FUN=FUN,
                   na.rm=TRUE
@@ -346,7 +345,7 @@ mapThresholdWithRangeAggregateAndApplyFunction <-
 postProcessQueriedPlotData.mapThresholdWithRangeAvgs <-
   function(plotter, plotData) {
     mapThresholdWithRangeAggregateAndApplyFunction(
-      plotter, plotData, FUN="mean", 
+      plotter, plotData, FUN="mean",
       aggregateBy=c("statid", "latitude", "longitude", "level")
   )
 }

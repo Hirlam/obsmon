@@ -48,6 +48,7 @@ tryCatch(
     suppressPackageStartupMessages(library(png))
     suppressPackageStartupMessages(library(pryr))
     suppressPackageStartupMessages(library(promises))
+    suppressPackageStartupMessages(library(RColorBrewer))
     suppressPackageStartupMessages(library(RcppTOML))
     suppressPackageStartupMessages(library(reshape2))
     suppressPackageStartupMessages(library(shiny))
