@@ -25,14 +25,6 @@ plotTitle.plotMap <- function(p, plotRequest, plotData) {
   return(title)
 }
 
-# Disable interactivity for maps plots.
-# These do not look good after conversion using ggplotly.
-plotGenerate.plotMap <- function(
-  p, plotRequest, plotData, interactive
-) {
-  plotGenerate.default(p, plotRequest, plotData, interactive=FALSE)
-}
-
 doPlot.plotMap <- function(p, plotRequest, plotData) {
   x1 <- min(plotData$longitude)-2
   x2 <- max(plotData$longitude)+2
@@ -44,6 +36,46 @@ doPlot.plotMap <- function(p, plotRequest, plotData) {
               colour="gray50") +
     coord_map("stereographic", xlim=c(x1, x2), ylim=c(y1, y2)) +
     labs(x="Longitude", y="Latitude")
+}
+
+doPlotly.plotMap <- function(p, plotRequest, plotData) {
+  myPlotly <- plot_geo(
+    data=plotData, lat=~latitude, lon =~longitude,
+    # These maps look better wirh a 1:1 aspect
+    height=plotDimensions$height, width=plotDimensions$height
+  ) %>%
+    layout(
+      autosize=FALSE,
+      margin = list(t=130, b=5, l=10, r=5),
+      showlegend = TRUE,
+      legend = list(
+        orientation="v", yanchor="center", y=0.5, xanchor="left", x=1.01
+      ),
+      geo = list(
+        # See <https://plot.ly/r/reference/#layout-geo>
+        resolution = 50,
+        showland = TRUE,
+        showlakes = TRUE,
+        showcountries=TRUE,
+        landcolor = toRGB("grey98"),
+        countrycolor = toRGB("grey50"),
+        lakecolor = toRGB("white"),
+        projection = list(type="stereographic"),
+        coastlinewidth = 0.5,
+        countrywidth = 0.5,
+        lataxis = list(
+          range = range(plotData$latitude) + c(-1, 1),
+          showgrid = TRUE,
+          dtick = 10
+        ),
+        lonaxis = list(
+          range = range(plotData$longitude) + c(-2, 2),
+          showgrid = TRUE,
+          dtick = 15
+        )
+      )
+    )
+  return(myPlotly)
 }
 
 doMap.plotMap <- function(p, plotRequest, plotData) {
@@ -227,6 +259,49 @@ doPlot.mapUsage <- function(p, plotRequest, plotData) {
                                  "Blacklisted"="black", "NA"="grey"))
 }
 
+doPlotly.mapUsage <- function(p, plotRequest, plotData) {
+  status <- rep("NA", nrow(plotData))
+  status <- ifelse(plotData$anflag == 0, "Rejected", status)
+  status <- ifelse(plotData$active  > 0, "Active", status)
+  status <- ifelse(plotData$rejected > 0, "Rejected", status)
+  status <- ifelse(plotData$passive > 0, "Passive", status)
+  status <- ifelse(plotData$blacklisted > 0, "Blacklisted", status)
+  status <- ifelse(plotData$anflag  > 0, "Active(2)", status)
+  status <- ifelse(plotData$anflag == 4, "Rejected", status)
+  status <- ifelse(plotData$anflag == 8, "Blacklisted", status)
+  plotData$status <- status
+
+  colors <- c(
+    "Active"="green", "Active(2)"="blue",
+    "Rejected"="red", "Passive"="magenta3",
+    "Blacklisted"="black", "NA"="grey"
+  )
+
+  myPlotly <- NextMethod()
+  myPlotly <- myPlotly %>%
+    add_markers(
+      data=plotData[rev(order(status)),],
+      text=~paste(
+        paste("Station:", statLabel),
+        sprintf("Coords: (%.3f\u00B0, %.3f\u00B0)", longitude, latitude),
+        paste("Anflag:", anflag),
+        paste("Status:", status),
+        sep="<br />"
+      ),
+      marker = list(
+        line = list(
+          color = 'black',
+          width = 1,
+          opacity=0.5
+        )
+      ),
+      symbol=~status, color=~status, colors=colors, size=2,
+      hoverinfo="text"
+    )
+
+  return(myPlotly)
+}
+
 registerPlotType(
     "Maps",
     plotCreate(c("mapUsage", "plotMap"),
@@ -252,6 +327,37 @@ doPlot.mapThreshold <- function(p, plotRequest, plotData) {
                size=3, shape=21, colour="gray50", alpha=.5, stroke=0.) +
     scale_fill_distiller(p$dataColumn, palette=cm$name,
                          direction=cm$direction, limits=cm$domain)
+}
+
+doPlotly.mapThreshold <- function(p, plotRequest, plotData) {
+  cm <- getSuitableColorScale(plotData)
+  myPlotly <- NextMethod()
+  myPlotly <- myPlotly %>%
+    add_markers(
+      text=~paste(
+        paste("Station:", statLabel),
+        paste("Level:", level),
+        sprintf("Coords: (%.3f\u00B0, %.3f\u00B0)", longitude, latitude),
+        sprintf("%s: %s", p$dataColumn, plotValues),
+        sep="<br />"
+      ),
+      size=2, color=~plotValues, colors=cm$palette,
+      marker = list(
+        line = list(
+          color = 'black',
+          width = 1,
+          opacity=0.5
+        )
+      ),
+      hoverinfo="text"
+    ) %>%
+    colorbar(
+      limits=cm$domain,
+      title=p$dataColumn,
+      yanchor="center", y=0.5,
+      xanchor="left", x=1.0
+    )
+  return(myPlotly)
 }
 
 registerPlotType(
