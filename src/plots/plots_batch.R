@@ -84,7 +84,7 @@ makeOneMultiPlotInBatch <- function(mpConf, exptDb) {
   # Making the plots
   plots <- prepareMultiPlots(
     plotter=plotTypesFlat[[mpConf$plotType]],
-    inputsForAllPlots=inputsForAllPlots, db=exptDb
+    inputsForAllPlots=inputsForAllPlots, interactive=FALSE, db=exptDb
   )
 
   fileType <- bmConf$fileType

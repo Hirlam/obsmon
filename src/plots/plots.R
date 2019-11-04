@@ -1,3 +1,5 @@
+plotDimensions <- list(height=750, width=1200)
+
 levelsLableForPlots <- function(obnumber, varname=character(0)) {
   strObnumber <- as.character(obnumber)
   obstype <- getAttrFromMetadata("category", obnumber=obnumber)
@@ -21,13 +23,10 @@ coord_flip_wrapper <- function(..., default=FALSE) {
   return(cf)
 }
 
-plotCanBeMadeInteractive <- function(myPlot) {
+plotIsPlotly <- function(myPlot) {
   # To be used in the server logic to determine whether to use regular
   # (non-interactive) or plotly (interactive) plot outputs.
-  # When using CoordMap in ggplot2, conversion to plotly makes the projections
-  # look a bit weird -- hence the restriction on CoordMap below.
-  rtn <- ("plotly" %in% class(myPlot) || is.ggplot(myPlot)) &&
-    !("CoordMap" %in% class(myPlot$coordinates))
+  rtn <- any(c("plotly", "plotlyhtmlwidget") %in% class(myPlot))
   return(rtn)
 }
 
@@ -162,25 +161,42 @@ putLabelsInStations <- function(stations=NULL, obname=NULL) {
 
 # Define generics
 plotBuildQuery <- function(p, plotRequest) UseMethod ("plotBuildQuery")
-plotGenerate <- function(p, plotRequest, plotData) UseMethod("plotGenerate")
+plotGenerate <- function(p, plotRequest, plotData, interactive) UseMethod("plotGenerate")
 plotIsApplicable <- function(p, criteria) UseMethod("plotIsApplicable")
 plotTitle <- function(p, plotRequest, plotData) UseMethod("plotTitle")
 doMap <- function(p, plotRequest, plotData) UseMethod("doMap")
 doPlot <- function(p, plotRequest, plotData) UseMethod("doPlot")
+doPlotly <- function(p, plotRequest, plotData) UseMethod("doPlotly")
 
 # Provide defaults
+doPlotly.default <- function(p, plotRequest, plotData) {
+  # Generate a regular ggplot2 plot and then use plotly's
+  # ggplotly function to convert it to a plotly object
+  ggplotPlot <- doPlot(p, plotRequest, plotData)
+  plotlyPlot <- ggplotly(ggplotPlot,
+    tooltip=c("x","y"),
+    height=plotDimensions$height, width=plotDimensions$width
+  ) %>%
+    layout(
+      autosize=FALSE,
+      margin=list(t=100),
+      legend=list(orientation="v", yanchor="center", y=0.5)
+    )
+  return(plotlyPlot)
+}
+
 plotBuildQuery.default <- function(p, plotRequest) {
   sprintf(p$queryStub, buildWhereClause(plotRequest$criteria))
 }
 
-plotGenerate.default <- function(p, plotRequest, plotData) {
+plotGenerate.default <- function(p, plotRequest, plotData, interactive) {
   if (plotRequest$criteria$obnumber==7 && ("level" %in% colnames(plotData))) {
     names(plotData)[names(plotData)=="level"] <- "channel"
   }
   result <- list(title=plotTitle(p, plotRequest, plotData))
   if(length(result$title)==0) flog.warn("plotGenerate: Empty plot title")
   if (!isTRUE(nrow(plotData)>0)) {
-    result$obmap=NULL
+    result$obmap <- NULL
     if(is.null(plotData)) {
       msg <- paste0(
         "Could not produce plot: ",
@@ -194,8 +210,20 @@ plotGenerate.default <- function(p, plotRequest, plotData) {
       textGrob(msg)
     )
   } else {
-    result$obplot <- doPlot(p, plotRequest, plotData)
     result$obmap <- doMap(p, plotRequest, plotData)
+    result$obplot <- NULL
+    if(interactive) {
+      result$obplot <- tryCatch(
+        doPlotly(p, plotRequest, plotData),
+        error=function(e){
+          flog.warn('plotGenerate: Failure making plot "%s" interactive: %s',
+            p$name, e
+          )
+          return(NULL)
+        }
+      )
+    }
+    if(is.null(result$obplot)) result$obplot <- doPlot(p,plotRequest,plotData)
   }
   result
 }
@@ -303,7 +331,7 @@ plotsBuildCriteria <- function(input) {
   return(res)
 }
 # Perform plotting
-preparePlots <- function(plotter, plotRequest, db) {
+preparePlots <- function(plotter, plotRequest, db, interactive=TRUE) {
   tryCatch({
     isWindspeed <- "varname" %in% names(plotRequest$criteria) &&
       plotRequest$criteria$varname %in% c("ff", "ff10m")
@@ -330,7 +358,7 @@ preparePlots <- function(plotter, plotRequest, db) {
       plotData$statLabel <- names(stations)
     }
 
-    res <- plotGenerate(plotter, plotRequest, plotData)
+    res <- plotGenerate(plotter,plotRequest,plotData,interactive=interactive)
     res[["queryUsed"]] <- query
     res[["plotData"]] <- plotData
     return(res)

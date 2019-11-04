@@ -25,6 +25,13 @@ plotTitle.plotMap <- function(p, plotRequest, plotData) {
   return(title)
 }
 
+# Disable interactivity for maps plots.
+# These do not look good after conversion using ggplotly.
+plotGenerate.plotMap <- function(
+  p, plotRequest, plotData, interactive
+) {
+  plotGenerate.default(p, plotRequest, plotData, interactive=FALSE)
+}
 
 doPlot.plotMap <- function(p, plotRequest, plotData) {
   x1 <- min(plotData$longitude)-2

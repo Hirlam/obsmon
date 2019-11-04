@@ -119,7 +119,7 @@ multiPlotsMakeShinyInputs <- function(pConfig) {
 }
 
 prepareMultiPlots <- function(
-  plotter, inputsForAllPlots, db, progressFile=NULL
+  plotter, inputsForAllPlots, db, interactive=FALSE, progressFile=NULL
 ) {
   allPlots <- list()
   for(iPlot in seq_along(inputsForAllPlots)) {
@@ -137,7 +137,7 @@ prepareMultiPlots <- function(
    plotRequest$criteria <- plotsBuildCriteria(qpInput)
 
    newPlot <- tryCatch({
-       preparePlots(plotter, plotRequest, db)
+       preparePlots(plotter, plotRequest, db, interactive=interactive)
      },
      error=function(e) {flog.error(e); NULL}
    )

@@ -1,6 +1,6 @@
 registerPlotCategory("Diagnostic")
 
-statisticsPanel <- function(data, column, bw, fill) {
+statisticsPanel <- function(data, column, bw, fill, interactive=FALSE) {
   columnName <- substitute(column)
   eval(substitute({
     hist <- ggplot(data) +
@@ -31,7 +31,18 @@ plotTitle.plotDiagnostic <- function(p, plotRequest, plotData) {
   return(title)
 }
 
-doPlot.plotDiagnostic <- function(p, plotRequest, plotData) {
+# Disable interactivity for "Station Diagnostics" plots.
+# Cannot be directly converted from ggplot to plotly due to the use of
+# grid.arrange
+plotGenerate.plotDiagnostic <- function(
+  p, plotRequest, plotData, interactive
+) {
+  plotGenerate.default(p, plotRequest, plotData, interactive=FALSE)
+}
+
+doPlot.plotDiagnostic <- function(
+  p, plotRequest, plotData, interactive=FALSE
+) {
   info <- list()
   info$labels <- c("obs"="Observation",
                    "fg"="First Guess",

@@ -101,7 +101,7 @@ observeEvent(input$doPlot, {
         js$enableTab("mapTab")
       }
       # (ii) Interactive or regular plot tabs
-      interactive <- plotCanBeMadeInteractive(value$plots$obplot)
+      interactive <- plotIsPlotly(value$plots$obplot)
       shinyjs::toggle(
         condition=interactive, selector="#mainArea li a[data-value=plotlyTab]"
       )
@@ -175,22 +175,28 @@ output$queryAndTableContainer <- renderUI(
 # (i.i) Interactive plot, if plot supports it
 output$plotly <- renderPlotly({
   myPlot <- readyPlot()$obplot
-  req(plotCanBeMadeInteractive(myPlot))
+  req(plotIsPlotly(myPlot))
   notifId <- showNotification(
     "Rendering plot...", duration=NULL, type="message"
   )
   on.exit(removeNotification(notifId))
   # Convert ggplot object to plotly and customise
   # See <https://plotly-r.com/control-modebar.html>
-  myPlot <- ggplotly(req(myPlot), tooltip = c("x","y")) %>%
+  myPlot <- req(myPlot) %>%
     config(
-      displaylogo=FALSE, collaborate=FALSE, cloud=FALSE,
+      # See all config options at
+      # <https://github.com/plotly/plotly.js/blob/master/src/plot_api/plot_config.js>
+      displaylogo=FALSE, cloud=FALSE,
       scrollZoom=TRUE,
       toImageButtonOptions = list(
         filename="obsmon_plot",
-        format="png",
-        width=1280,
-        height=720
+        format="png"
+      ),
+      # Decide what users can or cannot edit
+      editable=TRUE,
+      edits=list(
+        titleText=FALSE,
+        shapePosition=FALSE
       )
     )
   myPlot <- addTitleToPlot(myPlot, readyPlot()$title)
@@ -198,7 +204,7 @@ output$plotly <- renderPlotly({
 })
 # (i.ii) Non-interactive plot, if plot does not support interactivity
 output$plot <- renderPlot({
-  req(!plotCanBeMadeInteractive(readyPlot()$obplot))
+  req(!plotIsPlotly(readyPlot()$obplot))
   if(!is.null(readyPlot()$obplot)) {
     notifId <- showNotification(
       "Rendering plot...", duration=NULL, type="message"

@@ -122,6 +122,7 @@ observeEvent(input$multiPlotsDoPlot, {
     args=list(
       plotter=plotTypesFlat[[pConfig$plotType]],
       inputsForAllPlots=inputsForAllPlots, db=db,
+      interactive=obsmonConfig$general$multiPlotsEnableInteractivity,
       progressFile=multiPlotsProgressFile()
     )
   )
@@ -200,7 +201,7 @@ output$multiPlotsPlotContainer <- renderUI({
   plotOutList <- lapply(seq_along(multiPlot()), function(iPlot) {
     if(
       isTRUE(obsmonConfig$general$multiPlotsEnableInteractivity) &&
-      plotCanBeMadeInteractive(multiPlot()[[iPlot]]$obplot)
+      plotIsPlotly(multiPlot()[[iPlot]]$obplot)
     ) {
       plotlyOutputInsideFluidRow(multiPlotsGenId(iPlot, type="plot"))
     } else {
@@ -252,7 +253,7 @@ observeEvent(multiPlot(), {
       plotOutId <- multiPlotsGenId(iPlot, type="plot")
       if(
         isTRUE(obsmonConfig$general$multiPlotsEnableInteractivity) &&
-        plotCanBeMadeInteractive(multiPlot()[[pName]]$obplot)
+        plotIsPlotly(multiPlot()[[pName]]$obplot)
       ) {
         output[[plotOutId]] <- renderPlotly({
           myPlot <- multiPlot()[[pName]]$obplot
