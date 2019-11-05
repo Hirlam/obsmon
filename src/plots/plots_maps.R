@@ -40,13 +40,14 @@ doPlot.plotMap <- function(p, plotRequest, plotData) {
 
 doPlotly.plotMap <- function(p, plotRequest, plotData) {
   myPlotly <- plot_geo(
-    data=plotData, lat=~latitude, lon =~longitude,
-    # These maps look better wirh a 1:1 aspect
-    height=plotlySaveAsFigDimensions$height, width=plotlySaveAsFigDimensions$height
+    data=plotData, lat=~latitude, lon =~longitude
   ) %>%
     layout(
-      autosize=FALSE,
-      margin = list(t=130, b=5, l=10, r=5),
+      margin = list(
+        t=130, # To leave space for the title
+        b=10, # Looks better when figure is exported
+        l=175, r=175 # To prevent legend from ending up too far away from plot
+      ),
       showlegend = TRUE,
       legend = list(
         orientation="v", yanchor="center", y=0.5, xanchor="left", x=1.01

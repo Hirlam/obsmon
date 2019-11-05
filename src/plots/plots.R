@@ -174,8 +174,7 @@ doPlotly.default <- function(p, plotRequest, plotData) {
   # ggplotly function to convert it to a plotly object
   ggplotPlot <- doPlot(p, plotRequest, plotData)
   plotlyPlot <- ggplotly(ggplotPlot,
-    tooltip=c("x","y"),
-    height=plotlySaveAsFigDimensions$height, width=plotlySaveAsFigDimensions$width
+    tooltip=c("x","y")
   ) %>%
     layout(
       margin=list(t=100),
