@@ -42,7 +42,7 @@ doPlotly.plotMap <- function(p, plotRequest, plotData) {
   myPlotly <- plot_geo(
     data=plotData, lat=~latitude, lon =~longitude,
     # These maps look better wirh a 1:1 aspect
-    height=plotDimensions$height, width=plotDimensions$height
+    height=plotlySaveAsFigDimensions$height, width=plotlySaveAsFigDimensions$height
   ) %>%
     layout(
       autosize=FALSE,

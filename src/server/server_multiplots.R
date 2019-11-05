@@ -265,8 +265,8 @@ observeEvent(multiPlot(), {
               toImageButtonOptions = list(
                 filename=sprintf("obsmon_multiPlot_%s", iPlot),
                 format="png",
-                width=1280,
-                height=720
+                height=plotlySaveAsFigDimensions$height,
+                width=plotlySaveAsFigDimensions$width
               )
             )
           myPlot <- addTitleToPlot(myPlot, multiPlot()[[pName]]$title)

@@ -190,7 +190,9 @@ output$plotly <- renderPlotly({
       scrollZoom=TRUE,
       toImageButtonOptions = list(
         filename="obsmon_plot",
-        format="png"
+        format="png",
+        height=plotlySaveAsFigDimensions$height,
+        width=plotlySaveAsFigDimensions$width
       ),
       # Decide what users can or cannot edit
       editable=TRUE,

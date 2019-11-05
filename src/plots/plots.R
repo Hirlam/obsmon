@@ -1,4 +1,4 @@
-plotDimensions <- list(height=750, width=1200)
+plotlySaveAsFigDimensions <- list(height=755, width=1200)
 
 levelsLableForPlots <- function(obnumber, varname=character(0)) {
   strObnumber <- as.character(obnumber)
@@ -70,7 +70,7 @@ addTitleToPlot <- function(myPlot, title) {
     }
     },
     error=function(e) {
-      flog.error("(addTitleToPlot) Problems setting plot title: %s", e)
+      flog.error("addTitleToPlot: Problems setting plot title: %s", e)
       myPlot
     }
   )
@@ -175,10 +175,9 @@ doPlotly.default <- function(p, plotRequest, plotData) {
   ggplotPlot <- doPlot(p, plotRequest, plotData)
   plotlyPlot <- ggplotly(ggplotPlot,
     tooltip=c("x","y"),
-    height=plotDimensions$height, width=plotDimensions$width
+    height=plotlySaveAsFigDimensions$height, width=plotlySaveAsFigDimensions$width
   ) %>%
     layout(
-      autosize=FALSE,
       margin=list(t=100),
       legend=list(orientation="v", yanchor="center", y=0.5)
     )
