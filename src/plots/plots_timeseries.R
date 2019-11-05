@@ -22,7 +22,8 @@ doPlot.plotTimeseries <- function(p, plotRequest, plotData,
                aes(x=DTG, y=value, shape=variable, colour=variable, fill=variable),
                na.rm=TRUE) +
     labs(x="DATE") +
-    facet_wrap(wrapVariable, labeller=label_both)
+    facet_wrap(wrapVariable, labeller=label_both) +
+    theme(legend.title=element_blank())
   if (!is.null(shapes)) {
     obplot <- obplot +
       scale_shape_manual(values=shapes)
