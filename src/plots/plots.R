@@ -49,22 +49,20 @@ addTitleToPlot <- function(myPlot, title) {
     if(is.ggplot(myPlot)) {
       myPlot + ggtitle(title) + theme(plot.title=element_text(hjust=0.5))
     } else if("plotly" %in% class(myPlot)) {
-      # ggplotly in (plotly v4.8.0) has an issue that causes multiline titles
-      # to overlap with graphs. As a workaround, we use annotations instead of
-      # titles, and add a margin at the top which is proportional to the
-      # number of lines in the title. Not very practical, but plotly does not
-      # seem to have a native solution for this.
-      nLineBreaks <- str_count(title, "\n")
+      yTitle <- attr(myPlot, "yTitle")
+      if(is.null(yTitle)) yTitle <- 1.0
+      # Use an annotation instead of an actual title, as otherwise plotly
+      # will fail to put it in the correct position without overlaps (and
+      # it also won't allow users to change the position of the text)
       myPlot %>% add_annotations(
-        yref="paper",
-        xref="paper",
-        yanchor = "bottom",
-        y=1.035,
-        x=0.5,
-        text=title,
-        showarrow=F,
-        font=list(size=20)
-      ) %>% layout(title=FALSE, margin=list(t=(50 + nLineBreaks*27.5)))
+          text=title,
+          showarrow=FALSE,
+          font=list(size=20),
+          xref="paper", xanchor="center", x=0.5,
+          # Push y a bit above 1 as, otherwise, the title may overlap with the
+          # plot when using ggplotly on a ggplot object containing facet_wraps
+          yref="paper", yanchor="bottom", y=yTitle
+      ) %>% layout(title=FALSE)
     } else {
       grid.arrange(myPlot, top=textGrob(title, gp=gpar(fontsize=13)))
     }

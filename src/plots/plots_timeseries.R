@@ -38,6 +38,27 @@ doPlot.plotTimeseries <- function(p, plotRequest, plotData,
   obplot
 }
 
+doPlotly.plotTimeseries <- function(p, plotRequest, plotData) {
+  myPlotly <- doPlotly.default(p, plotRequest, plotData)
+  myPlotly <- myPlotly %>%
+    layout(
+      margin=list(
+        l=75 # Prevent y-axis label from being cut out
+      )
+    ) %>%
+    config(
+      edits=list(
+        axisTitleText=FALSE
+      )
+    )
+  # This parameter will be used in addTitleToPlot in order to
+  # prevent the title from overlapping with the plot. ggplotly
+  # seems to have issues when the original ggplot has facte_wraps.
+  attr(myPlotly, "yTitle") <- 1.0375
+  return(myPlotly)
+}
+
+
 registerPlotType(
     "Timeseries",
     plotCreate("plotTimeseries", "Number of Observations", "range",
