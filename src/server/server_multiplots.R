@@ -256,26 +256,18 @@ observeEvent(multiPlot(), {
         plotIsPlotly(multiPlot()[[pName]]$obplot)
       ) {
         output[[plotOutId]] <- renderPlotly({
-          myPlot <- multiPlot()[[pName]]$obplot
-          # Convert ggplot object to plotly and customise
-          myPlot <- ggplotly(req(myPlot), tooltip = c("x","y")) %>%
-            config(
-              displaylogo=FALSE, collaborate=FALSE, cloud=FALSE,
-              scrollZoom=TRUE,
-              toImageButtonOptions = list(
-                filename=sprintf("obsmon_multiPlot_%s", iPlot),
-                format="png",
-                height=plotlySaveAsFigDimensions$height,
-                width=plotlySaveAsFigDimensions$width
+          req(multiPlot()[[pName]]$obplot) %>%
+            configPlotlyWrapper(
+              toImageButtonOptions=list(
+                filename=sprintf("obsmon_multiPlot_%s", iPlot)
               )
-            )
-          myPlot <- addTitleToPlot(myPlot, multiPlot()[[pName]]$title)
-          myPlot
+            ) %>%
+            addTitleToPlot(multiPlot()[[pName]]$title)
         })
       } else {
         output[[plotOutId]] <- renderPlot({
-          myPlot <- multiPlot()[[pName]]
-          addTitleToPlot(req(myPlot$obplot), myPlot$title)
+          req(multiPlot()[[pName]]$obplot) %>%
+            addTitleToPlot(multiPlot()[[pName]]$title)
         },
            res=96, pointsize=18
         )

@@ -172,58 +172,28 @@ output$queryAndTableContainer <- renderUI(
 
 # Rendering plot/map/dataTable
 # (i) Rendering plots
-# (i.i) Interactive plot, if plot supports it
+# (i.i) Interactive plot, if plot is a plotly object
 output$plotly <- renderPlotly({
-  myPlot <- readyPlot()$obplot
-  req(plotIsPlotly(myPlot))
+  req(plotIsPlotly(readyPlot()$obplot))
   notifId <- showNotification(
     "Rendering plot...", duration=NULL, type="message"
   )
   on.exit(removeNotification(notifId))
-  # Convert ggplot object to plotly and customise
-  # See <https://plotly-r.com/control-modebar.html>
-  myPlot <- req(myPlot) %>%
-    config(
-      # See all config options at
-      # <https://github.com/plotly/plotly.js/blob/master/src/plot_api/plot_config.js>
-      displaylogo=FALSE, cloud=FALSE,
-      scrollZoom=TRUE,
-      toImageButtonOptions = list(
-        filename="obsmon_plot",
-        format="png",
-        height=plotlySaveAsFigDimensions$height,
-        width=plotlySaveAsFigDimensions$width
-      ),
-      # Decide what users can or cannot edit
-      editable=TRUE,
-      edits=list(
-        titleText=FALSE,
-        shapePosition=FALSE
-      )
-    )
-  myPlot <- addTitleToPlot(myPlot, readyPlot()$title)
-  myPlot
+  readyPlot()$obplot %>%
+    configPlotlyWrapper() %>%
+    addTitleToPlot(readyPlot()$title)
 })
-# (i.ii) Non-interactive plot, if plot does not support interactivity
+# (i.ii) Non-interactive plot, if plot is not a plotly object
 output$plot <- renderPlot({
+  if(is.null(readyPlot()$obplot)) return(NULL)
   req(!plotIsPlotly(readyPlot()$obplot))
-  if(!is.null(readyPlot()$obplot)) {
-    notifId <- showNotification(
-      "Rendering plot...", duration=NULL, type="message"
-    )
-    on.exit(removeNotification(notifId))
-  }
-  # Add title to plot
-  myPlot <- tryCatch(
-    grid.arrange(readyPlot()$obplot, top=textGrob(readyPlot()$title)),
-    error=function(e) {
-      if(!is.null(readyPlot()$obplot)) {
-        flog.error("Problems setting plot title: %s", e)
-      }
-      readyPlot()$obplot
-    }
+
+  notifId <- showNotification(
+    "Rendering plot...", duration=NULL, type="message"
   )
-  addTitleToPlot(readyPlot()$obplot, readyPlot()$title)
+  on.exit(removeNotification(notifId))
+
+  readyPlot()$obplot %>% addTitleToPlot(readyPlot()$title)
 },
   res=96, pointsize=18
 )

@@ -30,6 +30,47 @@ plotIsPlotly <- function(myPlot) {
   return(rtn)
 }
 
+configPlotlyWrapper <- function(...) {
+  # Wrapper to plotly's config function, with some useful defaults
+  # For a list of all config options, please visit
+  # <https://github.com/plotly/plotly.js/blob/master/src/plot_api/plot_config.js>
+  # Se allso <https://plotly-r.com/control-modebar.html>
+  argList <- list(...)
+  argNames <- names(argList)
+  if(!("displaylogo" %in% argNames)) argList$displaylogo <- FALSE
+  if(!("cloud" %in% argNames)) argList$cloud <- FALSE
+  if(!("scrollZoom" %in% argNames)) argList$scrollZoom <- TRUE
+
+  # Defaults for what users are allowed to edit in the plots
+  if(!("editable" %in% argNames)) argList$editable <- TRUE
+  editsOpts <- list(
+    titleText=FALSE,
+    shapePosition=FALSE
+  )
+  if("edits" %in% argNames) {
+    for(name in names(argList$edits)) {
+      editsOpts[[name]] <- argList$edits[[name]]
+    }
+  }
+  argList$edits <- editsOpts
+
+  # Defaults for saving figures
+  toImageButtonOpts <- list(
+    filename="obsmon_plot",
+    format="png",
+    height=plotlySaveAsFigDimensions$height,
+    width=plotlySaveAsFigDimensions$width
+  )
+  if("toImageButtonOptions" %in% argNames) {
+    for(name in names(argList$toImageButtonOptions)) {
+      toImageButtonOpts[[name]] <- argList$toImageButtonOptions[[name]]
+    }
+  }
+  argList$toImageButtonOptions <- toImageButtonOpts
+
+  return(do.call(config, argList))
+}
+
 getStationsForPlotTitle <- function(plotRequest, plotData, limit=5) {
   crit <- plotRequest$criteria
   if(length(crit$station)==0) {

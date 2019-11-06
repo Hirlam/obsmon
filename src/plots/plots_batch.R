@@ -93,7 +93,7 @@ makeOneMultiPlotInBatch <- function(mpConf, exptDb) {
       '  > multiPlot "%s": Saving plot %d of %d...',
       mpConf$displayName, iPlt, length(plots)
     )
-    plot <- addTitleToPlot(plots[[iPlt]]$obplot, plots[[iPlt]]$title)
+    plot <- plots[[iPlt]]$obplot %>% addTitleToPlot(plots[[iPlt]]$title)
     fName <- file.path(dirPath, sprintf("plot_%s.%s",iPlt,bmConf$fileType))
     ggsave(
       filename=fName, plot=plot, device=bmConf$fileType,
