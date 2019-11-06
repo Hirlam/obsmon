@@ -44,7 +44,7 @@ doPlotly.plotMap <- function(p, plotRequest, plotData) {
   ) %>%
     layout(
       margin = list(
-        t=130, # To leave space for the title
+        t=100, # To leave space for the title
         b=10, # Looks better when figure is exported
         l=175, r=175 # To prevent legend from ending up too far away from plot
       ),
@@ -214,8 +214,12 @@ doMap.mapUsage <- function(p, plotRequest, plotData) {
   pal <- colorFactor(c("green", "blue", "black", "grey", "magenta3", "red"),
                      domain=c("Active", "Active(2)",
                               "Blacklisted", "NA", "Passive", "Rejected"))
-  plotData$popup <- paste("Station: ", plotData$statLabel, "<br>Anflag: ",
-                          plotData$anflag, "<br>Status:", plotData$status)
+  plotData$popup <- paste(
+                      "Station: ", plotData$statLabel,
+                      "<br>Level: ", plotData$level,
+                      "<br>Anflag: ", plotData$anflag,
+                      "<br>Status:", plotData$status
+                    )
   clusterOptions <- markerClusterOptions(disableClusteringAtZoom=zoomLevel)
   obMap <- leaflet(data=plotData[rev(order(status)),]) %>%
     addProviderTiles("Esri.WorldStreetMap",
@@ -284,6 +288,7 @@ doPlotly.mapUsage <- function(p, plotRequest, plotData) {
       data=plotData[rev(order(status)),],
       text=~paste(
         paste("Station:", statLabel),
+        paste("Level:", level),
         sprintf("Coords: (%.3f\u00B0, %.3f\u00B0)", longitude, latitude),
         paste("Anflag:", anflag),
         paste("Status:", status),
@@ -308,7 +313,7 @@ registerPlotType(
     plotCreate(c("mapUsage", "plotMap"),
                "Observation Usage", "single",
                paste("SELECT",
-                     "latitude, longitude, statid,",
+                     "latitude, longitude, level, statid,",
                      "active, rejected, passive, blacklisted, anflag, obsvalue",
                      "FROM usage WHERE %s"),
                list("obnumber", "obname"))
@@ -339,7 +344,7 @@ doPlotly.mapThreshold <- function(p, plotRequest, plotData) {
         paste("Station:", statLabel),
         paste("Level:", level),
         sprintf("Coords: (%.3f\u00B0, %.3f\u00B0)", longitude, latitude),
-        sprintf("%s: %s", p$dataColumn, plotValues),
+        paste0(p$dataColumn, ": ", signif(plotValues, digits=5)),
         sep="<br />"
       ),
       size=2, color=~plotValues, colors=cm$palette,
