@@ -204,6 +204,9 @@ configGeneralFillInDefaults <- function(config) {
   config <- configGeneralFillInDefault(config, "maxAvgQueriesPerProc", Inf)
   config <- configGeneralFillInDefault(config, "showCacheOptions", FALSE)
   config <- configGeneralFillInDefault(
+    config, "plotsEnableInteractivity", TRUE
+  )
+  config <- configGeneralFillInDefault(
     config, "multiPlotsEnableInteractivity", FALSE
   )
   config <- configGeneralFillInDefault(config, "sessionTimeout", Inf)

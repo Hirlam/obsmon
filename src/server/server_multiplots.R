@@ -122,7 +122,7 @@ observeEvent(input$multiPlotsDoPlot, {
     args=list(
       plotter=plotTypesFlat[[pConfig$plotType]],
       inputsForAllPlots=inputsForAllPlots, db=db,
-      interactive=obsmonConfig$general$multiPlotsEnableInteractivity,
+      interactive=isTRUE(obsmonConfig$general$multiPlotsEnableInteractivity),
       progressFile=multiPlotsProgressFile()
     )
   )

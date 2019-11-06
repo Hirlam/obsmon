@@ -76,7 +76,10 @@ observeEvent(input$doPlot, {
   # Prepare plot asyncronously
   newFutPlotAndOutput <- futureCall(
     FUN=preparePlotsCapturingOutput,
-    args=list(plotter=plotter, plotRequest=plotRequest, db=db)
+    args=list(
+      plotter=plotter, plotRequest=plotRequest, db=db,
+      interactive=isTRUE(obsmonConfig$general$plotsEnableInteractivity)
+    )
   )
   plotPID <- newFutPlotAndOutput$job$pid
   currentPlotPid(plotPID)

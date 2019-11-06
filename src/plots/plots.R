@@ -381,7 +381,7 @@ plotsBuildCriteria <- function(input) {
   return(res)
 }
 # Perform plotting
-preparePlots <- function(plotter, plotRequest, db, interactive=TRUE) {
+preparePlots <- function(plotter, plotRequest, db, interactive) {
   tryCatch({
     isWindspeed <- "varname" %in% names(plotRequest$criteria) &&
       plotRequest$criteria$varname %in% c("ff", "ff10m")
