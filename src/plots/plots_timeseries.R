@@ -12,8 +12,24 @@ doPlot.plotTimeseries <- function(p, plotRequest, plotData,
         wrapVariable <- "level"
       }
   )
+
+  # Filtering out data so that we don't end up with facets for which
+  # all nobs equal zero.
+  plotDataNobsTotal <- aggregate(
+    list(nobs_total=plotData$nobs_total),
+    by=list(level=plotData[[wrapVariable]]),
+    FUN=sum
+  )
+  levelsToRm <- plotDataNobsTotal$level[plotDataNobsTotal$nobs_total==0]
+  plotData <- plotData[!(plotData[[wrapVariable]] %in% levelsToRm),]
+  if(nrow(plotData)==0) {
+    return(noDataPlot("No plottable data: All nobs are zero."))
+  }
+
   localPlotData <- melt(plotData[!(colnames(plotData) %in% maskColumns)],
                         id=c("DTG", wrapVariable))
+
+
   obplot <- ggplot() +
     geom_line(data=localPlotData,
               aes(x=DTG, y=value, group=variable),
@@ -35,6 +51,10 @@ doPlot.plotTimeseries <- function(p, plotRequest, plotData,
   } else {
     obplot <- obplot +
       scale_colour_brewer(palette="Spectral")
+  }
+  if(length(levels(localPlotData$variable))<2) {
+    # Only show legend when there are at least 2 different variables plotted
+    obplot <- obplot + theme(legend.position = "none")
   }
   obplot
 }
