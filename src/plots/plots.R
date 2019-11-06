@@ -226,6 +226,22 @@ plotBuildQuery.default <- function(p, plotRequest) {
   sprintf(p$queryStub, buildWhereClause(plotRequest$criteria))
 }
 
+noDataPlot <- function(msg) {
+  ggplot() +
+    annotate("text", x=0, y=0, size=8, label=msg) +
+    theme(
+      panel.background = element_rect(fill="grey90"),
+      panel.grid.major = element_blank(),
+      panel.grid.minor = element_blank(),
+      axis.title.x=element_blank(),
+      axis.text.x=element_blank(),
+      axis.ticks.x=element_blank(),
+      axis.title.y=element_blank(),
+      axis.text.y=element_blank(),
+      axis.ticks.y=element_blank()
+    )
+}
+
 plotGenerate.default <- function(p, plotRequest, plotData, interactive) {
   if (plotRequest$criteria$obnumber==7 && ("level" %in% colnames(plotData))) {
     names(plotData)[names(plotData)=="level"] <- "channel"
@@ -242,10 +258,7 @@ plotGenerate.default <- function(p, plotRequest, plotData, interactive) {
     } else {
       msg <- "Query returned no data"
     }
-    result$obplot=grobTree(
-      rectGrob(gp=gpar(col="black", fill="grey90", alpha=0.5)),
-      textGrob(msg)
-    )
+    result$obplot <- noDataPlot(msg)
   } else {
     result$obmap <- doMap(p, plotRequest, plotData)
     result$obplot <- NULL
