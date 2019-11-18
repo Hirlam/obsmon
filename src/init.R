@@ -194,6 +194,7 @@ configGeneralFillInDefaults <- function(config) {
   config <- configGeneralFillInDefault(
     config, "cacheDir", getSuitableCacheDirDefault()
   )
+  config <- configGeneralFillInDefault(config,"stopIfAllSessionsClosed",FALSE)
   config <- configGeneralFillInDefault(config, "logLevel", "WARN")
   config <- configGeneralFillInDefault(config, "initCheckDataExists", FALSE)
   config <- configGeneralFillInDefault(config, "maxExtraParallelProcs",

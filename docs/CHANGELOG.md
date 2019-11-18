@@ -5,6 +5,12 @@ The format is based on [Keep a Changelog](http://keepachangelog.com)
 and this project adheres to [Semantic Versioning](http://semver.org).
 
 
+## [Unreleased]
+### Added
+- Config file option "stopIfAllSessionsClosed"
+- Command-line option "-maxRetriesIfPortBusy"
+
+
 ## [3.6.0] 2019-10-22
 ### Added
 - Issue a notification and mark experiments as unavailable when they
