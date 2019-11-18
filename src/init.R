@@ -194,6 +194,7 @@ configGeneralFillInDefaults <- function(config) {
   config <- configGeneralFillInDefault(
     config, "cacheDir", getSuitableCacheDirDefault()
   )
+  config <- configGeneralFillInDefault(config,"stopIfAllSessionsClosed",FALSE)
   config <- configGeneralFillInDefault(config, "logLevel", "WARN")
   config <- configGeneralFillInDefault(config, "initCheckDataExists", FALSE)
   config <- configGeneralFillInDefault(config, "maxExtraParallelProcs",
@@ -323,6 +324,7 @@ runObsmonStandAlone <- function(cmdLineArgs) {
     runAppHandlingBusyPort(
       appDir=obsmonSrcDir, defaultPort=cmdLineArgs$port,
       launch.browser=cmdLineArgs$launch, quiet=TRUE,
+      maxNAtt=max(cmdLineArgs$maxTcpRetries+1, 1),
       display.mode=displayMode
     )
   }

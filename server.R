@@ -1,5 +1,12 @@
-# Keep track of how many sessions are connected
+# Keep track of how many sessions are connected and, if instructed
+# in the config file, stop execution when all sessions are ended
 sessionsConnected <- reactiveVal(0)
+observeEvent(sessionsConnected(), {
+  req(isTRUE(obsmonConfig$general$stopIfAllSessionsClosed))
+  if(sessionsConnected()<1) stopApp()
+},
+  ignoreInit=TRUE
+)
 
 # The server
 shinyServer(function(input, output, session) {
