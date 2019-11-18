@@ -1,8 +1,9 @@
 registerPlotCategory("Diagnostic")
 
-statisticsPanel <- function(data, column, bw, fill, interactive=FALSE) {
+statPanel <- function(data, column, bw, fill) {
+  # Statistics panel
   columnName <- substitute(column)
-  eval(substitute({
+  rtn <- eval(substitute({
     hist <- ggplot(data) +
       geom_histogram(aes(x=column), colour="black", fill=fill, binwidth=bw) +
       geom_vline(xintercept = 0.0)
@@ -15,21 +16,84 @@ statisticsPanel <- function(data, column, bw, fill, interactive=FALSE) {
     qq <- ggplot(data) +
       aes(sample=column) +
       stat_qq()
-    if(interactive) {
-      plotly::subplot(
-        ggplotly(hist) %>% layout(yaxis=list(title="count")),
-        ggplotly(ecdf) %>% layout(yaxis=list(title="ECDF")) ,
-        ggplotly(qq) %>% layout(yaxis=list(title="sample")),
-        nrows=1,
-        margin=c(0.06, 0, 0, 0), # left, right, top and bottom
-        titleY=TRUE,
-        titleX=TRUE
-      )
-    } else {
-      grid.arrange(hist, ecdf, qq, ncol=3)
-    }
+    grid.arrange(hist, ecdf, qq, ncol=3)
   }, list(column=columnName)))
+  return(rtn)
 }
+
+statPanelPlotly <- function(data, column, bw, fill) {
+  # Statistics panel (interactive version)
+  columnName <- as.character(substitute(column))
+  sortedColumn <- sort(data[[columnName]])
+
+  ax <- list(
+    titlefont=list(size=14),
+    zeroline = FALSE,
+    showline = TRUE,
+    mirror = "ticks",
+    gridcolor = "gray90",
+    gridwidth = 0.5,
+    zerolinecolor = "red",
+    zerolinewidth = 0.5,
+    linecolor = "black",
+    linewidth = 1
+  )
+
+  hist <- plot_ly(x=data[[columnName]], type="histogram",
+    showlegend=FALSE,
+    hovertemplate = paste0(columnName, ': ', '%{x}<br>', 'Count: ', '%{y:d}'),
+    marker=list(
+      color=fill,
+      line=list(width=0.5, color="black")
+    ),
+    xbins=list(size=bw)
+  ) %>%
+    layout(xaxis=ax, yaxis=ax) %>%
+    layout(
+      xaxis=list(title=columnName),
+      yaxis=list(title="Count")
+    )
+
+  ecdf_func <- ecdf(sortedColumn)
+  ecdf <- plot_ly() %>%
+    add_trace(x=sortedColumn, y=ecdf_func(sortedColumn),
+      showlegend=FALSE,
+      hovertemplate = paste0(columnName, ': ', '%{x}<br>', 'ECDF: ', '%{y}'),
+      type="scatter", mode='lines',
+      line=list(color="black", shape="hv")
+    ) %>%
+    add_trace(x=sortedColumn, y=pnorm(sortedColumn, sd=sd(sortedColumn)),
+      hovertemplate = paste0(columnName, ': ', '%{x}<br>', 'pnorm: ', '%{y}'),
+      showlegend=FALSE,
+      type="scatter", mode="lines", line=list(color="gray")
+    ) %>%
+    layout(xaxis=ax, yaxis=ax) %>%
+    layout(
+      xaxis=list(title=columnName),
+      yaxis=list(title="ECDF")
+    )
+
+  qqData <- qqnorm(sortedColumn)
+  qq <- plot_ly(x=qqData$x, y=qqData$y,
+    showlegend=FALSE,
+    hovertemplate = paste0('Theoretical: ', '%{x}<br>', 'Sample: ', '%{y}'),
+    type="scatter", mode='markers', marker=list(color="black"),
+    ) %>%
+    layout(xaxis=ax, yaxis=ax) %>%
+    layout(
+      xaxis=list(title="Theoretical"),
+      yaxis=list(title="Sample")
+    )
+
+  rtn <- plotly::subplot(hist, ecdf, qq,
+    nrows=1,
+    margin=c(0.06, 0, 0, 0), # left, right, top and bottom
+    titleX=TRUE,
+    titleY=TRUE
+  )
+  return(rtn)
+}
+
 
 plotTitle.plotDiagnostic <- function(p, plotRequest, plotData) {
   crit <- plotRequest$criteria
@@ -80,50 +144,40 @@ doPlot.plotDiagnostic <- function(
       dfs <- list(compDf)
   }
   varname <- unique(plotData$varname)
+  varnameAndUnits <- sprintf("%s [%s]", varname, units[[varname]])
   data <- do.call(rbind, lapply(dfs, partial(melt, id=c("Date", "panel"))))
   data$panel <- factor(data$panel, levels=c("comparison", "bias"))
   comparison <- ggplot(data, aes(Date, value, group=variable, colour=variable)) +
     geom_point() +
     facet_grid(panel~., scales="free_y") +
     scale_color_manual(labels=info$labels, values=info$colors) +
-    labs(y=sprintf("%s [%s]", varname, units[[varname]])) +
+    labs(y=varnameAndUnits) +
     theme(legend.title=element_blank())
   maxval <- max(plotData$fg_dep, plotData$an_dep)
   minval <- min(plotData$fg_dep, plotData$an_dep)
   bw <- (maxval-minval)/20.
 
   if(interactive) {
-    interactiveComparisonPlot <- ggplotly(comparison) %>%
+    interactiveComparisonPlot <- ggplotly(comparison, tooltip=c("x", "y")) %>%
       layout(
         legend=list(
           orientation="v",
           xanchor="left", x=1.025,
           yanchor="center", y=0.75
         ),
-        # Axis labels vanish with subplot. Adding them back (y now, x below).
-        yaxis=list(title=sprintf("%s [%s]", varname, units[[varname]]))
-      ) %>%
-    # Add x-label as an annotation. It sits too far from the axis otherwise.
-    add_annotations(
-      # x-asis label
-      text="DATE",
-      showarrow=FALSE,
-      xref="paper", xanchor="center", x=0.5,
-      yref="paper", yanchor="top", y=-0.1
-    )
-    # Constructing the final plot
-    fgDepStatPanel <- statisticsPanel(
-      plotData, fg_dep, bw, info$colors[["fg"]], interactive=TRUE
-    )
-    if (hasMinimization) {
-      andDepStatPanel <- statisticsPanel(
-        plotData, an_dep, bw, info$colors[["an"]], interactive=TRUE
+        # Axis labels vanish with subplot. Adding them back.
+        xaxis=list(title="Date", titlefont=list(size=14)),
+        yaxis=list(title=varnameAndUnits, titlefont=list(size=14))
       )
+    # Constructing the final plot
+    fgDepStatPanel <- statPanelPlotly(plotData,fg_dep,bw,info$colors[["fg"]])
+    if (hasMinimization) {
+      andDepStatPanel<-statPanelPlotly(plotData,an_dep,bw,info$colors[["an"]])
       obplot <- plotly::subplot(
         interactiveComparisonPlot,
         fgDepStatPanel,
         andDepStatPanel,
-        heights=c(0.4, 0.3, 0.3),
+        heights=c(0.30, 0.35, 0.35),
         titleX=TRUE,
         titleY=TRUE,
         margin=c(0, 0, 0.1125, 0), # left, right, top and bottom
@@ -133,7 +187,7 @@ doPlot.plotDiagnostic <- function(
       obplot <- plotly::subplot(
         interactiveComparisonPlot,
         fgDepStatPanel,
-        heights=c(0.45, 0.45),
+        heights=c(0.45, 0.55),
         titleX=TRUE,
         titleY=TRUE,
         margin=c(0, 0, 0.1125, 0), # left, right, top and bottom
@@ -143,22 +197,22 @@ doPlot.plotDiagnostic <- function(
     obplot <- obplot %>%
       layout(
         showlegend=TRUE,
-        margin = list(t=130, l=80, b=50)
-      ) %>%
-      config(
-        edits=list(axisTitleText=FALSE)
+        margin = list(t=80, l=80, b=50)
       )
-
   } else {
-    panels <- list(comparison,
-                   statisticsPanel(plotData, fg_dep, bw, info$colors[["fg"]]))
+    panels <- list(
+      comparison,
+      statPanel(plotData, fg_dep, bw, info$colors[["fg"]])
+    )
     if (hasMinimization) {
       lay <- rbind(c(1),
                    c(1),
                    c(2),
                    c(3))
-      panels <- c(panels,
-                  list(statisticsPanel(plotData, an_dep, bw, info$colors[["an"]])))
+      panels <- c(
+        panels,
+        list(statPanel(plotData, an_dep, bw, info$colors[["an"]]))
+      )
     } else {
       lay <- rbind(c(1),
                    c(2))
