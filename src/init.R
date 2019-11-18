@@ -323,6 +323,7 @@ runObsmonStandAlone <- function(cmdLineArgs) {
     runAppHandlingBusyPort(
       appDir=obsmonSrcDir, defaultPort=cmdLineArgs$port,
       launch.browser=cmdLineArgs$launch, quiet=TRUE,
+      maxNAtt=max(cmdLineArgs$maxTcpRetries+1, 1),
       display.mode=displayMode
     )
   }
