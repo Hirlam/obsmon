@@ -6,7 +6,7 @@ this_script_dir=$(dirname "$0")
 cd $this_script_dir
 gitCommitHash=$(git log --format='%H' -n 1)
 gitBranch=$(git rev-parse --abbrev-ref HEAD)
-gitTag=$(git describe --tags --dirty)
+gitTag=$(git describe --tags --dirty 2> /dev/null)
 gitAuthorDate=$(git log --format='%ai' -n 1)
 cd $original_dir
 
