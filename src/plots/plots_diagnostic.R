@@ -174,12 +174,26 @@ doPlot.plotDiagnostic <- function(
   bw <- (maxval-minval)/20.
 
   if(interactive) {
-    interactiveComparisonPlot <- ggplotly(comparison, tooltip=c("x", "y")) %>%
+    # The use of a subplot here is a trick to make the upper panel a bit
+    # narrower. Margins didn't work because subplot is again used later on
+    # to combine the upper and lower plots, and the subplot function
+    # unfortunately messes up with individual layouts
+    interactiveComparisonPlot <- plotly::subplot(
+      ggplotly(comparison, tooltip=c("x", "y")),
+      plotly_empty(type="scatter", mode='markers') %>%
+        layout(
+          # Setting axes' label colors to invisible to get rid
+          # of the annoying "Click here to edit x/y axis title"
+          xaxis=list(color='rgba(0,0,0,0.0)'),
+          yaxis=list(color='rgba(0,0,0,0.0)')
+        ),
+      widths=c(0.9, 0.1)
+    ) %>%
       layout(
         legend=list(
           orientation="v",
-          xanchor="left", x=1.025,
-          yanchor="center", y=0.75
+          xanchor="left", x=0.91,
+          yanchor="center", y=0.9
         ),
         # Axis labels vanish with subplot. Adding them back.
         xaxis=list(title="Date", titlefont=list(size=14)),
@@ -193,7 +207,7 @@ doPlot.plotDiagnostic <- function(
         interactiveComparisonPlot,
         fgDepStatPanel,
         andDepStatPanel,
-        heights=c(0.30, 0.35, 0.35),
+        heights=c(0.40, 0.30, 0.30),
         titleX=TRUE,
         titleY=TRUE,
         margin=c(0, 0, 0.1125, 0), # left, right, top and bottom
@@ -213,7 +227,7 @@ doPlot.plotDiagnostic <- function(
     obplot <- obplot %>%
       layout(
         showlegend=TRUE,
-        margin = list(t=80, l=80, b=50)
+        margin = list(t=80, l=5)
       )
   } else {
     panels <- list(
