@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](http://semver.org).
 
 ## [Unreleased]
 ### Added
-- Config file option "stopIfAllSessionsClosed"
+- Config file option "appTimeout"
 - Command-line option "-maxRetriesIfPortBusy"
 
 
