@@ -15,7 +15,9 @@ statPanel <- function(data, column, bw, fill) {
       ylab("ECDF")
     qq <- ggplot(data) +
       aes(sample=column) +
-      stat_qq()
+      stat_qq() +
+      xlab("Theoretical Quantiles") +
+      ylab("Sample Quantiles")
     grid.arrange(hist, ecdf, qq, ncol=3)
   }, list(column=columnName)))
   return(rtn)
@@ -59,7 +61,7 @@ statPanelPlotly <- function(data, column, bw, fill) {
     )
 
   ecdf_func <- ecdf(sortedColumn)
-  ecdf <- plot_ly() %>%
+  ecdf_plot <- plot_ly() %>%
     add_trace(x=sortedColumn, y=ecdf_func(sortedColumn),
       showlegend=FALSE,
       hovertemplate = paste0(
@@ -86,7 +88,7 @@ statPanelPlotly <- function(data, column, bw, fill) {
     )
 
   qqData <- qqnorm(sortedColumn)
-  qq <- plot_ly(x=qqData$x, y=qqData$y,
+  qq_plot <- plot_ly(x=qqData$x, y=qqData$y,
     showlegend=FALSE,
     hovertemplate = paste0(
       'Theoretical: ', '%{x}<br>',
@@ -97,11 +99,11 @@ statPanelPlotly <- function(data, column, bw, fill) {
     ) %>%
     layout(xaxis=ax, yaxis=ax) %>%
     layout(
-      xaxis=list(title="Theoretical"),
-      yaxis=list(title="Sample")
+      xaxis=list(title="Theoretical Quantiles"),
+      yaxis=list(title="Sample Quantiles")
     )
 
-  rtn <- plotly::subplot(hist, ecdf, qq,
+  rtn <- plotly::subplot(hist, ecdf_plot, qq_plot,
     nrows=1,
     margin=c(0.06, 0, 0, 0), # left, right, top and bottom
     titleX=TRUE,
