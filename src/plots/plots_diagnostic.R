@@ -41,7 +41,11 @@ statPanelPlotly <- function(data, column, bw, fill) {
 
   hist <- plot_ly(x=data[[columnName]], type="histogram",
     showlegend=FALSE,
-    hovertemplate = paste0(columnName, ': ', '%{x}<br>', 'Count: ', '%{y:d}'),
+    hovertemplate = paste0(
+      columnName, ': ', '%{x}<br>',
+      'Count: ', '%{y:d}',
+      '<extra></extra>'
+    ),
     marker=list(
       color=fill,
       line=list(width=0.5, color="black")
@@ -58,12 +62,20 @@ statPanelPlotly <- function(data, column, bw, fill) {
   ecdf <- plot_ly() %>%
     add_trace(x=sortedColumn, y=ecdf_func(sortedColumn),
       showlegend=FALSE,
-      hovertemplate = paste0(columnName, ': ', '%{x}<br>', 'ECDF: ', '%{y}'),
+      hovertemplate = paste0(
+        columnName, ': ', '%{x}<br>',
+        'ECDF: ', '%{y}',
+        '<extra></extra>'
+      ),
       type="scatter", mode='lines',
       line=list(color="black", shape="hv")
     ) %>%
     add_trace(x=sortedColumn, y=pnorm(sortedColumn, sd=sd(sortedColumn)),
-      hovertemplate = paste0(columnName, ': ', '%{x}<br>', 'pnorm: ', '%{y}'),
+      hovertemplate = paste0(
+        columnName, ': ', '%{x}<br>',
+        'pnorm: ', '%{y}',
+        '<extra></extra>'
+      ),
       showlegend=FALSE,
       type="scatter", mode="lines", line=list(color="gray")
     ) %>%
@@ -76,7 +88,11 @@ statPanelPlotly <- function(data, column, bw, fill) {
   qqData <- qqnorm(sortedColumn)
   qq <- plot_ly(x=qqData$x, y=qqData$y,
     showlegend=FALSE,
-    hovertemplate = paste0('Theoretical: ', '%{x}<br>', 'Sample: ', '%{y}'),
+    hovertemplate = paste0(
+      'Theoretical: ', '%{x}<br>',
+      'Sample: ', '%{y}',
+      '<extra></extra>'
+    ),
     type="scatter", mode='markers', marker=list(color="black"),
     ) %>%
     layout(xaxis=ax, yaxis=ax) %>%
