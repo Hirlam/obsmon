@@ -12,8 +12,24 @@ doPlot.plotTimeseries <- function(p, plotRequest, plotData,
         wrapVariable <- "level"
       }
   )
+
+  # Filtering out data so that we don't end up with facets for which
+  # all nobs equal zero.
+  plotDataNobsTotal <- aggregate(
+    list(nobs_total=plotData$nobs_total),
+    by=list(level=plotData[[wrapVariable]]),
+    FUN=sum
+  )
+  levelsToRm <- plotDataNobsTotal$level[plotDataNobsTotal$nobs_total==0]
+  plotData <- plotData[!(plotData[[wrapVariable]] %in% levelsToRm),]
+  if(nrow(plotData)==0) {
+    return(noDataPlot("No plottable data: All nobs are zero."))
+  }
+
   localPlotData <- melt(plotData[!(colnames(plotData) %in% maskColumns)],
                         id=c("DTG", wrapVariable))
+
+
   obplot <- ggplot() +
     geom_line(data=localPlotData,
               aes(x=DTG, y=value, group=variable),
@@ -22,7 +38,8 @@ doPlot.plotTimeseries <- function(p, plotRequest, plotData,
                aes(x=DTG, y=value, shape=variable, colour=variable, fill=variable),
                na.rm=TRUE) +
     labs(x="DATE") +
-    facet_wrap(wrapVariable, labeller=label_both)
+    facet_wrap(wrapVariable, labeller=label_both) +
+    theme(legend.title=element_blank())
   if (!is.null(shapes)) {
     obplot <- obplot +
       scale_shape_manual(values=shapes)
@@ -35,8 +52,33 @@ doPlot.plotTimeseries <- function(p, plotRequest, plotData,
     obplot <- obplot +
       scale_colour_brewer(palette="Spectral")
   }
+  if(length(levels(localPlotData$variable))<2) {
+    # Only show legend when there are at least 2 different variables plotted
+    obplot <- obplot + theme(legend.position = "none")
+  }
   obplot
 }
+
+doPlotly.plotTimeseries <- function(p, plotRequest, plotData) {
+  myPlotly <- doPlotly.default(p, plotRequest, plotData)
+  myPlotly <- myPlotly %>%
+    layout(
+      margin=list(
+        l=75 # Prevent y-axis label from being cut out
+      )
+    ) %>%
+    config(
+      edits=list(
+        axisTitleText=FALSE
+      )
+    )
+  # This parameter will be used in addTitleToPlot in order to
+  # prevent the title from overlapping with the plot. ggplotly
+  # seems to have issues when the original ggplot has facte_wraps.
+  attr(myPlotly, "yTitle") <- 1.0375
+  return(myPlotly)
+}
+
 
 registerPlotType(
     "Timeseries",

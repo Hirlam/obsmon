@@ -1,9 +1,21 @@
-# Keep track of how many sessions are connected and, if instructed
-# in the config file, stop execution when all sessions are ended
+# Keep track of how many sessions are connected
 sessionsConnected <- reactiveVal(0)
-observeEvent(sessionsConnected(), {
-  req(isTRUE(obsmonConfig$general$stopIfAllSessionsClosed))
-  if(sessionsConnected()<1) stopApp()
+# Stop app if all sessions are ended AND config file tells us to do so
+# Keep it alive for "timeoutAfterAllSessionsEnd" seconds after all sessions
+# closed, to prevent, for instance, killing app upon refresh of a lone session
+nConnectedSessions <- reactive(sessionsConnected()) %>%
+  debounce(1000*obsmonConfig$general$appTimeout)
+observeEvent(nConnectedSessions(), {
+  if(nConnectedSessions()<1) {
+    flog.info(
+      paste(
+        "appTimeout: All sessions closed and none started within %ss.",
+        "Stopping app."
+      ),
+      signif(obsmonConfig$general$appTimeout, 2)
+    )
+    stopApp()
+  }
 },
   ignoreInit=TRUE
 )

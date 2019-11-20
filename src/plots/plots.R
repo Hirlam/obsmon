@@ -1,3 +1,19 @@
+plotlySaveAsFigDimensions <- list(height=755, width=1200)
+
+renamePlotlyTraces <- function(plot, labels) {
+  # Renames the traces in plotly plot "plot" according to the
+  # namesd list passed as "labels". Leaves trace names intact if
+  # they are not listed in "labels".
+  iTrace <- 0
+  for(pData in plot$x$data) {
+    iTrace <- iTrace + 1
+    traceLabel <- labels[[pData$name]]
+    if(is.null(traceLabel)) next
+    plot <- plot %>% style(name=traceLabel, traces=iTrace)
+  }
+  return(plot)
+}
+
 levelsLableForPlots <- function(obnumber, varname=character(0)) {
   strObnumber <- as.character(obnumber)
   obstype <- getAttrFromMetadata("category", obnumber=obnumber)
@@ -21,14 +37,52 @@ coord_flip_wrapper <- function(..., default=FALSE) {
   return(cf)
 }
 
-plotCanBeMadeInteractive <- function(myPlot) {
+plotIsPlotly <- function(myPlot) {
   # To be used in the server logic to determine whether to use regular
   # (non-interactive) or plotly (interactive) plot outputs.
-  # When using CoordMap in ggplot2, conversion to plotly makes the projections
-  # look a bit weird -- hence the restriction on CoordMap below.
-  rtn <- ("plotly" %in% class(myPlot) || is.ggplot(myPlot)) &&
-    !("CoordMap" %in% class(myPlot$coordinates))
+  rtn <- any(c("plotly", "plotlyhtmlwidget") %in% class(myPlot))
   return(rtn)
+}
+
+configPlotlyWrapper <- function(...) {
+  # Wrapper to plotly's config function, with some useful defaults
+  # For a list of all config options, please visit
+  # <https://github.com/plotly/plotly.js/blob/master/src/plot_api/plot_config.js>
+  # Se allso <https://plotly-r.com/control-modebar.html>
+  argList <- list(...)
+  argNames <- names(argList)
+  if(!("displaylogo" %in% argNames)) argList$displaylogo <- FALSE
+  if(!("cloud" %in% argNames)) argList$cloud <- FALSE
+  if(!("scrollZoom" %in% argNames)) argList$scrollZoom <- TRUE
+
+  # Defaults for what users are allowed to edit in the plots
+  if(!("editable" %in% argNames)) argList$editable <- TRUE
+  editsOpts <- list(
+    titleText=FALSE,
+    shapePosition=FALSE
+  )
+  if("edits" %in% argNames) {
+    for(name in names(argList$edits)) {
+      editsOpts[[name]] <- argList$edits[[name]]
+    }
+  }
+  argList$edits <- editsOpts
+
+  # Defaults for saving figures
+  toImageButtonOpts <- list(
+    filename="obsmon_plot",
+    format="png",
+    height=plotlySaveAsFigDimensions$height,
+    width=plotlySaveAsFigDimensions$width
+  )
+  if("toImageButtonOptions" %in% argNames) {
+    for(name in names(argList$toImageButtonOptions)) {
+      toImageButtonOpts[[name]] <- argList$toImageButtonOptions[[name]]
+    }
+  }
+  argList$toImageButtonOptions <- toImageButtonOpts
+
+  return(do.call(config, argList))
 }
 
 getStationsForPlotTitle <- function(plotRequest, plotData, limit=5) {
@@ -50,28 +104,26 @@ addTitleToPlot <- function(myPlot, title) {
     if(is.ggplot(myPlot)) {
       myPlot + ggtitle(title) + theme(plot.title=element_text(hjust=0.5))
     } else if("plotly" %in% class(myPlot)) {
-      # ggplotly in (plotly v4.8.0) has an issue that causes multiline titles
-      # to overlap with graphs. As a workaround, we use annotations instead of
-      # titles, and add a margin at the top which is proportional to the
-      # number of lines in the title. Not very practical, but plotly does not
-      # seem to have a native solution for this.
-      nLineBreaks <- str_count(title, "\n")
+      yTitle <- attr(myPlot, "yTitle")
+      if(is.null(yTitle)) yTitle <- 1.0
+      # Use an annotation instead of an actual title, as otherwise plotly
+      # will fail to put it in the correct position without overlaps (and
+      # it also won't allow users to change the position of the text)
       myPlot %>% add_annotations(
-        yref="paper",
-        xref="paper",
-        yanchor = "bottom",
-        y=1.035,
-        x=0.5,
-        text=title,
-        showarrow=F,
-        font=list(size=20)
-      ) %>% layout(title=FALSE, margin=list(t=(50 + nLineBreaks*27.5)))
+          text=title,
+          showarrow=FALSE,
+          font=list(size=20),
+          xref="paper", xanchor="center", x=0.5,
+          # Push y a bit above 1 as, otherwise, the title may overlap with the
+          # plot when using ggplotly on a ggplot object containing facet_wraps
+          yref="paper", yanchor="bottom", y=yTitle
+      ) %>% layout(title=FALSE)
     } else {
       grid.arrange(myPlot, top=textGrob(title, gp=gpar(fontsize=13)))
     }
     },
     error=function(e) {
-      flog.error("(addTitleToPlot) Problems setting plot title: %s", e)
+      flog.error("addTitleToPlot: Problems setting plot title: %s", e)
       myPlot
     }
   )
@@ -162,25 +214,56 @@ putLabelsInStations <- function(stations=NULL, obname=NULL) {
 
 # Define generics
 plotBuildQuery <- function(p, plotRequest) UseMethod ("plotBuildQuery")
-plotGenerate <- function(p, plotRequest, plotData) UseMethod("plotGenerate")
+plotGenerate <- function(p, plotRequest, plotData, interactive) UseMethod("plotGenerate")
 plotIsApplicable <- function(p, criteria) UseMethod("plotIsApplicable")
 plotTitle <- function(p, plotRequest, plotData) UseMethod("plotTitle")
 doMap <- function(p, plotRequest, plotData) UseMethod("doMap")
 doPlot <- function(p, plotRequest, plotData) UseMethod("doPlot")
+doPlotly <- function(p, plotRequest, plotData) UseMethod("doPlotly")
 
 # Provide defaults
+doPlotly.default <- function(p, plotRequest, plotData) {
+  # Generate a regular ggplot2 plot and then use plotly's
+  # ggplotly function to convert it to a plotly object
+  ggplotPlot <- doPlot(p, plotRequest, plotData)
+  plotlyPlot <- ggplotly(ggplotPlot,
+    tooltip=c("x","y")
+  ) %>%
+    layout(
+      margin=list(t=100),
+      legend=list(orientation="v", yanchor="center", y=0.5)
+    )
+  return(plotlyPlot)
+}
+
 plotBuildQuery.default <- function(p, plotRequest) {
   sprintf(p$queryStub, buildWhereClause(plotRequest$criteria))
 }
 
-plotGenerate.default <- function(p, plotRequest, plotData) {
+noDataPlot <- function(msg) {
+  ggplot() +
+    annotate("text", x=0, y=0, size=8, label=msg) +
+    theme(
+      panel.background = element_rect(fill="grey90"),
+      panel.grid.major = element_blank(),
+      panel.grid.minor = element_blank(),
+      axis.title.x=element_blank(),
+      axis.text.x=element_blank(),
+      axis.ticks.x=element_blank(),
+      axis.title.y=element_blank(),
+      axis.text.y=element_blank(),
+      axis.ticks.y=element_blank()
+    )
+}
+
+plotGenerate.default <- function(p, plotRequest, plotData, interactive) {
   if (plotRequest$criteria$obnumber==7 && ("level" %in% colnames(plotData))) {
     names(plotData)[names(plotData)=="level"] <- "channel"
   }
   result <- list(title=plotTitle(p, plotRequest, plotData))
   if(length(result$title)==0) flog.warn("plotGenerate: Empty plot title")
   if (!isTRUE(nrow(plotData)>0)) {
-    result$obmap=NULL
+    result$obmap <- NULL
     if(is.null(plotData)) {
       msg <- paste0(
         "Could not produce plot: ",
@@ -189,13 +272,22 @@ plotGenerate.default <- function(p, plotRequest, plotData) {
     } else {
       msg <- "Query returned no data"
     }
-    result$obplot=grobTree(
-      rectGrob(gp=gpar(col="black", fill="grey90", alpha=0.5)),
-      textGrob(msg)
-    )
+    result$obplot <- noDataPlot(msg)
   } else {
-    result$obplot <- doPlot(p, plotRequest, plotData)
     result$obmap <- doMap(p, plotRequest, plotData)
+    result$obplot <- NULL
+    if(interactive) {
+      result$obplot <- tryCatch(
+        doPlotly(p, plotRequest, plotData),
+        error=function(e){
+          flog.warn('plotGenerate: Failure making plot "%s" interactive: %s',
+            p$name, e
+          )
+          return(NULL)
+        }
+      )
+    }
+    if(is.null(result$obplot)) result$obplot <- doPlot(p,plotRequest,plotData)
   }
   result
 }
@@ -303,7 +395,7 @@ plotsBuildCriteria <- function(input) {
   return(res)
 }
 # Perform plotting
-preparePlots <- function(plotter, plotRequest, db) {
+preparePlots <- function(plotter, plotRequest, db, interactive) {
   tryCatch({
     isWindspeed <- "varname" %in% names(plotRequest$criteria) &&
       plotRequest$criteria$varname %in% c("ff", "ff10m")
@@ -330,7 +422,7 @@ preparePlots <- function(plotter, plotRequest, db) {
       plotData$statLabel <- names(stations)
     }
 
-    res <- plotGenerate(plotter, plotRequest, plotData)
+    res <- plotGenerate(plotter,plotRequest,plotData,interactive=interactive)
     res[["queryUsed"]] <- query
     res[["plotData"]] <- plotData
     return(res)
