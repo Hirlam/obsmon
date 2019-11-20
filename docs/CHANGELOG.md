@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](http://semver.org).
 ### Added
 - Interactivity to "Maps" plots
 - Interactivity to "Station Diagnostics" plots
+- Editable plot elements (titles, axes and legend text and position)
+  in interactive plots
 - Config file options "appTimeout" and "plotsEnableInteractivity"
 - Command-line option "-maxRetriesIfPortBusy"
 
