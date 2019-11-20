@@ -1,39 +1,79 @@
 registerPlotCategory("Diagnostic")
 
-statPanel <- function(data, column, bw, fill) {
-  # Statistics panel
+diagosticPltColors <- c(
+  "obs"="black",
+  "fg"="red",
+  "an"="green",
+  "biascrl"="blue",
+  "rawobs"="brown"
+)
+diagosticPltLabels <- c(
+  "obs"="Observation",
+  "fg"="First Guess",
+  "an"="Analysis",
+  "fg_dep"="First Guess Departure",
+  "an_dep"="Analysis Departure",
+  "biascrl"="Bias correction",
+  "rawobs"="Raw observation"
+)
+
+plotTitle.plotDiagnostic <- function(p, plotRequest, plotData) {
+  crit <- plotRequest$criteria
+  stationLabel <- getStationsForPlotTitle(plotRequest, plotData)
+  title <- sprintf(
+    "%s: %s\nstation=%s\ndb=%s, DTG=%s, obname=%s, varname=%s",
+    plotRequest$expName, p$name,
+    stationLabel,
+    plotRequest$dbType, formatDtg(crit$dtg), crit$obname, crit$varname
+  )
+  return(title)
+}
+
+statPanelStatic <- function(data, column, fill) {
+  # Statistics panel (lower panel)
   columnName <- substitute(column)
+  xLabelPlot <- diagosticPltLabels[[as.character(columnName)]]
+  if(is.null(xLabelPlot)) xLabelPlot <- as.character(columnName)
   rtn <- eval(substitute({
     hist <- ggplot(data) +
-      geom_histogram(aes(x=column), colour="black", fill=fill, binwidth=bw) +
-      geom_vline(xintercept = 0.0)
+      geom_histogram(
+        aes(x=column), colour="black", fill=fill,
+        binwidth=diff(range(data$fg_dep, data$an_dep))/20.
+      ) +
+      geom_vline(xintercept = 0.0) +
+      xlab(xLabelPlot) + ylab("Count")
     ecdf <- ggplot(data) +
       aes(x=column) +
       stat_ecdf() +
       aes(y=pnorm(column, sd=sd(column))) +
       geom_line(alpha=.4) +
-      ylab("ECDF")
+      xlab(xLabelPlot) + ylab("ECDF")
     qq <- ggplot(data) +
       aes(sample=column) +
       stat_qq() +
-      xlab("Theoretical Quantiles") +
+      xlab(sprintf("%s: Theoretical Quantiles", xLabelPlot)) +
       ylab("Sample Quantiles")
     grid.arrange(hist, ecdf, qq, ncol=3)
   }, list(column=columnName)))
   return(rtn)
 }
 
-statPanelPlotly <- function(data, column, bw, fill) {
-  # Statistics panel (interactive version)
+statPanelPlotly <- function(data, column, fill) {suppressWarnings({
+  # Statistics panel (lower panel) -- Interactive version
+  # Suppressing warnings for a reason similar to the one discussed at
+  # <https://github.com/ropensci/plotly/issues/1299>
   columnName <- as.character(substitute(column))
+  xLabelPlot <- diagosticPltLabels[[columnName]]
+  if(is.null(xLabelPlot)) xLabelPlot <- columnName
   sortedColumn <- sort(data[[columnName]])
 
+  # ax: Common layout configs for all axes
   ax <- list(
     titlefont=list(size=14),
     zeroline = FALSE,
     showline = TRUE,
     mirror = "ticks",
-    gridcolor = "gray90",
+    gridcolor = "gray50",
     gridwidth = 0.5,
     zerolinecolor = "red",
     zerolinewidth = 0.5,
@@ -52,17 +92,22 @@ statPanelPlotly <- function(data, column, bw, fill) {
       color=fill,
       line=list(width=0.5, color="black")
     ),
-    xbins=list(size=bw)
+    xbins=list(size=diff(range(data$fg_dep, data$an_dep))/20.)
   ) %>%
-    layout(xaxis=ax, yaxis=ax) %>%
     layout(
-      xaxis=list(title=columnName),
-      yaxis=list(title="Count")
+      xaxis=c(ax, title=xLabelPlot),
+      yaxis=c(ax, title="Count")
     )
 
   ecdf_func <- ecdf(sortedColumn)
+  # Expand the range in x a bit in the ECDF plot to prevent it
+  # from vanishing if there's only one point
+  colMax <- sortedColumn[length(sortedColumn)]
+  colMin <- sortedColumn[1]
+  xStretch <- max(0.05*(colMax-colMin), 0.5)
+  xForEcdf <- c(colMin-xStretch, sortedColumn, colMax+xStretch)
   ecdf_plot <- plot_ly() %>%
-    add_trace(x=sortedColumn, y=ecdf_func(sortedColumn),
+    add_trace(x=xForEcdf, y=ecdf_func(xForEcdf),
       showlegend=FALSE,
       hovertemplate = paste0(
         columnName, ': ', '%{x}<br>',
@@ -81,10 +126,9 @@ statPanelPlotly <- function(data, column, bw, fill) {
       showlegend=FALSE,
       type="scatter", mode="lines", line=list(color="gray")
     ) %>%
-    layout(xaxis=ax, yaxis=ax) %>%
     layout(
-      xaxis=list(title=columnName),
-      yaxis=list(title="ECDF")
+      xaxis=c(ax, title=xLabelPlot),
+      yaxis=c(ax, title="ECDF")
     )
 
   qqData <- qqnorm(sortedColumn)
@@ -97,10 +141,9 @@ statPanelPlotly <- function(data, column, bw, fill) {
     ),
     type="scatter", mode='markers', marker=list(color="black"),
     ) %>%
-    layout(xaxis=ax, yaxis=ax) %>%
     layout(
-      xaxis=list(title="Theoretical Quantiles"),
-      yaxis=list(title="Sample Quantiles")
+      xaxis=c(ax, title=sprintf("%s: Theoretical Quantiles", xLabelPlot)),
+      yaxis=c(ax, title="Sample Quantiles")
     )
 
   rtn <- plotly::subplot(hist, ecdf_plot, qq_plot,
@@ -110,159 +153,144 @@ statPanelPlotly <- function(data, column, bw, fill) {
     titleY=TRUE
   )
   return(rtn)
-}
+})}
 
-
-plotTitle.plotDiagnostic <- function(p, plotRequest, plotData) {
-  crit <- plotRequest$criteria
-  stationLabel <- getStationsForPlotTitle(plotRequest, plotData)
-  title <- sprintf(
-    "%s: %s\nstation=%s\ndb=%s, DTG=%s, obname=%s, varname=%s",
-    plotRequest$expName, p$name,
-    stationLabel,
-    plotRequest$dbType, formatDtg(crit$dtg), crit$obname, crit$varname
-  )
-  return(title)
-}
-
-doPlot.plotDiagnostic <- function(
-  p, plotRequest, plotData, interactive=FALSE
-) {
-  info <- list()
-  info$labels <- c("obs"="Observation",
-                   "fg"="First Guess",
-                   "an"="Analysis",
-                   "biascrl"="Bias correction",
-                   "rawobs"="Raw observation")
-  info$colors <- c("obs"="black",
-                   "fg"="red",
-                   "an"="green",
-                   "biascrl"="blue",
-                   "rawobs"="brown")
-  dtg <- plotData[["DTG"]]
-  obs <- plotData[["obsvalue"]]
-  fgDep <- plotData[["fg_dep"]]
-  anDep <- plotData[["an_dep"]]
-  compDf <- data.frame("Date"=dtg,
-                       "obs"=obs,
-                       "fg"=obs-fgDep)
+comparisonPlotStatic <- function(p, plotRequest, plotData) {
+  # Comparison plot (upper panel)
+  compDf <- data.frame("Date"=plotData[["DTG"]],
+                       "obs"=plotData[["obsvalue"]],
+                       "fg"=plotData[["obsvalue"]]-plotData[["fg_dep"]])
   hasMinimization <- plotRequest$dbType %in% c("ecma_sfc", "ccma")
   if (hasMinimization) {
-    compDf["an"] <- obs-anDep
+    compDf["an"] <- plotData[["obsvalue"]]-plotData[["an_dep"]]
   }
-  compDf$panel <- "comparison"
+  compDf$panel <- "Comparison"
   if (plotRequest$criteria$varname=="apd") {
     bias <- plotData[["biascrl"]]
-    compDf["rawobs"] <- obs+bias
-    biasDf <- data.frame("Date"=dtg,
+    compDf["rawobs"] <- plotData[["obsvalue"]]+bias
+    biasDf <- data.frame("Date"=plotData[["DTG"]],
                          "biascrl"=bias)
-    biasDf$panel <- "bias"
+    biasDf$panel <- "Bias"
     dfs <- list(compDf, biasDf)
   } else {
       dfs <- list(compDf)
   }
   varname <- unique(plotData$varname)
-  varnameAndUnits <- sprintf("%s [%s]", varname, units[[varname]])
   data <- do.call(rbind, lapply(dfs, partial(melt, id=c("Date", "panel"))))
-  data$panel <- factor(data$panel, levels=c("comparison", "bias"))
-  comparison <- ggplot(data, aes(Date, value, group=variable, colour=variable)) +
+  data$panel <- factor(data$panel, levels=c("Comparison", "Bias"))
+  plot <- ggplot(data, aes(Date, value, group=variable, colour=variable)) +
     geom_point() +
     facet_grid(panel~., scales="free_y") +
-    scale_color_manual(labels=info$labels, values=info$colors) +
-    labs(y=varnameAndUnits) +
+    scale_color_manual(labels=diagosticPltLabels, values=diagosticPltColors) +
+    labs(y=sprintf("%s [%s]", varname, units[[varname]])) +
     theme(legend.title=element_blank())
-  maxval <- max(plotData$fg_dep, plotData$an_dep)
-  minval <- min(plotData$fg_dep, plotData$an_dep)
-  bw <- (maxval-minval)/20.
+  return(plot)
+}
 
-  if(interactive) {
-    # The use of a subplot here is a trick to make the upper panel a bit
-    # narrower. Margins didn't work because subplot is again used later on
-    # to combine the upper and lower plots, and the subplot function
-    # unfortunately messes up with individual layouts
-    interactiveComparisonPlot <- plotly::subplot(
-      ggplotly(comparison, tooltip=c("x", "y")),
-      plotly_empty(type="scatter", mode='markers') %>%
-        layout(
-          # Setting axes' label colors to invisible to get rid
-          # of the annoying "Click here to edit x/y axis title"
-          xaxis=list(color='rgba(0,0,0,0.0)'),
-          yaxis=list(color='rgba(0,0,0,0.0)')
-        ),
-      widths=c(0.9, 0.1)
-    ) %>%
-      layout(
-        legend=list(
-          orientation="v",
-          xanchor="left", x=0.91,
-          yanchor="center", y=0.9
-        ),
-        # Axis labels vanish with subplot. Adding them back.
-        xaxis=list(title="Date", titlefont=list(size=14)),
-        yaxis=list(title=varnameAndUnits, titlefont=list(size=14))
+comparisonPlotPlotly <- function(p, plotRequest, plotData) {
+  # Comparison plot (upper panel) -- interactive version
+  varname <- unique(plotData$varname)
+
+  # Using empty plots as a trick to get the axes' labels, as well as
+  # the legends, to appear where they are supposed to in the final plot.
+  # ggplotly does not take care of this and the final plot ends up looking
+  # very different from the ggplot one if we don't do this.
+  emptyPlot <- plotly_empty(type="scatter", mode='markers') %>%
+    layout(
+      xaxis=list(title="No Title", color="rgba(0, 0, 0, 0)"),
+      yaxis=list(
+        yanchor="center", y=0.5,
+        title=sprintf("%s [%s]", varname, units[[varname]]),
+        titlefont=list(size=14)
       )
-    # Constructing the final plot
-    fgDepStatPanel <- statPanelPlotly(plotData,fg_dep,bw,info$colors[["fg"]])
-    if (hasMinimization) {
-      andDepStatPanel<-statPanelPlotly(plotData,an_dep,bw,info$colors[["an"]])
-      obplot <- plotly::subplot(
-        interactiveComparisonPlot,
-        fgDepStatPanel,
-        andDepStatPanel,
-        heights=c(0.40, 0.30, 0.30),
-        titleX=TRUE,
-        titleY=TRUE,
-        margin=c(0, 0, 0.1125, 0), # left, right, top and bottom
-        nrows=3
-      )
-    } else {
-      obplot <- plotly::subplot(
-        interactiveComparisonPlot,
-        fgDepStatPanel,
-        heights=c(0.45, 0.55),
-        titleX=TRUE,
-        titleY=TRUE,
-        margin=c(0, 0, 0.1125, 0), # left, right, top and bottom
-        nrows=2
-      )
-    }
-    obplot <- obplot %>%
-      layout(
-        showlegend=TRUE,
-        margin = list(t=80, l=5)
-      )
-  } else {
-    panels <- list(
-      comparison,
-      statPanel(plotData, fg_dep, bw, info$colors[["fg"]])
     )
-    if (hasMinimization) {
-      lay <- rbind(c(1),
-                   c(1),
-                   c(2),
-                   c(3))
-      panels <- c(
-        panels,
-        list(statPanel(plotData, an_dep, bw, info$colors[["an"]]))
+  emptyPlot2 <- plotly_empty(type="scatter", mode='markers') %>%
+    layout(
+      xaxis=list(title="No Title", color="rgba(0, 0, 0, 0)"),
+      yaxis=list(title="No Title", color="rgba(0, 0, 0, 0)")
+    )
+
+  interactivePanel <- ggplotly(
+    comparisonPlotStatic(p, plotRequest, plotData), tooltip=c("Date","value"),
+  ) %>%
+    layout(xaxis=list(title="Date")) %>%
+    renamePlotlyTraces(diagosticPltLabels)
+
+  plotWidth <- 0.9 # Visible plot's relative width. It'll be left-adjusted.
+  plot <- plotly::subplot(emptyPlot, interactivePanel, emptyPlot2,
+    nrows=1, widths=c(0, plotWidth, 1.0-plotWidth), which_layout=1,
+    shareY=FALSE, shareX=FALSE, titleY=TRUE, titleX=TRUE
+  ) %>%
+    layout(
+      legend=list(
+        orientation="v",
+        xanchor="left", x=plotWidth+0.001,
+        yanchor="center", y=0.9
       )
-    } else {
-      lay <- rbind(c(1),
-                   c(2))
-    }
-    obplot <- grid.arrange(grobs=panels, layout_matrix=lay)
+    )
+  return(plot)
+}
+
+doPlot.plotDiagnostic <- function(p, plotRequest, plotData) {
+  panels <- list(
+    comparisonPlotStatic(p, plotRequest, plotData),
+    statPanelStatic(plotData, fg_dep, diagosticPltColors[["fg"]])
+  )
+  hasMinimization <- plotRequest$dbType %in% c("ecma_sfc", "ccma")
+  if (hasMinimization) {
+    lay <- rbind(c(1),
+                 c(1),
+                 c(2),
+                 c(3))
+    panels <- c(
+      panels,
+      list(statPanelStatic(plotData, an_dep, diagosticPltColors[["an"]]))
+    )
+  } else {
+    lay <- rbind(c(1),
+                 c(2))
   }
-  obplot
+  return(grid.arrange(grobs=panels, layout_matrix=lay))
 }
 
-doPlotly.plotDiagnostic <- function(...) {
-  doPlot.plotDiagnostic(..., interactive=TRUE)
+doPlotly.plotDiagnostic <- function(p, plotRequest, plotData) {
+  hasMinimization <- plotRequest$dbType %in% c("ecma_sfc", "ccma")
+  if (hasMinimization) {
+    obplot <- plotly::subplot(
+      comparisonPlotPlotly(p, plotRequest, plotData),
+      statPanelPlotly(plotData, fg_dep, diagosticPltColors[["fg"]]),
+      statPanelPlotly(plotData, an_dep, diagosticPltColors[["an"]]),
+      heights=c(0.40, 0.30, 0.30),
+      margin=c(0, 0, 0.1125, 0), # left, right, top and bottom
+      titleX=TRUE, titleY=TRUE,
+      nrows=3
+    )
+  } else {
+    obplot <- plotly::subplot(
+      comparisonPlotPlotly(p, plotRequest, plotData),
+      statPanelPlotly(plotData, fg_dep, diagosticPltColors[["fg"]]),
+      heights=c(0.45, 0.55),
+      margin=c(0, 0, 0.1125, 0), # left, right, top and bottom
+      titleX=TRUE, titleY=TRUE,
+      nrows=2
+    )
+  }
+  obplot <- obplot %>%
+    layout(
+      showlegend=TRUE,
+      margin = list(t=80, l=5)
+    )
+  return(obplot)
 }
 
-registerPlotType(
-    "Diagnostic",
-    plotCreate("plotDiagnostic", "Station Diagnostics", "range",
-               paste("SELECT",
-                     "DTG, varname, obsvalue, fg_dep, an_dep, biascrl, statid",
-                     "FROM usage WHERE %s"),
-               list("station"))
+registerPlotType("Diagnostic",
+  plotCreate("plotDiagnostic",
+    name="Station Diagnostics",
+    dateType="range",
+    queryStub=paste(
+      "SELECT DTG, varname, obsvalue, fg_dep, an_dep, biascrl, statid",
+      "FROM usage WHERE %s"
+    ),
+    requiredFields=list("station")
+  )
 )

@@ -7,8 +7,18 @@ and this project adheres to [Semantic Versioning](http://semver.org).
 
 ## [Unreleased]
 ### Added
-- Config file option "appTimeout"
+- Interactivity to "Maps" plots
+- Interactivity to "Station Diagnostics" plots
+- Config file options "appTimeout" and "plotsEnableInteractivity"
 - Command-line option "-maxRetriesIfPortBusy"
+
+### Changed
+- Plot "timeseries": Hide levels for which all nobs are zero
+- Better axes labels in "Station Diagnostics" plots
+- Dimensions of figures exported from interactive plots (755x1280 -> 755x1200)
+
+### Removed
+- Title of legend from "timeseries" plots
 
 
 ## [3.6.0] 2019-10-22

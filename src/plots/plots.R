@@ -1,5 +1,19 @@
 plotlySaveAsFigDimensions <- list(height=755, width=1200)
 
+renamePlotlyTraces <- function(plot, labels) {
+  # Renames the traces in plotly plot "plot" according to the
+  # namesd list passed as "labels". Leaves trace names intact if
+  # they are not listed in "labels".
+  iTrace <- 0
+  for(pData in plot$x$data) {
+    iTrace <- iTrace + 1
+    traceLabel <- labels[[pData$name]]
+    if(is.null(traceLabel)) next
+    plot <- plot %>% style(name=traceLabel, traces=iTrace)
+  }
+  return(plot)
+}
+
 levelsLableForPlots <- function(obnumber, varname=character(0)) {
   strObnumber <- as.character(obnumber)
   obstype <- getAttrFromMetadata("category", obnumber=obnumber)
