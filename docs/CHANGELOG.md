@@ -15,7 +15,7 @@ and this project adheres to [Semantic Versioning](http://semver.org).
 - Command-line option "-maxRetriesIfPortBusy"
 
 ### Changed
-- Plot "timeseries": Hide levels for which all nobs are zero
+- "Timeseries"-type plots: Hide levels for which all nobs are zero
 - Better axes labels in "Station Diagnostics" plots
 - Dimensions of figures exported from interactive plots (755x1280 -> 755x1200)
 

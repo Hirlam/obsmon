@@ -280,7 +280,7 @@ plotGenerate.default <- function(p, plotRequest, plotData, interactive) {
       result$obplot <- tryCatch(
         doPlotly(p, plotRequest, plotData),
         error=function(e){
-          flog.warn('plotGenerate: Failure making plot "%s" interactive: %s',
+          flog.debug('plotGenerate: Failure making plot "%s" interactive: %s',
             p$name, e
           )
           return(NULL)

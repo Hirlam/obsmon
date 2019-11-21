@@ -1,5 +1,23 @@
 registerPlotCategory("Timeseries")
 
+filterOutZeroNobsTotal <- function(data) {
+  # Filters out data for which nobs_total==0, so that we don't end up with
+  # these showing up in the plots. Returns the data unchanged if it does not
+  # contain info on nobs_total
+  if(!is.null(data$nobs_total)) {
+    filteringVar <- "level"
+    if("channel" %in% colnames(data)) filteringVar <- "channel"
+    dataNobsTotal <- aggregate(
+      list(nobs_total=data$nobs_total),
+      by=list(level=data[[filteringVar]]),
+      FUN=sum
+    )
+    levelsToRm <- dataNobsTotal$level[dataNobsTotal$nobs_total==0]
+    data <- data[!(data[[filteringVar]] %in% levelsToRm),]
+  }
+  return(data)
+}
+
 doPlot.plotTimeseries <- function(p, plotRequest, plotData,
                                   maskColumns=character(0),
                                   colours=NULL, shapes=NULL) {
@@ -13,16 +31,8 @@ doPlot.plotTimeseries <- function(p, plotRequest, plotData,
       }
   )
 
-  # Filtering out data so that we don't end up with facets for which
-  # all nobs equal zero.
-  plotDataNobsTotal <- aggregate(
-    list(nobs_total=plotData$nobs_total),
-    by=list(level=plotData[[wrapVariable]]),
-    FUN=sum
-  )
-  levelsToRm <- plotDataNobsTotal$level[plotDataNobsTotal$nobs_total==0]
-  plotData <- plotData[!(plotData[[wrapVariable]] %in% levelsToRm),]
-  if(nrow(plotData)==0) {
+  plotData <- filterOutZeroNobsTotal(plotData)
+  if(!is.null(plotData$nobs_total) && nrow(plotData)==0) {
     return(noDataPlot("No plottable data: All nobs are zero."))
   }
 
@@ -30,13 +40,12 @@ doPlot.plotTimeseries <- function(p, plotRequest, plotData,
                         id=c("DTG", wrapVariable))
 
 
-  obplot <- ggplot() +
-    geom_line(data=localPlotData,
-              aes(x=DTG, y=value, group=variable),
-              na.rm=TRUE, alpha=.1) +
-    geom_point(data=localPlotData,
-               aes(x=DTG, y=value, shape=variable, colour=variable, fill=variable),
-               na.rm=TRUE) +
+  obplot <- ggplot(data=localPlotData) +
+    geom_line(aes(x=DTG, y=value, group=variable), na.rm=TRUE, alpha=.1) +
+    geom_point(
+      aes(x=DTG, y=value, shape=variable, colour=variable, fill=variable),
+      na.rm=TRUE
+    ) +
     labs(x="DATE") +
     facet_wrap(wrapVariable, labeller=label_both) +
     theme(legend.title=element_blank())
@@ -126,6 +135,7 @@ registerPlotType(
 
 doPlot.biasCorrection <- function(p, plotRequest, plotData) {
   varname <- unique(plotData$varname)
+  plotData <- filterOutZeroNobsTotal(plotData)
   NextMethod(.Generic, maskColumns=c("nobs_total", "varname")) +
     geom_text(data=plotData, aes(x=DTG, y=fg_uncorr_total, label=nobs_total)) +
     ylab(units[[varname]])
@@ -142,6 +152,10 @@ registerPlotType(
 )
 
 doPlot.landSeaDepartures <- function(p, plotRequest, plotData) {
+  # Making sure we don't show data with nobs_total==0
+  plotData <- filterOutZeroNobsTotal(plotData)
+  plotData <- within(plotData, rm("nobs_total"))
+
   seaColor <- "blue"
   landColor <- "green"
   ncShape <- 2
@@ -173,7 +187,7 @@ registerPlotType(
     "Timeseries",
     plotCreate(c("landSeaDepartures", "plotTimeseries"),
                "Land-sea departures", "range",
-               paste("SELECT DTG, level, nobs_land, nobs_sea,",
+               paste("SELECT DTG, level, nobs_total, nobs_land, nobs_sea,",
                      "fg_uncorr_sea, fg_dep_sea, an_dep_sea,",
                      "fg_uncorr_land, fg_dep_land, an_dep_land",
                      "FROM obsmon WHERE %s"),
@@ -181,6 +195,7 @@ registerPlotType(
 )
 
 doPlot.hovmoller <- function(p, plotRequest, plotData) {
+  plotData <- filterOutZeroNobsTotal(plotData)
   obplot <- ggplot(plotData) +
     aes(DTG, channel, fill=fg_bias_total) +
     geom_raster() +
@@ -191,7 +206,7 @@ registerPlotType(
     "Timeseries",
     plotCreate(c("hovmoller", "plotTimeseries"),
                "Hovmöller", "range",
-               paste("SELECT DTG, level, fg_bias_total",
+               paste("SELECT DTG, level, nobs_total, fg_bias_total",
                      "FROM obsmon WHERE %s"),
                list("obnumber"=7, "obname"))
 )
