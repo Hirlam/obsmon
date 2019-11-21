@@ -154,6 +154,9 @@ registerPlotType(
 doPlot.landSeaDepartures <- function(p, plotRequest, plotData) {
   # Making sure we don't show data with nobs_total==0
   plotData <- filterOutZeroNobsTotal(plotData)
+  if(!is.null(plotData$nobs_total) && nrow(plotData)==0) {
+    return(noDataPlot("No plottable data: All nobs are zero."))
+  }
   plotData <- within(plotData, rm("nobs_total"))
 
   seaColor <- "blue"
@@ -196,6 +199,9 @@ registerPlotType(
 
 doPlot.hovmoller <- function(p, plotRequest, plotData) {
   plotData <- filterOutZeroNobsTotal(plotData)
+  if(!is.null(plotData$nobs_total) && nrow(plotData)==0) {
+    return(noDataPlot("No plottable data: All nobs are zero."))
+  }
   obplot <- ggplot(plotData) +
     aes(DTG, channel, fill=fg_bias_total) +
     geom_raster() +
