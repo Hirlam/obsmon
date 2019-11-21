@@ -1,5 +1,23 @@
 registerPlotCategory("Timeseries")
 
+filterOutZeroNobsTotal <- function(data) {
+  # Filters out data for which nobs_total==0, so that we don't end up with
+  # these showing up in the plots. Returns the data unchanged if it does not
+  # contain info on nobs_total
+  if(!is.null(data$nobs_total)) {
+    filteringVar <- "level"
+    if("channel" %in% colnames(data)) filteringVar <- "channel"
+    dataNobsTotal <- aggregate(
+      list(nobs_total=data$nobs_total),
+      by=list(level=data[[filteringVar]]),
+      FUN=sum
+    )
+    levelsToRm <- dataNobsTotal$level[dataNobsTotal$nobs_total==0]
+    data <- data[!(data[[filteringVar]] %in% levelsToRm),]
+  }
+  return(data)
+}
+
 doPlot.plotTimeseries <- function(p, plotRequest, plotData,
                                   maskColumns=character(0),
                                   colours=NULL, shapes=NULL) {
@@ -12,17 +30,25 @@ doPlot.plotTimeseries <- function(p, plotRequest, plotData,
         wrapVariable <- "level"
       }
   )
+
+  plotData <- filterOutZeroNobsTotal(plotData)
+  if(!is.null(plotData$nobs_total) && nrow(plotData)==0) {
+    return(noDataPlot("No plottable data: All nobs are zero."))
+  }
+
   localPlotData <- melt(plotData[!(colnames(plotData) %in% maskColumns)],
                         id=c("DTG", wrapVariable))
-  obplot <- ggplot() +
-    geom_line(data=localPlotData,
-              aes(x=DTG, y=value, group=variable),
-              na.rm=TRUE, alpha=.1) +
-    geom_point(data=localPlotData,
-               aes(x=DTG, y=value, shape=variable, colour=variable, fill=variable),
-               na.rm=TRUE) +
+
+
+  obplot <- ggplot(data=localPlotData) +
+    geom_line(aes(x=DTG, y=value, group=variable), na.rm=TRUE, alpha=.1) +
+    geom_point(
+      aes(x=DTG, y=value, shape=variable, colour=variable, fill=variable),
+      na.rm=TRUE
+    ) +
     labs(x="DATE") +
-    facet_wrap(wrapVariable, labeller=label_both)
+    facet_wrap(wrapVariable, labeller=label_both) +
+    theme(legend.title=element_blank())
   if (!is.null(shapes)) {
     obplot <- obplot +
       scale_shape_manual(values=shapes)
@@ -35,8 +61,33 @@ doPlot.plotTimeseries <- function(p, plotRequest, plotData,
     obplot <- obplot +
       scale_colour_brewer(palette="Spectral")
   }
+  if(length(levels(localPlotData$variable))<2) {
+    # Only show legend when there are at least 2 different variables plotted
+    obplot <- obplot + theme(legend.position = "none")
+  }
   obplot
 }
+
+doPlotly.plotTimeseries <- function(p, plotRequest, plotData) {
+  myPlotly <- doPlotly.default(p, plotRequest, plotData)
+  myPlotly <- myPlotly %>%
+    layout(
+      margin=list(
+        l=75 # Prevent y-axis label from being cut out
+      )
+    ) %>%
+    config(
+      edits=list(
+        axisTitleText=FALSE
+      )
+    )
+  # This parameter will be used in addTitleToPlot in order to
+  # prevent the title from overlapping with the plot. ggplotly
+  # seems to have issues when the original ggplot has facte_wraps.
+  attr(myPlotly, "yTitle") <- 1.0375
+  return(myPlotly)
+}
+
 
 registerPlotType(
     "Timeseries",
@@ -84,6 +135,7 @@ registerPlotType(
 
 doPlot.biasCorrection <- function(p, plotRequest, plotData) {
   varname <- unique(plotData$varname)
+  plotData <- filterOutZeroNobsTotal(plotData)
   NextMethod(.Generic, maskColumns=c("nobs_total", "varname")) +
     geom_text(data=plotData, aes(x=DTG, y=fg_uncorr_total, label=nobs_total)) +
     ylab(units[[varname]])
@@ -100,6 +152,13 @@ registerPlotType(
 )
 
 doPlot.landSeaDepartures <- function(p, plotRequest, plotData) {
+  # Making sure we don't show data with nobs_total==0
+  plotData <- filterOutZeroNobsTotal(plotData)
+  if(!is.null(plotData$nobs_total) && nrow(plotData)==0) {
+    return(noDataPlot("No plottable data: All nobs are zero."))
+  }
+  plotData <- within(plotData, rm("nobs_total"))
+
   seaColor <- "blue"
   landColor <- "green"
   ncShape <- 2
@@ -131,7 +190,7 @@ registerPlotType(
     "Timeseries",
     plotCreate(c("landSeaDepartures", "plotTimeseries"),
                "Land-sea departures", "range",
-               paste("SELECT DTG, level, nobs_land, nobs_sea,",
+               paste("SELECT DTG, level, nobs_total, nobs_land, nobs_sea,",
                      "fg_uncorr_sea, fg_dep_sea, an_dep_sea,",
                      "fg_uncorr_land, fg_dep_land, an_dep_land",
                      "FROM obsmon WHERE %s"),
@@ -139,6 +198,10 @@ registerPlotType(
 )
 
 doPlot.hovmoller <- function(p, plotRequest, plotData) {
+  plotData <- filterOutZeroNobsTotal(plotData)
+  if(!is.null(plotData$nobs_total) && nrow(plotData)==0) {
+    return(noDataPlot("No plottable data: All nobs are zero."))
+  }
   obplot <- ggplot(plotData) +
     aes(DTG, channel, fill=fg_bias_total) +
     geom_raster() +
@@ -149,7 +212,7 @@ registerPlotType(
     "Timeseries",
     plotCreate(c("hovmoller", "plotTimeseries"),
                "Hovmöller", "range",
-               paste("SELECT DTG, level, fg_bias_total",
+               paste("SELECT DTG, level, nobs_total, fg_bias_total",
                      "FROM obsmon WHERE %s"),
                list("obnumber"=7, "obname"))
 )

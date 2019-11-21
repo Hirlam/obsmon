@@ -48,6 +48,7 @@ tryCatch(
     suppressPackageStartupMessages(library(png))
     suppressPackageStartupMessages(library(pryr))
     suppressPackageStartupMessages(library(promises))
+    suppressPackageStartupMessages(library(RColorBrewer))
     suppressPackageStartupMessages(library(RcppTOML))
     suppressPackageStartupMessages(library(reshape2))
     suppressPackageStartupMessages(library(shiny))
@@ -123,6 +124,14 @@ configGeneralFillInDefault <- function(config, key, default) {
 
   currentVal <- config$general[[key]]
   config$general[[key]] <- switch(key,
+    "appTimeout"={
+      currentVal <- as.numeric(currentVal)
+      if(anyNA(currentVal) || currentVal<0) {
+        flog.warn("Invalid appTimeout. Resetting to %s s.", default)
+        currentVal <- default
+      }
+      currentVal
+    },
     "cacheDir"={
       # Append code version information to the cacheDir path. Useful to
       # prevent conflict when updating the code. Discarding patch, though,
@@ -140,20 +149,20 @@ configGeneralFillInDefault <- function(config, key, default) {
       if(exists("cmdLineArgs") && isTRUE(cmdLineArgs$debug)) "DEBUG"
       else currentVal
     },
+    "maxAvgQueriesPerProc"={
+      currentVal <- round(as.numeric(currentVal))
+      if(anyNA(currentVal) || currentVal<1) {
+        flog.warn("Resetting maxAvgQueriesPerProc to %s", default)
+        currentVal <- default
+      }
+      currentVal
+    },
     "maxExtraParallelProcs"={
       currentVal <- round(as.numeric(currentVal))
       if(anyNA(currentVal) || currentVal<0) {
         currentVal <- 4 * availableCores()
       } else {
         flog.info("Limiting maxExtraParallelProcs to %s", currentVal)
-      }
-      currentVal
-    },
-    "maxAvgQueriesPerProc"={
-      currentVal <- round(as.numeric(currentVal))
-      if(anyNA(currentVal) || currentVal<1) {
-        flog.warn("Resetting maxAvgQueriesPerProc to %s", default)
-        currentVal <- default
       }
       currentVal
     },
@@ -191,20 +200,24 @@ getSuitableCacheDirDefault <- function() {
 
 configGeneralFillInDefaults <- function(config) {
   if(length(config)==0) config <- list(general=list())
+  config <- configGeneralFillInDefault(config, "appTimeout", Inf)
   config <- configGeneralFillInDefault(
     config, "cacheDir", getSuitableCacheDirDefault()
   )
-  config <- configGeneralFillInDefault(config, "logLevel", "WARN")
   config <- configGeneralFillInDefault(config, "initCheckDataExists", FALSE)
+  config <- configGeneralFillInDefault(config, "logLevel", "WARN")
+  config <- configGeneralFillInDefault(config, "maxAvgQueriesPerProc", Inf)
   config <- configGeneralFillInDefault(config, "maxExtraParallelProcs",
     Sys.getenv("OBSMON_MAX_N_EXTRA_PROCESSES")
   )
-  config <- configGeneralFillInDefault(config, "maxAvgQueriesPerProc", Inf)
-  config <- configGeneralFillInDefault(config, "showCacheOptions", FALSE)
   config <- configGeneralFillInDefault(
     config, "multiPlotsEnableInteractivity", FALSE
   )
+  config <- configGeneralFillInDefault(
+    config, "plotsEnableInteractivity", TRUE
+  )
   config <- configGeneralFillInDefault(config, "sessionTimeout", Inf)
+  config <- configGeneralFillInDefault(config, "showCacheOptions", FALSE)
   config
 }
 
@@ -323,6 +336,7 @@ runObsmonStandAlone <- function(cmdLineArgs) {
     runAppHandlingBusyPort(
       appDir=obsmonSrcDir, defaultPort=cmdLineArgs$port,
       launch.browser=cmdLineArgs$launch, quiet=TRUE,
+      maxNAtt=max(cmdLineArgs$maxTcpRetries+1, 1),
       display.mode=displayMode
     )
   }

@@ -35,14 +35,27 @@ tryCatch(
   error=function(e) stop(paste(e, libPathsMsg[['error']], sep="\n"))
 )
 parser <- ArgumentParser()
-parser$add_argument("--launch", action="store_true", help="Launch browser")
-parser$add_argument('-pt', '--port', type="integer", default=5391,
-  help=paste('Port the app will listen to (default: 5391).',
-         'If busy, the code will attempt to pick a valid port number randomly'
-       )
-)
-parser$add_argument("--debug", action="store_true", help="Start in debug mode")
 parser$add_argument("--batch", action="store_true", help="Run in batch mode")
+parser$add_argument("--launch", action="store_true",
+  help="Launch browser at startup. Does not apply when running in batch mode."
+)
+parser$add_argument('-pt', '--port', type="integer", default=5391,
+  help=paste(
+    'TCP port the app will listen to (default: 5391).',
+    'If busy, the code will attempt to pick a valid port number randomly',
+    'Does not apply when running in batch mode.'
+  )
+)
+parser$add_argument(
+  '-maxRetriesIfPortBusy', '--max-retries-if-tcp-port-busy', dest="maxTcpRetries",
+  type="integer", default=9,
+  help=paste(
+    "Max number of times the app will try to find an available TCP port",
+    "to listen to, if the initially picked one is busy.",
+    'Does not apply when running in batch mode.'
+  )
+)
+parser$add_argument("--debug", action="store_true", help="Run in debug mode")
 cmdLineArgs <- parser$parse_args()
 
 # Initialising the rest of the code

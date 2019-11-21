@@ -76,7 +76,10 @@ observeEvent(input$doPlot, {
   # Prepare plot asyncronously
   newFutPlotAndOutput <- futureCall(
     FUN=preparePlotsCapturingOutput,
-    args=list(plotter=plotter, plotRequest=plotRequest, db=db)
+    args=list(
+      plotter=plotter, plotRequest=plotRequest, db=db,
+      interactive=isTRUE(obsmonConfig$general$plotsEnableInteractivity)
+    )
   )
   plotPID <- newFutPlotAndOutput$job$pid
   currentPlotPid(plotPID)
@@ -101,7 +104,7 @@ observeEvent(input$doPlot, {
         js$enableTab("mapTab")
       }
       # (ii) Interactive or regular plot tabs
-      interactive <- plotCanBeMadeInteractive(value$plots$obplot)
+      interactive <- plotIsPlotly(value$plots$obplot)
       shinyjs::toggle(
         condition=interactive, selector="#mainArea li a[data-value=plotlyTab]"
       )
@@ -172,50 +175,28 @@ output$queryAndTableContainer <- renderUI(
 
 # Rendering plot/map/dataTable
 # (i) Rendering plots
-# (i.i) Interactive plot, if plot supports it
+# (i.i) Interactive plot, if plot is a plotly object
 output$plotly <- renderPlotly({
-  myPlot <- readyPlot()$obplot
-  req(plotCanBeMadeInteractive(myPlot))
+  req(plotIsPlotly(readyPlot()$obplot))
   notifId <- showNotification(
     "Rendering plot...", duration=NULL, type="message"
   )
   on.exit(removeNotification(notifId))
-  # Convert ggplot object to plotly and customise
-  # See <https://plotly-r.com/control-modebar.html>
-  myPlot <- ggplotly(req(myPlot), tooltip = c("x","y")) %>%
-    config(
-      displaylogo=FALSE, collaborate=FALSE, cloud=FALSE,
-      scrollZoom=TRUE,
-      toImageButtonOptions = list(
-        filename="obsmon_plot",
-        format="png",
-        width=1280,
-        height=720
-      )
-    )
-  myPlot <- addTitleToPlot(myPlot, readyPlot()$title)
-  myPlot
+  readyPlot()$obplot %>%
+    configPlotlyWrapper() %>%
+    addTitleToPlot(readyPlot()$title)
 })
-# (i.ii) Non-interactive plot, if plot does not support interactivity
+# (i.ii) Non-interactive plot, if plot is not a plotly object
 output$plot <- renderPlot({
-  req(!plotCanBeMadeInteractive(readyPlot()$obplot))
-  if(!is.null(readyPlot()$obplot)) {
-    notifId <- showNotification(
-      "Rendering plot...", duration=NULL, type="message"
-    )
-    on.exit(removeNotification(notifId))
-  }
-  # Add title to plot
-  myPlot <- tryCatch(
-    grid.arrange(readyPlot()$obplot, top=textGrob(readyPlot()$title)),
-    error=function(e) {
-      if(!is.null(readyPlot()$obplot)) {
-        flog.error("Problems setting plot title: %s", e)
-      }
-      readyPlot()$obplot
-    }
+  if(is.null(readyPlot()$obplot)) return(NULL)
+  req(!plotIsPlotly(readyPlot()$obplot))
+
+  notifId <- showNotification(
+    "Rendering plot...", duration=NULL, type="message"
   )
-  addTitleToPlot(readyPlot()$obplot, readyPlot()$title)
+  on.exit(removeNotification(notifId))
+
+  readyPlot()$obplot %>% addTitleToPlot(readyPlot()$title)
 },
   res=96, pointsize=18
 )

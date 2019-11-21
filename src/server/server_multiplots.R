@@ -122,6 +122,7 @@ observeEvent(input$multiPlotsDoPlot, {
     args=list(
       plotter=plotTypesFlat[[pConfig$plotType]],
       inputsForAllPlots=inputsForAllPlots, db=db,
+      interactive=isTRUE(obsmonConfig$general$multiPlotsEnableInteractivity),
       progressFile=multiPlotsProgressFile()
     )
   )
@@ -200,7 +201,7 @@ output$multiPlotsPlotContainer <- renderUI({
   plotOutList <- lapply(seq_along(multiPlot()), function(iPlot) {
     if(
       isTRUE(obsmonConfig$general$multiPlotsEnableInteractivity) &&
-      plotCanBeMadeInteractive(multiPlot()[[iPlot]]$obplot)
+      plotIsPlotly(multiPlot()[[iPlot]]$obplot)
     ) {
       plotlyOutputInsideFluidRow(multiPlotsGenId(iPlot, type="plot"))
     } else {
@@ -252,29 +253,21 @@ observeEvent(multiPlot(), {
       plotOutId <- multiPlotsGenId(iPlot, type="plot")
       if(
         isTRUE(obsmonConfig$general$multiPlotsEnableInteractivity) &&
-        plotCanBeMadeInteractive(multiPlot()[[pName]]$obplot)
+        plotIsPlotly(multiPlot()[[pName]]$obplot)
       ) {
         output[[plotOutId]] <- renderPlotly({
-          myPlot <- multiPlot()[[pName]]$obplot
-          # Convert ggplot object to plotly and customise
-          myPlot <- ggplotly(req(myPlot), tooltip = c("x","y")) %>%
-            config(
-              displaylogo=FALSE, collaborate=FALSE, cloud=FALSE,
-              scrollZoom=TRUE,
-              toImageButtonOptions = list(
-                filename=sprintf("obsmon_multiPlot_%s", iPlot),
-                format="png",
-                width=1280,
-                height=720
+          req(multiPlot()[[pName]]$obplot) %>%
+            configPlotlyWrapper(
+              toImageButtonOptions=list(
+                filename=sprintf("obsmon_multiPlot_%s", iPlot)
               )
-            )
-          myPlot <- addTitleToPlot(myPlot, multiPlot()[[pName]]$title)
-          myPlot
+            ) %>%
+            addTitleToPlot(multiPlot()[[pName]]$title)
         })
       } else {
         output[[plotOutId]] <- renderPlot({
-          myPlot <- multiPlot()[[pName]]
-          addTitleToPlot(req(myPlot$obplot), myPlot$title)
+          req(multiPlot()[[pName]]$obplot) %>%
+            addTitleToPlot(multiPlot()[[pName]]$title)
         },
            res=96, pointsize=18
         )

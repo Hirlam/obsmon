@@ -5,6 +5,27 @@ The format is based on [Keep a Changelog](http://keepachangelog.com)
 and this project adheres to [Semantic Versioning](http://semver.org).
 
 
+## [3.7.0] 2019-11-21
+### Added
+- Interactivity to "Maps" plots
+- Interactivity to "Station Diagnostics" plots
+- Editable plot elements (titles, axes and legend text and position)
+  in interactive plots
+- Config file options "appTimeout" and "plotsEnableInteractivity"
+- Command-line option "-maxRetriesIfPortBusy"
+
+### Changed
+- "Timeseries"-type plots: Hide levels for which all nobs are zero
+- Better axes labels in "Station Diagnostics" plots
+- Dimensions of figures exported from interactive plots (755x1280 -> 755x1200)
+
+### Removed
+- Title of legend from "timeseries" plots
+
+### Fixed
+- Installation error caused by R-package lambda.R
+
+
 ## [3.6.0] 2019-10-22
 ### Added
 - Issue a notification and mark experiments as unavailable when they
@@ -274,6 +295,7 @@ and this project adheres to [Semantic Versioning](http://semver.org).
 - Environment variables for configuration
 
 
+[3.7.0]: https://git.smhi.se/foum/obsmon/compare/obsmon-3.6.0...obsmon-3.7.0
 [3.6.0]: https://git.smhi.se/foum/obsmon/compare/obsmon-3.5.0...obsmon-3.6.0
 [3.5.0]: https://git.smhi.se/foum/obsmon/compare/obsmon-3.4.0...obsmon-3.5.0
 [3.4.0]: https://git.smhi.se/foum/obsmon/compare/obsmon-3.3.2...obsmon-3.4.0
