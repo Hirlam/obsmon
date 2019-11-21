@@ -22,6 +22,9 @@ and this project adheres to [Semantic Versioning](http://semver.org).
 ### Removed
 - Title of legend from "timeseries" plots
 
+### Fixed
+- Installation error caused by R-package lambda.R
+
 
 ## [3.6.0] 2019-10-22
 ### Added
