@@ -5,7 +5,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com)
 and this project adheres to [Semantic Versioning](http://semver.org).
 
 
-## [Unreleased]
+## [3.7.0] 2019-11-21
 ### Added
 - Interactivity to "Maps" plots
 - Interactivity to "Station Diagnostics" plots
@@ -295,6 +295,7 @@ and this project adheres to [Semantic Versioning](http://semver.org).
 - Environment variables for configuration
 
 
+[3.7.0]: https://git.smhi.se/foum/obsmon/compare/obsmon-3.6.0...obsmon-3.7.0
 [3.6.0]: https://git.smhi.se/foum/obsmon/compare/obsmon-3.5.0...obsmon-3.6.0
 [3.5.0]: https://git.smhi.se/foum/obsmon/compare/obsmon-3.4.0...obsmon-3.5.0
 [3.4.0]: https://git.smhi.se/foum/obsmon/compare/obsmon-3.3.2...obsmon-3.4.0
