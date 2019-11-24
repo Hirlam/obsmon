@@ -5,6 +5,14 @@ The format is based on [Keep a Changelog](http://keepachangelog.com)
 and this project adheres to [Semantic Versioning](http://semver.org).
 
 
+## [Unreleased]
+### Added
+- Some new plot types:
+    - "Average First Guess Departure + Bias Correction Map"
+    - "Average Bias Correction Map"
+    - "Average Observations Map"
+
+
 ## [3.7.0] 2019-11-21
 ### Added
 - Interactivity to "Maps" plots

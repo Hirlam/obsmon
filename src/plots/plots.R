@@ -336,12 +336,11 @@ plotCreate <- function(clazz, name, dateType, queryStub, requiredFields, ...) {
 }
 
 
-postProcessQueriedPlotData <-
-  function(plotter, plotData) UseMethod("postProcessQueriedPlotData")
-
-postProcessQueriedPlotData.default <- function(plotter, plotData) {
-    plotData
+postProcessQueriedPlotData <- function(plotData) {
+  UseMethod("postProcessQueriedPlotData")
 }
+
+postProcessQueriedPlotData.default <- function(plotData) {plotData}
 
 # Functions used in in server.R
 # Build named list of plot criteria
@@ -408,7 +407,7 @@ preparePlots <- function(plotter, plotRequest, db, interactive) {
       # Postprocessing plotData returned by performQuery.
       # This may be useful, e.g., if performing averages over a
       # picked date range.
-      plotData <- postProcessQueriedPlotData(plotter, plotData)
+      plotData <- postProcessQueriedPlotData(plotData)
     }
     if(isTRUE(nrow(plotData)>0)) {
       statIds <- c()

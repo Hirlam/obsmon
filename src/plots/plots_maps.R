@@ -373,7 +373,7 @@ registerPlotType(
                paste("SELECT",
                      "latitude, longitude, level, statid, obsvalue,",
                      "(%s) as plotValues",
-                     "FROM usage WHERE %s AND fg_dep NOT NULL"),
+                     "FROM usage WHERE %s AND (plotValues NOT NULL)"),
                list("obnumber", "obname"),
                dataColumn="fg_dep")
 )
@@ -384,7 +384,8 @@ registerPlotType(
                paste("SELECT",
                      "latitude, longitude, level, statid,",
                      "(%s) as plotValues",
-                     "FROM usage WHERE %s AND fg_dep NOT NULL"),
+                     "FROM usage WHERE %s AND",
+                     "fg_dep NOT NULL AND (plotValues NOT NULL)"),
                list("obnumber", "obname"),
                dataColumn="fg_dep+biascrl")
 )
@@ -395,7 +396,7 @@ registerPlotType(
                paste("SELECT",
                      "latitude, longitude, level, statid, obsvalue,",
                      "(%s) as plotValues",
-                     "FROM usage WHERE %s AND an_dep NOT NULL"),
+                     "FROM usage WHERE %s AND (plotValues NOT NULL)"),
                list("obnumber", "obname"),
                dataColumn="an_dep")
 )
@@ -407,7 +408,7 @@ registerPlotType(
                      "latitude, longitude, level, statid,",
                      "obsvalue, fg_dep, an_dep,",
                      "(%s) as plotValues",
-                     "FROM usage WHERE %s AND fg_dep NOT NULL AND an_dep NOT NULL"),
+                     "FROM usage WHERE %s AND (plotValues NOT NULL)"),
                list("obnumber", "obname"),
                dataColumn="an_dep-fg_dep")
 )
@@ -418,7 +419,7 @@ registerPlotType(
                paste("SELECT",
                      "latitude, longitude, level, statid,",
                      "(%s) as plotValues",
-                     "FROM usage WHERE %s"),
+                     "FROM usage WHERE %s AND (plotValues NOT NULL)"),
                list("obnumber", "obname"),
                dataColumn="biascrl")
 )
@@ -429,7 +430,7 @@ registerPlotType(
                paste("SELECT",
                      "latitude, longitude, level, statid,",
                      "(%s) as plotValues",
-                     "FROM usage WHERE %s"),
+                     "FROM usage WHERE %s AND (plotValues NOT NULL)"),
                list("obnumber", "obname"),
                dataColumn="obsvalue")
 )
@@ -440,33 +441,19 @@ registerPlotType(
 # selectes dates and cycles.
 registerPlotCategory("AverageMaps")
 
-mapThresholdWithRangeAggregateAndApplyFunction <-
-  function(plotter, plotData, FUN='mean',
-    aggregateBy=c("statid", "latitude", "longitude", "level")
-  ) {
-  # Grouping data by the colnames specified in aggregateBy,
-  # then applying function FUN within each group
-  if(isTRUE(nrow(plotData)>0)) {
-    aggregateByList = plotData[, aggregateBy]
-    columnsNotToBeAggreg <- which(colnames(plotData) %in%
-                                c("DTG", aggregateBy)
-                              )
-    plotData <- aggregate(plotData[, -columnsNotToBeAggreg],
-                  by=aggregateByList,
-                  FUN=FUN,
-                  na.rm=TRUE
-                )
-  }
-  # Returning
-  plotData
-}
-
-postProcessQueriedPlotData.mapThresholdWithRangeAvgs <-
-  function(plotter, plotData) {
-    mapThresholdWithRangeAggregateAndApplyFunction(
-      plotter, plotData, FUN="mean",
-      aggregateBy=c("statid", "latitude", "longitude", "level")
-  )
+postProcessQueriedPlotData.mapThresholdWithRangeAvgs <- function(plotData) {
+  # Columns we don't want to calculate the average for
+  groupBy=c("statid", "latitude", "longitude", "level")
+  # Make sure we don't try to calculate means of non-numeric columns
+  nonNumericCols <- names(which(sapply(plotData, is.numeric)==FALSE))
+  groupBy <- unique(c(groupBy, nonNumericCols))
+  # Remove DTG if present. Doesn't make sense to have it after the averages.
+  plotData <- within(plotData, rm(DTG))
+  # Finally, calculate the averages
+  plotData <- plotData %>%
+    group_by(.dots=groupBy) %>%
+    summarize_all(mean)
+  return(plotData)
 }
 
 registerPlotType(
@@ -476,9 +463,20 @@ registerPlotType(
                paste("SELECT",
                      "latitude, longitude, level, statid, obsvalue,",
                      "(%s) as plotValues",
-                     "FROM usage WHERE %s AND fg_dep NOT NULL"),
+                     "FROM usage WHERE %s AND (plotValues NOT NULL)"),
                list("obnumber", "obname"),
                dataColumn="fg_dep")
+)
+registerPlotType(
+    "AverageMaps",
+    plotCreate(c("mapThresholdWithRangeAvgs", "mapThreshold", "plotMap"),
+               "Average First Guess Departure + Bias Correction Map", "range",
+               paste("SELECT",
+                     "latitude, longitude, level, statid,",
+                     "(%s) as plotValues",
+                     "FROM usage WHERE %s AND (plotValues NOT NULL)"),
+               list("obnumber", "obname"),
+               dataColumn="fg_dep+biascrl")
 )
 registerPlotType(
     "AverageMaps",
@@ -487,7 +485,7 @@ registerPlotType(
                paste("SELECT",
                      "latitude, longitude, level, statid, obsvalue,",
                      "(%s) as plotValues",
-                     "FROM usage WHERE %s AND an_dep NOT NULL"),
+                     "FROM usage WHERE %s AND (plotValues NOT NULL)"),
                list("obnumber", "obname"),
                dataColumn="an_dep")
 )
@@ -499,7 +497,29 @@ registerPlotType(
                      "latitude, longitude, level, statid,",
                      "obsvalue, fg_dep, an_dep,",
                      "(%s) as plotValues",
-                     "FROM usage WHERE %s AND fg_dep NOT NULL AND an_dep NOT NULL"),
+                     "FROM usage WHERE %s AND (plotValues NOT NULL)"),
                list("obnumber", "obname"),
                dataColumn="an_dep-fg_dep")
+)
+registerPlotType(
+    "AverageMaps",
+    plotCreate(c("mapThresholdWithRangeAvgs", "mapThreshold", "plotMap"),
+               "Average Bias Correction Map", "range",
+               paste("SELECT",
+                     "latitude, longitude, level, statid,",
+                     "(%s) as plotValues",
+                     "FROM usage WHERE %s AND (plotValues NOT NULL)"),
+               list("obnumber", "obname"),
+               dataColumn="biascrl")
+)
+registerPlotType(
+    "AverageMaps",
+    plotCreate(c("mapThresholdWithRangeAvgs", "mapThreshold", "plotMap"),
+               "Average Observations Map", "range",
+               paste("SELECT",
+                     "latitude, longitude, level, statid,",
+                     "(%s) as plotValues",
+                     "FROM usage WHERE %s AND (plotValues NOT NULL)"),
+               list("obnumber", "obname"),
+               dataColumn="obsvalue")
 )
