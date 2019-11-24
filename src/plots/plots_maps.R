@@ -295,10 +295,11 @@ doPlotly.mapUsage <- function(p, plotRequest, plotData) {
         sep="<br />"
       ),
       marker = list(
+        opacity=0.5,
         line = list(
           color = 'black',
-          width = 1,
-          opacity=0.5
+          width = 0.25,
+          opacity=0.1
         )
       ),
       symbol=~status, color=~status, colors=colors, size=2,
@@ -349,10 +350,11 @@ doPlotly.mapThreshold <- function(p, plotRequest, plotData) {
       ),
       size=2, color=~plotValues, colors=cm$palette,
       marker = list(
+        opacity=0.5,
         line = list(
           color = 'black',
-          width = 1,
-          opacity=0.5
+          width = 0.25,
+          opacity=0.1
         )
       ),
       hoverinfo="text"

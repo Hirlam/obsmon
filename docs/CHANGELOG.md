@@ -12,6 +12,10 @@ and this project adheres to [Semantic Versioning](http://semver.org).
     - "Average Bias Correction Map"
     - "Average Observations Map"
 
+### Changed
+- Reduce marker opacities and line widths in interactive Maps Plots for
+  better visibility in dense plots
+
 
 ## [3.7.0] 2019-11-21
 ### Added
