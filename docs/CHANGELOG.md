@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](http://semver.org).
     - "Average First Guess Departure + Bias Correction Map"
     - "Average Bias Correction Map"
     - "Average Observations Map"
+- Config file option "configName"
 
 ### Changed
 - Reduce marker opacities and line widths in interactive Maps Plots for

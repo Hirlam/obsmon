@@ -307,6 +307,9 @@ configure <- function() {
     confExpts <- obsmonConfig$experiments
     exptNamesInConfig <<- unlist(lapply(confExpts, function(x) x$displayName))
     if(length(exptNamesInConfig)==0) flog.error("No experiment configured!")
+    if(length(obsmonConfig$general$configName)>0) {
+      flog.info('Config name found: "%s"\n', obsmonConfig$general$configName)
+    }
     sourceObsmonFiles()
   }
 }

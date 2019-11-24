@@ -7,14 +7,22 @@
 # FYI:                                                                              #
 #    - Comments can be added using a "#" character and are optional                 #
 #    - Indentation is also optional, but highly encouraged                          #
+#    - Other config options exist. Please read the PDF doc file for more info       #
 #####################################################################################
 
 ###################
 # General options #
 ###################
 [general]
+    # Some of the general options below may be optional even though they are not marked
+    # as such here. There are also other options that have not been listed here.
+    # To know more, and for default values, please see the PDF doc file.
+    configName = "My config name" # Optional. If set, will appear in the GUI and logs.
     logLevel = "INFO"
     cacheDir = ".Rcache"
+    sessionTimeout = 1800 # In seconds. Optional.
+    appTimeout = 5 # In seconds. Optional.
+    multiPlotsEnableInteractivity = true # The default value is false
 
 ###########################
 # Configuring experiments #

@@ -52,7 +52,10 @@ shinyUI(ui=tagList(
   hidden(div(id="app-content",
     navbarPage(
       title=uiOutput("pageTitle"),
-      windowTitle=paste0("Obsmon v", obsmonVersion),
+      windowTitle=ifelse(length(obsmonConfig$general$configName)>0,
+        sprintf("Obsmon v%s %s", obsmonVersion, obsmonConfig$general$configName),
+        paste0("Obsmon v", obsmonVersion)
+      ),
       id="appNavbarPage",
       tabPanel("Main", value="mainTab", mainTab()),
       tabPanel(
