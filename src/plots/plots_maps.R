@@ -295,7 +295,6 @@ doPlotly.mapUsage <- function(p, plotRequest, plotData) {
         sep="<br />"
       ),
       marker = list(
-        opacity=0.5,
         line = list(
           color = 'black',
           width = 0.25,
@@ -350,7 +349,6 @@ doPlotly.mapThreshold <- function(p, plotRequest, plotData) {
       ),
       size=2, color=~plotValues, colors=cm$palette,
       marker = list(
-        opacity=0.5,
         line = list(
           color = 'black',
           width = 0.25,
