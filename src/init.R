@@ -303,6 +303,7 @@ configure <- function() {
     config <- readConfig()
     assertCacheDirWritable(config, verbose=TRUE)
     setPackageOptions(config)
+    flog.debug('Temp dir for session: %s\n', tempdir())
     obsmonConfig <<- config
     confExpts <- obsmonConfig$experiments
     exptNamesInConfig <<- unlist(lapply(confExpts, function(x) x$displayName))

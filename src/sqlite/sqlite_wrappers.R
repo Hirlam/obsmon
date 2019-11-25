@@ -144,9 +144,41 @@ singleFileQuerier <- function(dbpath, query) {
   res
 }
 
+readPlotProgressFile <- function(path) {
+  fContents <- tryCatch(unlist(read.table(path), use.names=FALSE),
+    error=function(e) NULL,
+    warning=function(w) NULL
+  )
+  rtn <- list(current=fContents[1], total=fContents[2])
+  return(rtn)
+}
+
+performQueryOnIthDbPath <- function(dbpaths, query, i, progressFile=NULL) {
+  # Using a file to get update on progress of plots
+  # Unfortunately there was no other way to do this from within a future
+  # at the time this code was written
+  if(!is.null(progressFile)) {
+    tryCatch({
+      if(file.exists(progressFile)) {
+        progressNow <- readPlotProgressFile(progressFile)
+        thisIter <- progressNow$current + 1
+      } else {
+        thisIter <- 1
+      }
+      write(c(thisIter, length(dbpaths)), progressFile, append=FALSE)
+    },
+      error=function(e) {flog.debug(e); NULL},
+      warn=function(w) {flog.debug(w); NULL}
+    )
+  }
+
+  singleFileQuerier(dbpaths[i], query)
+}
+
 performQuery <- function(
   db, query, dtgs,
-  maxAvgQueriesPerProc=obsmonConfig$general$maxAvgQueriesPerProc
+  maxAvgQueriesPerProc=obsmonConfig$general$maxAvgQueriesPerProc,
+  progressFile=NULL
 ) {
   startTime <- Sys.time() # For debug purposes
   selectedDtgs <- dtgs
@@ -157,8 +189,11 @@ performQuery <- function(
   dbpaths <- db$getDataFilePaths(selectedDtgs)
 
   res <- tryCatch({
-      queryResult <- future_lapply(dbpaths,
-        partial(singleFileQuerier, query=query),
+      queryResult <- future_lapply(seq_along(dbpaths),
+        partial(
+          performQueryOnIthDbPath, dbpaths=dbpaths,
+          query=query, progressFile=progressFile
+        ),
         future.chunk.size=maxAvgQueriesPerProc
       )
       do.call(rbind, queryResult)

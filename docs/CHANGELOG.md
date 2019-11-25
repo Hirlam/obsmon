@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](http://semver.org).
     - "Average Bias Correction Map"
     - "Average Observations Map"
 - Config file option "configName"
+- Progress bar on GUI when querying data files to produce plots
 
 ### Changed
 - Reduce marker opacities and line widths in interactive Maps Plots for

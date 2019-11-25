@@ -394,7 +394,9 @@ plotsBuildCriteria <- function(input) {
   return(res)
 }
 # Perform plotting
-preparePlots <- function(plotter, plotRequest, db, interactive) {
+preparePlots <- function(
+  plotter, plotRequest, db, interactive, progressFile=NULL
+) {
   tryCatch({
     isWindspeed <- "varname" %in% names(plotRequest$criteria) &&
       plotRequest$criteria$varname %in% c("ff", "ff10m")
@@ -403,7 +405,9 @@ preparePlots <- function(plotter, plotRequest, db, interactive) {
       plotData <- buildFfData(db, plotter, plotRequest)
     } else {
       query <- plotBuildQuery(plotter, plotRequest)
-      plotData <- performQuery(db, query, plotRequest$criteria$dtg)
+      plotData <- performQuery(
+        db, query, plotRequest$criteria$dtg, progressFile=progressFile
+      )
       # Postprocessing plotData returned by performQuery.
       # This may be useful, e.g., if performing averages over a
       # picked date range.
