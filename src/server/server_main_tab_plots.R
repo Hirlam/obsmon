@@ -7,11 +7,11 @@ shinyjs::hide(selector="#mainArea li a[data-value=plotlyTab]")
 currentPlotPid <- reactiveVal(-1)
 plotStartedNotifId <- reactiveVal(-1)
 plotInterrupted <- reactiveVal()
-onclick("cancelPlot", {
+observeEvent(input$cancelPlot, {
   showNotification("Cancelling plot", type="warning", duration=1)
   plotInterrupted(TRUE)
   killProcessTree(currentPlotPid(), warnFail=TRUE)
-})
+}, priority=2000, ignoreInit=TRUE)
 
 readyPlot <- reactiveVal(NULL)
 observeEvent(input$doPlot, {
@@ -160,7 +160,7 @@ observeEvent(input$doPlot, {
   })
   # This NULL is necessary in order to prevent the future from blocking
   NULL
-})
+}, priority=1000)
 
 # Finally, producing the output
 # Rendering UI slots for the outputs dynamically

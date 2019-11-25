@@ -77,7 +77,7 @@ observeEvent({
   # Give caching lower priority than other observers, as it will keep running
   # on the background for as long as needed and we don't want the app to slow
   # down as a result
-  priority=-1
+  priority=-10
 )
 # Prepare and send, if requested, batches of data files to be re-cached
 observeEvent({
@@ -89,7 +89,7 @@ observeEvent({
   filesToRecacheInThisBatch <- Filter(Negate(anyNA), filesToRecacheInThisBatch)
   newBatchFilesToRecache(filesToRecacheInThisBatch)
 },
-  priority=-1
+  priority=-10
 )
 
 # Cache (or recache) observations as new batches of file paths arrive
@@ -141,7 +141,7 @@ observeEvent({
   # This NULL is necessary in order to prevent the future from blocking
   NULL
 },
-  priority=-1
+  priority=-10
 )
 
 # Re-cache observations if requested by user
@@ -190,12 +190,12 @@ reloadInfoFromCache <- eventReactive({
   Sys.time()
 },
   ignoreNULL=FALSE
-) %>% throttle(1000)
+) %>% throttle(1000, priority=-1)
 
 # Keep track of whether selected DTGs are cached or not
 observeEvent(reloadInfoFromCache(), {
     selectedDtgsAreCached(dtgsAreCached(req(activeDb()),req(selectedDtgs())))
-})
+}, priority=-1)
 
 # Notify progress of caching
 observeEvent({
@@ -223,4 +223,4 @@ observeEvent({
       id=cacheNotifId, ui=cacheProgressMsg, type="message", duration=NULL
     )
   }
-})
+}, priority=-1)
