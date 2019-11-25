@@ -14,7 +14,7 @@
 #                      Use this, e.g., for optional libraries that prove
 #                      tricky to install.
 pkgsSafeToIgnore <- c("RadarBE")
-excludeFromSuggests <- c("sf", "units", "udunits2")
+excludeFromSuggests <- c("sf", "units", "udunits2", "vdiffr", "freetypeharfbuzz")
 
 # Some rudimentary parsing of command line options
 args <- commandArgs(trailingOnly=FALSE)

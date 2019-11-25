@@ -17,6 +17,9 @@ and this project adheres to [Semantic Versioning](http://semver.org).
 - Reduce marker opacities and line widths in interactive Maps Plots for
   better visibility in dense plots
 
+### Fixed
+- Installation error om Debian caused by R-pkgs vdiffr and freetypeharfbuzz
+
 
 ## [3.7.0] 2019-11-21
 ### Added
