@@ -448,3 +448,13 @@ preparePlotsCapturingOutput <- function(...) {
   if(output=="") output <- character(0)
   return(list(plots=plots, output=output))
 }
+
+# Helper functions for plot progress bar
+readPlotProgressFile <- function(path) {
+  fContents <- tryCatch(unlist(read.table(path), use.names=FALSE),
+    error=function(e) NULL,
+    warning=function(w) NULL
+  )
+  rtn <- list(current=fContents[1], total=fContents[2])
+  return(rtn)
+}

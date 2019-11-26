@@ -24,18 +24,20 @@ observeEvent(plotProgressFile(), {
 })
 observeEvent(plotProgressStatus()(), {
   pProgress <- plotProgressStatus()()
-  req(pProgress$current, pProgress$total)
+  req(isTRUE(pProgress$total>0), isTRUE(pProgress$current<=pProgress$total))
   removeNotification(plotStartedNotifId())
   progress <- plotProgressBar()
   if(is.null(progress)) {
     progress <- shiny::Progress$new(max=pProgress$total)
     plotProgressBar(progress)
   }
+  # Subtract 1 from barValue as progress is updated when the process begins
+  barValue <- pProgress$current-1
   progress$set(
-    # Subtract 1 from value as progress is updated when the process begins
-    value=pProgress$current-1,
+    value=barValue,
     message=sprintf(
-      "Plot: Querying data file %s of %s", pProgress$current, pProgress$total
+      "Plot: Querying %s data files: %.0f%%",
+      pProgress$total,  100.0*(barValue/pProgress$total)
     )
   )
 })
