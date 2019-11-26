@@ -197,7 +197,7 @@ observeEvent(input$doPlot, {
   })
   # This NULL is necessary in order to prevent the future from blocking
   NULL
-}, priority=1000)
+}, priority=2000)
 
 # Finally, producing the output
 # Rendering UI slots for the outputs dynamically

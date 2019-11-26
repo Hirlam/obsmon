@@ -214,7 +214,6 @@ observeEvent({
       newChoices <- obtypes$cached
     } else {
       newChoices <- combineCachedAndGeneralChoices(obtypes)
-      delay(1000, triggerReadCache())
     }
     updateSelectInputWrapper(
       session, "obtype", choices=newChoices, choicesFoundIncache=isCached
@@ -241,11 +240,6 @@ observeEvent(updateObnames(), {
     newChoices <- obnames$cached
   } else {
     newChoices <- combineCachedAndGeneralChoices(obnames)
-    if(!(obsCategory %in% c("radar", "scatt"))) {
-      # In these cases obnames$cached will always be NULL, since
-      # obname=obsCategory and this info is therefore not stored in cache
-      delay(1000, triggerReadCache())
-    }
   }
   updateSelectInputWrapper(
     session, "obname", choices=newChoices, choicesFoundIncache=isCached
@@ -267,7 +261,6 @@ observeEvent(updateVariables(), {
     newChoices <- variables$cached
   } else {
     newChoices <- combineCachedAndGeneralChoices(variables)
-    delay(1000, triggerReadCache())
   }
   updateSelectInputWrapper(
     session, "variable", choices=newChoices, choicesFoundIncache=isCached
@@ -287,7 +280,6 @@ observeEvent(updateSensor(), {
     newChoices <- sens$cached
   } else {
     newChoices <- combineCachedAndGeneralChoices(sens)
-    delay(1000, triggerReadCache())
   }
   updateSelectInputWrapper(
     session, "sensor", choices=newChoices, choicesFoundIncache=isCached
@@ -309,7 +301,6 @@ observeEvent(updateSatellite(), {
     newChoices <- sats$cached
   } else {
     newChoices <- combineCachedAndGeneralChoices(sats)
-    delay(1000, triggerReadCache())
   }
   updateSelectInputWrapper(
     session, "satellite", choices=newChoices, choicesFoundIncache=isCached
@@ -336,7 +327,6 @@ channels <- eventReactive(updateChannels(), {
   } else if(!selectedDtgsAreCached()) {
     newChannels <- c("Any (cache info incomplete)"="", newChannels)
   }
-  if(!selectedDtgsAreCached()) delay(1000, triggerReadCache())
 
   return(newChannels)
 })
@@ -429,8 +419,6 @@ observeEvent(updateStations(), {
     stations <- c(entryForAnyStation, stations)
   }
   updateSelectInputWrapper(session, inputName, choices=stations, label=label)
-
-  if(!selectedDtgsAreCached()) delay(1000, triggerReadCache())
 },
   ignoreNULL=TRUE
 )
@@ -473,7 +461,6 @@ availableLevels <- eventReactive({
   } else if(!selectedDtgsAreCached()) {
     levels$all <- c("Any (cache info incomplete)"="", levels$all)
   }
-  if(!selectedDtgsAreCached()) delay(1000, triggerReadCache())
   return(levels)
 })
 observe({

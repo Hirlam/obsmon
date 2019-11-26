@@ -17,6 +17,8 @@ and this project adheres to [Semantic Versioning](http://semver.org).
 ### Changed
 - Reduce marker opacities and line widths in interactive Maps Plots for
   better visibility in dense plots
+- Some improvements to caching for better UI responsiveness
+    - In particular, pause caching while producing plot/multiPlot
 
 ### Fixed
 - Installation error om Debian caused by R-pkgs vdiffr and freetypeharfbuzz
