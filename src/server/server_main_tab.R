@@ -439,12 +439,16 @@ observeEvent({
 )
 
 # Update level choices for selected station(s) and variable
+# Defining availableLevels as an eventReactive was causing an issue
+# that could leave a blank Levels field on the UI upon page refresh
+availableLevels <- reactiveVal(NULL)
 updateLevels <- reactive({
   selectedStations()
   updateVariables()
   req(input$variable)
+  if(length(availableLevels())==0) invalidateLater(500)
 }) %>% throttle(500)
-availableLevels <- eventReactive({
+observeEvent({
   updateLevels()
   }, {
   db <- activeDb()
@@ -461,8 +465,8 @@ availableLevels <- eventReactive({
   } else if(!selectedDtgsAreCached()) {
     levels$all <- c("Any (cache info incomplete)"="", levels$all)
   }
-  return(levels)
-})
+  availableLevels(levels)
+}, ignoreNULL=FALSE, ignoreInit=FALSE)
 observe({
   updateSelectInputWrapper(session,"levels",choices=availableLevels()$all)
 })
