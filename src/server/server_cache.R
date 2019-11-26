@@ -114,6 +114,15 @@ observeEvent({
     )
   )
 
+  cacheProcPID <- cacheProc$job$pid
+  session$onSessionEnded(function() {
+    flog.debug(
+      "Session finished: Making sure cache task with PID=%s is killed",
+      cacheProcPID
+    )
+    killProcessTree(cacheProcPID)
+  })
+
   then(cacheProc,
     onRejected=function(e) {flog.error(e)}
   )
@@ -127,6 +136,7 @@ observeEvent({
       newCacheQueue <- cacheQueue[!(cacheQueue %in% fPaths)]
       filesPendingCache(newCacheQueue)
     }
+    killProcessTree(cacheProcPID)
     filesBeingCachedNow(NULL)
     cacheIsOngoing(FALSE)
   })
