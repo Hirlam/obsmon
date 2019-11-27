@@ -5,6 +5,26 @@ The format is based on [Keep a Changelog](http://keepachangelog.com)
 and this project adheres to [Semantic Versioning](http://semver.org).
 
 
+## [Unreleased]
+### Added
+- Some new plot types:
+    - "Average First Guess Departure + Bias Correction Map"
+    - "Average Bias Correction Map"
+    - "Average Observations Map"
+- Config file option "configName"
+- Progress bar on GUI when querying data files to produce plots
+- .Rrofile to help shiny-server to find R-libs
+
+### Changed
+- Reduce marker opacities and line widths in interactive Maps Plots for
+  better visibility in dense plots
+- Some improvements to caching for better UI responsiveness
+    - In particular, pause caching while producing plot/multiPlot
+
+### Fixed
+- Installation error om Debian caused by R-pkgs vdiffr and freetypeharfbuzz
+
+
 ## [3.7.0] 2019-11-21
 ### Added
 - Interactivity to "Maps" plots

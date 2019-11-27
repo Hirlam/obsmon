@@ -353,8 +353,8 @@ putObsInCache <- function(sourceDbPaths, cacheDir, replaceExisting=FALSE) {
       cacheObsFromFile(
         sourceDbPath, cacheDir=cacheDir, replaceExisting=replaceExisting
       ),
-      warning=function(w) flog.warn("putObsInCache: %s", w),
-      error=function(e) flog.error("putObsInCache: %s", e)
+      warning=function(w) flog.warn("putObsInCache (%s): %s",sourceDbPath, w),
+      error=function(e) flog.error("putObsInCache (%s): %s", sourceDbPath, e)
     )
   }
 }

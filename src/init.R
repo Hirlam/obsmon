@@ -303,10 +303,14 @@ configure <- function() {
     config <- readConfig()
     assertCacheDirWritable(config, verbose=TRUE)
     setPackageOptions(config)
+    flog.debug('Temp dir for session: %s\n', tempdir())
     obsmonConfig <<- config
     confExpts <- obsmonConfig$experiments
     exptNamesInConfig <<- unlist(lapply(confExpts, function(x) x$displayName))
     if(length(exptNamesInConfig)==0) flog.error("No experiment configured!")
+    if(length(obsmonConfig$general$configName)>0) {
+      flog.info('Config name found: "%s"\n', obsmonConfig$general$configName)
+    }
     sourceObsmonFiles()
   }
 }

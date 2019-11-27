@@ -43,7 +43,10 @@ shinyServer(function(input, output, session) {
   # Show, below the title, the number of currently connected sessions
   output$pageTitle <- renderUI({
     nSessions <- sessionsConnected()
-    obsmonVersionText <- sprintf("Obsmon v%s", obsmonVersion)
+    obsmonVersionText <- ifelse(length(obsmonConfig$general$configName)>0,
+      sprintf("Obsmon v%s %s",obsmonVersion,obsmonConfig$general$configName),
+      sprintf("Obsmon v%s", obsmonVersion)
+    )
     if(nSessions>0) {
       sessionsConnectedText <- sprintf(
         '<p style="font-size:11px">#Sessions connected: %d</p>', nSessions

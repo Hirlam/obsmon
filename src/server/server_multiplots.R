@@ -51,11 +51,11 @@ multiPlotCurrentPid <- reactiveVal(-1)
 
 # Management of "Cancel multiPlot" button
 multiPlotInterrupted <- reactiveVal(FALSE)
-onclick("multiPlotsCancelPlot", {
+observeEvent(input$multiPlotsCancelPlot, {
   showNotification("Cancelling multiPlot", type="warning", duration=1)
   multiPlotInterrupted(TRUE)
   killProcessTree(multiPlotCurrentPid(), warnFail=TRUE)
-})
+}, priority=2000, ignoreInit=TRUE)
 
 # Producing multiPlots
 multiPlot <- reactiveVal(NULL)
@@ -192,7 +192,7 @@ observeEvent(input$multiPlotsDoPlot, {
   })
   # This NULL is necessary in order to prevent the future from blocking
   NULL
-})
+}, priority=2000)
 
 # Prepare the correct output slots for plots, maps and dataTables
 # Code adapted from <https://gist.github.com/wch/5436415>
