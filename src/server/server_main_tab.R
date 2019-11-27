@@ -201,6 +201,7 @@ triggerReadCache <- function() latestTriggerReadCache(Sys.time())
 # Update obtype
 observeEvent({
   req(activeDb())
+  selectedDtgsAreCached()
   reloadInfoFromCache()
  }, {
   db <- activeDb()
