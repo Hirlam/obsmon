@@ -9,28 +9,9 @@
 # possible to reassign the order in which they should be parsed (e.g., to
 # make sure the currently selected DTGs/dB have priority).
 
-# Vars to establish/update queue of files that need to be cached
-filesPendingCache <- reactiveVal(character(0))
-filesPendingRecache <- reactiveVal(character(0))
-newBatchFilesToCache <- reactiveVal(character(0))
-newBatchFilesToRecache <- reactiveVal(character(0))
-# Reset queues of files to cache/recache if db changes
-# One could argue that it's fine to keep the queue going,
-# but if the user changes dBs, they are probably no longer
-# interested in the info present in the files on the queue,
-# so not much point keep the processors working on this
-activeDbChanged <- reactiveVal(0)
-observeEvent(activeDb(), {
-  filesPendingCache(character(0))
-  filesPendingRecache(character(0))
-  newBatchFilesToCache(character(0))
-  newBatchFilesToRecache(character(0))
-  activeDbChanged((activeDbChanged() + 1) %% 2)
-})
-
 # Get paths to data files associated with currently selected dB and DTG(s)
 dataFilesForDbAndDtgs <- eventReactive({
-  activeDbChanged()
+  activeDb()
   selectedDtgs()
 }, {
   db <- req(activeDb())
@@ -38,61 +19,74 @@ dataFilesForDbAndDtgs <- eventReactive({
   return(db$getDataFilePaths(dtgs))
 })
 
-# "asyncCachingProcs" keeps track of the ongoing processes for the caching
-# of the various data files. These processes are "Future" objects (from R
-# pkg "future").
-asyncCachingProcs <- list()
-
-# Establish/update queue of files that need to be cached
+# Initialise queue of files that need to be cached upon change of
+# dataFilesForDbAndDtgs. The update of the queue while cache is ongoing
+# is done in a observer defined further below.
+filesPendingCache <- reactiveVal(character(0))
+filesBeingCachedNow <- reactiveVal(character(0))
 observeEvent(dataFilesForDbAndDtgs(), {
   newFiles <- dataFilesForDbAndDtgs()
-  # Remove files for which caching is ongoing
-  filesNotCachingNow <- newFiles[!(newFiles %in% names(asyncCachingProcs))]
-  filesPendingCache(filesNotCachingNow)
+  filesPendingCache(newFiles[!(newFiles %in% filesBeingCachedNow())])
 })
 
-# recacheRequested: To be used if the user manually requests recache or if
-# obsmon detects that cache has finished but DTGs remain uncached
+# Initialise queue of files that have been requested to be recached
+# The recaching itself is requested manually by the user by clicling
+# on input$recacheCacheButton. An observer defined below will take
+# care of triggering the recache.
+filesPendingRecache <- reactiveVal(character(0))
 recacheRequested <- reactiveVal(FALSE)
-# Establish/update queue of files that need to be recached (if requested)
 observeEvent(recacheRequested(), {
   req(isTRUE(recacheRequested()))
   filesPendingRecache(unique(c(filesPendingRecache(),dataFilesForDbAndDtgs())))
   recacheRequested(FALSE)
 })
 
-# Keep track of caching activity
-cacheIsOngoing <- reactiveVal(FALSE)
+# Vars that will hold the batches of files to be sent for caching/recaching
+# These "reactiveVal"s will be updated via an observer defined below. The
+# reason for not defining them as reactives is that we'd like to give a lower
+# priority to their updates w.r.t. the updates of other reactives (as caching
+# will run in the background), but, at the moment, shiny does not allow
+# setting the priority of reactives.
+newBatchFilesToCache <- reactiveVal(character(0))
+newBatchFilesToRecache <- reactiveVal(character(0))
+observeEvent(dataFilesForDbAndDtgs(), {
+  newBatchFilesToCache(character(0))
+  newBatchFilesToRecache(character(0))
+})
 
-# Prepare and send batches of data files to be cached
-observeEvent({
-  filesPendingCache()
-  cacheIsOngoing()
-  }, {
-  req(!isTRUE(cacheIsOngoing()))
+# Pause the caching engine if a plot or multiPlot is being performed
+pauseCaching <- reactive({
+  isTRUE(currentPlotPid()>-1) || isTRUE(multiPlotCurrentPid()>-1)
+})
+
+# Managing the queues of files to be cached/recached
+cacheIsOngoing <- reactiveVal(FALSE)
+observe({
+  # Prepare and send batches of data files to be cached
+  req(!cacheIsOngoing())
+  if(isolate(pauseCaching())) invalidateLater(1000)
+  req(isolate(!pauseCaching()))
   filesToCacheInThisBatch <- filesPendingCache()[1:2]
   filesToCacheInThisBatch <- Filter(Negate(anyNA), filesToCacheInThisBatch)
-  newBatchFilesToCache(filesToCacheInThisBatch)
+  isolate(newBatchFilesToCache(filesToCacheInThisBatch))
 },
-  # Give caching lower priority than other observers, as it will keep running
-  # on the background for as long as needed and we don't want the app to slow
-  # down as a result
-  priority=-1
+  # Lower priority: Caching will be running in the background; the other
+  # processes are more important
+  priority=-10
 )
-# Prepare and send, if requested, batches of data files to be re-cached
-observeEvent({
-  filesPendingRecache()
-  cacheIsOngoing()
-  }, {
+observe({
+  # Prepare and send, if requested, batches of data files to be re-cached
   req(!isTRUE(cacheIsOngoing()))
+  if(isolate(pauseCaching())) invalidateLater(1000)
+  req(isolate(!pauseCaching()))
   filesToRecacheInThisBatch <- filesPendingRecache()[1:2]
   filesToRecacheInThisBatch <- Filter(Negate(anyNA), filesToRecacheInThisBatch)
-  newBatchFilesToRecache(filesToRecacheInThisBatch)
+  isolate(newBatchFilesToRecache(filesToRecacheInThisBatch))
 },
-  priority=-1
+  priority=-10
 )
 
-# Cache (or recache) observations as new batches of file paths arrive
+# Finally, cache (or recache) obs as new batches of file paths arrive
 observeEvent({
   newBatchFilesToCache()
   newBatchFilesToRecache()
@@ -107,6 +101,10 @@ observeEvent({
   req(length(fPaths)>0)
   db <- req(activeDb())
 
+  # Register caching as "onging" for the relevant files
+  cacheIsOngoing(TRUE)
+  filesBeingCachedNow(fPaths)
+
   cacheProc <- futureCall(
     FUN=putObsInCache,
     args=list(
@@ -115,17 +113,20 @@ observeEvent({
       replaceExisting=isRecache
     )
   )
-  # Register caching as "onging" for the relevant files
-  cacheIsOngoing(TRUE)
-  for(fPath in fPaths) asyncCachingProcs[[fPath]] <<- cacheProc
+
+  cacheProcPID <- cacheProc$job$pid
+  session$onSessionEnded(function() {
+    flog.debug(
+      "Session finished: Making sure cache task with PID=%s is killed",
+      cacheProcPID
+    )
+    killProcessTree(cacheProcPID)
+  })
 
   then(cacheProc,
     onRejected=function(e) {flog.error(e)}
   )
   finally(cacheProc, function() {
-    triggerReadCache()
-    # Clean up entries from list of ongoing cache processes
-    asyncCachingProcs[fPaths] <<- NULL
     if(isRecache) {
       recacheQueue <- filesPendingRecache()
       newRecacheQueue <- recacheQueue[!(recacheQueue %in% fPaths)]
@@ -135,13 +136,15 @@ observeEvent({
       newCacheQueue <- cacheQueue[!(cacheQueue %in% fPaths)]
       filesPendingCache(newCacheQueue)
     }
+    killProcessTree(cacheProcPID)
+    filesBeingCachedNow(NULL)
     cacheIsOngoing(FALSE)
   })
 
   # This NULL is necessary in order to prevent the future from blocking
   NULL
 },
-  priority=-1
+  priority=-10
 )
 
 # Re-cache observations if requested by user
@@ -181,29 +184,33 @@ observeEvent(input$resetCacheConfirmationButton, {
   }
 })
 
-# Flagging that it's time to read info from cache
-reloadInfoFromCache <- eventReactive({
-    latestTriggerReadCache()
-    activeDb()
-    selectedDtgs()
-  }, {
-  Sys.time()
-},
-  ignoreNULL=FALSE
-) %>% throttle(1000)
-
+# Flagging that it's time to read info from cache once a batch of
+# files to be cached has been processed processed
+reloadInfoFromCache <- reactive({
+  req(!cacheIsOngoing())
+  req(!pauseCaching())
+}) %>% throttle(1000)
 # Keep track of whether selected DTGs are cached or not
-observeEvent(reloadInfoFromCache(), {
-    selectedDtgsAreCached(dtgsAreCached(req(activeDb()),req(selectedDtgs())))
+observeEvent({
+  activeDb()
+  selectedDtgs()
+  reloadInfoFromCache()
+},{
+  selectedDtgsAreCached(dtgsAreCached(req(activeDb()),req(selectedDtgs())))
 })
 
 # Notify progress of caching
 observeEvent({
   reloadInfoFromCache()
+  pauseCaching()
 },{
   cacheNotifId="guiCacheNotif"
   if(isTRUE(selectedDtgsAreCached())) {
     removeNotification(cacheNotifId)
+  } else if (pauseCaching()) {
+    showNotification(
+      id=cacheNotifId, ui="Caching paused", duration=2
+    )
   } else {
     totalNFiles <- length(req(dataFilesForDbAndDtgs()))
     cacheProgressMsg <- tryCatch({
@@ -223,4 +230,4 @@ observeEvent({
       id=cacheNotifId, ui=cacheProgressMsg, type="message", duration=NULL
     )
   }
-})
+}, priority=-100)

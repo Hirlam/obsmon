@@ -144,9 +144,29 @@ singleFileQuerier <- function(dbpath, query) {
   res
 }
 
+performSingleQuery <- function(iPath, dbpaths, query, progressFile=NULL) {
+  # Using a file to get update on progress of plots
+  # Unfortunately there was no other way to do this from within a future
+  # at the time this code was written
+  if(!is.null(progressFile)) {
+    tryCatch({
+      progressNow <- readPlotProgressFile(progressFile)
+      if(is.null(progressNow$current) || progressNow$current<iPath) {
+        write(c(iPath, length(dbpaths)), progressFile, append=FALSE)
+      }
+    },
+      error=function(e) {flog.debug(e); unlink(progressFile); NULL},
+      warn=function(w) {flog.debug(w); unlink(progressFile); NULL}
+    )
+  }
+
+  singleFileQuerier(dbpaths[iPath], query)
+}
+
 performQuery <- function(
   db, query, dtgs,
-  maxAvgQueriesPerProc=obsmonConfig$general$maxAvgQueriesPerProc
+  maxAvgQueriesPerProc=obsmonConfig$general$maxAvgQueriesPerProc,
+  progressFile=NULL
 ) {
   startTime <- Sys.time() # For debug purposes
   selectedDtgs <- dtgs
@@ -157,9 +177,12 @@ performQuery <- function(
   dbpaths <- db$getDataFilePaths(selectedDtgs)
 
   res <- tryCatch({
-      queryResult <- future_lapply(dbpaths,
-        partial(singleFileQuerier, query=query),
-        future.chunk.size=maxAvgQueriesPerProc
+      queryResult <- future_lapply(seq_along(dbpaths),
+        partial(
+          performSingleQuery, dbpaths=dbpaths,
+          query=query, progressFile=progressFile
+        ),
+        future.chunk.size=structure(maxAvgQueriesPerProc, ordering=seq_along(dbpaths))
       )
       do.call(rbind, queryResult)
     },

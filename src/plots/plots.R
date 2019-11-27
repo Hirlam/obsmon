@@ -336,12 +336,11 @@ plotCreate <- function(clazz, name, dateType, queryStub, requiredFields, ...) {
 }
 
 
-postProcessQueriedPlotData <-
-  function(plotter, plotData) UseMethod("postProcessQueriedPlotData")
-
-postProcessQueriedPlotData.default <- function(plotter, plotData) {
-    plotData
+postProcessQueriedPlotData <- function(plotData) {
+  UseMethod("postProcessQueriedPlotData")
 }
+
+postProcessQueriedPlotData.default <- function(plotData) {plotData}
 
 # Functions used in in server.R
 # Build named list of plot criteria
@@ -395,7 +394,9 @@ plotsBuildCriteria <- function(input) {
   return(res)
 }
 # Perform plotting
-preparePlots <- function(plotter, plotRequest, db, interactive) {
+preparePlots <- function(
+  plotter, plotRequest, db, interactive, progressFile=NULL
+) {
   tryCatch({
     isWindspeed <- "varname" %in% names(plotRequest$criteria) &&
       plotRequest$criteria$varname %in% c("ff", "ff10m")
@@ -404,11 +405,13 @@ preparePlots <- function(plotter, plotRequest, db, interactive) {
       plotData <- buildFfData(db, plotter, plotRequest)
     } else {
       query <- plotBuildQuery(plotter, plotRequest)
-      plotData <- performQuery(db, query, plotRequest$criteria$dtg)
+      plotData <- performQuery(
+        db, query, plotRequest$criteria$dtg, progressFile=progressFile
+      )
       # Postprocessing plotData returned by performQuery.
       # This may be useful, e.g., if performing averages over a
       # picked date range.
-      plotData <- postProcessQueriedPlotData(plotter, plotData)
+      plotData <- postProcessQueriedPlotData(plotData)
     }
     if(isTRUE(nrow(plotData)>0)) {
       statIds <- c()
@@ -444,4 +447,14 @@ preparePlotsCapturingOutput <- function(...) {
   output <- trimws(paste(output, collapse="\n"))
   if(output=="") output <- character(0)
   return(list(plots=plots, output=output))
+}
+
+# Helper functions for plot progress bar
+readPlotProgressFile <- function(path) {
+  fContents <- tryCatch(unlist(read.table(path), use.names=FALSE),
+    error=function(e) NULL,
+    warning=function(w) NULL
+  )
+  rtn <- list(current=fContents[1], total=fContents[2])
+  return(rtn)
 }

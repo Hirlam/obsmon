@@ -2,23 +2,6 @@
 # Routines that are related to caching in obsmon #
 ##################################################
 
-# Cache file locking
-cacheFileLocks <- list()
-lockSignalingFpath <- function(fpath) sprintf("%s.lock", fpath)
-lockCacheFile <- function(fpath) {
-  cacheFileLocks[[fpath]] <<- lock(lockSignalingFpath(fpath))
-}
-unlockCacheFile <- function(fpath) {
-  unlock(cacheFileLocks[[fpath]])
-  cacheFileLocks[[fpath]] <<- NULL
-}
-cacheFileIsLocked <- function(fpath) {
-  cacheFileLock <- cacheFileLocks[[fpath]]
-  if(is.null(cacheFileLock)) isLocked <- FALSE
-  else isLocked <- is.locked(cacheFileLock)
-  return(isLocked)
-}
-
 createCacheFiles <- function(cacheDir, dbType=dbTypesRecognised, reset=FALSE){
   # Routine to initialise cache files
   rtn <- tryCatch({
@@ -45,20 +28,6 @@ createCacheFiles <- function(cacheDir, dbType=dbTypesRecognised, reset=FALSE){
   return(rtn)
 }
 
-cacheFilesLatestMdate <- function(db) {
-  # Latest modified date of cache files for a given db
-  mtimes <- c(-1)
-  for(cacheFilePath in db$cachePaths) {
-    mtime <- tryCatch(
-      file.mtime(cacheFilePath),
-      error=function(e) NULL,
-      warning=function(w) NULL
-    )
-    mtimes <- c(mtimes, mtime)
-  }
-  return(max(mtimes))
-}
-
 cacheObsFromFile <- function(sourceDbPath, cacheDir, replaceExisting=FALSE) {
   ###################################
   # Main routine to perform caching #
@@ -67,7 +36,6 @@ cacheObsFromFile <- function(sourceDbPath, cacheDir, replaceExisting=FALSE) {
   anyFailedCachingAttmpt <- FALSE
   cacheDbConsCreatedHere <- c()
   allDbConsCreatedHere <- c()
-  fPathsLockedHere <- c()
 
   on.exit({
     if(anyFailedCachingAttmpt) {
@@ -86,7 +54,6 @@ cacheObsFromFile <- function(sourceDbPath, cacheDir, replaceExisting=FALSE) {
     }
     allDbConsCreatedHere <- c(allDbConsCreatedHere, cacheDbConsCreatedHere)
     for(dbCon in allDbConsCreatedHere) dbDisconnectWrapper(dbCon)
-    for(lockedFName in fPathsLockedHere) unlockCacheFile(lockedFName)
   })
 
   con <- dbConnectWrapper(sourceDbPath, read_only=TRUE)
@@ -113,25 +80,6 @@ cacheObsFromFile <- function(sourceDbPath, cacheDir, replaceExisting=FALSE) {
   for(db_table in c('obsmon', 'usage')) {
     cacheFileName <- sprintf('%s_%s.db', db_type, db_table)
     cacheFilePath <- file.path(cacheDir, cacheFileName)
-
-    hadToWait <- FALSE
-    while(cacheFileIsLocked(cacheFilePath)) {
-      hadToWait <- TRUE
-      msg <- sprintf("Caching (%s): Waiting for cache file %s to be unlocked",
-        sourceDbPath, cacheFilePath
-      )
-      flog.debug(msg)
-      Sys.sleep(5)
-    }
-    if(hadToWait) {
-      msg <- sprintf("Caching (%s): Cache file %s UNLOCKED. Proceeding.",
-        sourceDbPath, cacheFilePath
-      )
-      flog.debug(msg)
-    }
-
-    lockCacheFile(cacheFilePath)
-    fPathsLockedHere <- c(fPathsLockedHere, cacheFilePath)
 
     con_cache <- dbConnectWrapper(cacheFilePath)
     cacheDbConsCreatedHere <- c(cacheDbConsCreatedHere, con_cache)
@@ -353,8 +301,8 @@ putObsInCache <- function(sourceDbPaths, cacheDir, replaceExisting=FALSE) {
       cacheObsFromFile(
         sourceDbPath, cacheDir=cacheDir, replaceExisting=replaceExisting
       ),
-      warning=function(w) flog.warn("putObsInCache: %s", w),
-      error=function(e) flog.error("putObsInCache: %s", e)
+      warning=function(w) flog.warn("putObsInCache (%s): %s",sourceDbPath, w),
+      error=function(e) flog.error("putObsInCache (%s): %s", sourceDbPath, e)
     )
   }
 }
@@ -372,7 +320,6 @@ getCycleQueryString <- function(cycles=NULL) {
   else rtn <- sprintf("cycle IN (%s)", paste(cycles, collapse=", "))
   return(rtn)
 }
-
 
 dtgsAreCached <- function(db, dtgs) {
   # Determine whether a set of dtgs is present in the cached data for a

@@ -7,10 +7,39 @@ shinyjs::hide(selector="#mainArea li a[data-value=plotlyTab]")
 currentPlotPid <- reactiveVal(-1)
 plotStartedNotifId <- reactiveVal(-1)
 plotInterrupted <- reactiveVal()
-onclick("cancelPlot", {
+observeEvent(input$cancelPlot, {
   showNotification("Cancelling plot", type="warning", duration=1)
   plotInterrupted(TRUE)
   killProcessTree(currentPlotPid(), warnFail=TRUE)
+}, priority=2000, ignoreInit=TRUE)
+
+# Management of plot progress bar
+plotProgressFile <- reactiveVal(NULL)
+plotProgressStatus <- reactiveVal(function() NULL)
+plotProgressBar <- reactiveVal(NULL)
+observeEvent(plotProgressFile(), {
+  plotProgressStatus(reactiveFileReader(
+    500, session, isolate(plotProgressFile()), readPlotProgressFile
+  ))
+})
+observeEvent(plotProgressStatus()(), {
+  pProgress <- plotProgressStatus()()
+  req(isTRUE(pProgress$total>0), isTRUE(pProgress$current<=pProgress$total))
+  removeNotification(plotStartedNotifId())
+  progress <- plotProgressBar()
+  if(is.null(progress)) {
+    progress <- shiny::Progress$new(max=pProgress$total)
+    plotProgressBar(progress)
+  }
+  # Subtract 1 from barValue as progress is updated when the process begins
+  barValue <- pProgress$current-1
+  progress$set(
+    value=barValue,
+    message=sprintf(
+      "Plot: Querying %s data files: %.0f%%",
+      pProgress$total,  100.0*(barValue/pProgress$total)
+    )
+  )
 })
 
 readyPlot <- reactiveVal(NULL)
@@ -60,6 +89,13 @@ observeEvent(input$doPlot, {
   shinyjs::enable("cancelPlot")
   shinyjs::show("cancelPlot")
 
+  plotStartedNotifId(showNotification(
+    "Processing plot request...", type="message", duration=NULL
+  ))
+
+  # Trigger creation of progress bar
+  plotProgressFile(tempfile(pattern="plotProgress"))
+
   # The plot tab does not keep the spinner running if the plot
   # is NULL, but the plotly tab does. Using this to keep the
   # spinner running while the plot is being prepared.
@@ -69,16 +105,13 @@ observeEvent(input$doPlot, {
   }
   shinyjs::hide(selector="#mainArea li a[data-value=plotTab]")
 
-  plotStartedNotifId(showNotification(
-    "Gathering data for plot...", type="message", duration=NULL
-  ))
-
   # Prepare plot asyncronously
   newFutPlotAndOutput <- futureCall(
     FUN=preparePlotsCapturingOutput,
     args=list(
       plotter=plotter, plotRequest=plotRequest, db=db,
-      interactive=isTRUE(obsmonConfig$general$plotsEnableInteractivity)
+      interactive=isTRUE(obsmonConfig$general$plotsEnableInteractivity),
+      progressFile=plotProgressFile()
     )
   )
   plotPID <- newFutPlotAndOutput$job$pid
@@ -141,7 +174,13 @@ observeEvent(input$doPlot, {
   )
   plotCleanup <- finally(newFutPlotAndOutput, function() {
     currentPlotPid(-1)
+    # Reset items related to plot progress bar
     removeNotification(plotStartedNotifId())
+    unlink(plotProgressFile())
+    if(!is.null(plotProgressBar())) plotProgressBar()$close()
+    plotProgressFile(NULL)
+    plotProgressBar(NULL)
+    # Hide/show and disable/enable relevant inputs
     shinyjs::hide("cancelPlot")
     shinyjs::show("doPlot")
     enableShinyInputs(input, except="^multiPlots*")
@@ -160,7 +199,7 @@ observeEvent(input$doPlot, {
   })
   # This NULL is necessary in order to prevent the future from blocking
   NULL
-})
+}, priority=2000)
 
 # Finally, producing the output
 # Rendering UI slots for the outputs dynamically
