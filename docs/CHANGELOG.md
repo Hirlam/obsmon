@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](http://semver.org).
     - "Average Observations Map"
 - Config file option "configName"
 - Progress bar on GUI when querying data files to produce plots
+- .Rrofile to help shiny-server to find R-libs
 
 ### Changed
 - Reduce marker opacities and line widths in interactive Maps Plots for
