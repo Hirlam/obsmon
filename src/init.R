@@ -9,15 +9,17 @@ isFALSE <- tryCatch(
 
 thisAppDir <- getwd()
 
-if(!exists("runningAsStandalone") || runningAsStandalone==FALSE) {
+if(!exists("runningAsStandalone") || !isTRUE(runningAsStandalone)) {
   source("src/src_info_obsmon.R")
   source('src/lib_paths_config.R')
   runningAsStandalone <- FALSE
+  cmdLineArgs <- list()
   dirObsmonWasCalledFrom <- thisAppDir
   # Write code info to the log for every session when using a shiny server
   # This info is already printed in a banner when running standalone
   message(obsmonBanner)
 }
+
 
 getUserName <- function() {
   userName <- Sys.info()[["user"]]
@@ -78,7 +80,7 @@ for(dir in c(systemConfigDir, systemCacheDirPath)) {
   # All users can rwx to dirname(systemCacheDirPath), but no one modifies what
   # someone else has created
   dir.create(dirname(dir), recursive=TRUE, showWarnings=FALSE, mode="1777")
-  # Access to a user's own cache files only
+  # Only the user can write to their own cache files
   dir.create(dir, recursive=FALSE, showWarnings=FALSE, mode="0755")
 }
 
@@ -146,7 +148,7 @@ configGeneralFillInDefault <- function(config, key, default) {
         mustWork=FALSE)
     },
     "logLevel"={
-      if(exists("cmdLineArgs") && isTRUE(cmdLineArgs$debug)) "DEBUG"
+      if(isTRUE(cmdLineArgs$debug)) "DEBUG"
       else currentVal
     },
     "maxAvgQueriesPerProc"={
@@ -188,7 +190,7 @@ getSuitableCacheDirDefault <- function() {
 
   cacheDirPrio <- c(homeCacheDirPath, systemCacheDirPath)
   for(dirPath in cacheDirPrio) {
-    dirCreated <- dir.create(dirPath, recursive=TRUE, showWarnings=FALSE, mode="0755")
+    dirCreated <- dir.create(dirPath, recursive=TRUE, showWarnings=FALSE)
     if(!(dirCreated | dir.exists(dirPath))) next
     if(file.access(dirPath, mode=2)==0) cacheDirPath <- dirPath
     if(dirCreated) unlink(dirPath, recursive=TRUE)
@@ -282,18 +284,19 @@ readConfig <- function() {
   return(configGeneralFillInDefaults(config))
 }
 
-assertCacheDirWritable <- function(config, verbose=FALSE) {
+createCacheDir <- function(config, verbose=FALSE) {
   cacheDirPath <- config$general[["cacheDir"]]
-  dir.create(cacheDirPath, recursive=TRUE, showWarnings=FALSE, mode="0755")
+  dir.create(cacheDirPath, recursive=TRUE, showWarnings=FALSE)
   writable <- tryCatch(
     file.access(cacheDirPath, mode=2)==0,
     error=function(e) FALSE
   )
   if(!writable) {
-    msg <- paste("Cannot write to cacheDir", cacheDirPath, "\n")
+    msg <- paste("Cannot write to cacheDir", cacheDirPath, " !!!!!\n")
     msg <- paste(msg, "Please specify a valid cacheDir value under the\n")
     msg <- paste(msg, '"[general]" section in your config file.\n')
-    stop(msg)
+    msg <- paste(msg, ">> Caching will not work!!!!\n")
+    warning(msg, immediate.=TRUE)
   }
   if(verbose) flog.info("cacheDir set to: %s\n", cacheDirPath)
 }
@@ -301,7 +304,7 @@ assertCacheDirWritable <- function(config, verbose=FALSE) {
 configure <- function() {
   if(!exists("obsmonConfig")) {
     config <- readConfig()
-    assertCacheDirWritable(config, verbose=TRUE)
+    if(!isTRUE(cmdLineArgs$batch)) createCacheDir(config, verbose=TRUE)
     setPackageOptions(config)
     flog.debug('Temp dir for session: %s\n', tempdir())
     obsmonConfig <<- config

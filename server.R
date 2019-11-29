@@ -60,9 +60,7 @@ shinyServer(function(input, output, session) {
 
   # Show code below the runApp is called with displayMode="showcase"
   # This happens if using "--debug" when running obsmon in standalone mode
-  if(exists("cmdLineArgs") && isTRUE(cmdLineArgs$debug)) {
-    shinyjs::runjs('toggleCodePosition();')
-  }
+  if(isTRUE(cmdLineArgs$debug)) shinyjs::runjs('toggleCodePosition();')
 
   # Loading info about configured experiments
   expts <- initExperiments()

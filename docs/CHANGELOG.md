@@ -5,6 +5,13 @@ The format is based on [Keep a Changelog](http://keepachangelog.com)
 and this project adheres to [Semantic Versioning](http://semver.org).
 
 
+## [3.8.1] 2019-11-29
+### Changed
+- Create cacheDir with default system permissions (instead of specifying 0755)
+- Do now stop if cacheDit cannot be written to. Show a warning instead, as obsmon
+  can be used without caching.
+
+
 ## [3.8.0] 2019-11-27
 ### Added
 - Some new plot types:
