@@ -13,7 +13,7 @@ pkgs_append libssl-dev
 pkgs_append libxml2-dev
 
 # For R-lib "RMariaDB"
-if [[ `lsb_release -rs` < "16.04" ]]
+if [[  $(lsb_release -d | awk '{print $2}') == 'Debian' || `lsb_release -rs` < "16.04" ]]
 then
    pkgs_append libmariadbclient-dev
 else
@@ -31,6 +31,10 @@ pkgs_append libgdal-dev
 # For R-lib "Cairo"
 pkgs_append libxt-dev
 # For R-lib "V8"
-pkgs_append libv8-3.14-dev
+if [[ $(lsb_release -d | awk '{print $2}') == 'Debian' ]]; then
+  pkgs_append libnode-dev
+else
+  pkgs_append libv8-3.14-dev
+fi
 
 sudo apt-get install -y $PKGS

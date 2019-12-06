@@ -5,6 +5,11 @@ The format is based on [Keep a Changelog](http://keepachangelog.com)
 and this project adheres to [Semantic Versioning](http://semver.org).
 
 
+## [3.8.2] 2019-12-06
+### Fixed
+- Install of V8 library on debian (updated v8 to v2.3)
+
+
 ## [3.8.1] 2019-11-29
 ### Changed
 - Create cacheDir with default system permissions (instead of specifying 0755)
