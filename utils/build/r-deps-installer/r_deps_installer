@@ -34,9 +34,9 @@ showDepsAndQuit <- "--listdeps" %in% args
 ignoreBuildFail <- "--ignore-build-fail" %in% args
 buildOnly <- "--build" %in% args # Just build, do not install
 rebuildAll <- "--rebuild-all" %in% args
-# --include-suggests-deps: Should we build/install "Suggests"-type
+# --ignore-suggests-deps: Should we skip building/installing "Suggests"-type
 #                          dependencies? Default is FALSE.
-includeSuggests <- "--include-suggests-deps" %in% args
+ignoreSuggests <- "--ignore-suggests-deps" %in% args
 # Options that control whether downloads can be made from CRAN or not
 # --reset-local-repo will erase everything you currently have in your local repo and
 #                    then download new versions of the packages from CRAN. Be careful.
@@ -248,14 +248,14 @@ for (pkg in mainPkgs) {
     neededBySuggests=depsNeededBySuggests
   )
 
-  if(includeSuggests) {
+  if(ignoreSuggests) {
+    thisPkgDeps <- pkgsDeps[[pkg]][["essential"]]
+  } else {
     thisPkgDeps <-c(
       pkgsDeps[[pkg]][["essential"]],
       pkgsDeps[[pkg]][["Suggests"]],
       pkgsDeps[[pkg]][["neededBySuggests"]]
     )
-  } else {
-    thisPkgDeps <- pkgsDeps[[pkg]][["essential"]]
   }
 
 
@@ -268,7 +268,7 @@ for (pkg in mainPkgs) {
   )
 
   allPkgDeps <- c(allPkgDeps, allEssentialDeps)
-  if(includeSuggests) allPkgDeps <- c(allPkgDeps, allDepsNeededBySuggests, allSuggestsDeps)
+  if(!ignoreSuggests) allPkgDeps <- c(allPkgDeps, allDepsNeededBySuggests, allSuggestsDeps)
 }
 # At last, building the full list of pkgs to be installed
 allPkgs <- unique(c(allPkgDeps, mainPkgs))
@@ -298,14 +298,14 @@ if(length(c(allEssentialDeps, allSuggestsDeps, allDepsNeededBySuggests))>0) {
   }
 
   if(length(allSuggestsDeps)>0) {
-    if(includeSuggests) {
-      cat('* Suggests-type dependencies:\n')
-    } else {
+    if(ignoreSuggests) {
       cat(
         '* The following "Suggests"-type dependencies will be skipped (please\n',
         '  rerun the install script with the --include-suggests-deps option\n',
         '  if you really wish them to be included):\n'
       )
+    } else {
+      cat('* Suggests-type dependencies:\n')
     }
   }
   for (pkg in sort(c(allSuggestsDeps, allDepsNeededBySuggests))) cat("  >", pkg, "\n")
@@ -314,16 +314,16 @@ if(length(c(allEssentialDeps, allSuggestsDeps, allDepsNeededBySuggests))>0) {
 cat("Total:", length(allPkgs), "R-libraries to be built/installed.\n")
 cat("  Main R-libraries:", length(mainPkgs), "\n")
 cat("  Essential dependencies for the main R-libs:", length(allEssentialDeps), "\n")
-if(includeSuggests) {
+if(ignoreSuggests) {
+  cat(
+    "  Suggests-type dependencies have *NOT* been included.\n",
+    "    > Use the --include-suggests-deps option if you wish them to be.\n"
+  )
+} else {
   cat('  Suggests-type dependencies:', length(allSuggestsDeps), "\n")
   cat(
     "  Extra deps needed to install the suggests-type deps:",
     length(allDepsNeededBySuggests), "\n"
-  )
-} else {
-  cat(
-    "  Suggests-type dependencies have *NOT* been included.\n",
-    "    > Use the --include-suggests-deps option if you wish them to be.\n"
   )
 }
 cat("\n")
