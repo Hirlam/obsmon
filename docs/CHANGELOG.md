@@ -8,6 +8,9 @@ and this project adheres to [Semantic Versioning](http://semver.org).
 ## [3.9.0] Unreleased
 ### Added
 - metop3 defaults for the GUI's "Satellite" menu
+- Explicit libv8.so path info in the .Rprofile file, so that the
+  V8 R-lib can be loaded on ecgb after their most recent system update
+
 
 ### Fixed
 - Bug that would cause satem map plots to fail with message
