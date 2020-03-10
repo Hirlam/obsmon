@@ -158,9 +158,21 @@ doMap.mapThreshold <- function(p, plotRequest, plotData) {
       zoomLevel <- i+3
     }
   }
-  plotData$popup <- paste("Station: ", plotData$statLabel, "<br>Value: ",
-                          signif(plotData$plotValues, digits=5),
-                          "<br>Level: ", plotData$level)
+
+  if(is.null(plotData$channel)) {
+    plotData$popup <- paste(
+      "Station: ", plotData$statLabel,
+      "<br>Level: ", plotData$level,
+      "<br>Value: ", signif(plotData$plotValues, digits=5)
+    )
+  } else {
+    plotData$popup <- paste(
+      "Sensor: ", plotRequest$criteria$obname,
+      "<br>Satellite: ", plotRequest$criteria$satname,
+      "<br>Channel: ", plotData$channel,
+      "<br>Value: ", signif(plotData$plotValues, digits=5)
+    )
+  }
   if ( max(plotData$plotValues) > 0 ) {
     plotData$radius <- (abs(plotData$plotValues)/max(abs(plotData$plotValues)))*10
     if ( length(plotData$radius) > 0 ) {
@@ -214,12 +226,23 @@ doMap.mapUsage <- function(p, plotRequest, plotData) {
   pal <- colorFactor(c("green", "blue", "black", "grey", "magenta3", "red"),
                      domain=c("Active", "Active(2)",
                               "Blacklisted", "NA", "Passive", "Rejected"))
-  plotData$popup <- paste(
-                      "Station: ", plotData$statLabel,
-                      "<br>Level: ", plotData$level,
-                      "<br>Anflag: ", plotData$anflag,
-                      "<br>Status:", plotData$status
-                    )
+
+  if(is.null(plotData$level)) {
+    plotData$popup <- paste(
+      "Sensor: ", plotRequest$criteria$obname,
+      "<br>Satellite: ", plotRequest$criteria$satname,
+      "<br>Channel: ", plotData$channel,
+      "<br>Anflag: ", plotData$anflag,
+      "<br>Status:", plotData$status
+    )
+  } else {
+    plotData$popup <- paste(
+      "Station: ", plotData$statLabel,
+      "<br>Level: ", plotData$level,
+      "<br>Anflag: ", plotData$anflag,
+      "<br>Status:", plotData$status
+    )
+  }
   clusterOptions <- markerClusterOptions(disableClusteringAtZoom=zoomLevel)
   obMap <- leaflet(data=plotData[rev(order(status)),]) %>%
     addProviderTiles("Esri.WorldStreetMap",
@@ -286,14 +309,15 @@ doPlotly.mapUsage <- function(p, plotRequest, plotData) {
   myPlotly <- myPlotly %>%
     add_markers(
       data=plotData[rev(order(status)),],
-      text=~paste(
-        paste("Station:", statLabel),
-        paste("Level:", level),
+      text=~gsub("\\w*:[[:space:]]*<br />", "", gsub("(<br />){2,}", "<br />", paste(
+	if("statLabel" %in% names(plotData)) paste("Station:", statLabel),
+	if("level" %in% names(plotData)) paste("Level:", level),
+	if("channel" %in% names(plotData)) paste("Channel:", channel),
         sprintf("Coords: (%.3f\u00B0, %.3f\u00B0)", longitude, latitude),
         paste("Anflag:", anflag),
         paste("Status:", status),
         sep="<br />"
-      ),
+      ))),
       marker = list(
         line = list(
           color = 'black',
@@ -340,13 +364,14 @@ doPlotly.mapThreshold <- function(p, plotRequest, plotData) {
   myPlotly <- NextMethod()
   myPlotly <- myPlotly %>%
     add_markers(
-      text=~paste(
-        paste("Station:", statLabel),
-        paste("Level:", level),
+      text=~gsub("\\w*:[[:space:]]*<br />", "", gsub("(<br />){2,}", "<br />", paste(
+	if("statLabel" %in% names(plotData)) paste("Station:", statLabel),
+	if("level" %in% names(plotData)) paste("Level:", level),
+	if("channel" %in% names(plotData)) paste("Channel:", channel),
         sprintf("Coords: (%.3f\u00B0, %.3f\u00B0)", longitude, latitude),
         paste0(p$dataColumn, ": ", signif(plotValues, digits=5)),
         sep="<br />"
-      ),
+      ))),
       size=2, color=~plotValues, colors=cm$palette,
       marker = list(
         line = list(

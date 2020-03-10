@@ -5,6 +5,12 @@ The format is based on [Keep a Changelog](http://keepachangelog.com)
 and this project adheres to [Semantic Versioning](http://semver.org).
 
 
+## [3.9.0] Unreleased
+### Fixed
+- Bug that would cause satem map plots to fail with message
+  "Error: object 'level' not found"
+
+
 ## [3.8.2] 2019-12-06
 ### Fixed
 - Install of V8 library on debian (updated v8 to v2.3)
