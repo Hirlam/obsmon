@@ -6,6 +6,9 @@ and this project adheres to [Semantic Versioning](http://semver.org).
 
 
 ## [3.9.0] Unreleased
+### Added
+- metop3 defaults for the GUI's "Satellite" menu
+
 ### Fixed
 - Bug that would cause satem map plots to fail with message
   "Error: object 'level' not found"
