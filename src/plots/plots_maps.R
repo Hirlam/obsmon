@@ -40,7 +40,7 @@ doPlot.plotMap <- function(p, plotRequest, plotData) {
 
 doPlotly.plotMap <- function(p, plotRequest, plotData) {
   myPlotly <- plot_geo(
-    data=plotData, lat=~latitude, lon =~longitude
+    data=plotData, lat=~jitter(latitude, 1), lon =~jitter(longitude, 1)
   ) %>%
     layout(
       margin = list(

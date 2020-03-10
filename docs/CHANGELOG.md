@@ -11,6 +11,10 @@ and this project adheres to [Semantic Versioning](http://semver.org).
 - Explicit libv8.so path info in the .Rprofile file, so that the
   V8 R-lib can be loaded on ecgb after their most recent system update
 
+### Changed
+- Add jitter to scatter plots performed over maps, so user can get
+  popup info on more layers of data than just the last one plotted
+  (for cases when there are overlapping points)
 
 ### Fixed
 - Bug that would cause satem map plots to fail with message
