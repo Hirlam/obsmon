@@ -103,10 +103,16 @@ if(!is.null(localRLibDirUserArg)) {
 pkgSrcDir <- file.path(localRLibDir, "src", "contrib")
 localInstallRLib <- file.path(localRLibDir, "R-libs")
 # Setup of the installer's search for pre-compiled binaries
-localPreCompiledPkgsDir <- file.path(localRLibDir, "pre_compiled", sysInfoStringLong)
+# Do not mix binaries compiled with versions of R with different major.minor
+# This means that R-libs compiled with R version M.m.p will be accepted during an
+# install using R version M.m.x (for any p and x), but will not be considered valid
+# if either M or m changes.
+rVersion <- paste0(version$major, '.', gsub("\\..", "", version$minor))
+preCompiledPkgsDirComplement <- file.path(sysInfoStringLong, paste0("R_", rVersion))
+localPreCompiledPkgsDir <- file.path(localRLibDir, "pre_compiled", preCompiledPkgsDirComplement)
 envVarPreCompiledPkgsDir <- file.path(
   unlist(strsplit(Sys.getenv("R_LIBS_BIN_REPO_ROOTDIR"), ":")),
-  sysInfoStringLong
+  preCompiledPkgsDirComplement
 )
 
 if(resetLocalRepo) {

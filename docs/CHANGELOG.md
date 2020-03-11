@@ -15,10 +15,13 @@ and this project adheres to [Semantic Versioning](http://semver.org).
 - Add jitter to scatter plots performed over maps, so user can get
   popup info on more layers of data than just the last one plotted
   (for cases when there are overlapping points)
+- Install script now requires that eventual pre-compiled binaries are
+  compiled with the same major.minor version of R used during install
 
 ### Fixed
 - Bug that would cause satem map plots to fail with message
   "Error: object 'level' not found"
+- Install of V8 library on RHEL8 (updated v8 to v3.0.1)
 
 
 ## [3.8.2] 2019-12-06
@@ -343,6 +346,7 @@ and this project adheres to [Semantic Versioning](http://semver.org).
 - Environment variables for configuration
 
 
+[3.9.0]: https://git.smhi.se/foum/obsmon/compare/obsmon-3.8.0...obsmon-3.9.0
 [3.8.0]: https://git.smhi.se/foum/obsmon/compare/obsmon-3.7.0...obsmon-3.8.0
 [3.7.0]: https://git.smhi.se/foum/obsmon/compare/obsmon-3.6.0...obsmon-3.7.0
 [3.6.0]: https://git.smhi.se/foum/obsmon/compare/obsmon-3.5.0...obsmon-3.6.0
