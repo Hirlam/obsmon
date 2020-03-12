@@ -31,15 +31,15 @@ refHeights <- c(
 sensorToSats=list(
   amsua=c(
     'noaa15', 'noaa16', 'noaa17', 'noaa18', 'noaa19',
-    'metop1', 'metop2'
+    'metop1', 'metop2', 'metop3'
   ),
   amsub=c(
     'noaa15', 'noaa16', 'noaa17', 'noaa18', 'noaa19',
-    'metop1', 'metop2'
+    'metop1', 'metop2', 'metop3'
   ),
   atms=c('jpss0'),
-  iasi=c('metop1', 'metop2'),
-  mhs=c('noaa19', 'metop1', 'metop2'),
+  iasi=c('metop1', 'metop2', 'metop3'),
+  mhs=c('noaa19', 'metop1', 'metop2', 'metop3'),
   mwhs2=c('fy3c', 'fy3d')
 )
 

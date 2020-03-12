@@ -22,6 +22,8 @@ dependencies <- function(pkgName, db,
   #  because we seen cases in which install.packages showed a somewhat erratic
   #  behaviour when it comes to the dependencies it installs.
 
+  if(length(pkgName)==0) return(character(0))
+
   depsType <- levelOneDepsType
   if(recDepth>0) depsType <- levelTwoDepsType
   deps <- unlist(tools::package_dependencies(pkgName, db=db,
