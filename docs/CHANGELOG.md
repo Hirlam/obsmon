@@ -5,7 +5,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com)
 and this project adheres to [Semantic Versioning](http://semver.org).
 
 
-## [3.9.0] Unreleased
+## [Unreleased]
 ### Added
 - metop3 defaults for the GUI's "Satellite" menu
 - Explicit libv8.so path info in the .Rprofile file, so that the
