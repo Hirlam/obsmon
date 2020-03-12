@@ -59,6 +59,7 @@ localRLibDirUserArg <- getArgVal("--local-R-lib-dir")
 # Options to be passed to the configure.args argument of install.packages.
 # Usage example: ./install -configure.args="--with-udunits2-include=/usr/include/udunits2"
 installPkgsConfigArgs <- getArgVal("-configure.args")
+installPkgsConfigVars <- getArgVal("-configure.vars")
 
 # Some defaults for installPkgsConfigArgs
 # The udunits2 R-lib requires sometimes a bit of a special handling. Providing
@@ -519,7 +520,8 @@ if(length(binsToBeBuilt)==0) {
         install.packages(pkgName, lib=tmpLibForBuild,
           repos=localRepo, type="source", INSTALL_opts="--build",
           dependencies=FALSE,
-          configure.args=installPkgsConfigArgs
+          configure.args=installPkgsConfigArgs,
+          configure.vars=installPkgsConfigVars
         )
       },
         warning = function(w) {
