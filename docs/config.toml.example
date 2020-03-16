@@ -7,7 +7,8 @@
 # FYI:                                                                              #
 #    - Comments can be added using a "#" character and are optional                 #
 #    - Indentation is also optional, but highly encouraged                          #
-#    - Other config options exist. Please read the PDF doc file for more info       #
+#    - Please read the PDF doc file for more info on the options below AND on       #
+#      options that do not appear here                                              #
 #####################################################################################
 
 ###################
@@ -19,6 +20,8 @@
     # To know more, and for default values, please see the PDF doc file.
     configName = "My config name" # Optional. If set, will appear in the GUI and logs.
     logLevel = "INFO"
+    # cacheDir is optional. However, at ECMWF, we recommend setting it to somewhere
+    # under your $SCRATCH directory.
     cacheDir = ".Rcache"
     sessionTimeout = 1800 # In seconds. Optional.
     appTimeout = 5 # In seconds. Optional.
