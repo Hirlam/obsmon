@@ -14,15 +14,18 @@
 #                      Use this, e.g., for optional libraries that prove
 #                      tricky to install.
 pkgsSafeToIgnore <- c("RadarBE")
-excludeFromSuggests <- c("sf", "units", "udunits2", "vdiffr", "freetypeharfbuzz")
+excludeFromSuggests <- c(
+  "sf", "units", "udunits2", "vdiffr",
+  "freetypeharfbuzz", "RPostgreSQL"
+)
 
 # Some rudimentary parsing of command line options
 args <- commandArgs(trailingOnly=FALSE)
-getArgVal <- function(argName) {
+getArgVal <- function(argName, default=NULL) {
   argPatt <- paste(argName, "={1}", sep="")
   argStr <- grep(argPatt, args, value=TRUE)
 
-  if(length(argStr)==0) argVal <- NULL
+  if(length(argStr)==0) argVal <- default
   else {
     argVal <- gsub(argPatt, "", argStr)
     if(anyNA(argVal) | argVal=="") argVal <- NULL
@@ -34,14 +37,21 @@ showDepsAndQuit <- "--listdeps" %in% args
 ignoreBuildFail <- "--ignore-build-fail" %in% args
 buildOnly <- "--build" %in% args # Just build, do not install
 rebuildAll <- "--rebuild-all" %in% args
+# --ignore-suggests-deps: Should we skip building/installing "Suggests"-type
+#                          dependencies? Default is FALSE.
+ignoreSuggests <- "--ignore-suggests-deps" %in% args
 # Options that control whether downloads can be made from CRAN or not
-# You should only use --reset-local-repo if you know what you are doing
+# --reset-local-repo will erase everything you currently have in your local repo and
+#                    then download new versions of the packages from CRAN. Be careful.
 resetLocalRepo <- "--reset-local-repo" %in% args
 allowSrcDownload <- "--allow-downloads" %in% args | resetLocalRepo
-# --pedantic: Requires all srcs and builds all missing binaries.
+# --pedantic: Requires all srcs to be present, even if pre-compiled binaries are
+#             available. Builds all missing binaries.
 pedanticBuild <- "--pedantic" %in% args
-# --local-install is useful whenever minimum interference with current R setup
-# is desirable
+# --local-install: Install R-libs to a local R-repo instead of the global one.
+#                  Provides minimum interference with the current R setup.
+# --local-reinstall: Similar to --local-install, but the locally installed R-libs
+#                    are erased first. Useful for updates.
 localReinstallRequested <- "--local-reinstall" %in% args
 localInstallRequested <- "--local-install" %in% args || localReinstallRequested
 # Optional user-specified workDir
@@ -49,27 +59,22 @@ workDirUserArg <- getArgVal("--workdir")
 # Path to the local R library directory (relative to workDir)
 # (to replace the default localRLibDir, optionally)
 localRLibDirUserArg <- getArgVal("--local-R-lib-dir")
+# Options to be passed to the configure.args argument of install.packages.
+# Usage example: ./install -configure.args="--with-udunits2-include=/usr/include/udunits2"
+installPkgsConfigArgs <- getArgVal("-configure.args")
+installPkgsConfigVars <- getArgVal("-configure.vars")
 
-addConfigArgs <- function(configArgs) {
-  # Creates (or appends new items to) a named array "addConfigArgs"
-  # in the global scope, containing options to be later on passed to
-  # the "configure.args" argument of the "install.packages" function.
-  # We're doing this via a function to prevent inadvertent deletion
-  # of existing items
-  if(!exists("installPkgsConfigArgs")) installPkgsConfigArgs <<- c()
-  installPkgsConfigArgs <<- c(installPkgsConfigArgs, configArgs)
+# Some defaults for installPkgsConfigArgs
+# The udunits2 R-lib requires sometimes a bit of a special handling. Providing
+# a reasonable default for configure.args in this case.
+if(
+  !isTRUE(grepl("--with-udunits2-include", installPkgsConfigArgs)) &&
+  file.exists("/usr/include/udunits2")
+) {
+  installPkgsConfigArgs <- paste(installPkgsConfigArgs,
+    "--with-udunits2-include=/usr/include/udunits2"
+  )
 }
-
-# The udunits2 R-library requires some special handling. Giving users
-# an option to set the path to the headers needed for compilation, but
-# provide a reasonable default to try in case the user doesn't specify it.
-udunits2IncludePath <- getArgVal("--with-udunits2-include")
-if(is.null(udunits2IncludePath)) {
-  udunits2IncludePath <- "/usr/include/udunits2"
-}
-addConfigArgs(
-  c(udunits2=paste0('--with-udunits2-include=', udunits2IncludePath))
-)
 
 # Getting file path and defining workDir
 thisFileRelPath <- getArgVal("--file")
@@ -101,10 +106,17 @@ if(!is.null(localRLibDirUserArg)) {
 }
 pkgSrcDir <- file.path(localRLibDir, "src", "contrib")
 localInstallRLib <- file.path(localRLibDir, "R-libs")
-localPreCompiledPkgsDir <- file.path(localRLibDir, "pre_compiled", sysInfoStringLong)
+# Setup of the installer's search for pre-compiled binaries
+# Do not mix binaries compiled with versions of R with different major.minor
+# This means that R-libs compiled with R version M.m.p will be accepted during an
+# install using R version M.m.x (for any p and x), but will not be considered valid
+# if either M or m changes.
+rVersion <- paste0(version$major, '.', gsub("\\..", "", version$minor))
+preCompiledPkgsDirComplement <- file.path(sysInfoStringLong, paste0("R_", rVersion))
+localPreCompiledPkgsDir <- file.path(localRLibDir, "pre_compiled", preCompiledPkgsDirComplement)
 envVarPreCompiledPkgsDir <- file.path(
   unlist(strsplit(Sys.getenv("R_LIBS_BIN_REPO_ROOTDIR"), ":")),
-  sysInfoStringLong
+  preCompiledPkgsDirComplement
 )
 
 if(resetLocalRepo) {
@@ -221,9 +233,7 @@ for (pkg in mainPkgs) {
   essentialDeps <- dependencies(pkg, db=pkgsDbToGetDepsFrom,
                      levelOneDepsType=essentialDepsTypes
                    )
-  suggestsDeps <- dependencies(pkg, db=pkgsDbToGetDepsFrom,
-                    levelOneDepsType="Suggests"
-                  )
+  suggestsDeps <- dependencies(pkg, db=pkgsDbToGetDepsFrom, levelOneDepsType="Suggests")
   suggestsDeps <- suggestsDeps[!(suggestsDeps %in% excludeFromSuggests)]
 
   # A Suggests type dependency may also end up being a recursive non-suggests
@@ -248,11 +258,17 @@ for (pkg in mainPkgs) {
     neededBySuggests=depsNeededBySuggests
   )
 
-  thisPkgDeps <-c(
-    pkgsDeps[[pkg]][["essential"]],
-    pkgsDeps[[pkg]][["Suggests"]],
-    pkgsDeps[[pkg]][["neededBySuggests"]]
-  )
+  if(ignoreSuggests) {
+    thisPkgDeps <- pkgsDeps[[pkg]][["essential"]]
+  } else {
+    thisPkgDeps <-c(
+      pkgsDeps[[pkg]][["essential"]],
+      pkgsDeps[[pkg]][["Suggests"]],
+      pkgsDeps[[pkg]][["neededBySuggests"]]
+    )
+  }
+
+
   newDeps <-setdiff(thisPkgDeps,intersect(thisPkgDeps,c(mainPkgs, allPkgDeps)))
   cat("nDependencies =", length(thisPkgDeps), "(", length(newDeps),"new)\n")
   allEssentialDeps <- c(allEssentialDeps, pkgsDeps[[pkg]][["essential"]])
@@ -260,10 +276,9 @@ for (pkg in mainPkgs) {
   allDepsNeededBySuggests <- c(allDepsNeededBySuggests,
     pkgsDeps[[pkg]][["neededBySuggests"]]
   )
-  allPkgDeps <- c(
-    allPkgDeps, allEssentialDeps,
-    allDepsNeededBySuggests, allSuggestsDeps
-  )
+
+  allPkgDeps <- c(allPkgDeps, allEssentialDeps)
+  if(!ignoreSuggests) allPkgDeps <- c(allPkgDeps, allDepsNeededBySuggests, allSuggestsDeps)
 }
 # At last, building the full list of pkgs to be installed
 allPkgs <- unique(c(allPkgDeps, mainPkgs))
@@ -279,6 +294,8 @@ allDepsNeededBySuggests <- unique(
   ]
 )
 
+
+# Notifying user about what deps will be installed
 if(length(c(allEssentialDeps, allSuggestsDeps, allDepsNeededBySuggests))>0) {
   cat("\n")
   msg <- "In addition to the main R-libraries listed above,"
@@ -286,27 +303,39 @@ if(length(c(allEssentialDeps, allSuggestsDeps, allDepsNeededBySuggests))>0) {
   msg <- paste(msg, "be available after a successful full install:\n", sep="\n")
   cat(msg)
   if(length(allEssentialDeps)>0) {
-    cat("* Essential dependencies for the main libraries:\n")
+    cat("* Essential dependencies of the main libraries:\n")
     for (pkg in sort(allEssentialDeps)) cat("  >", pkg, "\n")
   }
+
   if(length(allSuggestsDeps)>0) {
-    cat('* Suggests-type dependencies:\n')
-    for (pkg in sort(allSuggestsDeps)) cat("  >", pkg, "\n")
+    if(ignoreSuggests) {
+      cat(
+        '* The following "Suggests"-type dependencies will be skipped (please\n',
+        '  rerun the install script with the --include-suggests-deps option\n',
+        '  if you really wish them to be included):\n'
+      )
+    } else {
+      cat('* Suggests-type dependencies:\n')
+    }
   }
-  if(length(allDepsNeededBySuggests)>0) {
-    cat("* Extra deps needed in order to install the suggests-type deps:\n")
-    for (pkg in sort(allDepsNeededBySuggests)) cat("  >", pkg, "\n")
-  }
+  for (pkg in sort(c(allSuggestsDeps, allDepsNeededBySuggests))) cat("  >", pkg, "\n")
 }
 
-cat("Total:", length(allPkgs), "R-libraries.\n")
+cat("Total:", length(allPkgs), "R-libraries to be built/installed.\n")
 cat("  Main R-libraries:", length(mainPkgs), "\n")
 cat("  Essential dependencies for the main R-libs:", length(allEssentialDeps), "\n")
-cat('  Suggests-type dependencies:', length(allSuggestsDeps), "\n")
-cat(
-  "  Extra deps needed to install the suggests-type deps:",
-  length(allDepsNeededBySuggests), "\n"
-)
+if(ignoreSuggests) {
+  cat(
+    "  Suggests-type dependencies have *NOT* been included.\n",
+    "    > Use the --include-suggests-deps option if you wish them to be.\n"
+  )
+} else {
+  cat('  Suggests-type dependencies:', length(allSuggestsDeps), "\n")
+  cat(
+    "  Extra deps needed to install the suggests-type deps:",
+    length(allDepsNeededBySuggests), "\n"
+  )
+}
 cat("\n")
 
 if(showDepsAndQuit) {
@@ -494,7 +523,8 @@ if(length(binsToBeBuilt)==0) {
         install.packages(pkgName, lib=tmpLibForBuild,
           repos=localRepo, type="source", INSTALL_opts="--build",
           dependencies=FALSE,
-          configure.args=installPkgsConfigArgs
+          configure.args=installPkgsConfigArgs,
+          configure.vars=installPkgsConfigVars
         )
       },
         warning = function(w) {
