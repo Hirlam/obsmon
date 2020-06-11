@@ -60,6 +60,12 @@ registerObservation <- function(dataFrame, ...) {
 }
 
 generalObsMetadata <- registerObservation(generalObsMetadata,
+  obname='netatmo',
+  category='surface',
+  obnumber=1,
+  variables=c('ps')
+)
+generalObsMetadata <- registerObservation(generalObsMetadata,
   obname='metar',
   category='surface',
   obnumber=1,

@@ -427,17 +427,59 @@ getObtypesFromCache <- function(db, dates, cycles) {
   return(sort(unique(rtn)))
 }
 
+getCacheTableNameForObname <- function(db, obname) {
+  # First, try to builkd the name of the table from the
+  # data registered in the observation_definitions.R file
+  category <- getAttrFromMetadata('category', obname=obname)
+  if(!is.na(category)) {
+    rtn <- sprintf("%s_obs", category)
+    return(rtn)
+  }
+
+  # If the obname is not registered in the observation_definitions.R
+  # file, then the above won't work. in this case, try to get the name
+  # of the table from the cache database files themselves. Not as efficient
+  # as the first approach, but at least the user will be able to access
+  # most new obs of usual types (surface, upper air, satellite, etc) even
+  # if the new observation is still not registered.
+  flog.debug(
+    'obname="%s" not registered in observation_definitions.R', obname
+  )
+  rtn <- NULL
+  for(cacheFilePath in db$cachePaths) {
+    con <- dbConnectWrapper(cacheFilePath, read_only=TRUE, showWarnings=FALSE)
+    if(is.null(con)) next
+    for(tableName in dbListTables(con)) {
+      tryCatch({
+          query = sprintf(
+            "SELECT COUNT(*) from %s WHERE obname='%s'",
+             tableName, obname
+          )
+          queryResult <- dbGetQuery(con, query)[['COUNT(*)']]
+          if(queryResult>0) {
+            rtn <- tableName
+            break
+          }
+        },
+        error=function(e) {flog.trace("getCacheTableNameForObname: %s", e); NULL},
+        warning=function(w) {flog.trace("getCacheTableNameForObname: %s", w); NULL}
+      )
+    }
+    dbDisconnectWrapper(con)
+  }
+  return(rtn)
+}
+
 getVariablesFromCache <- function(db, dates, cycles, obname) {
   rtn <- c()
   dateQueryString <- getDateQueryString(dates)
   cycleQueryString <- getCycleQueryString(cycles)
-
-  category <- getAttrFromMetadata('category', obname=obname)
-  tableName <- sprintf("%s_obs", category)
+  tableName <- getCacheTableNameForObname(db, obname)
 
   for(cacheFilePath in db$cachePaths) {
     con <- dbConnectWrapper(cacheFilePath, read_only=TRUE, showWarnings=FALSE)
     if(is.null(con)) next
+    # Try to determine the appropriate cache table for the obname
     tryCatch({
         tableCols <- dbListFields(con, tableName)
         query <- sprintf("SELECT DISTINCT varname FROM %s WHERE %s AND %s",
@@ -449,8 +491,8 @@ getVariablesFromCache <- function(db, dates, cycles, obname) {
         queryResult <- dbGetQuery(con, query)
         rtn <- c(rtn, queryResult[['varname']])
       },
-      error=function(e) NULL,
-      warning=function(w) NULL
+      error=function(e) {flog.trace("getVariablesFromCache: %s", e); NULL},
+      warning=function(w) {flog.trace("getVariablesFromCache: %s", w); NULL}
     )
     dbDisconnectWrapper(con)
   }
@@ -465,8 +507,7 @@ getLevelsFromCache <- function(
 
   dateQueryString <- getDateQueryString(dates)
   cycleQueryString <- getCycleQueryString(cycles)
-  category <- getAttrFromMetadata('category', obname=obname)
-  tableName <- sprintf("%s_obs", category)
+  tableName <- getCacheTableNameForObname(db, obname)
 
   for(odbTable in c("obsmon", "usage")) {
     if(odbTable=="obsmon" && !is.null(stations)) next
@@ -592,8 +633,7 @@ getStationsFromCache <- function(db, dates, cycles, obname, variable) {
   dateQueryString <- getDateQueryString(dates)
   cycleQueryString <- getCycleQueryString(cycles)
 
-  category <- getAttrFromMetadata('category', obname=obname)
-  tableName <- sprintf("%s_obs", category)
+  tableName <- getCacheTableNameForObname(db, obname)
 
   for(cacheFilePath in db$cachePaths) {
     con <- dbConnectWrapper(cacheFilePath, read_only=TRUE, showWarnings=FALSE)

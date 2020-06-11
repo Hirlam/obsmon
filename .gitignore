@@ -19,6 +19,7 @@ rtags
 rtags.R
 TAGS
 .obsmon_git_info
+tmp/
 
 # Stuff generated at run time or during installation
 R-libs/
