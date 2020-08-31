@@ -181,6 +181,8 @@ DROP TABLE IF EXISTS scatt_obs;
 CREATE TABLE scatt_obs(
   date INTEGER NOT NULL,
   cycle INTEGER NOT NULL,
+  /* satname will be 'undefined' for obsmon v<=3.10.0 */
+  satname TEXT NOT NULL,
   /* Allowing statid to be NULL, as the "obsmon" table does not currently contain statid info */
   statid TEXT DEFAULT NULL,
   varname TEXT NOT NULL,
