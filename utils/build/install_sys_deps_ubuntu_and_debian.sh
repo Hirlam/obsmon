@@ -27,6 +27,7 @@ pkgs_append libcairo2-dev
 # For R-lib "rgeos"
 pkgs_append libgeos++-dev
 # For R-lib "rgdal"
+pkgs_append libproj-dev
 pkgs_append libgdal-dev
 # For R-lib "Cairo"
 pkgs_append libxt-dev
