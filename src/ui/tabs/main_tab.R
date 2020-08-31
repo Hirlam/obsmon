@@ -83,6 +83,14 @@ mainTab <- function() {fluidPage(
         )
       ),
       conditionalPanel(
+        condition = "input.obtype == 'scatt'",
+        selectInput("scatt_satellite",
+          label=getDefLabel("satellite"),
+          choices=c(),
+          selectize=FALSE
+        )
+      ),
+      conditionalPanel(
         condition = "input.obtype != 'satem'",
         selectInput("variable",
           label=getDefLabel("variable"),
