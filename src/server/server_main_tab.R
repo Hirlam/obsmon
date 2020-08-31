@@ -340,6 +340,26 @@ observeEvent(input$channelsSelectAny, {
   )
 })
 
+# Update scatt satnames
+updateScattSatellite <- reactive({
+  reloadInfoFromCache()
+  req(input$obtype=='scatt')
+})  %>% throttle(500)
+observeEvent(updateScattSatellite(), {
+  db <- req(activeDb())
+
+  sats <- getAvailableScattSatnames(db, selectedDates(), selectedCycles())
+  isCached <- selectedDtgsAreCached() && !is.null(sats$cached)
+  if(isCached) {
+    newChoices <- sats$cached
+  } else {
+    newChoices <- combineCachedAndGeneralChoices(sats)
+  }
+  updateSelectInputWrapper(
+    session, "scatt_satellite", choices=newChoices, choicesFoundIncache=isCached
+  )
+})
+
 # Update plottype choices according to criteria
 updatePlotType <- reactive({
   input$obtype
