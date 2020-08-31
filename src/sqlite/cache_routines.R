@@ -627,6 +627,34 @@ getSatnamesFromCache <- function(db, dates, cycles, sensorname) {
   return(sort(unique(rtn)))
 }
 
+getScattSatnamesFromCache <- function(db, dates, cycles) {
+  rtn <- c()
+
+  dateQueryString <- getDateQueryString(dates)
+  cycleQueryString <- getCycleQueryString(cycles)
+
+  for(odbTable in c("obsmon", "usage")) {
+    cacheFilePath <- db$cachePaths[[odbTable]]
+    con <- dbConnectWrapper(cacheFilePath, read_only=TRUE, showWarnings=FALSE)
+    if(is.null(con)) next
+    tryCatch({
+        query <- sprintf(
+          "SELECT DISTINCT satname FROM scatt_obs WHERE %s AND %s
+           ORDER BY satname",
+          dateQueryString, cycleQueryString
+        )
+        queryResult <- dbGetQuery(con, query)
+        rtn <- c(rtn, queryResult[['satname']])
+      },
+      error=function(e) NULL,
+      warning=function(w) NULL
+    )
+    dbDisconnectWrapper(con)
+  }
+  if(length(rtn)==0) rtn <- NULL
+  return(sort(unique(rtn)))
+}
+
 getStationsFromCache <- function(db, dates, cycles, obname, variable) {
   rtn <- c()
 
@@ -704,5 +732,11 @@ getAvailableSensornames <- function(db, dates, cycles) {
 getAvailableSatnames <- function(db, dates, cycles, sensorname) {
   cached <- getSatnamesFromCache(db, dates, cycles, sensorname)
   general <- getSatelliteNamesFromMetadata(sensorname)
+  return(list(cached=cached, general=general))
+}
+
+getAvailableScattSatnames <- function(db, dates, cycles) {
+  cached <- getScattSatnamesFromCache(db, dates, cycles)
+  general <- getScattSatnamesFromMetadata()
   return(list(cached=cached, general=general))
 }
