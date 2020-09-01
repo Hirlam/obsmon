@@ -273,11 +273,22 @@ updateVariables <- reactive({
   req(input$obtype!="satem")
   updateObnames()
   req(input$obname)
+  if(input$obtype == 'scatt') {
+    updateScattSatellite()
+    req(input$scatt_satellite)
+  } else {
+    TRUE
+  }
 }) %>% throttle(500)
 observeEvent(updateVariables(), {
   db <- req(activeDb())
 
-  variables <- getVariables(db, selectedDates(), selectedCycles(), input$obname)
+  satname = NULL
+  if(input$obtype=='scatt') satname = req(input$scatt_satellite)
+
+  variables <- getVariables(
+      db, selectedDates(), selectedCycles(), input$obname, satname
+  )
   isCached <- selectedDtgsAreCached() && !is.null(variables$cached)
   if(isCached) {
     newChoices <- variables$cached

@@ -470,7 +470,7 @@ getCacheTableNameForObname <- function(db, obname) {
   return(rtn)
 }
 
-getVariablesFromCache <- function(db, dates, cycles, obname) {
+getVariablesFromCache <- function(db, dates, cycles, obname, satname=NULL) {
   rtn <- c()
   dateQueryString <- getDateQueryString(dates)
   cycleQueryString <- getCycleQueryString(cycles)
@@ -487,6 +487,9 @@ getVariablesFromCache <- function(db, dates, cycles, obname) {
         )
         if("obname" %in% tableCols) {
           query <- sprintf("%s AND obname='%s'", query, obname)
+        }
+        if(!is.null(satname)) {
+          query <- sprintf("%s AND satname='%s'", query, satname)
         }
         queryResult <- dbGetQuery(con, query)
         rtn <- c(rtn, queryResult[['varname']])
@@ -717,8 +720,8 @@ getObtypes <- function(db, dates, cycles) {
   return(list(cached=cached, general=general))
 }
 
-getVariables <- function(db, dates, cycles, obname) {
-  cached <- getVariablesFromCache(db, dates, cycles, obname)
+getVariables <- function(db, dates, cycles, obname, satname=NULL) {
+  cached <- getVariablesFromCache(db, dates, cycles, obname, satname)
   general <- getAttrFromMetadata('variables', obname=obname)
   return(list(cached=cached, general=general))
 }
