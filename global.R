@@ -38,6 +38,7 @@ defaultMenuLabels <- list(
   obname="Observation Name",
   sensor="Sensor",
   satellite="Satellite",
+  scatt_satellite="Satellite",
   channels="Channels",
   variable="Variable",
   levels="Levels",

@@ -369,6 +369,9 @@ plotsBuildCriteria <- function(input) {
     levels <- input$channels
     excludeLevels <- input$excludeChannels
   } else {
+    if (isTRUE(obname=='scatt')) {
+      res$satname <- input$scatt_satellite
+    }
     res$obname <- obname
     res$varname <- input$variable
     levels <- input$levels

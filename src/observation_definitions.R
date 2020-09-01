@@ -42,6 +42,9 @@ sensorToSats=list(
   mhs=c('noaa19', 'metop1', 'metop2', 'metop3'),
   mwhs2=c('fy3c', 'fy3d')
 )
+sensorToSatsScatt=list(
+  scatt=c('undefined', 'metopa', 'metopb', 'metopc')
+)
 
 generalObsMetadata <- data.frame(
   obname=character(),
@@ -124,7 +127,8 @@ generalObsMetadata <- registerObservation(generalObsMetadata,
   obname='scatt',
   category='scatt',
   obnumber=9,
-  variables=c('u10m', 'v10m')
+  variables=c('u10m', 'v10m'),
+  sensors.sats=joinWithDotAsSep(sensorToSatsScatt)
 )
 generalObsMetadata <- registerObservation(generalObsMetadata,
   obname='limb',
@@ -178,6 +182,12 @@ getSatelliteNamesFromMetadata <- function(sensor) {
   sens.sats <- getAttrFromMetadata('sensors.sats', category="satem")
   sens.sats <- sens.sats[startsWith(sens.sats, paste0(sensor, '.'))]
   rtn <- gsub(paste0(sensor, '.'), '', sens.sats, fixed=TRUE)
+  return(sort(unique(rtn)))
+}
+getScattSatnamesFromMetadata <- function() {
+  sens.sats <- getAttrFromMetadata('sensors.sats', category="scatt")
+  sens.sats <- sens.sats[startsWith(sens.sats, paste0('scatt', '.'))]
+  rtn <- gsub(paste0('scatt', '.'), '', sens.sats, fixed=TRUE)
   return(sort(unique(rtn)))
 }
 

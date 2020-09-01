@@ -247,16 +247,48 @@ observeEvent(updateObnames(), {
   )
 })
 
+# Update scatt satnames
+updateScattSatellite <- reactive({
+  req(input$obtype=='scatt')
+  reloadInfoFromCache()
+})  %>% throttle(500)
+observeEvent(updateScattSatellite(), {
+  db <- req(activeDb())
+
+  sats <- getAvailableScattSatnames(db, selectedDates(), selectedCycles())
+  isCached <- selectedDtgsAreCached() && !is.null(sats$cached)
+  if(isCached) {
+    newChoices <- sats$cached
+  } else {
+    newChoices <- combineCachedAndGeneralChoices(sats)
+  }
+  updateSelectInputWrapper(
+    session, "scatt_satellite",
+    choices=newChoices, choicesFoundIncache=isCached
+  )
+})
+
 # Update variable
 updateVariables <- reactive({
   req(input$obtype!="satem")
   updateObnames()
   req(input$obname)
+  if(input$obtype == 'scatt') {
+    updateScattSatellite()
+    req(input$scatt_satellite)
+  } else {
+    TRUE
+  }
 }) %>% throttle(500)
 observeEvent(updateVariables(), {
   db <- req(activeDb())
 
-  variables <- getVariables(db, selectedDates(), selectedCycles(), input$obname)
+  satname = NULL
+  if(input$obtype=='scatt') satname = req(input$scatt_satellite)
+
+  variables <- getVariables(
+      db, selectedDates(), selectedCycles(), input$obname, satname
+  )
   isCached <- selectedDtgsAreCached() && !is.null(variables$cached)
   if(isCached) {
     newChoices <- variables$cached
@@ -383,6 +415,11 @@ updateStations <- reactive({
   input$obtype
   input$obname
   input$variable
+  if(input$obtype=='scatt') {
+    input$scatt_satellite
+  } else {
+    TRUE
+  }
 }) %>% throttle(500)
 observeEvent(updateStations(), {
   if(!allowChoosingStation()) {
@@ -397,7 +434,12 @@ observeEvent(updateStations(), {
   obname <- req(input$obname)
   variable <- req(input$variable)
 
-  stations <- getStationsFromCache(db, dates, cycles, obname, variable)
+  satname = NULL
+  if(input$obtype=='scatt') satname = req(input$scatt_satellite)
+
+  stations <- getStationsFromCache(
+      db, dates, cycles, obname, variable, satname=satname
+  )
   stations <- putLabelsInStations(stations, obname)
 
   stationsAvailable <- length(stations)>0

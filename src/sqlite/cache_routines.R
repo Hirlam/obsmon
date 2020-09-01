@@ -470,7 +470,7 @@ getCacheTableNameForObname <- function(db, obname) {
   return(rtn)
 }
 
-getVariablesFromCache <- function(db, dates, cycles, obname) {
+getVariablesFromCache <- function(db, dates, cycles, obname, satname=NULL) {
   rtn <- c()
   dateQueryString <- getDateQueryString(dates)
   cycleQueryString <- getCycleQueryString(cycles)
@@ -487,6 +487,9 @@ getVariablesFromCache <- function(db, dates, cycles, obname) {
         )
         if("obname" %in% tableCols) {
           query <- sprintf("%s AND obname='%s'", query, obname)
+        }
+        if(!is.null(satname)) {
+          query <- sprintf("%s AND satname='%s'", query, satname)
         }
         queryResult <- dbGetQuery(con, query)
         rtn <- c(rtn, queryResult[['varname']])
@@ -627,7 +630,37 @@ getSatnamesFromCache <- function(db, dates, cycles, sensorname) {
   return(sort(unique(rtn)))
 }
 
-getStationsFromCache <- function(db, dates, cycles, obname, variable) {
+getScattSatnamesFromCache <- function(db, dates, cycles) {
+  rtn <- c()
+
+  dateQueryString <- getDateQueryString(dates)
+  cycleQueryString <- getCycleQueryString(cycles)
+
+  for(odbTable in c("obsmon", "usage")) {
+    cacheFilePath <- db$cachePaths[[odbTable]]
+    con <- dbConnectWrapper(cacheFilePath, read_only=TRUE, showWarnings=FALSE)
+    if(is.null(con)) next
+    tryCatch({
+        query <- sprintf(
+          "SELECT DISTINCT satname FROM scatt_obs WHERE %s AND %s
+           ORDER BY satname",
+          dateQueryString, cycleQueryString
+        )
+        queryResult <- dbGetQuery(con, query)
+        rtn <- c(rtn, queryResult[['satname']])
+      },
+      error=function(e) NULL,
+      warning=function(w) NULL
+    )
+    dbDisconnectWrapper(con)
+  }
+  if(length(rtn)==0) rtn <- NULL
+  return(sort(unique(rtn)))
+}
+
+getStationsFromCache <- function(
+    db, dates, cycles, obname, variable, satname=NULL
+) {
   rtn <- c()
 
   dateQueryString <- getDateQueryString(dates)
@@ -645,6 +678,9 @@ getStationsFromCache <- function(db, dates, cycles, obname, variable) {
         )
         if("obname" %in% tableCols) {
           query <- sprintf("%s AND obname='%s'", query, obname)
+        }
+        if(!is.null(satname)) {
+          query <- sprintf("%s AND satname='%s'", query, satname)
         }
         query <- sprintf("%s AND varname='%s'", query, variable)
         queryResult <- dbGetQuery(con, query)
@@ -689,8 +725,8 @@ getObtypes <- function(db, dates, cycles) {
   return(list(cached=cached, general=general))
 }
 
-getVariables <- function(db, dates, cycles, obname) {
-  cached <- getVariablesFromCache(db, dates, cycles, obname)
+getVariables <- function(db, dates, cycles, obname, satname=NULL) {
+  cached <- getVariablesFromCache(db, dates, cycles, obname, satname)
   general <- getAttrFromMetadata('variables', obname=obname)
   return(list(cached=cached, general=general))
 }
@@ -704,5 +740,11 @@ getAvailableSensornames <- function(db, dates, cycles) {
 getAvailableSatnames <- function(db, dates, cycles, sensorname) {
   cached <- getSatnamesFromCache(db, dates, cycles, sensorname)
   general <- getSatelliteNamesFromMetadata(sensorname)
+  return(list(cached=cached, general=general))
+}
+
+getAvailableScattSatnames <- function(db, dates, cycles) {
+  cached <- getScattSatnamesFromCache(db, dates, cycles)
+  general <- getScattSatnamesFromMetadata()
   return(list(cached=cached, general=general))
 }
