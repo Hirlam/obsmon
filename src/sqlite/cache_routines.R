@@ -658,7 +658,9 @@ getScattSatnamesFromCache <- function(db, dates, cycles) {
   return(sort(unique(rtn)))
 }
 
-getStationsFromCache <- function(db, dates, cycles, obname, variable) {
+getStationsFromCache <- function(
+    db, dates, cycles, obname, variable, satname=NULL
+) {
   rtn <- c()
 
   dateQueryString <- getDateQueryString(dates)
@@ -676,6 +678,9 @@ getStationsFromCache <- function(db, dates, cycles, obname, variable) {
         )
         if("obname" %in% tableCols) {
           query <- sprintf("%s AND obname='%s'", query, obname)
+        }
+        if(!is.null(satname)) {
+          query <- sprintf("%s AND satname='%s'", query, satname)
         }
         query <- sprintf("%s AND varname='%s'", query, variable)
         queryResult <- dbGetQuery(con, query)

@@ -415,6 +415,11 @@ updateStations <- reactive({
   input$obtype
   input$obname
   input$variable
+  if(input$obtype=='scatt') {
+    input$scatt_satellite
+  } else {
+    TRUE
+  }
 }) %>% throttle(500)
 observeEvent(updateStations(), {
   if(!allowChoosingStation()) {
@@ -429,7 +434,12 @@ observeEvent(updateStations(), {
   obname <- req(input$obname)
   variable <- req(input$variable)
 
-  stations <- getStationsFromCache(db, dates, cycles, obname, variable)
+  satname = NULL
+  if(input$obtype=='scatt') satname = req(input$scatt_satellite)
+
+  stations <- getStationsFromCache(
+      db, dates, cycles, obname, variable, satname=satname
+  )
   stations <- putLabelsInStations(stations, obname)
 
   stationsAvailable <- length(stations)>0
