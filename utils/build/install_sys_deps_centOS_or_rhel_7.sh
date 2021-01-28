@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# Intended for use in CentOS/RHEL 7.
 
 # Parsing command line arguments
 SF_SUPPORT=false # Support to "sf" R package?
