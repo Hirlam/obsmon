@@ -142,7 +142,7 @@ if(localReinstallRequested) {
   unlink(localInstallRLib, recursive=TRUE)
 }
 
-remoteRepo <- c("http://cran.ma.imperial.ac.uk")
+remoteRepo <- c("https://ftp.acc.umu.se/mirror/CRAN")
 localRepo <- c(file.path("file:", localRLibDir))
 # Configuring library search paths
 originalLibPaths <- .libPaths()

@@ -5,6 +5,21 @@ The format is based on [Keep a Changelog](http://keepachangelog.com)
 and this project adheres to [Semantic Versioning](http://semver.org).
 
 
+## [Unreleased]
+### Fix
+- Install in R v4
+
+
+## [3.11.0] 2020-09-01
+### Added
+- Support to new scatt data format
+
+
+## [3.10.0] 2020-06-11
+### Added
+- Support to netatmo stations
+
+
 ## [3.9.0] 2020-03-16
 ### Added
 - metop3 defaults for the GUI's "Satellite" menu
@@ -346,6 +361,8 @@ and this project adheres to [Semantic Versioning](http://semver.org).
 - Environment variables for configuration
 
 
+[3.11.0]: https://git.smhi.se/foum/obsmon/compare/obsmon-3.10.0...obsmon-3.11.0
+[3.10.0]: https://git.smhi.se/foum/obsmon/compare/obsmon-3.9.0...obsmon-3.10.0
 [3.9.0]: https://git.smhi.se/foum/obsmon/compare/obsmon-3.8.0...obsmon-3.9.0
 [3.8.0]: https://git.smhi.se/foum/obsmon/compare/obsmon-3.7.0...obsmon-3.8.0
 [3.7.0]: https://git.smhi.se/foum/obsmon/compare/obsmon-3.6.0...obsmon-3.7.0
