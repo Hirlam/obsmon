@@ -559,3 +559,14 @@ registerPlotType(
                list("obnumber", "obname"),
                dataColumn="obsvalue")
 )
+registerPlotType(
+    "AverageMaps",
+    plotCreate(c("mapThresholdWithRangeAvgs", "mapThreshold", "plotMap"),
+               "Average First Guess Map", "range",
+               paste("SELECT",
+                     "latitude, longitude, level, statid, obsvalue, fg_dep,",
+                     "(%s) as plotValues",
+                     "FROM usage WHERE %s AND (plotValues NOT NULL)"),
+               list("obnumber", "obname"),
+               dataColumn="obsvalue-fg_dep")
+)

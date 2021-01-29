@@ -19,6 +19,7 @@ and this project adheres to [Semantic Versioning](http://semver.org).
 ## [3.11.0] 2020-09-01
 ### Added
 - Support to new scatt data format
+- New "First Guess Map" and "Average First Guess Map" plot types
 
 
 ## [3.10.0] 2020-06-11
