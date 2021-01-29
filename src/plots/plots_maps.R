@@ -459,6 +459,17 @@ registerPlotType(
                list("obnumber", "obname"),
                dataColumn="obsvalue")
 )
+registerPlotType(
+    "Maps",
+    plotCreate(c("mapThreshold", "plotMap"),
+               "First Guess Map", "single",
+               paste("SELECT",
+                     "latitude, longitude, level, statid, obsvalue, fg_dep,",
+                     "(%s) as plotValues",
+                     "FROM usage WHERE %s AND (plotValues NOT NULL)"),
+               list("obnumber", "obname"),
+               dataColumn="obsvalue-fg_dep")
+)
 
 # The "mapThresholdWithRangeAvgs" class is similar to mapThreshold, except
 # that it takes in a date range and supports the selection of multiple cycles.
