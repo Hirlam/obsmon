@@ -435,7 +435,7 @@ registerPlotType(
                      "(%s) as plotValues",
                      "FROM usage WHERE %s AND (plotValues NOT NULL)"),
                list("obnumber", "obname"),
-               dataColumn="an_dep-fg_dep")
+               dataColumn="fg_dep-an_dep")
 )
 registerPlotType(
     "Maps",
@@ -458,6 +458,17 @@ registerPlotType(
                      "FROM usage WHERE %s AND (plotValues NOT NULL)"),
                list("obnumber", "obname"),
                dataColumn="obsvalue")
+)
+registerPlotType(
+    "Maps",
+    plotCreate(c("mapThreshold", "plotMap"),
+               "First Guess Map", "single",
+               paste("SELECT",
+                     "latitude, longitude, level, statid, obsvalue, fg_dep,",
+                     "(%s) as plotValues",
+                     "FROM usage WHERE %s AND (plotValues NOT NULL)"),
+               list("obnumber", "obname"),
+               dataColumn="obsvalue-fg_dep")
 )
 
 # The "mapThresholdWithRangeAvgs" class is similar to mapThreshold, except
@@ -524,7 +535,7 @@ registerPlotType(
                      "(%s) as plotValues",
                      "FROM usage WHERE %s AND (plotValues NOT NULL)"),
                list("obnumber", "obname"),
-               dataColumn="an_dep-fg_dep")
+               dataColumn="fg_dep-an_dep")
 )
 registerPlotType(
     "AverageMaps",
@@ -547,4 +558,15 @@ registerPlotType(
                      "FROM usage WHERE %s AND (plotValues NOT NULL)"),
                list("obnumber", "obname"),
                dataColumn="obsvalue")
+)
+registerPlotType(
+    "AverageMaps",
+    plotCreate(c("mapThresholdWithRangeAvgs", "mapThreshold", "plotMap"),
+               "Average First Guess Map", "range",
+               paste("SELECT",
+                     "latitude, longitude, level, statid, obsvalue, fg_dep,",
+                     "(%s) as plotValues",
+                     "FROM usage WHERE %s AND (plotValues NOT NULL)"),
+               list("obnumber", "obname"),
+               dataColumn="obsvalue-fg_dep")
 )

@@ -6,13 +6,20 @@ and this project adheres to [Semantic Versioning](http://semver.org).
 
 
 ## [Unreleased]
-### Fix
-- Install in R v4
+### Fixed
+- Install in R version 4
+- "invalid units" error in plots when running on R version 4
+
+### Changed
+- Redefine analysis increment in maps ("fg_dep-an_dep" instead of "an_dep-fg_dep")
+- Remote CRAN mirror address in install script
+- Path to libv8.so (see .Rprofile file) for installs on ECGB
 
 
 ## [3.11.0] 2020-09-01
 ### Added
 - Support to new scatt data format
+- New "First Guess Map" and "Average First Guess Map" plot types
 
 
 ## [3.10.0] 2020-06-11
@@ -24,7 +31,7 @@ and this project adheres to [Semantic Versioning](http://semver.org).
 ### Added
 - metop3 defaults for the GUI's "Satellite" menu
 - Explicit libv8.so path info in the .Rprofile file, so that the
-  V8 R-lib can be loaded on ecgb after their most recent system update
+  V8 R-lib can be loaded on ECGB after their most recent system update
 
 ### Changed
 - Add jitter to scatter plots performed over maps, so user can get
