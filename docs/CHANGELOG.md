@@ -7,7 +7,11 @@ and this project adheres to [Semantic Versioning](http://semver.org).
 
 ## [Unreleased]
 ### Added
-- New "First Guess Map" and "Average First Guess Map" plot types
+- New plot types:
+    - First Guess Map
+    - Average First Guess Map
+    - First-Guess Departure Timeseries
+    - Analysis Departure Timeseries
 - multiPlots: Ability to generate multiple "single-date" plots.
       - If multiple dates/cycles are specified using "startDate", "endDate",
         "nDays" and "cycles", then a multiPlot with multiple single-DTG plots will
