@@ -40,12 +40,34 @@ multiPlotsMakeShinyInputs <- function(pConfig) {
   plotsCommonInput <- list(
     experiment=pConfig$experiment,
     plottype=pConfig$plotType,
-    database=pConfig$database,
-    date=pConfig$date,
-    cycle=pConfig$cycle,
-    dateRange=c(pConfig$startDate, pConfig$endDate),
-    cycles=pConfig$cycles
+    database=pConfig$database
   )
+
+  # Prepare date/cycle inputs depending on the plot date type
+  if(getPlotDateType(pConfig$plotType) == "single") {
+    # If the multiple dates/cycles are configured in this case, then
+    # produce one single plot for each (date, cycle) combination.
+    datesForSingleDtgPlot = paste0(seq(
+      as.Date(pConfig$startDate),
+      as.Date(pConfig$endDate),
+      "days"
+    ))
+    cyclesForSingleDtgPlot = pConfig$cycles
+  } else {
+    # Setting these to NA because we'll loop over them later.
+    # If setting to NULL, then the loop doesn't work (length==0).
+    datesForSingleDtgPlot = NA
+    cyclesForSingleDtgPlot = NA
+    # Now populate the dates/cycles in the appropriate places for the
+    # plot's "range" date type.
+    plotsCommonInput <- c(
+      plotsCommonInput,
+      list(
+        dateRange=c(pConfig$startDate, pConfig$endDate),
+        cycles=pConfig$cycles
+      )
+    )
+  }
 
   obnames <- names(pConfig$obs)
   iPlot <- 0
@@ -53,15 +75,23 @@ multiPlotsMakeShinyInputs <- function(pConfig) {
     obname <- obnames[iObname]
     if(obname=="satem") {
       for(satemConfig in pConfig$obs[[obname]]) {
-        inputsThisPlotOnly <- list(
-          obname="satem",
-          sensor=satemConfig$sensor,
-          satellite=satemConfig$satellite,
-          channels=satemConfig$channels,
-          excludeChannels=satemConfig$excludeChannels
-        )
-        iPlot <- iPlot + 1
-        inputsForAllPlots[[iPlot]] <- c(plotsCommonInput,inputsThisPlotOnly)
+        # If the date type of the plot is "range", then datesForSingleDtgPlot
+        # and cyclesForSingleDtgPlot are NA, and their loops has just 1 iter.
+        for(date in datesForSingleDtgPlot) {
+          for(cycle in cyclesForSingleDtgPlot) {
+            inputsThisPlotOnly <- list(
+              obname="satem",
+              sensor=satemConfig$sensor,
+              satellite=satemConfig$satellite,
+              channels=satemConfig$channels,
+              excludeChannels=satemConfig$excludeChannels,
+              date=date,
+              cycle=cycle
+            )
+            iPlot <- iPlot + 1
+            inputsForAllPlots[[iPlot]] <- c(plotsCommonInput,inputsThisPlotOnly)
+          }
+        }
       }
     } else {
       levelsConfig <- pConfig$levels[[obname]]
@@ -74,20 +104,28 @@ multiPlotsMakeShinyInputs <- function(pConfig) {
           stations <- unique(
             c(stationsConfig[["allVars"]], stationsConfig[[variable]])
           )
-          inputsThisPlotOnly <- list(
-            obname=obname,
-            variable=variable,
-            levels=sort(unique(
-              c(levelsConfig[["allVars"]], levelsConfig[[variable]])
-            )),
-            excludeLevels=sort(unique(c(
-              excludeLevelsConfig[["allVars"]],
-              excludeLevelsConfig[[variable]])
-            )),
-            station=stations
-          )
-          iPlot <- iPlot + 1
-          inputsForAllPlots[[iPlot]]<-c(plotsCommonInput,inputsThisPlotOnly)
+          # If the date type of the plot is "range", then datesForSingleDtgPlot
+          # and cyclesForSingleDtgPlot are NA, and their loops has just 1 iter.
+          for(date in datesForSingleDtgPlot) {
+            for(cycle in cyclesForSingleDtgPlot) {
+              inputsThisPlotOnly <- list(
+                obname=obname,
+                variable=variable,
+                levels=sort(unique(
+                  c(levelsConfig[["allVars"]], levelsConfig[[variable]])
+                )),
+                excludeLevels=sort(unique(c(
+                  excludeLevelsConfig[["allVars"]],
+                  excludeLevelsConfig[[variable]])
+                )),
+                station=stations,
+                date=date,
+                cycle=cycle
+              )
+              iPlot <- iPlot + 1
+              inputsForAllPlots[[iPlot]]<-c(plotsCommonInput,inputsThisPlotOnly)
+            }
+          }
         }
       } else {
         # One plot for each variable and station
@@ -96,20 +134,26 @@ multiPlotsMakeShinyInputs <- function(pConfig) {
             c(stationsConfig[["allVars"]], stationsConfig[[variable]])
           )
           for(station in stations) {
-            inputsThisPlotOnly <- list(
-              obname=obname,
-              variable=variable,
-              levels=sort(unique(
-                c(levelsConfig[["allVars"]], levelsConfig[[variable]])
-              )),
-              excludeLevels=sort(unique(c(
-                excludeLevelsConfig[["allVars"]],
-                excludeLevelsConfig[[variable]])
-              )),
-              station=station
-            )
-            iPlot <- iPlot + 1
-            inputsForAllPlots[[iPlot]]<-c(plotsCommonInput,inputsThisPlotOnly)
+            for(date in datesForSingleDtgPlot) {
+              for(cycle in cyclesForSingleDtgPlot) {
+                inputsThisPlotOnly <- list(
+                  obname=obname,
+                  variable=variable,
+                  levels=sort(unique(
+                    c(levelsConfig[["allVars"]], levelsConfig[[variable]])
+                  )),
+                  excludeLevels=sort(unique(c(
+                    excludeLevelsConfig[["allVars"]],
+                    excludeLevelsConfig[[variable]])
+                  )),
+                  station=station,
+                  date=date,
+                  cycle=cycle
+                )
+                iPlot <- iPlot + 1
+                inputsForAllPlots[[iPlot]]<-c(plotsCommonInput,inputsThisPlotOnly)
+              }
+            }
           }
         }
       }
@@ -229,22 +273,24 @@ multiPlotPlotTypeValid <- function(plotConfig) {
   return(valid)
 }
 
+getPlotDateType <- function(plotType) {
+  return(plotTypesFlat[[plotType]]$dateType)
+}
+
 datesCompatibleWithPlotType <- function(pConfig) {
   compatible <- TRUE
-  plotter <- plotTypesFlat[[pConfig$plotType]]
-  if(plotter$dateType=="range") {
-    if(is.null(pConfig$startDate) || is.null(pConfig$endDate)) {
-      msg <- paste(
-        "Selected plotType requires startDate and endDate (or",
-        "startDate and nDays, or a negative startDate) to be configured."
-      )
-      compatible <- FALSE
-    }
-  } else {
-    if(is.null(pConfig$date) || is.null(pConfig$cycle)) {
-      msg <- "Selected plotType requires date and cycle to be set."
-      compatible <- FALSE
-    }
+  msg <- ''
+  if(is.null(pConfig$startDate) || is.null(pConfig$endDate)) {
+    msg <- paste(
+      msg,
+      "Missing required date info. Needs one of the following: (i) startDate",
+      " and endDate, (ii) startDate and nDays, or (iii) a negative startDate. "
+    )
+    compatible <- FALSE
+  }
+  if((getPlotDateType(pConfig$plotType)=="single") && is.null(pConfig$cycles)) {
+    msg <- paste(msg, "Missing required cycles info.")
+    compatible <- FALSE
   }
   if(!compatible) {
     flog.error('\n  multiPlot "%s": %s', pConfig$displayName, msg)
@@ -301,7 +347,6 @@ multiPlotsValidateConfig <- function(config) {
       }
 
       # Process dates
-      pc$date <- validateStartDate(pc$date)
       pc$startDate <- validateStartDate(pc$startDate)
       pc$endDate <- validateEndDate(pc$endDate, pc$startDate, pc$nDays)
       if(!datesCompatibleWithPlotType(pc)) validConfig <- FALSE

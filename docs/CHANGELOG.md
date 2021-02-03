@@ -6,14 +6,27 @@ and this project adheres to [Semantic Versioning](http://semver.org).
 
 
 ## [Unreleased]
-### Fixed
-- Install in R version 4
-- "invalid units" error in plots when running on R version 4
+### Added
+- New "First Guess Map" and "Average First Guess Map" plot types
+- multiPlots: Ability to generate multiple "single-date" plots.
+      - If multiple dates/cycles are specified using "startDate", "endDate",
+        "nDays" and "cycles", then a multiPlot with multiple single-DTG plots will
+        be created using all combinations of dates and cycles.
 
 ### Changed
 - Redefine analysis increment in maps ("fg_dep-an_dep" instead of "an_dep-fg_dep")
 - Remote CRAN mirror address in install script
 - Path to libv8.so (see .Rprofile file) for installs on ECGB
+- multiPlots:
+    - Config options "date" and "cycle" no longer exist. They used to
+      apply to plot types that required a single DTG. Now, for all the plot types,
+      dates and cycles are specified using "startDate", "endDate", "nDays" and
+      "cycles" (the same way it has been done for plots that use a date range).
+      Please check the documentation for more usage details.
+
+### Fixed
+- Install in R version 4
+- "invalid units" error in plots when running on R version 4
 
 
 ## [3.11.0] 2020-09-01
@@ -368,6 +381,7 @@ and this project adheres to [Semantic Versioning](http://semver.org).
 - Environment variables for configuration
 
 
+[4.0.0]: https://git.smhi.se/foum/obsmon/compare/obsmon-4.0.0...obsmon-3.11.0
 [3.11.0]: https://git.smhi.se/foum/obsmon/compare/obsmon-3.10.0...obsmon-3.11.0
 [3.10.0]: https://git.smhi.se/foum/obsmon/compare/obsmon-3.9.0...obsmon-3.10.0
 [3.9.0]: https://git.smhi.se/foum/obsmon/compare/obsmon-3.8.0...obsmon-3.9.0
