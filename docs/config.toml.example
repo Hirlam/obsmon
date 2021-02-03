@@ -115,8 +115,9 @@
     experiment = "Second Experiment"
     plotType = "Observation Usage"
     database = "ecma"
-    date = "2018-11-19"
-    cycle = 0
+    startDate = "2018-11-19"
+    endDate = "2018-11-19"
+    cycles = "00"
     ##############################################################
     # Optional: Choosing which stations (station IDs) to include #
     ##############################################################
@@ -129,8 +130,9 @@
     experiment = "First Experiment"
     plotType = "First Guess and Analysis Departure"
     database = "ecma"
-    date = "2018-11-19"
-    cycle = 0
+    startDate = "2018-11-19"
+    nDays = 1 # To include only the startDate
+    cycles = ["00", "09"] # Specifying multiple cycles
     [multiPlots.obs]
         synop=["z"]
     #############################################
@@ -151,8 +153,8 @@
     experiment = "Second Experiment"
     plotType = "Observation Usage"
     database = "ecma"
-    date = "2018-11-19"
-    cycle = 0
+    startDate = "2018-11-19"
+    cycles = "00"
     ###################################################################
     # Another way to remove observations. Note the syntax for sat obs #
     ###################################################################
