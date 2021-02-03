@@ -176,6 +176,7 @@ validateStartDate <- function(startDate, format=dateInputFormat) {
   } else if(dateIsValid(startDate, format)) {
     rtn <- as.Date(startDate, format)
   }
+  return(rtn)
 }
 validateEndDate <- function(endDate, startDate=NULL, nDays=NULL, format=dateInputFormat) {
   rtn <- NULL
