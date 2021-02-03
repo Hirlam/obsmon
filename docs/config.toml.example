@@ -131,7 +131,7 @@
     plotType = "First Guess and Analysis Departure"
     database = "ecma"
     startDate = "2018-11-19"
-    endDate = "2018-11-19"
+    nDays = 1 # To include only the startDate
     cycles = ["00", "09"] # Specifying multiple cycles
     [multiPlots.obs]
         synop=["z"]

@@ -228,7 +228,7 @@ validateEndDate <- function(endDate, startDate=NULL, nDays=NULL, format=dateInpu
     if(dateIsValid(endDate)) {
       rtn <- as.Date(endDate, format)
     } else if(is.integer(nDays) && nDays>0) {
-      rtn <- startDate + nDays
+      rtn <- startDate + nDays - 1
     } else {
       todayDateUTC <- as.Date(strftime(Sys.Date(), tz="GM"))
       rtn <- todayDateUTC

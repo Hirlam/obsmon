@@ -23,6 +23,8 @@ and this project adheres to [Semantic Versioning](http://semver.org).
       dates and cycles are specified using "startDate", "endDate", "nDays" and
       "cycles" (the same way it has been done for plots that use a date range).
       Please check the documentation for more usage details.
+    - "nDays" config parameter now sets the endDate to "startDate + nDays - 1".
+      The previous value was "startDate + nDays".
 
 ### Fixed
 - Install in R version 4
