@@ -153,7 +153,7 @@ formatDtg <- function(dtg) {
       }
     }
   } else {
-    flog.error("Invalid dtg selection")
+    flog.error('Invalid dtg selection: "%s"', dtg)
   }
 }
 
