@@ -216,7 +216,7 @@ validateStartDate <- function(startDate, format=dateInputFormat) {
     # Allow startDate to be an integer<0, in which case it is considered
     # to represent a date startDate days before today
     todayDateUTC <- as.Date(strftime(Sys.Date(), tz="GM"))
-    if(startDate<0) rtn <- todayDateUTC + startDate
+    rtn <- todayDateUTC - abs(startDate)
   } else if(dateIsValid(startDate, format)) {
     rtn <- as.Date(startDate, format)
   }

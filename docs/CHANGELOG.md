@@ -25,6 +25,8 @@ and this project adheres to [Semantic Versioning](http://semver.org).
       Please check the documentation for more usage details.
     - "nDays" config parameter now sets the endDate to "startDate + nDays - 1".
       The previous value was "startDate + nDays".
+    - "startDate" param can now also be zero, in which case it is taken to be
+      "today" -- whatever day today is.
 
 ### Fixed
 - Install in R version 4
