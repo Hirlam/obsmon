@@ -90,7 +90,7 @@ installPkgsFromDf <- function(df, lib, repos, binDirs, binSaveDir, ...) {
           )
         },
           error=function(e) {
-            if(df$Type[irow]=="suggest") {
+            if(!(df$isImport[irow] || df$isEssentialRecDep[irow])) {
               warning(paste0(
                 e, "\n",
                 'Error installing opt dep "', df$Package[irow], '". Skipping.'

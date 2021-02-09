@@ -80,31 +80,6 @@ getImportedPkgsDepsDf <- function(
   ))
 }
 
-.summarisePkgDepsDf <- function(pkgDepsDf) {
-  depsSummary <- list(imports=c(), essentials=c(), suggests=c())
-
-  for(irow in seq_len(nrow(pkgDepsDf))) {
-    depsSummary$imports <- c(
-      depsSummary$imports,
-      unlist(pkgDepsDf$Package[irow], use.names=FALSE)
-    )
-    depsSummary$suggests <- c(
-      depsSummary$suggests,
-      unlist(pkgDepsDf$suggestsDeps[irow], use.names=FALSE)
-    )
-    depsSummary$essentials <- c(
-      depsSummary$essentials,
-      unlist(pkgDepsDf$essentialDeps[irow], use.names=FALSE)
-    )
-  }
-
-  depsSummary$essentials <- setdiff(depsSummary$essentials, depsSummary$imports)
-  depsSummary$suggests <- setdiff(depsSummary$suggests, depsSummary$imports)
-  depsSummary$suggests <- setdiff(depsSummary$suggests, depsSummary$essentials)
-
-  return(depsSummary)
-}
-
 summarisePkgDepsDf <- function(pkgDepsDf, availablePkgsDb=NULL) {
 
   imports <- c()
@@ -125,18 +100,20 @@ summarisePkgDepsDf <- function(pkgDepsDf, availablePkgsDb=NULL) {
     )
   }
 
-  essentials <- setdiff(essentials, imports)
-  suggests <- setdiff(suggests, imports)
-  suggests <- setdiff(suggests, essentials)
-
-  depsSummary <- data.frame(Package=c(essentials, suggests, imports))
+  essentials <- unique(essentials)
+  suggests <- unique(suggests)
+  imports <- unique(imports)
+  depsSummary <- data.frame(Package=unique(c(essentials, suggests, imports)))
   depsSummary$Version <- importfinder::fillPkgVersion(
     depsSummary$Package, availablePkgsDb=availablePkgsDb
   )
-  depsSummary$Type <- c(
-      rep("essential", length(essentials)),
-      rep("suggest", length(suggests)),
-      rep("import", length(imports))
-  )
+
+  .isType <- Vectorize(function(pkgName, type) {
+    return(pkgName %in% get(type))
+  }, vectorize.args=c("pkgName"))
+  depsSummary$isImport <- .isType(depsSummary$Package, "imports")
+  depsSummary$isEssentialRecDep <- .isType(depsSummary$Package, "essentials")
+  depsSummary$isSuggestsDep <- .isType(depsSummary$Package, "suggests")
+
   return(depsSummary)
 }
