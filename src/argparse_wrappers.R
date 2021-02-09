@@ -32,6 +32,11 @@ parser$add_argument(
   default=NULL,
   help="Path where eventual compiled libs will be saved."
 )
+parser$add_argument(
+  "--listdeps",
+  action="store_true",
+  help="Show the dependencies and quit."
+)
 args <- parser$parse_args()
 
 # Validate input paths

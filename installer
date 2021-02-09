@@ -20,6 +20,7 @@ depsSummaryDf <- summarisePkgDepsDf(
 
 # Show dependency list
 printDepsFromDf(depsSummaryDf)
+if(args$listdeps) quit(status=0)
 
 # Install
 installPkgsFromDf(
