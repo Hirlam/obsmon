@@ -117,3 +117,44 @@ summarisePkgDepsDf <- function(pkgDepsDf, availablePkgsDb=NULL) {
 
   return(depsSummary)
 }
+
+printDepsFromDf <- function(df) {
+  dfImports <- df[df$isImport, ]
+  dfEssentialDeps <- df[df$isEssentialRecDep & !df$isImport, ]
+  dfSuggests <- df[df$isSuggestsDep & !(df$isImport | df$isEssentialRecDep), ]
+  # Sort by pkg name
+  dfImports <- dfImports[order(dfImports$Package), ]
+  dfEssentialDeps <- dfEssentialDeps[order(dfEssentialDeps$Package), ]
+  dfSuggests <- dfSuggests[order(dfSuggests$Package), ]
+
+  cat("Summary of R-pkgs that the code suggests, depends and imports:\n")
+  if(nrow(dfSuggests)>0) {
+    cat("Suggests:\n")
+    for(irow in seq_len(nrow(dfSuggests))) {
+      cat(paste0(
+        "    ",dfSuggests$Package[irow]," (=",dfSuggests$Version[irow],")\n"
+      ))
+    }
+  }
+  if(nrow(dfEssentialDeps)>0) {
+    cat("Depends:\n")
+    for(irow in seq_len(nrow(dfEssentialDeps))) {
+      cat(paste0(
+        "    ",dfEssentialDeps$Package[irow]," (=",dfEssentialDeps$Version[irow],")\n"
+      ))
+    }
+  }
+  if(nrow(dfImports)>0) {
+    cat("Imports:\n")
+    for(irow in seq_len(nrow(dfImports))) {
+      cat(paste0(
+        "    ",dfImports$Package[irow]," (=",dfImports$Version[irow],")\n"
+      ))
+    }
+  }
+  cat("\n")
+  cat("Total:", nrow(df), "R-libs to be built/installed.\n")
+  cat("Main R-libraries:", nrow(dfImports), "\n")
+  cat("Essential dependencies for the main R-libs:", nrow(dfEssentialDeps), "\n")
+  cat("Suggests-type dependencies:", nrow(dfSuggests), "\n")
+}

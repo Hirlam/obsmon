@@ -18,6 +18,9 @@ depsSummaryDf <- summarisePkgDepsDf(
   availablePkgsDb=availablePkgsDb
 )
 
+# Show dependency list
+printDepsFromDf(depsSummaryDf)
+
 # Install
 installPkgsFromDf(
   df=depsSummaryDf,
