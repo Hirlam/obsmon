@@ -9,7 +9,7 @@ parser$add_argument(
 parser$add_argument(
   "-ignore",
   nargs="+",
-  default="local_R-libs_install",
+  default="local_R-libs",
   help="Path to directories or files to be ignored."
 )
 parser$add_argument(
@@ -20,7 +20,7 @@ parser$add_argument(
 )
 parser$add_argument(
   "-install-path",
-  default=file.path(".", "local_R-libs_install", "R-libs"),
+  default=file.path(".", "local_R-libs", "R-libs"),
   help="Path to the dir where the R-libs will be installed."
 )
 parser$add_argument(
