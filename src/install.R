@@ -58,6 +58,7 @@ getPathToBinary <- function(pkgName, pkgVersion, binDirs) {
   install.packages(
     pkgName, lib=lib, repos=repos, type="source",
     INSTALL_opts=c("--build"), dependencies=FALSE,
+    quiet=TRUE,
     ...
   )
 
@@ -70,20 +71,16 @@ installPkgsFromDf <- function(df, lib, repos, binDirs, binSaveDir, ...) {
   df$binPath <- getPathToBinary(df$Package, df$Version, binDirs=binDirs)
   dir.create(lib, showWarnings=FALSE, recursive=TRUE)
   for(irow in seq_len(nrow(df))) {
-    cat("#######################################\n")
-    cat(paste0('Installing package "', df$Package[irow], '"\n'))
-    cat("#######################################\n")
+    cat(paste0('Installing package "', df$Package[irow], '"... \n'))
 
     tryCatch({
       utils::untar(unlist(df$binPath[irow]), exdir=lib)
       cat(paste0(
-        'Package "', df$Package[irow], '" installed from pre-compiled binary.\n'
+        '  > Package "', df$Package[irow],
+        '" installed from pre-compiled binary.\n'
       ))
     },
       error=function(e) {
-        cat(paste0(
-          'No binary for pkg "', df$Package[irow], '". Building from source.\n'
-        ))
         tryCatch({
           .installSinglePkg(
             df$Package[irow], lib=lib, repos=repos, binSaveDir=binSaveDir, ...
@@ -102,6 +99,5 @@ installPkgsFromDf <- function(df, lib, repos, binDirs, binSaveDir, ...) {
         )
       }
     )
-    cat("\n")
   }
 }
