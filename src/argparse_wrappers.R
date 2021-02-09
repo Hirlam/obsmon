@@ -16,7 +16,10 @@ parser$add_argument(
   "-repos",
   nargs="*",
   default=getOption("repos"),
-  help="Repo(s) containing R-libs sources."
+  help=paste(
+    "URL to repo(s) containing R-libs sources. If it is a local dir, then",
+    'make sure to prefix the path with "file:" (without quotes).'
+  )
 )
 parser$add_argument(
   "-install-path",
@@ -43,6 +46,18 @@ args <- parser$parse_args()
 # Validate input paths
 args$path <- normalizePath(args$path, mustWork=TRUE)
 args$install_path <- normalizePath(args$install_path, mustWork=FALSE)
+
+.validateRepos <- Vectorize(function(repo) {
+  if(startsWith(repo, "file:")) {
+    repo <- paste0(
+      "file:",
+      normalizePath(sub("file:", "", repo), mustWork=FALSE)
+    )
+  }
+  return(repo)
+}, USE.NAMES=FALSE)
+args$repos <- .validateRepos(args$repos)
+
 
 if(is.null(args$bin_repo_path)) {
   args$bin_repo_path <- file.path(

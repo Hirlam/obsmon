@@ -13,7 +13,7 @@ sourceFiles <- file.path(sourcesDir, c(
 for(sourceFile in sourceFiles) source(sourceFile)
 
 # Get dependencies
-availablePkgsDb <- available.packages()
+availablePkgsDb <- available.packages(repos=args$repos)
 pkgDepsDf <- getImportedPkgsDepsDf(
   path=args$path,
   ignore_regex=args$ignore,
@@ -33,6 +33,7 @@ installPkgsFromDf(
   df=depsSummaryDf,
   lib=args$install_path,
   repos=args$repos,
+  available=availablePkgsDb,
   binDirs=args$bin_repo_path,
   binSaveDir=args$bin_save_path
 )
