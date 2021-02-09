@@ -1,3 +1,60 @@
+.getThisFilePath <- function() {
+  argv <- commandArgs(trailingOnly = FALSE)
+  thisFilePath <- normalizePath(sub("--file=", "", argv[grep("--file=", argv)]))
+
+  # Account for the fact that the script may be executed via a symlink
+  rtn <- Sys.readlink(thisFilePath)
+  if(rtn=="" || anyNA(rtn)) rtn <- thisFilePath
+
+  return(rtn)
+}
+
+.filesAreR <- function(fPaths) {
+  rtn <- c()
+  for(fPath in fPaths) {
+    if(!file.exists(fPath)) rtn <- c(rtn, FALSE)
+    else if(tools::file_ext(fPath)=="R") rtn <- c(rtn, TRUE)
+    else if(tools::file_ext(fPath)=="") {
+      con = file(fPath, "r")
+      line = readLines(con, n=1, warn=FALSE)
+      close(con)
+      if(length(line)>0) {
+        rtn <- c(rtn, grepl("Rscript", line, fixed=TRUE, useBytes=TRUE))
+      } else {
+        rtn <- c(rtn, FALSE)
+      }
+    }
+    else rtn <- c(rtn, FALSE)
+  }
+  return(rtn)
+}
+
+.filesAreR <- Vectorize(function(fPath) {
+  if(!file.exists(fPath)) return(False)
+  if(tools::file_ext(fPath)=="R") return(TRUE)
+  if(tools::file_ext(fPath)=="") {
+      con = file(fPath, "r")
+      line = readLines(con, n=1, warn=FALSE)
+      close(con)
+      if(length(line)>0) {
+        rtn <- grepl("Rscript", line, fixed=TRUE, useBytes=TRUE)
+      } else {
+        rtn <-  FALSE
+      }
+  } else {
+    rtn <- FALSE
+  }
+  return(rtn)
+})
+
+.locateRSources <- function(path, ignore_regex=NULL) {
+  # Locate R files (descend recursively through directories)
+  allFiles <- list.files(path=path, recursive=TRUE, full.names=TRUE)
+  # Make sure we don't include ignored patterns
+  for(patt in ignore_regex) allFiles <- allFiles[!grepl(patt, allFiles)]
+  # Keep only R files
+  return(normalizePath(allFiles[.filesAreR(allFiles)]))
+}
 
 .getExplicitlyUsedRPkgs <- function(files) {
   # This routine returns a vector containing the names of the R packages
@@ -80,6 +137,6 @@ getImportedPkgs <- function(path=".", ignore_regex=NULL, availablePkgsDb=NULL) {
   listOfRFiles <- .locateRSources(path=path, ignore_regex=ignore_regex)
   importedPkgs <- .getExplicitlyUsedRPkgs(listOfRFiles)
   df <- data.frame(Package=importedPkgs)
-  df$Version <- fillPkgVersion(df$Package)
+  df$Version <- fillPkgVersion(df$Package, availablePkgsDb=availablePkgsDb)
   return(df)
 }

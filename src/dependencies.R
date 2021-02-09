@@ -72,7 +72,7 @@ getImportedPkgsDepsDf <- function(
   path=".", ignore_regex=NULL, availablePkgsDb=NULL
 ) {
   if(is.null(availablePkgsDb)) availablePkgsDb <- available.packages()
-  importedPkgs <- importfinder::getImportedPkgs(
+  importedPkgs <- getImportedPkgs(
     path=path, ignore_regex=ignore_regex, availablePkgsDb=availablePkgsDb
   )
   return(fillInPkgDeps(
@@ -104,7 +104,7 @@ summarisePkgDepsDf <- function(pkgDepsDf, availablePkgsDb=NULL) {
   suggests <- unique(suggests)
   imports <- unique(imports)
   depsSummary <- data.frame(Package=unique(c(essentials, suggests, imports)))
-  depsSummary$Version <- importfinder::fillPkgVersion(
+  depsSummary$Version <- fillPkgVersion(
     depsSummary$Package, availablePkgsDb=availablePkgsDb
   )
 

@@ -1,10 +1,16 @@
 #!/usr/bin/env Rscript
-#
-devtools::load_all("src/importfinder")
-source("src/argparse_wrappers.R")
-source("src/dependencies.R")
-source("src/install.R")
-source("src/get_sys_info.R")
+# Source needed files
+argv <- commandArgs(trailingOnly = FALSE)
+thisFilePath <- normalizePath(sub("--file=", "", argv[grep("--file=", argv)]))
+sourcesDir <- file.path(dirname(thisFilePath), "src")
+sourceFiles <- file.path(sourcesDir, c(
+  "argparse_wrappers.R",
+  "import_finder.R",
+  "dependencies.R",
+  "install.R",
+  "get_sys_info.R"
+))
+for(sourceFile in sourceFiles) source(sourceFile)
 
 # Get dependencies
 availablePkgsDb <- available.packages()
