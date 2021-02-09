@@ -1,0 +1,28 @@
+#!/usr/bin/env Rscript
+#
+devtools::load_all("src/importfinder")
+source("src/argparse_wrappers.R")
+source("src/dependencies.R")
+source("src/install.R")
+source("src/get_sys_info.R")
+
+# Get dependencies
+availablePkgsDb <- available.packages()
+pkgDepsDf <- getImportedPkgsDepsDf(
+  path=args$path,
+  ignore_regex=args$ignore,
+  availablePkgsDb=availablePkgsDb
+)
+depsSummaryDf <- summarisePkgDepsDf(
+  pkgDepsDf,
+  availablePkgsDb=availablePkgsDb
+)
+
+# Install
+installPkgsFromDf(
+  df=depsSummaryDf,
+  lib=args$install_path,
+  repos=args$repos,
+  binDirs=args$bin_repo_path,
+  binSaveDir=args$bin_save_path
+)
