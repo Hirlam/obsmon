@@ -30,8 +30,6 @@
     pkgName, db=db, which=depsType, recursive=FALSE
   ))
   deps <- deps[!(deps %in% exclude)]
-  #if(is.null(deps)) return(NA)
-  #if(length(deps)==0) return(deps)
 
   for(dep in deps) {
     deps <- c(
@@ -46,7 +44,11 @@
   return(unique(deps))
 }
 
-getDependencies <- Vectorize(.getDependencies, vectorize.args=c("pkgName"))
+getDependencies <- Vectorize(
+  .getDependencies,
+  vectorize.args=c("pkgName"),
+  SIMPLIFY=FALSE
+)
 
 fillInPkgDeps <- function(importedPkgsDf, availablePkgsDb=NULL) {
   if(is.null(availablePkgsDb)) availablePkgsDb <- available.packages()
@@ -58,12 +60,6 @@ fillInPkgDeps <- function(importedPkgsDf, availablePkgsDb=NULL) {
     importedPkgsDf$Package,
     db=availablePkgsDb,
     which=c("Suggests")
-  )
-  # Remove from suggests those deps that also appear as essential
-  vec_setdiff <- Vectorize(setdiff)
-  importedPkgsDf$suggestsDeps <- vec_setdiff(
-    importedPkgsDf$suggestsDeps,
-    importedPkgsDf$essentialDeps
   )
   return(importedPkgsDf)
 }
