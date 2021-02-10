@@ -33,7 +33,7 @@ if(!isFALSE(args$create_local_repo)) {
   quit(status=0)
 }
 
-cat("Installing packages...\n")
+# Install packages
 installPkgsFromDf(
   df=depsSummaryDf,
   lib=args$install_path,

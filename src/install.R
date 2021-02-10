@@ -47,6 +47,35 @@ getPathToBinary <- function(pkgName, pkgVersion, binDirs) {
   .libPaths(unique(c(lib, libPathsOriginal)))
   on.exit(.libPaths(libPathsOriginal))
 
+  # Installing
+  install.packages(
+    pkgName, lib=lib, repos=repos, type="source",
+    INSTALL_opts=c("--build"), dependencies=FALSE,
+    quiet=TRUE, keep_outputs=TRUE,
+    ...
+  )
+
+  # Copying compiled binaries, so they are available next time
+  .mvPkgsBinsToRepo(getwd(), binSaveDir)
+}
+
+.printOnSameLine <- function(newStatus) {
+  blankLine <- strrep(" ", getOption("width"))
+  cat(paste0("\r", blankLine, "\r", newStatus))
+}
+
+.printInstallStatus <- function(ipkg, npkgs, action, pkgName, pkgVersion) {
+  installStatus <- sprintf(
+    'Installation (%.0f%%): %s R-lib "%s-%s" ...',
+    100*(ipkg / npkgs), action, pkgName, pkgVersion
+  )
+  .printOnSameLine(installStatus)
+}
+
+installPkgsFromDf <- function(df, lib, repos, binDirs, binSaveDir, ...) {
+  df$binPath <- getPathToBinary(df$Package, df$Version, binDirs=binDirs)
+  dir.create(lib, showWarnings=FALSE, recursive=TRUE)
+
   # Build in a tmpdir to keep user's dir clean
   originalDir <- getwd()
   tmpBuildDir <- file.path(tempdir(), "tmp_build_dir")
@@ -54,46 +83,36 @@ getPathToBinary <- function(pkgName, pkgVersion, binDirs) {
   setwd(tmpBuildDir)
   on.exit(setwd(originalDir))
 
-  # Installing
-  install.packages(
-    pkgName, lib=lib, repos=repos, type="source",
-    INSTALL_opts=c("--build"), dependencies=FALSE,
-    quiet=TRUE,
-    ...
-  )
+  # Dir where install logfiles will be saved
+  installLogDir <- file.path(originalDir, "install_logs")
 
-  # Copying compiled binaries, so they are available next time
-  .mvPkgsBinsToRepo(tmpBuildDir, binSaveDir)
-}
-
-
-installPkgsFromDf <- function(df, lib, repos, binDirs, binSaveDir, ...) {
-  df$binPath <- getPathToBinary(df$Package, df$Version, binDirs=binDirs)
-  dir.create(lib, showWarnings=FALSE, recursive=TRUE)
   for(irow in seq_len(nrow(df))) {
-    cat(paste0('Installing package "', df$Package[irow], '"... \n'))
-
     tryCatch({
+      .printInstallStatus(
+        irow, nrow(df), "Installing", df$Package[irow], df$Version[irow]
+      )
       utils::untar(unlist(df$binPath[irow]), exdir=lib)
-      cat(paste0(
-        '  > Package "', df$Package[irow],
-        '" installed from pre-compiled binary.\n'
-      ))
     },
       error=function(e) {
+        .printInstallStatus(
+          irow, nrow(df), "Building and installing",
+          df$Package[irow], df$Version[irow]
+        )
         tryCatch({
           .installSinglePkg(
             df$Package[irow], lib=lib, repos=repos, binSaveDir=binSaveDir, ...
           )
         },
           error=function(e) {
-            if(!(df$isImport[irow] || df$isEssentialRecDep[irow])) {
+            dir.create(installLogDir, recursive=TRUE, showWarnings=FALSE)
+            file.copy(paste0(df$Package[irow], ".out"), installLogDir)
+            if(df$isImport[irow] || df$isEssentialRecDep[irow]) {
+              stop(e)
+            } else {
               warning(paste0(
                 e, "\n",
                 'Error installing opt dep "', df$Package[irow], '". Skipping.'
               ))
-            } else {
-              stop(e)
             }
           }
         )
