@@ -153,4 +153,5 @@ printDepsFromDf <- function(df) {
   cat("Main R-libraries:", nrow(dfImports), "\n")
   cat("Essential dependencies for the main R-libs:", nrow(dfEssentialDeps), "\n")
   cat("Suggests-type dependencies:", nrow(dfSuggests), "\n")
+  cat("\n")
 }

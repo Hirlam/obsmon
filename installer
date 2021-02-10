@@ -13,7 +13,8 @@ sourceFiles <- file.path(sourcesDir, c(
 ))
 for(sourceFile in sourceFiles) source(sourceFile)
 
-# Get dependencies
+cat("Getting imports and dependencies...\n")
+cat("  * Getting recursive dependencies from", args$repos, "\n")
 availablePkgsDb <- available.packages(repos=args$repos)
 pkgDepsDf <- getImportedPkgsDepsDf(
   path=args$path,
@@ -29,7 +30,7 @@ depsSummaryDf <- summarisePkgDepsDf(
 printDepsFromDf(depsSummaryDf)
 if(args$listdeps) quit(status=0)
 
-# Create local repo, if requested
+# Create local repo (and quit), if requested
 if(!isFALSE(args$create_local_repo)) {
   cat("Creating local CRAN-like repo under", args$create_local_repo, "...\n\n")
   createLocalRepo(pkgsDf=depsSummaryDf, destdir=args$create_local_repo)
@@ -38,7 +39,7 @@ if(!isFALSE(args$create_local_repo)) {
   quit(status=0)
 }
 
-# Install
+cat("Installing packages...\n")
 installPkgsFromDf(
   df=depsSummaryDf,
   lib=args$install_path,
@@ -47,3 +48,4 @@ installPkgsFromDf(
   binDirs=args$bin_repo_path,
   binSaveDir=args$bin_save_path
 )
+cat("Done installing packages.\n")
