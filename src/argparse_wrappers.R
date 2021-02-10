@@ -9,7 +9,7 @@ parser$add_argument(
 parser$add_argument(
   "-ignore",
   nargs="+",
-  default="local_R-libs",
+  default=NULL,
   help="Path to directories or files to be ignored."
 )
 parser$add_argument(
@@ -62,6 +62,7 @@ args <- parser$parse_args()
 args$path <- normalizePath(args$path, mustWork=TRUE)
 args$install_path <- normalizePath(args$install_path, mustWork=FALSE)
 
+if(is.null(args$ignore)) args$ignore <- basename(args$install_path)
 
 if(is.null(args$bin_save_path)) {
   args$bin_save_path <- file.path(
