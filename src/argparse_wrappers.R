@@ -3,7 +3,7 @@ parser <- argparse::ArgumentParser()
 parser$add_argument(
   "path",
   nargs="?",
-  default=".",
+  default=getwd(),
   help="Path to the dir containing the R sources."
 )
 parser$add_argument(
@@ -17,13 +17,15 @@ parser$add_argument(
   nargs="*",
   default=getOption("repos"),
   help=paste(
-    "URL to repo(s) containing R-libs sources. If it is a local dir, then",
-    'make sure to prefix the path with "file:" (without quotes).'
+    "URL(s) to repo(s) containing R-libs sources. If it is a local repo,",
+    'then (i) make sure to prefix the path with "file:" (without quotes),',
+    'and (ii) it will be assumed to be a directory containing an',
+    '"src/contrib" subdir structure.'
   )
 )
 parser$add_argument(
   "-install-path",
-  default=file.path(".", "local_R-libs", "R-libs"),
+  default=file.path(getwd(), "local_R-libs", "R-libs"),
   help="Path to the dir where the R-libs will be installed."
 )
 parser$add_argument(
@@ -58,17 +60,11 @@ args$install_path <- normalizePath(args$install_path, mustWork=FALSE)
 }, USE.NAMES=FALSE)
 args$repos <- .validateRepos(args$repos)
 
-
-if(is.null(args$bin_repo_path)) {
-  args$bin_repo_path <- file.path(
-    dirname(args$install_path), "compiled_binaries"
-  )
-}
-args$bin_repo_path <- normalizePath(args$bin_repo_path, mustWork=FALSE)
-
 if(is.null(args$bin_save_path)) {
   args$bin_save_path <- file.path(
     dirname(args$install_path), "compiled_binaries"
   )
 }
 args$bin_save_path <- normalizePath(args$bin_save_path, mustWork=FALSE)
+
+if(is.null(args$bin_repo_path)) args$bin_repo_path <- args$bin_save_path
