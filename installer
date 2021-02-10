@@ -1,18 +1,12 @@
 #!/usr/bin/env Rscript
-# Source needed files
-argv <- commandArgs(trailingOnly = FALSE)
-thisFilePath <- normalizePath(sub("--file=", "", argv[grep("--file=", argv)]))
-sourcesDir <- file.path(dirname(thisFilePath), "src")
-sourceFiles <- file.path(sourcesDir, c(
-  "argparse_wrappers.R",
-  "import_finder.R",
-  "dependencies.R",
-  "install.R",
-  "get_sys_info.R",
-  "create_local_repo.R"
-))
-for(sourceFile in sourceFiles) source(sourceFile)
+# Initialise
+callingScriptPath <- function() {
+  argv <- commandArgs(trailingOnly = FALSE)
+  normalizePath(sub("--file=", "", argv[grep("--file=", argv)]))
+}
+source(file.path(dirname(callingScriptPath()), "src", "init.R"))
 
+# Get imports and deps
 cat("Getting imports and dependencies...\n")
 cat("  * Getting recursive dependencies from", args$repos, "\n")
 availablePkgsDb <- available.packages(repos=args$repos)
