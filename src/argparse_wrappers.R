@@ -39,6 +39,16 @@ parser$add_argument(
   help="Path where eventual compiled libs will be saved."
 )
 parser$add_argument(
+  # Instead of using action="store_true", set this opt up such that,
+  # if passed without any value, then it becomes TRUE, but if a value
+  # is passed, then it takes on the passed value.
+  "--create-local-repo",
+  nargs="?",
+  const=TRUE,
+  default=FALSE,
+  help="Create a local CRAN-like repo with the needed packages and quit."
+)
+parser$add_argument(
   "--listdeps",
   action="store_true",
   help="Show the dependencies and quit."
@@ -68,3 +78,14 @@ if(is.null(args$bin_save_path)) {
 args$bin_save_path <- normalizePath(args$bin_save_path, mustWork=FALSE)
 
 if(is.null(args$bin_repo_path)) args$bin_repo_path <- args$bin_save_path
+
+if(isTRUE(args$create_local_repo)) {
+  args$create_local_repo <- file.path(
+    dirname(args$install_path), "src", "contrib"
+  )
+}
+if(!isFALSE(args$create_local_repo)) {
+  args$create_local_repo <- normalizePath(
+    args$create_local_repo, mustWork=FALSE
+  )
+}

@@ -8,7 +8,8 @@ sourceFiles <- file.path(sourcesDir, c(
   "import_finder.R",
   "dependencies.R",
   "install.R",
-  "get_sys_info.R"
+  "get_sys_info.R",
+  "create_local_repo.R"
 ))
 for(sourceFile in sourceFiles) source(sourceFile)
 
@@ -27,6 +28,15 @@ depsSummaryDf <- summarisePkgDepsDf(
 # Show dependency list
 printDepsFromDf(depsSummaryDf)
 if(args$listdeps) quit(status=0)
+
+# Create local repo, if requested
+if(!isFALSE(args$create_local_repo)) {
+  cat("Creating local CRAN-like repo under", args$create_local_repo, "...\n\n")
+  createLocalRepo(pkgsDf=depsSummaryDf, destdir=args$create_local_repo)
+  cat("Done creating local CRAN-like repo.\n")
+  cat("  > Path to sources:", args$create_local_repo, "\n")
+  quit(status=0)
+}
 
 # Install
 installPkgsFromDf(
