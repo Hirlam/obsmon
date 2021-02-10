@@ -1,10 +1,14 @@
 # Install argparse locally if not available globally
 .localInstallLib <- file.path(dirname(callingScriptPath()), "pkg_local_R-libs")
-.installThisPkgDepLocally <- function(pkg) {
-  if(!suppressWarnings(require(pkg, character.only=TRUE, quietly=TRUE))) {
+.installPkgLocallyIfMissingGlobally <- function(pkg, minPkgVersion="0") {
+  .libPaths(c(.localInstallLib, .libPaths()))
+  pkgIsInstalled <- tryCatch(
+    packageVersion(pkg) >= minPkgVersion,
+    error=function(e) FALSE
+  )
+  if(!pkgIsInstalled) {
     cat(paste0('Setting up R-pkg "', pkg, '" needed by the installer...\n'))
     dir.create(.localInstallLib, recursive=TRUE, showWarnings=FALSE)
-    # If .localInstallLib didn't exist before, we need this .libPaths again
     .libPaths(c(.localInstallLib, .libPaths()))
     install.packages(
       pkg, lib=.localInstallLib, quiet=TRUE,
@@ -12,8 +16,9 @@
     )
   }
 }
-.libPaths(c(.localInstallLib, .libPaths()))
-.installThisPkgDepLocally("argparse")
+# We need argparse>=2.0.0 because of the
+# "add_mutually_exclusive_group" functionality
+.installPkgLocallyIfMissingGlobally("argparse", minPkgVersion="2.0.0")
 
 # Source needed files
 .sourceNeededFiles <- function(
