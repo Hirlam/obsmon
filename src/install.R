@@ -84,7 +84,21 @@ installPkgsFromDf <- function(df, lib, repos, binDirs, binSaveDir, ...) {
   on.exit(setwd(originalDir))
 
   # Dir where install logfiles will be saved
-  installLogDir <- file.path(originalDir, "install_logs")
+  logfile <- file.path(originalDir, "install_log.txt")
+
+  .errorFunc <- function(e, df, irow) {
+    logLines <- readLines(paste0(df$Package[irow], ".out"))
+    write(logLines, logfile, append=TRUE)
+    if(df$isImport[irow] || df$isEssentialRecDep[irow]) {
+      stop(paste(e, "EITCHA", sep="\n"))
+    } else {
+      warning(paste0(
+        e, "\n",
+        'Error installing opt dep "', df$Package[irow], '". Skipping.'
+      ))
+    }
+  }
+
 
   for(irow in seq_len(nrow(df))) {
     tryCatch({
@@ -103,18 +117,8 @@ installPkgsFromDf <- function(df, lib, repos, binDirs, binSaveDir, ...) {
             df$Package[irow], lib=lib, repos=repos, binSaveDir=binSaveDir, ...
           )
         },
-          error=function(e) {
-            dir.create(installLogDir, recursive=TRUE, showWarnings=FALSE)
-            file.copy(paste0(df$Package[irow], ".out"), installLogDir)
-            if(df$isImport[irow] || df$isEssentialRecDep[irow]) {
-              stop(e)
-            } else {
-              warning(paste0(
-                e, "\n",
-                'Error installing opt dep "', df$Package[irow], '". Skipping.'
-              ))
-            }
-          }
+          warning=function(e) .errorFunc(e, df, irow),
+          error=function(e) .errorFunc(e, df, irow)
         )
       }
     )
