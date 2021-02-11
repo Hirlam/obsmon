@@ -32,6 +32,14 @@ parser$add_argument(
   action="store_true",
   help="Show the dependencies and quit."
 )
+parser$add_argument(
+  "--keep-full-install-log",
+  action="store_true",
+  help=paste(
+    "Keep the full installation log. If not passed, then only logs for",
+    "failed package installs are kept (if any)."
+  )
+)
 
 optsThatChoosePkgSrcRepos = parser$add_mutually_exclusive_group()
 optsThatChoosePkgSrcRepos$add_argument(

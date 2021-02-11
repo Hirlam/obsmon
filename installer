@@ -40,6 +40,7 @@ installPkgsFromDf(
   repos=args$repos,
   available=availablePkgsDb,
   binDirs=args$bin_repo_path,
-  binSaveDir=args$bin_save_path
+  binSaveDir=args$bin_save_path,
+  keepFullLog=args$keep_full_install_log
 )
 cat("Done installing packages.\n")
