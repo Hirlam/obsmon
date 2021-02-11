@@ -23,7 +23,7 @@ getPathToBinary <- function(pkgName, pkgVersion, binDirs) {
 }
 
 .mvPkgsBinsToRepo <- function(buildDir, preCompiledPkgsDir) {
-  gzBinFiles <- list.files(buildDir, pattern="\\.tar\\.gz$", 
+  gzBinFiles <- list.files(buildDir, pattern="\\.tar\\.gz$",
                   recursive=TRUE, full.names=TRUE
                 )
   gzBinFiles <- normalizePath(gzBinFiles, mustWork=FALSE)
@@ -51,7 +51,6 @@ getPathToBinary <- function(pkgName, pkgVersion, binDirs) {
   install.packages(
     pkgName, lib=lib, repos=repos, type="source",
     INSTALL_opts=c("--build"), dependencies=FALSE,
-    quiet=TRUE, keep_outputs=TRUE,
     ...
   )
 
@@ -66,13 +65,15 @@ getPathToBinary <- function(pkgName, pkgVersion, binDirs) {
 
 .printInstallStatus <- function(ipkg, npkgs, action, pkgName, pkgVersion) {
   installStatus <- sprintf(
-    'Installation (%.0f%%): %s R-lib "%s-%s" ...',
-    100*(ipkg / npkgs), action, pkgName, pkgVersion
+    'Installing R-lib %d/%d (%.0f%%): %s (=%s) ...',
+    ipkg, npkgs, 100*(ipkg / npkgs), pkgName, pkgVersion
   )
   .printOnSameLine(installStatus)
 }
 
-installPkgsFromDf <- function(df, lib, repos, binDirs, binSaveDir, ...) {
+installPkgsFromDf <- function(
+  df, lib, repos, binDirs, binSaveDir, logfile=NULL, ...
+) {
   df$binPath <- getPathToBinary(df$Package, df$Version, binDirs=binDirs)
   dir.create(lib, showWarnings=FALSE, recursive=TRUE)
 
@@ -83,14 +84,19 @@ installPkgsFromDf <- function(df, lib, repos, binDirs, binSaveDir, ...) {
   setwd(tmpBuildDir)
   on.exit(setwd(originalDir))
 
-  # Dir where install logfiles will be saved
-  logfile <- file.path(originalDir, "install_log.txt")
+  # We'll reduce stdout and have install logs in a separate file instead.
+  if(is.null(logfile)) {
+    logfile <- file.path(
+      originalDir,
+      paste0("install_", format(Sys.time(), "%Y-%m-%d_%H%M%OS1"), ".log")
+    )
+  }
 
+  # Helper function to handle install.packages errors
   .errorFunc <- function(e, df, irow) {
-    logLines <- readLines(paste0(df$Package[irow], ".out"))
-    write(logLines, logfile, append=TRUE)
     if(df$isImport[irow] || df$isEssentialRecDep[irow]) {
-      stop(paste(e, "EITCHA", sep="\n"))
+      cat("\n")
+      stop(e$message, call.=FALSE)
     } else {
       warning(paste0(
         e, "\n",
@@ -99,26 +105,36 @@ installPkgsFromDf <- function(df, lib, repos, binDirs, binSaveDir, ...) {
     }
   }
 
-
+  cat("Installation logfile:", logfile, "\n")
   for(irow in seq_len(nrow(df))) {
+    .printInstallStatus(
+      irow, nrow(df), "Installing", df$Package[irow], df$Version[irow]
+    )
     tryCatch({
-      .printInstallStatus(
-        irow, nrow(df), "Installing", df$Package[irow], df$Version[irow]
-      )
+      # Try installing from pre-compiled binary first
       utils::untar(unlist(df$binPath[irow]), exdir=lib)
+      write(
+        sprintf(
+          'Package "%s" installed using pre-compiled binary %s\n',
+          df$Package[irow], unlist(df$binPath[irow])
+        ),
+        file=logfile, append=TRUE
+      )
     },
       error=function(e) {
-        .printInstallStatus(
-          irow, nrow(df), "Building and installing",
-          df$Package[irow], df$Version[irow]
-        )
+        # Fall back to building & installing from source if no binary available
         tryCatch({
           .installSinglePkg(
-            df$Package[irow], lib=lib, repos=repos, binSaveDir=binSaveDir, ...
+            df$Package[irow], lib=lib, repos=repos, binSaveDir=binSaveDir,
+            quiet=TRUE, keep_outputs=TRUE, ...
           )
         },
           warning=function(e) .errorFunc(e, df, irow),
-          error=function(e) .errorFunc(e, df, irow)
+          error=function(e) .errorFunc(e, df, irow),
+          finally={
+            logLines <- readLines(paste0(df$Package[irow], ".out"))
+            write(logLines, logfile, append=TRUE)
+          }
         )
       }
     )
