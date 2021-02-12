@@ -19,7 +19,7 @@
 }
 
 .filesAreR <- Vectorize(function(fPath) {
-  if(!file.exists(fPath)) return(False)
+  if(!file.exists(fPath)) return(FALSE)
   if(tools::file_ext(fPath)=="R") return(TRUE)
   if(tools::file_ext(fPath)=="") {
       con = file(fPath, "r")
