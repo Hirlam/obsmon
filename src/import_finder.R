@@ -1,14 +1,3 @@
-.getThisFilePath <- function() {
-  argv <- commandArgs(trailingOnly = FALSE)
-  thisFilePath <- normalizePath(sub("--file=", "", argv[grep("--file=", argv)]))
-
-  # Account for the fact that the script may be executed via a symlink
-  rtn <- Sys.readlink(thisFilePath)
-  if(rtn=="" || anyNA(rtn)) rtn <- thisFilePath
-
-  return(rtn)
-}
-
 .filesAreR <- function(fPaths) {
   rtn <- c()
   for(fPath in fPaths) {
