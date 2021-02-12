@@ -1,39 +1,12 @@
-.filesAreR <- function(fPaths) {
-  rtn <- c()
-  for(fPath in fPaths) {
-    if(!file.exists(fPath)) rtn <- c(rtn, FALSE)
-    else if(tools::file_ext(fPath)=="R") rtn <- c(rtn, TRUE)
-    else if(tools::file_ext(fPath)=="") {
-      con = file(fPath, "r")
-      line = readLines(con, n=1, warn=FALSE)
-      close(con)
-      if(length(line)>0) {
-        rtn <- c(rtn, grepl("Rscript", line, fixed=TRUE, useBytes=TRUE))
-      } else {
-        rtn <- c(rtn, FALSE)
-      }
-    }
-    else rtn <- c(rtn, FALSE)
-  }
-  return(rtn)
-}
-
 .filesAreR <- Vectorize(function(fPath) {
   if(!file.exists(fPath)) return(FALSE)
   if(tools::file_ext(fPath)=="R") return(TRUE)
   if(tools::file_ext(fPath)=="") {
-      con = file(fPath, "r")
-      line = readLines(con, n=1, warn=FALSE)
-      close(con)
-      if(length(line)>0) {
-        rtn <- grepl("Rscript", line, fixed=TRUE, useBytes=TRUE)
-      } else {
-        rtn <-  FALSE
-      }
-  } else {
-    rtn <- FALSE
+    line = readLines(fPath, n=1, warn=FALSE)
+    if(length(line)>0) return(grepl("Rscript", line, fixed=TRUE, useBytes=TRUE))
+    return(FALSE)
   }
-  return(rtn)
+  return(FALSE)
 })
 
 .locateRSources <- function(path, ignore_regex=NULL) {
