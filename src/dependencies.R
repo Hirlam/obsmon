@@ -115,6 +115,11 @@ summarisePkgDepsDf <- function(pkgDepsDf, availablePkgsDb=NULL) {
 }
 
 printDepsFromDf <- function(df) {
+  if(nrow(df)==0) {
+    cat("No imports (and, consequently, no dependencies) found.\n")
+    return(NULL)
+  }
+
   dfImports <- df[df$isImport, ]
   dfEssentialDeps <- df[df$isEssentialRecDep & !df$isImport, ]
   dfSuggests <- df[df$isSuggestsDep & !(df$isImport | df$isEssentialRecDep), ]

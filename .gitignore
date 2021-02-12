@@ -3,3 +3,4 @@ pkg_local_R-libs/
 .Rhistory
 *.swp
 *.log
+tmp/

@@ -21,8 +21,8 @@ depsSummaryDf <- summarisePkgDepsDf(
 )
 
 # Show dependency list
-printDepsFromDf(depsSummaryDf)
-if(args$listdeps) quit(status=0)
+invisible(printDepsFromDf(depsSummaryDf))
+if(nrow(depsSummaryDf)==0 || args$listdeps) quit(status=0)
 
 # Create local repo (and quit), if requested
 if(!isFALSE(args$create_local_repo)) {
