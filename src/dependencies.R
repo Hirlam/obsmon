@@ -60,27 +60,9 @@ getImportedPkgsDepsDf <- function(
 
 summarisePkgDepsDf <- function(pkgDepsDf, availablePkgsDb=NULL) {
 
-  imports <- c()
-  essentials <- c()
-  suggests <- c()
-  for(irow in seq_len(nrow(pkgDepsDf))) {
-    imports <- c(
-      imports,
-      unlist(pkgDepsDf$Package[irow], use.names=FALSE)
-    )
-    suggests <- c(
-      suggests,
-      unlist(pkgDepsDf$suggestsDeps[irow], use.names=FALSE)
-    )
-    essentials <- c(
-      essentials,
-      unlist(pkgDepsDf$essentialDeps[irow], use.names=FALSE)
-    )
-  }
-
-  essentials <- unique(essentials)
-  suggests <- unique(suggests)
-  imports <- unique(imports)
+  essentials <- do.call(c, pkgDepsDf$essentialDeps)
+  suggests <- do.call(c, pkgDepsDf$suggestsDeps)
+  imports <- pkgDepsDf$Package
   depsSummary <- data.frame(Package=unique(c(essentials, suggests, imports)))
   depsSummary$Version <- fillPkgVersion(
     depsSummary$Package, availablePkgsDb=availablePkgsDb
