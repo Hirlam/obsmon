@@ -1,54 +1,36 @@
-.getDependencies <- function(pkgName, db,
-  recDepth=0,
-  which=c("Depends", "Imports", "LinkingTo"),
-  exclude=rownames(installed.packages(priority="base"))
+getDependencies <- Vectorize(function(
+  pkgName, db, which=c("Depends", "Imports", "LinkingTo"),
+  recursiveDepsType=c("Depends", "Imports", "LinkingTo"),
+  exclude=rownames(installed.packages(priority="base")),
+  recDepth=0
 ){
   #  Recursively search dependencies of package "pkgName".
   #  Useful wrapper around tools::package_dependencies that gives finer
   #  control over how to determine such dependencies.
   #
   #  pkgName: Package(s) for which dependencies should be searched
+  #  db: Result of calling available.packages()
   #  which: What type of dependencies should be considered for the
   #                    first search (at recursion depth == 0)
-  #  levelTwoDepsType: What type of secondary (recursion depth>0) dependencies
-  #                    should be included in the search
+  #  recursiveDepsType: Type of dependencies included in recursive dep searches
   #  exclude: Dependencies that should not be included in the return value
   #
-  #  Called with default values for the arguments, this function returns a
-  #  list of dependencies that would, in principle, be installed if one would
-  #  call install.packages with the same pkgName arg. We use "in principle"
-  #  because we seen cases in which install.packages showed a somewhat erratic
-  #  behaviour when it comes to the dependencies it installs.
+  #  "suggests"-type dependencies of recursive dependencies are not included.
 
-  if(length(pkgName)>1) stop("Only one package at a time is supported.")
   if(length(pkgName)==0) return(NULL)
 
-  levelTwoDepsType=c("Depends", "Imports", "LinkingTo")
-  depsType <- which
-  if(recDepth>0) depsType <- levelTwoDepsType
   deps <- unlist(tools::package_dependencies(
-    pkgName, db=db, which=depsType, recursive=FALSE
+    pkgName, db=db, which=which, recursive=FALSE
+  ), recursive=FALSE, use.names=FALSE)
+  deps <- unique(deps[!(deps %in% exclude)])
+
+  if(length(deps)==0) return(character(0))
+  depsOfDeps <- unlist(getDependencies(
+    deps, db=db, which=recursiveDepsType, exclude=exclude, recDepth=recDepth+1
   ))
-  deps <- deps[!(deps %in% exclude)]
+  return(unique(c(depsOfDeps, deps)))
 
-  for(dep in deps) {
-    deps <- c(
-      .getDependencies(
-        dep, db=db, recDepth=recDepth+1,
-        which=levelTwoDepsType,
-        exclude=exclude
-      ),
-      deps
-    )
-  }
-  return(unique(deps))
-}
-
-getDependencies <- Vectorize(
-  .getDependencies,
-  vectorize.args=c("pkgName"),
-  SIMPLIFY=FALSE
-)
+}, vectorize.args=c("pkgName"), SIMPLIFY=FALSE)
 
 fillInPkgDeps <- function(importedPkgsDf, availablePkgsDb=NULL) {
   if(is.null(availablePkgsDb)) availablePkgsDb <- available.packages()
