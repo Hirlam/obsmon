@@ -65,14 +65,15 @@ getPathToBinary <- function(pkgName, pkgVersion, binDirs) {
 
 .printInstallStatus <- function(ipkg, npkgs, action, pkgName, pkgVersion) {
   installStatus <- sprintf(
-    'Installing R-lib %d/%d (%.0f%%): %s (=%s) ...',
+    'Installing R-lib %d/%d (%.0f%%): %s (=%s) ... ',
     ipkg, npkgs, 100*(ipkg / npkgs), pkgName, pkgVersion
   )
   .printOnSameLine(installStatus)
 }
 
 installPkgsFromDf <- function(
-  df, lib, repos, binDirs, binSaveDir, logfile=NULL, keepFullLog=FALSE, ...
+  df, lib, repos, binDirs, binSaveDir, liveViewLog=FALSE,
+  logfile=NULL, keepFullLog=FALSE, ...
 ) {
   df$binPath <- getPathToBinary(df$Package, df$Version, binDirs=binDirs)
   dir.create(lib, showWarnings=FALSE, recursive=TRUE)
@@ -115,11 +116,10 @@ installPkgsFromDf <- function(
     tryCatch({
       # Try installing from pre-compiled binary first
       utils::untar(unlist(df$binPath[irow]), exdir=lib)
-      if(keepFullLog) {
-        msg <- 'Package "%s" installed using pre-compiled binary %s\n'
-        msg <- sprintf(msg, df$Package[irow], unlist(df$binPath[irow]))
-        write(msg, file=logfile, append=TRUE)
-      }
+      msg <- 'Package "%s" installed using pre-compiled binary %s\n\n'
+      msg <- sprintf(msg, df$Package[irow], unlist(df$binPath[irow]))
+      if(liveViewLog) cat(msg)
+      if(keepFullLog) write(msg, file=logfile, append=TRUE)
     },
       error=function(e) {
         # Fall back to building & installing from source if no binary available
@@ -127,7 +127,7 @@ installPkgsFromDf <- function(
         tryCatch({
           .installSinglePkg(
             df$Package[irow], lib=lib, repos=repos, binSaveDir=binSaveDir,
-            quiet=TRUE, keep_outputs=TRUE, ...
+            quiet=!liveViewLog, keep_outputs=!liveViewLog, ...
           )
           pkgInstallFailed <- FALSE
         },
@@ -135,7 +135,7 @@ installPkgsFromDf <- function(
           warning=function(e) .errorFunc(e, df, irow),
           error=function(e) .errorFunc(e, df, irow),
           finally={
-            if(keepFullLog || pkgInstallFailed) {
+            if(keepFullLog || (pkgInstallFailed && !liveViewLog)) {
               # Append current lib's install log to common logfile
               logLines <- readLines(paste0(df$Package[irow], ".out"))
               write(logLines, logfile, append=TRUE)

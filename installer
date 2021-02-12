@@ -41,6 +41,7 @@ installPkgsFromDf(
   available=availablePkgsDb,
   binDirs=args$bin_repo_path,
   binSaveDir=args$bin_save_path,
+  liveViewLog=args$live_view_install_log,
   keepFullLog=args$keep_full_install_log
 )
 cat("Done installing packages.\n")

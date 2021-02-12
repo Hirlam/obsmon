@@ -32,12 +32,22 @@ parser$add_argument(
   action="store_true",
   help="Show the dependencies and quit."
 )
-parser$add_argument(
+
+logOptions = parser$add_mutually_exclusive_group()
+logOptions$add_argument(
+  "--live-view-install-log",
+  action="store_true",
+  help=paste(
+    'Show compilation messages "live" in the console',
+    'instead of sending these to a log file.'
+  )
+)
+logOptions$add_argument(
   "--keep-full-install-log",
   action="store_true",
   help=paste(
-    "Keep the full installation log. If not passed, then only logs for",
-    "failed package installs are kept (if any)."
+    "Keep the full installation log. If not passed, then only",
+    "failed package install logs are kept (if any)."
   )
 )
 
