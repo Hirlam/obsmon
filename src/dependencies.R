@@ -118,9 +118,9 @@ printDepsFromDf <- function(df) {
     }
   }
   cat("\n")
-  cat("Total:", nrow(df), "R-libs to be built/installed.\n")
-  cat("Main R-libraries:", nrow(dfImports), "\n")
-  cat("Essential dependencies for the main R-libs:", nrow(dfEssentialDeps), "\n")
-  cat("Suggests-type dependencies:", nrow(dfSuggests), "\n")
+  cat("Total:", nrow(df), "R-libs.\n")
+  cat("#Main (imported) R-libs:", nrow(dfImports), "\n")
+  cat("#Essential dependencies for the main R-libs:", nrow(dfEssentialDeps), "\n")
+  cat("#Suggests-type dependencies:", nrow(dfSuggests), "\n")
   cat("\n")
 }
