@@ -15,7 +15,7 @@
   # Normalise paths to, e.g., resolve symlinks
   allFiles <- normalizePath(allFiles)
   # Make sure we don't include ignored patterns
-  for(patt in ignore_regex) allFiles <- allFiles[!grepl(patt, allFiles)]
+  allFiles <- allFiles[!grepl(paste(ignore_regex, collapse="|"), allFiles)]
   # Keep only R files
   return(allFiles[.filesAreR(allFiles)])
 }
