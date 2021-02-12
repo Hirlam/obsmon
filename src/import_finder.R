@@ -69,25 +69,6 @@
   return(sort(unique(explicitlyUsedPkgs[!(explicitlyUsedPkgs %in% basePackagesR)])))
 }
 
-.getAvailablePkgs <- function(repos) {
-  tryCatch(
-    {
-      if(!is.null(repos)) {
-        if(!any(startsWith(repos, c("file:", "www", "https://", "http://")))) {
-          repos <- normalizePath(repos, mustWork=TRUE)
-          repos <- paste0("file:", repos)
-        }
-        available.packages(repos=repos)
-      } else {
-        NULL
-      }
-    },
-    warning=function(w) {warning(w); NULL},
-    error=function(e) {warning(e); NULL}
-  )
-}
-
-#' @export
 fillPkgVersion <- Vectorize(function(pkgName, availablePkgsDb) {
   tryCatch(
     version <- availablePkgsDb[pkgName, "Version"],
@@ -95,7 +76,6 @@ fillPkgVersion <- Vectorize(function(pkgName, availablePkgsDb) {
   )
 }, vectorize.args=c("pkgName"))
 
-#' @export
 getImportedPkgs <- function(path=".", ignore_regex=NULL, availablePkgsDb=NULL) {
   if(is.null(availablePkgsDb)) availablePkgsDb <- available.packages()
   listOfRFiles <- .locateRSources(path=path, ignore_regex=ignore_regex)
