@@ -50,10 +50,12 @@
 .locateRSources <- function(path, ignore_regex=NULL) {
   # Locate R files (descend recursively through directories)
   allFiles <- list.files(path=path, recursive=TRUE, full.names=TRUE)
+  # Normalise paths to, e.g., resolve symlinks
+  allFiles <- normalizePath(allFiles)
   # Make sure we don't include ignored patterns
   for(patt in ignore_regex) allFiles <- allFiles[!grepl(patt, allFiles)]
   # Keep only R files
-  return(normalizePath(allFiles[.filesAreR(allFiles)]))
+  return(allFiles[.filesAreR(allFiles)])
 }
 
 .getExplicitlyUsedRPkgs <- function(files) {

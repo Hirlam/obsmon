@@ -92,6 +92,9 @@ args$path <- normalizePath(args$path, mustWork=TRUE)
 args$install_path <- normalizePath(args$install_path, mustWork=FALSE)
 
 if(is.null(args$ignore)) args$ignore <- basename(args$install_path)
+# Make sure to ignore the calling script itself, if called via a
+# symlink located somewhere else
+args$ignore <- unique(c(paste0("^", callingScriptPath(), "$"), args$ignore))
 
 if(is.null(args$bin_save_path)) {
   args$bin_save_path <- file.path(
