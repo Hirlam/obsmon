@@ -1,47 +1,72 @@
 # Command line args
 parser <- argparse::ArgumentParser()
+
 parser$add_argument(
   "path",
   nargs="?",
   default=getwd(),
-  help="Path to the dir containing the R sources."
+  help='Directory to be recursively searched for R sources. Default: "."'
 )
+
+parser$add_argument(
+  "--listdeps",
+  action="store_true",
+  help="Show the imports and dependencies and exit."
+)
+
+optsThatChoosePkgSrcRepos = parser$add_mutually_exclusive_group()
+optsThatChoosePkgSrcRepos$add_argument(
+  # Instead of using action="store_true", set this opt up such that,
+  # if passed without any value, then it becomes TRUE, but if a value
+  # is passed, then it takes on the passed value.
+  "--create-local-repo",
+  nargs="?",
+  const=TRUE,
+  default=FALSE,
+  help="Create a local CRAN-like repo with the needed pkg sources and exit."
+)
+
 parser$add_argument(
   "-ignore",
   nargs="+",
   default=NULL,
-  help="Path to directories or files to be ignored."
+  help="Path patterns to ignore when searching for R files."
 )
-parser$add_argument(
-  "-install-path",
-  default=file.path(getwd(), "local_R-libs", "R-libs"),
-  help="Path to the dir where the R-libs will be installed."
+
+optsThatChoosePkgSrcRepos$add_argument(
+  "-repos",
+  nargs="*",
+  default=NULL,
+  help=paste(
+    "URL(s) to repo(s) containing R-libs sources. If using a local repo,",
+    'make sure to prefix the path with "file:" (without quotes).',
+    'Local repos are assumed to be a directory containing an',
+    '"src/contrib" subdir structure, similar to what is shown at',
+    "<https://environments.rstudio.com/repositories.html#structure-of-a-cran-like-repository>."
+  )
 )
+
 parser$add_argument(
   "-bin-repo-path",
   default=NULL,
-  help="Path to the dir containing pre-compiled R-pkg binaries."
+  help="Location of eventual pre-compiled R-pkg binaries.",
+  metavar="BIN_REPO_DIR_PATH"
 )
+
+parser$add_argument(
+  "-install-path",
+  default=file.path(getwd(), "local_R-libs", "R-libs"),
+  help="Where the detected R-libs & deps should be installed.",
+  metavar="INSTALL_DIR_PATH"
+)
+
 parser$add_argument(
   "-bin-save-path",
   default=NULL,
   help="Path where eventual compiled libs will be saved."
 )
-parser$add_argument(
-  "--listdeps",
-  action="store_true",
-  help="Show the dependencies and quit."
-)
 
 logOptions = parser$add_mutually_exclusive_group()
-logOptions$add_argument(
-  "--live-view-install-log",
-  action="store_true",
-  help=paste(
-    'Show compilation messages "live" in the console',
-    'instead of sending these to a log file.'
-  )
-)
 logOptions$add_argument(
   "--keep-full-install-log",
   action="store_true",
@@ -51,27 +76,13 @@ logOptions$add_argument(
   )
 )
 
-optsThatChoosePkgSrcRepos = parser$add_mutually_exclusive_group()
-optsThatChoosePkgSrcRepos$add_argument(
-  "-repos",
-  nargs="*",
-  default=NULL,
+logOptions$add_argument(
+  "--live-view-install-log",
+  action="store_true",
   help=paste(
-    "URL(s) to repo(s) containing R-libs sources. If it is a local repo,",
-    'then (i) make sure to prefix the path with "file:" (without quotes),',
-    'and (ii) it will be assumed to be a directory containing an',
-    '"src/contrib" subdir structure.'
+    'Show "live" compilation messages in the console',
+    'instead of sending them to a log file.'
   )
-)
-optsThatChoosePkgSrcRepos$add_argument(
-  # Instead of using action="store_true", set this opt up such that,
-  # if passed without any value, then it becomes TRUE, but if a value
-  # is passed, then it takes on the passed value.
-  "--create-local-repo",
-  nargs="?",
-  const=TRUE,
-  default=FALSE,
-  help="Create a local CRAN-like repo with the needed packages and quit."
 )
 
 args <- parser$parse_args()
