@@ -95,7 +95,7 @@ printDepsFromDf <- function(df) {
 
   .printDfSummary <- function(df, dfName) {
     if(nrow(df)>0) {
-      cat(paste0(dfName, "\n"))
+      cat(paste0(dfName, ":\n"))
       for(irow in seq_len(nrow(df))) {
         cat(paste0(
           "    ", df$Package[irow], " (=", df$Version[irow],")\n"

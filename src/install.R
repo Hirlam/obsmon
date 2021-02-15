@@ -83,7 +83,10 @@ installPkgsFromDf <- function(
   tmpBuildDir <- file.path(tempdir(), "tmp_build_dir")
   dir.create(tmpBuildDir, recursive=TRUE, showWarnings=FALSE)
   setwd(tmpBuildDir)
-  on.exit(setwd(originalDir))
+  on.exit({
+    setwd(originalDir)
+    cat("\n")
+  })
 
   # We'll reduce stdout and have install logs in a separate file instead.
   if(is.null(logfile)) {
