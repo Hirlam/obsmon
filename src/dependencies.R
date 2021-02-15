@@ -32,49 +32,50 @@ getDependencies <- Vectorize(function(
 
 }, vectorize.args=c("pkgName"), SIMPLIFY=FALSE)
 
-fillInPkgDeps <- function(importedPkgsDf, availablePkgsDb=NULL) {
+fillInPkgDeps <- function(
+  importedPkgsDf, availablePkgsDb=NULL, includeSuggests=FALSE
+) {
   if(is.null(availablePkgsDb)) availablePkgsDb <- available.packages()
+
   importedPkgsDf$essentialDeps <- getDependencies(
-    importedPkgsDf$Package,
-    db=availablePkgsDb
+    importedPkgsDf$Package, db=availablePkgsDb
   )
-  importedPkgsDf$suggestsDeps <- getDependencies(
-    importedPkgsDf$Package,
-    db=availablePkgsDb,
-    which=c("Suggests")
-  )
+  if(includeSuggests) {
+    importedPkgsDf$suggestsDeps <- getDependencies(
+      importedPkgsDf$Package, db=availablePkgsDb, which=c("Suggests")
+    )
+  }
   return(importedPkgsDf)
 }
 
 getImportedPkgsDepsDf <- function(
-  path=".", ignore_regex=NULL, availablePkgsDb=NULL
+  path=".", ignore_regex=NULL, availablePkgsDb=NULL, includeSuggests=FALSE
 ) {
   if(is.null(availablePkgsDb)) availablePkgsDb <- available.packages()
   importedPkgs <- getImportedPkgs(
     path=path, ignore_regex=ignore_regex, availablePkgsDb=availablePkgsDb
   )
   return(fillInPkgDeps(
-    importedPkgsDf=importedPkgs, availablePkgsDb=availablePkgsDb
+    importedPkgsDf=importedPkgs, availablePkgsDb=availablePkgsDb,
+    includeSuggests=includeSuggests
   ))
 }
 
 summarisePkgDepsDf <- function(pkgDepsDf, availablePkgsDb=NULL) {
-
-  essentials <- do.call(c, pkgDepsDf$essentialDeps)
-  suggests <- do.call(c, pkgDepsDf$suggestsDeps)
-  imports <- pkgDepsDf$Package
-  depsSummary <- data.frame(Package=unique(c(essentials, suggests, imports)))
-  depsSummary$Version <- fillPkgVersion(
-    depsSummary$Package, availablePkgsDb=availablePkgsDb
+  allPkgs <- unique(unlist(c(
+    pkgDepsDf$essentialDeps, pkgDepsDf$suggestsDeps, pkgDepsDf$Package
+  ), use.names=FALSE))
+  .isType <- function(pkgName, type) {
+    if(!(type %in% colnames(pkgDepsDf))) return(FALSE)
+    return(pkgName %in% unlist(pkgDepsDf[type], use.names=FALSE))
+  }
+  depsSummary <- data.frame(
+    Package=allPkgs,
+    Version=fillPkgVersion(allPkgs, availablePkgsDb=availablePkgsDb),
+    isImport=.isType(allPkgs, "Package"),
+    isEssentialRecDep=.isType(allPkgs, "essentialDeps"),
+    isSuggestsDep=.isType(allPkgs, "suggestsDeps")
   )
-
-  .isType <- Vectorize(function(pkgName, type) {
-    return(pkgName %in% get(type))
-  }, vectorize.args=c("pkgName"))
-  depsSummary$isImport <- .isType(depsSummary$Package, "imports")
-  depsSummary$isEssentialRecDep <- .isType(depsSummary$Package, "essentials")
-  depsSummary$isSuggestsDep <- .isType(depsSummary$Package, "suggests")
-
   return(depsSummary)
 }
 
@@ -92,35 +93,25 @@ printDepsFromDf <- function(df) {
   dfEssentialDeps <- dfEssentialDeps[order(dfEssentialDeps$Package), ]
   dfSuggests <- dfSuggests[order(dfSuggests$Package), ]
 
+  .printDfSummary <- function(df, dfName) {
+    if(nrow(df)>0) {
+      cat(paste0(dfName, "\n"))
+      for(irow in seq_len(nrow(df))) {
+        cat(paste0(
+          "    ", df$Package[irow], " (=", df$Version[irow],")\n"
+        ))
+      }
+    }
+  }
+
   cat("Summary of R-pkgs that the code suggests, depends and imports:\n")
-  if(nrow(dfSuggests)>0) {
-    cat("Suggests:\n")
-    for(irow in seq_len(nrow(dfSuggests))) {
-      cat(paste0(
-        "    ",dfSuggests$Package[irow]," (=",dfSuggests$Version[irow],")\n"
-      ))
-    }
-  }
-  if(nrow(dfEssentialDeps)>0) {
-    cat("Depends:\n")
-    for(irow in seq_len(nrow(dfEssentialDeps))) {
-      cat(paste0(
-        "    ",dfEssentialDeps$Package[irow]," (=",dfEssentialDeps$Version[irow],")\n"
-      ))
-    }
-  }
-  if(nrow(dfImports)>0) {
-    cat("Imports:\n")
-    for(irow in seq_len(nrow(dfImports))) {
-      cat(paste0(
-        "    ",dfImports$Package[irow]," (=",dfImports$Version[irow],")\n"
-      ))
-    }
-  }
+  .printDfSummary(dfSuggests, "Suggests")
+  .printDfSummary(dfEssentialDeps, "Depends")
+  .printDfSummary(dfImports, "Imports")
   cat("\n")
   cat("Total:", nrow(df), "R-libs.\n")
   cat("#Main (imported) R-libs:", nrow(dfImports), "\n")
   cat("#Essential dependencies for the main R-libs:", nrow(dfEssentialDeps), "\n")
-  cat("#Suggests-type dependencies:", nrow(dfSuggests), "\n")
+  if(nrow(dfSuggests)>0) cat("#Suggests-type dependencies:", nrow(dfSuggests), "\n")
   cat("\n")
 }

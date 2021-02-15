@@ -13,7 +13,8 @@ availablePkgsDb <- available.packages(repos=args$repos)
 pkgDepsDf <- getImportedPkgsDepsDf(
   path=args$path,
   ignore_regex=args$ignore,
-  availablePkgsDb=availablePkgsDb
+  availablePkgsDb=availablePkgsDb,
+  includeSuggests=args$include_suggests
 )
 depsSummaryDf <- summarisePkgDepsDf(
   pkgDepsDf,

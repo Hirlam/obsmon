@@ -14,6 +14,15 @@ parser$add_argument(
   help="Show the imports and dependencies and exit."
 )
 
+parser$add_argument(
+  "--include-suggests",
+  action="store_true",
+  help=paste(
+    'Include "suggests"-type dependencies.',
+    "See <https://r-pkgs.org/description.html>"
+  )
+)
+
 optsThatChoosePkgSrcRepos = parser$add_mutually_exclusive_group()
 optsThatChoosePkgSrcRepos$add_argument(
   # Instead of using action="store_true", set this opt up such that,
