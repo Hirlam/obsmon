@@ -1,3 +1,15 @@
+.pkgDepsCache <- list()
+.package_dependencies <- function(pkg, which, ...) {
+  # Wapper to tools::package_dependencies that caches results
+  if(length(pkg) > 1) stop("Vector argument not supported")
+  cacheKey <- paste(pkg, paste(sort(which), collapse="_"), sep="_")
+  cached <- .pkgDepsCache[cacheKey]
+  if(cacheKey %in% names(.pkgDepsCache)) return(cached)
+  deps <- tools::package_dependencies(pkg, which=which, ...)
+  .pkgDepsCache[cacheKey] <<- deps
+  return(deps)
+}
+
 getDependencies <- Vectorize(function(
   pkgName, db, which=c("Depends", "Imports", "LinkingTo"),
   recursiveDepsType=c("Depends", "Imports", "LinkingTo"),
@@ -19,7 +31,7 @@ getDependencies <- Vectorize(function(
 
   if(length(pkgName)==0) return(NULL)
 
-  deps <- unlist(tools::package_dependencies(
+  deps <- unlist(.package_dependencies(
     pkgName, db=db, which=which, recursive=FALSE
   ), recursive=FALSE, use.names=FALSE)
   deps <- unique(deps[!(deps %in% exclude)])
