@@ -1,8 +1,3 @@
-.libPaths(unique(c(
-  "R-libs/",
-  "utils/build/local_R_library/R-libs/",
-  .libPaths()
-)))
 
 # The call to dyn.load below is needed on ecgate@ECMWF, otherwise loading the V8 R-lib will fail.
 tryCatch(
