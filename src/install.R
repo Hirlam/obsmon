@@ -65,8 +65,8 @@ getPathToBinary <- function(pkgName, pkgVersion, binDirs) {
 
 .printInstallStatus <- function(ipkg, npkgs, action, pkgName, pkgVersion) {
   installStatus <- sprintf(
-    'Installing R-lib %d/%d (%.0f%%): %s (=%s) ... ',
-    ipkg, npkgs, 100*(ipkg / npkgs), pkgName, pkgVersion
+    'Install progress %.0f%%, installing R-lib %d/%d: %s (=%s) ... ',
+    100*((ipkg-1) / npkgs), ipkg, npkgs, pkgName, pkgVersion
   )
   .printOnSameLine(installStatus)
 }
@@ -148,4 +148,5 @@ installPkgsFromDf <- function(
       }
     )
   }
+  .printOnSameLine("Install complete.")
 }

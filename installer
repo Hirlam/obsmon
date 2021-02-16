@@ -45,4 +45,4 @@ installPkgsFromDf(
   liveViewLog=args$live_view_install_log,
   keepFullLog=args$keep_full_install_log
 )
-cat("Done installing packages.\n")
+cat("Done.\n")
