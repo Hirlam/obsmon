@@ -15,6 +15,9 @@ obsmonSrcDir <- dirname(Sys.readlink(thisFilePath))
 if(obsmonSrcDir=="" || anyNA(obsmonSrcDir)) obsmonSrcDir<-dirname(thisFilePath)
 setwd(obsmonSrcDir)
 
+## Make sure to read .Rprofile even when not running from location obsmonSrcDir
+# This is important, e.g., for the libPaths
+source(file.path(obsmonSrcDir, ".Rprofile"))
 
 # Printing startup info such as code name, version and git info
 source("src/src_info_obsmon.R")
