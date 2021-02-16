@@ -1,0 +1,48 @@
+#!/usr/bin/env Rscript
+# Initialise
+callingScriptPath <- function() {
+  argv <- commandArgs(trailingOnly = FALSE)
+  normalizePath(sub("--file=", "", argv[grep("--file=", argv)]))
+}
+source(file.path(dirname(callingScriptPath()), "src", "init.R"))
+
+# Get imports and deps
+cat("Getting imports and dependencies...\n")
+cat("  * Getting recursive dependencies from", args$repos, "\n")
+availablePkgsDb <- available.packages(repos=args$repos)
+pkgDepsDf <- getImportedPkgsDepsDf(
+  path=args$path,
+  ignore_regex=args$ignore,
+  availablePkgsDb=availablePkgsDb,
+  includeSuggests=args$include_suggests
+)
+depsSummaryDf <- summarisePkgDepsDf(
+  pkgDepsDf,
+  availablePkgsDb=availablePkgsDb
+)
+
+# Show dependency list
+invisible(printDepsFromDf(depsSummaryDf))
+if(nrow(depsSummaryDf)==0 || args$listdeps) quit(status=0)
+
+# Create local repo (and quit), if requested
+if(!isFALSE(args$create_local_repo)) {
+  cat("Creating local CRAN-like repo under", args$create_local_repo, "...\n\n")
+  createLocalRepo(pkgsDf=depsSummaryDf, destdir=args$create_local_repo)
+  cat("Done creating local CRAN-like repo.\n")
+  cat("  > Path to sources:", args$create_local_repo, "\n")
+  quit(status=0)
+}
+
+# Install packages
+installPkgsFromDf(
+  df=depsSummaryDf,
+  lib=args$install_path,
+  repos=args$repos,
+  available=availablePkgsDb,
+  binDirs=args$bin_repo_path,
+  binSaveDir=args$bin_save_path,
+  liveViewLog=args$live_view_install_log,
+  keepFullLog=args$keep_full_install_log
+)
+cat("Done.\n")
