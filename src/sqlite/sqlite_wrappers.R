@@ -182,6 +182,7 @@ performQuery <- function(
           performSingleQuery, dbpaths=dbpaths,
           query=query, progressFile=progressFile
         ),
+        future.seed=TRUE, # Just gets rid of a very annoying warning
         future.chunk.size=structure(maxAvgQueriesPerProc, ordering=seq_along(dbpaths))
       )
       do.call(rbind, queryResult)
