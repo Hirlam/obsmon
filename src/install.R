@@ -93,7 +93,7 @@ installPkgsFromDf <- function(
     logfile <- file.path(
       originalDir,
       paste0(
-        ifelse(keepFullLog, "install_", "install_failed_"),
+        ifelse(keepFullLog, "install_", "failed_install_"),
         format(Sys.time(), "%Y-%m-%d_%H%M%OS1"), ".log"
       )
     )
