@@ -75,6 +75,33 @@ parser$add_argument(
   help="Path where eventual compiled libs will be saved."
 )
 
+parser$add_argument(
+  "-ca",
+  action="append",
+  dest="configure_args",
+  default=getOption("configure.args"),
+  help=paste(
+    'Passed to install.packages "configure.args" argument. See',
+    '<https://www.rdocumentation.org/packages/utils/versions/3.6.2/topics/install.packages>.',
+    'USAGE EXAMPLE (with arbitrary values, please adjust for your usage):',
+    './install -ca="--with-gdal-config=/usr/gdal23/bin/gdal-config"',
+    '-ca="--with-proj-include=/usr/proj49/include"',
+    '-ca="--with-proj-lib=/usr/proj49/lib"'
+  )
+)
+
+parser$add_argument(
+  "-cv",
+  action="append",
+  dest="configure_vars",
+  default=getOption("configure.vars"),
+  help=paste(
+    'Passed to install.packages "configure.vars" argument. See',
+    '<https://www.rdocumentation.org/packages/utils/versions/3.6.2/topics/install.packages>.',
+    'Usage is similar to the "--configure-args" option.'
+  )
+)
+
 logOptions = parser$add_mutually_exclusive_group()
 logOptions$add_argument(
   "--keep-full-install-log",

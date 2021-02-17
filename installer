@@ -39,10 +39,12 @@ installPkgsFromDf(
   df=depsSummaryDf,
   lib=args$install_path,
   repos=args$repos,
-  available=availablePkgsDb,
   binDirs=args$bin_repo_path,
   binSaveDir=args$bin_save_path,
   liveViewLog=args$live_view_install_log,
-  keepFullLog=args$keep_full_install_log
+  keepFullLog=args$keep_full_install_log,
+  available=availablePkgsDb,
+  configure.args=args$configure_args,
+  configure.vars=args$configure_vars
 )
 cat("Done.\n")
