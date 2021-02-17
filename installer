@@ -6,6 +6,12 @@ callingScriptPath <- function() {
 }
 source(file.path(dirname(callingScriptPath()), "src", "init.R"))
 
+# Clean directories, if requested
+if(!is.null(args$clean)) {
+  removeDirs(args)
+  quit(status=0)
+}
+
 # Get imports and deps
 cat("Getting imports and dependencies...\n")
 cat("  * Getting recursive dependencies from", args$repos, "\n")

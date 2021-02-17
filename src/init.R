@@ -30,7 +30,8 @@
     "dependencies.R",
     "install.R",
     "get_sys_info.R",
-    "create_local_repo.R"
+    "create_local_repo.R",
+    "clean.R"
   ))
   for(sourceFile in sourceFiles) source(sourceFile, local=FALSE)
 }
