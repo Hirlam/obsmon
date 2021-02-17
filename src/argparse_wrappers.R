@@ -14,6 +14,13 @@ parser$add_argument(
   help="Show the imports and dependencies and exit."
 )
 
+optsThatChoosePkgSrcRepos = parser$add_mutually_exclusive_group()
+optsThatChoosePkgSrcRepos$add_argument(
+  "--create-local-repo",
+  action="store_true",
+  help="Create a local CRAN-like repo with the needed pkg sources and exit."
+)
+
 parser$add_argument(
   "--include-suggests",
   action="store_true",
@@ -23,16 +30,11 @@ parser$add_argument(
   )
 )
 
-optsThatChoosePkgSrcRepos = parser$add_mutually_exclusive_group()
-optsThatChoosePkgSrcRepos$add_argument(
-  # Instead of using action="store_true", set this opt up such that,
-  # if passed without any value, then it becomes TRUE, but if a value
-  # is passed, then it takes on the passed value.
-  "--create-local-repo",
-  nargs="?",
-  const=TRUE,
-  default=FALSE,
-  help="Create a local CRAN-like repo with the needed pkg sources and exit."
+parser$add_argument(
+  "-output-rootdir",
+  default=file.path(getwd(), "installer_local_R-libs"),
+  help="Where the detected R-libs & deps should be installed.",
+  metavar="OUTPUT_ROOTDIR_PATH"
 )
 
 parser$add_argument(
@@ -60,19 +62,6 @@ parser$add_argument(
   default=NULL,
   help="Location of eventual pre-compiled R-pkg binaries.",
   metavar="BIN_REPO_DIR_PATH"
-)
-
-parser$add_argument(
-  "-install-path",
-  default=file.path(getwd(), "local_R-libs", "R-libs"),
-  help="Where the detected R-libs & deps should be installed.",
-  metavar="INSTALL_DIR_PATH"
-)
-
-parser$add_argument(
-  "-bin-save-path",
-  default=NULL,
-  help="Path where eventual compiled libs will be saved."
 )
 
 parser$add_argument(
@@ -125,22 +114,21 @@ args <- parser$parse_args()
 
 # Validation and special defaults
 args$path <- normalizePath(args$path, mustWork=TRUE)
-args$install_path <- normalizePath(args$install_path, mustWork=FALSE)
 
-if(is.null(args$ignore)) args$ignore <- basename(args$install_path)
+args$output_rootdir <- normalizePath(args$output_rootdir, mustWork=FALSE)
+args$output_dirs <- list(
+  installed=file.path(args$output_rootdir, "R-libs"),
+  sources=file.path(args$output_rootdir, "src"),
+  binaries=file.path(args$output_rootdir, "compiled_binaries")
+)
+if(is.null(args$bin_repo_path)) args$bin_repo_path <- args$output_dirs[["binaries"]]
+args$bin_repo_path <- normalizePath(args$bin_repo_path, mustWork=FALSE)
+
+# Ignore outputs when parsing R sources
+if(is.null(args$ignore)) args$ignore <- args$output_rootdir
 # Make sure to ignore the calling script itself, if called via a
 # symlink located somewhere else
 args$ignore <- unique(c(paste0("^", callingScriptPath(), "$"), args$ignore))
-
-if(is.null(args$bin_save_path)) {
-  args$bin_save_path <- file.path(
-    dirname(args$install_path), "compiled_binaries"
-  )
-}
-
-args$bin_save_path <- normalizePath(args$bin_save_path, mustWork=FALSE)
-
-if(is.null(args$bin_repo_path)) args$bin_repo_path <- args$bin_save_path
 
 # Handle "--create-local-repo" and "-repos" (which are mutually exclusive)
 if(is.null(args$repos)) {
@@ -164,16 +152,7 @@ if(is.null(args$repos)) {
 })
 args$repos <- .validateRepos(args$repos)
 
-if(isTRUE(args$create_local_repo)) {
-  # In this case, the user passed the arg without a value.
-  args$create_local_repo <- file.path(
-    dirname(args$install_path), "src", "contrib"
-  )
-}
-if(!isFALSE(args$create_local_repo)) {
-  args$create_local_repo <- normalizePath(
-    args$create_local_repo, mustWork=FALSE
-  )
+if(args$create_local_repo) {
   # If creating local repo, then make sure CRAN is the 1st repo
   args$repos <- c(args$repos["CRAN"], args$repos)
   args$repos <- args$repos[!duplicated(args$repos)]
