@@ -22,7 +22,7 @@ TAGS
 tmp/
 
 # Stuff generated at run time or during installation
-local_R-libs/
+installer_local_R-libs/
 batch_mode_plots/
 Rprof.out
 

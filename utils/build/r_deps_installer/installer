@@ -26,21 +26,20 @@ invisible(printDepsFromDf(depsSummaryDf))
 if(nrow(depsSummaryDf)==0 || args$listdeps) quit(status=0)
 
 # Create local repo (and quit), if requested
-if(!isFALSE(args$create_local_repo)) {
-  cat("Creating local CRAN-like repo under", args$create_local_repo, "...\n\n")
-  createLocalRepo(pkgsDf=depsSummaryDf, destdir=args$create_local_repo)
+if(args$create_local_repo) {
+  cat("Creating local CRAN-like repo under", args$output_dirs$sources, "...\n\n")
+  createLocalRepo(pkgsDf=depsSummaryDf, destdir=args$output_dirs$sources)
   cat("Done creating local CRAN-like repo.\n")
-  cat("  > Path to sources:", args$create_local_repo, "\n")
+  cat("  > Path to sources:", args$output_dirs$sources, "\n")
   quit(status=0)
 }
 
 # Install packages
 installPkgsFromDf(
   df=depsSummaryDf,
-  lib=args$install_path,
   repos=args$repos,
   binDirs=args$bin_repo_path,
-  binSaveDir=args$bin_save_path,
+  outputDirs=args$output_dirs,
   liveViewLog=args$live_view_install_log,
   keepFullLog=args$keep_full_install_log,
   available=availablePkgsDb,
