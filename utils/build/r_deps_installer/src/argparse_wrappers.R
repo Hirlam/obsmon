@@ -22,6 +22,13 @@ optsThatChoosePkgSrcRepos$add_argument(
 )
 
 parser$add_argument(
+  "--clean",
+  nargs="*",
+  choices=c("installed", "sources", "binaries", "all"),
+  help="Remove files created by the installer."
+)
+
+parser$add_argument(
   "--include-suggests",
   action="store_true",
   help=paste(
@@ -157,3 +164,6 @@ if(args$create_local_repo) {
   args$repos <- c(args$repos["CRAN"], args$repos)
   args$repos <- args$repos[!duplicated(args$repos)]
 }
+
+# If the user doesn't specify what to clean, clean just installed packages
+if(!is.null(args$clean) && length(args$clean)==0) args$clean <- "installed"
