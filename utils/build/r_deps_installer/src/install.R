@@ -76,7 +76,7 @@ installPkgsFromDf <- function(
   logfile=NULL, keepFullLog=FALSE, ...
 ) {
   df$binPath <- getPathToBinary(df$Package, df$Version, binDirs=binDirs)
-  dir.create(outputDirs$install, showWarnings=FALSE, recursive=TRUE)
+  dir.create(outputDirs$installed, showWarnings=FALSE, recursive=TRUE)
 
   # Build in a tmpdir to keep user's dir clean
   originalDir <- getwd()
@@ -118,7 +118,7 @@ installPkgsFromDf <- function(
     )
     tryCatch({
       # Try installing from pre-compiled binary first
-      utils::untar(unlist(df$binPath[irow]), exdir=outputDirs$install)
+      utils::untar(unlist(df$binPath[irow]), exdir=outputDirs$installed)
       msg <- 'Package "%s" installed using pre-compiled binary %s\n\n'
       msg <- sprintf(msg, df$Package[irow], unlist(df$binPath[irow]))
       if(liveViewLog) cat(msg)
@@ -129,8 +129,8 @@ installPkgsFromDf <- function(
         pkgInstallFailed <- TRUE
         tryCatch({
           .installSinglePkg(
-            df$Package[irow], lib=outputDirs$install, repos=repos,
-            binSaveDir=outputDirs$compiled,
+            df$Package[irow], lib=outputDirs$installed, repos=repos,
+            binSaveDir=outputDirs$binaries,
             quiet=!liveViewLog, keep_outputs=!liveViewLog, ...
           )
           pkgInstallFailed <- FALSE
