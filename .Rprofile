@@ -1,4 +1,5 @@
-.libPaths(c("installer_local_R-libs/R-libs", .libPaths()))
+# Make sure obsmon can finds any locally-installed libraries first
+.libPaths(c(".installer_local_R-libs/R-libs", .libPaths()))
 
 # The call to dyn.load below is needed on ecgate@ECMWF, otherwise loading the V8 R-lib will fail.
 tryCatch(
