@@ -30,6 +30,14 @@ getUserName <- function() {
 userName <- getUserName()
 
 # Load packages
+cat(paste(
+  "Looking for R-libs in the following directories",
+  "(listed in order of priority):\n"
+))
+for(path in .libPaths()) {
+  cat(paste("    >", normalizePath(path), "\n"))
+}
+cat("\n")
 suppressPackageStartupMessages(library(bsplus))
 suppressPackageStartupMessages(library(Cairo))
 suppressPackageStartupMessages(library(DBI))
