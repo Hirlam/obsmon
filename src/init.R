@@ -11,7 +11,6 @@ thisAppDir <- getwd()
 
 if(!exists("runningAsStandalone") || !isTRUE(runningAsStandalone)) {
   source("src/src_info_obsmon.R")
-  source('src/lib_paths_config.R')
   runningAsStandalone <- FALSE
   cmdLineArgs <- list()
   dirObsmonWasCalledFrom <- thisAppDir
@@ -30,42 +29,46 @@ getUserName <- function() {
 }
 userName <- getUserName()
 
-tryCatch(
-  {
-    suppressPackageStartupMessages(library(bsplus))
-    suppressPackageStartupMessages(library(Cairo))
-    suppressPackageStartupMessages(library(DBI))
-    suppressPackageStartupMessages(library(dbplyr))
-    suppressPackageStartupMessages(library(dplyr))
-    suppressPackageStartupMessages(library(flock))
-    suppressPackageStartupMessages(library(futile.logger))
-    suppressPackageStartupMessages(library(future))
-    suppressPackageStartupMessages(library(future.apply))
-    suppressPackageStartupMessages(library(ggplot2))
-    suppressPackageStartupMessages(library(grid))
-    suppressPackageStartupMessages(library(gridExtra))
-    suppressPackageStartupMessages(library(leaflet))
-    suppressPackageStartupMessages(library(methods))
-    suppressPackageStartupMessages(library(plotly))
-    suppressPackageStartupMessages(library(png))
-    suppressPackageStartupMessages(library(pryr))
-    suppressPackageStartupMessages(library(promises))
-    suppressPackageStartupMessages(library(RColorBrewer))
-    suppressPackageStartupMessages(library(RcppTOML))
-    suppressPackageStartupMessages(library(reshape2))
-    suppressPackageStartupMessages(library(shiny))
-    suppressPackageStartupMessages(library(shinycssloaders))
-    suppressPackageStartupMessages(library(shinyjs))
-    suppressPackageStartupMessages(library(stringi))
-    suppressPackageStartupMessages(library(stringr))
-    suppressPackageStartupMessages(library(tidyr))
-    suppressPackageStartupMessages(library(V8))
-  },
-  error=function(e) stop(paste(e, libPathsMsg[['error']], sep="\n"))
-)
+# Load packages
+cat(paste(
+  "Looking for R-libs in the following directories",
+  "(listed in order of priority):\n"
+))
+for(path in .libPaths()) {
+  cat(paste("    >", normalizePath(path), "\n"))
+}
+cat("\n")
+suppressPackageStartupMessages(library(bsplus))
+suppressPackageStartupMessages(library(Cairo))
+suppressPackageStartupMessages(library(DBI))
+suppressPackageStartupMessages(library(dbplyr))
+suppressPackageStartupMessages(library(dplyr))
+suppressPackageStartupMessages(library(flock))
+suppressPackageStartupMessages(library(futile.logger))
+suppressPackageStartupMessages(library(future))
+suppressPackageStartupMessages(library(future.apply))
+suppressPackageStartupMessages(library(ggplot2))
+suppressPackageStartupMessages(library(grid))
+suppressPackageStartupMessages(library(gridExtra))
+suppressPackageStartupMessages(library(leaflet))
+suppressPackageStartupMessages(library(methods))
+suppressPackageStartupMessages(library(plotly))
+suppressPackageStartupMessages(library(png))
+suppressPackageStartupMessages(library(pryr))
+suppressPackageStartupMessages(library(promises))
+suppressPackageStartupMessages(library(RColorBrewer))
+suppressPackageStartupMessages(library(RcppTOML))
+suppressPackageStartupMessages(library(reshape2))
+suppressPackageStartupMessages(library(shiny))
+suppressPackageStartupMessages(library(shinycssloaders))
+suppressPackageStartupMessages(library(shinyjs))
+suppressPackageStartupMessages(library(stringi))
+suppressPackageStartupMessages(library(stringr))
+suppressPackageStartupMessages(library(tidyr))
+suppressPackageStartupMessages(library(V8))
+
 flog.info(sprintf("Main process PID: %d", Sys.getpid()))
 flog.info(paste('Running as user "', userName, '"', sep=""))
-flog.info(libPathsMsg[['success']])
 
 # homeAuxDir: Used for storage of information such as config files,
 # cache, etc.

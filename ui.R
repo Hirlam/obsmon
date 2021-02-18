@@ -44,7 +44,7 @@ appCSS <- "
 shinyUI(ui=tagList(
   # Some definitions that apply to all tabs
   useShinyjs(),
-  extendShinyjs(text=jscode),
+  extendShinyjs(text=jscode, functions=c("disableTab", "enableTab", "init")),
   tags$script(inactivity), # Enable session timeout
   inlineCSS(appCSS),
   div(id="loading-content",h2(sprintf("Loading Obsmon v%s...",obsmonVersion))),

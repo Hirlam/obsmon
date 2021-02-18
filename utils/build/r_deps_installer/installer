@@ -1,0 +1,15 @@
+#!/usr/bin/env Rscript
+# Initialise
+callingScriptPath <- function() {
+  argv <- commandArgs(trailingOnly = FALSE)
+  normalizePath(sub("--file=", "", argv[grep("--file=", argv)]))
+}
+source(file.path(dirname(callingScriptPath()), "src", "init.R"))
+
+# Select action based on passed command
+switch(args$command,
+  install=install(args),
+  listdeps=list_deps(args),
+  "create-local-repo"=create_local_repo(args),
+  clean=clean(args)
+)
