@@ -18,6 +18,7 @@ and this project adheres to [Semantic Versioning](http://semver.org).
         be created using all combinations of dates and cycles.
 
 ### Changed
+- Install script (removed old, put a new one in place)
 - Redefine analysis increment in maps ("fg_dep-an_dep" instead of "an_dep-fg_dep")
 - Remote CRAN mirror address in install script
 - Path to libv8.so (see .Rprofile file) for installs on ECGB
@@ -31,6 +32,12 @@ and this project adheres to [Semantic Versioning](http://semver.org).
       The previous value was "startDate + nDays".
     - "startDate" param can now also be zero, in which case it is taken to be
       "today" -- whatever day today is.
+
+### Removed
+- Sources for R-lib dependencies
+    - The new install script has options to create a CRAN-like repo and install
+      dependencies from it, if users wish to use such functionality (e.g., to
+      freeze the versions of the used R-libs, as it used to be before this release)
 
 ### Fixed
 - Install in R version 4
