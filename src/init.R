@@ -31,7 +31,7 @@
     "install.R",
     "get_sys_info.R",
     "create_local_repo.R",
-    "clean.R"
+    "commands.R"
   ))
   for(sourceFile in sourceFiles) source(sourceFile, local=FALSE)
 }
