@@ -82,11 +82,15 @@ for(p in c(parser_install, parser_listdeps)) {
   )
 }
 
+.defaultOutRootdirBasename <- ".installer_local_R-libs"
 for(p in c(parser_install, parser_create_local_repo, parser_clean)) {
   p$add_argument(
     "-output-rootdir",
-    default=file.path(getwd(), "installer_local_R-libs"),
-    help="Where the installer puts R-libs, sources and binaries.",
+    default=file.path(getwd(), .defaultOutRootdirBasename),
+    help=paste(
+      "Where the installer puts R-libs, sources and binaries.",
+      "Default:", paste0('"', .defaultOutRootdirBasename, '"')
+    ),
     metavar="OUTPUT_ROOTDIR_PATH"
   )
 }
