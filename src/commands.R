@@ -60,6 +60,7 @@ list_deps <- function(args) {
 create_local_repo <- function(args) {
   cat("Creating local CRAN-like repo under", args$output_dirs$sources, "...\n\n")
   depsSummaryAndAvPkgs <- .getDependenciesSummaryDf(args)
+  invisible(printDepsFromDf(depsSummaryAndAvPkgs$depsSummaryDf))
   depsSummaryDf <- depsSummaryAndAvPkgs$depsSummaryDf
   createLocalRepo(pkgsDf=depsSummaryDf, destdir=args$output_dirs$sources)
   cat("Done creating local CRAN-like repo.\n")
