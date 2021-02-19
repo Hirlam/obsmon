@@ -80,7 +80,7 @@ getImportedPkgs <- function(path=".", ignore_regex=NULL, availablePkgsDb=NULL) {
   if(is.null(availablePkgsDb)) availablePkgsDb <- available.packages()
   listOfRFiles <- .locateRSources(path=path, ignore_regex=ignore_regex)
   importedPkgs <- .getExplicitlyUsedRPkgs(listOfRFiles)
-  df <- data.frame(Package=importedPkgs)
+  df <- data.frame(Package=importedPkgs, stringsAsFactors=FALSE)
   df$Version <- fillPkgVersion(df$Package, availablePkgsDb=availablePkgsDb)
   return(df)
 }

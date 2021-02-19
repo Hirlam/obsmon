@@ -83,11 +83,13 @@ summarisePkgDepsDf <- function(pkgDepsDf, availablePkgsDb=NULL) {
   }
   depsSummary <- data.frame(
     Package=allPkgs,
-    Version=fillPkgVersion(allPkgs, availablePkgsDb=availablePkgsDb),
+    Version=NA,
     isImport=.isType(allPkgs, "Package"),
     isEssentialRecDep=.isType(allPkgs, "essentialDeps"),
-    isSuggestsDep=.isType(allPkgs, "suggestsDeps")
+    isSuggestsDep=.isType(allPkgs, "suggestsDeps"),
+    stringsAsFactors=FALSE
   )
+  depsSummary$Version <- fillPkgVersion(allPkgs, availablePkgsDb=availablePkgsDb)
   return(depsSummary)
 }
 
