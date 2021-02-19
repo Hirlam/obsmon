@@ -3,11 +3,14 @@
 
   args$path <- normalizePath(args$path, mustWork=TRUE)
 
-  # Ignore outputs when parsing R sources
-  if(is.null(args$ignore)) args$ignore <- args$output_rootdir
-  # Make sure to ignore the calling script itself, if called via a
-  # symlink located somewhere else
-  args$ignore <- unique(c(paste0("^", callingScriptPath(), "$"), args$ignore))
+  # Ignore the default output dir when parsing R sources
+  args$ignore <- c(args$ignore, .defaultOutRootdirBasename)
+  # Make sure to ignore the calling script itself, as well as its dir
+  args$ignore <- unique(c(
+    args$ignore,
+    paste0("^", callingScriptPath(resolve_symlink=FALSE), "$"),
+    paste0("^", file.path(dirname(callingScriptPath()), ".*"))
+  ))
 
   cat("Getting imports and dependencies...\n")
   cat("  * Getting recursive dependencies from", args$repos, "\n")
@@ -57,6 +60,7 @@ list_deps <- function(args) {
 create_local_repo <- function(args) {
   cat("Creating local CRAN-like repo under", args$output_dirs$sources, "...\n\n")
   depsSummaryAndAvPkgs <- .getDependenciesSummaryDf(args)
+  invisible(printDepsFromDf(depsSummaryAndAvPkgs$depsSummaryDf))
   depsSummaryDf <- depsSummaryAndAvPkgs$depsSummaryDf
   createLocalRepo(pkgsDf=depsSummaryDf, destdir=args$output_dirs$sources)
   cat("Done creating local CRAN-like repo.\n")
