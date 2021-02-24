@@ -1,4 +1,4 @@
-local_R-libs/
+.installer_local_R-libs/
 pkg_local_R-libs/
 .Rhistory
 *.swp

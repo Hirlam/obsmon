@@ -73,7 +73,58 @@ getImportedPkgsDepsDf <- function(
   ))
 }
 
-summarisePkgDepsDf <- function(pkgDepsDf, availablePkgsDb=NULL) {
+fillPkgVersion <- Vectorize(function(pkgName, availablePkgsDb, userDefinedVersions) {
+  version <- tryCatch({
+    rtn <- userDefinedVersions[pkgName, "Version"]
+    if(is.null(rtn) || is.na(rtn)) rtn <- availablePkgsDb[pkgName, "Version"]
+    # Prepend an "== " if dep specification starts with number
+    if(grepl("^[[:digit:]]+", rtn)) rtn <- paste0("== ", rtn)
+    rtn
+  },
+    error=function(e) NULL
+  )
+  return(version)
+}, vectorize.args=c("pkgName"))
+
+parsePkgVersionSpec <- function(pkgSpecification) {
+  tryCatch({
+    nonPkgRegex <- "[^[:alnum:].]"
+    pkgSpecification <- trimws(pkgSpecification)
+    pkgName <- unlist(strsplit(pkgSpecification, nonPkgRegex))[1]
+    pkgVersion <- trimws(sub(pkgName, "", pkgSpecification, fixed=TRUE))
+    # Add spaces between comparison operators in deps
+    pkgVersion <- gsub("([^[:alnum:]._-]+[[:space:]]*)", "\\1 ", pkgVersion)
+    pkgVersion <- gsub("(,[[:space:]]*)", "\\1 ", pkgVersion)
+    return(list(Package=pkgName, Version=pkgVersion))
+  },
+    error=function(e) {
+      msg <- paste("Problems parsing package specification:", pkgSpecification)
+      stop(paste(e$message, msg, sep="\n"))
+    }
+  )
+}
+
+readPkgVersions <- function(fpath) {
+  df <- tryCatch({
+    pkgNames <- c()
+    pkgVersions <- c()
+    for(raw in suppressWarnings(readLines(fpath))) {
+      item <- parsePkgVersionSpec(raw)
+      pkgNames <- c(pkgNames, item$Package)
+      pkgVersions <- c(pkgVersions, item$Version)
+    }
+    data.frame(Package=pkgNames, Version=pkgVersions, stringsAsFactors=FALSE)
+  },
+    error=function(e) data.frame(Package=NULL, Version=NULL)
+  )
+  if(nrow(df)>0) rownames(df) <- df$Package
+  return(df)
+}
+
+summarisePkgDepsDf <- function(
+  pkgDepsDf, availablePkgsDb=NULL, userVersionsFile=NULL
+) {
+  if(nrow(pkgDepsDf)==0) return(data.frame())
   allPkgs <- unique(unlist(c(
     pkgDepsDf$essentialDeps, pkgDepsDf$suggestsDeps, pkgDepsDf$Package
   ), use.names=FALSE))
@@ -89,43 +140,59 @@ summarisePkgDepsDf <- function(pkgDepsDf, availablePkgsDb=NULL) {
     isSuggestsDep=.isType(allPkgs, "suggestsDeps"),
     stringsAsFactors=FALSE
   )
-  depsSummary$Version <- fillPkgVersion(allPkgs, availablePkgsDb=availablePkgsDb)
+  depsSummary$Version <- fillPkgVersion(
+    allPkgs,
+    userDefinedVersions=readPkgVersions(userVersionsFile),
+    availablePkgsDb=availablePkgsDb
+  )
   return(depsSummary)
 }
 
-printDepsFromDf <- function(df) {
+printDepsFromDf <- function(df, verbose=TRUE) {
   if(nrow(df)==0) {
-    cat("No imports (and, consequently, no dependencies) found.\n")
+    if(verbose) cat("No imports (and, consequently, no dependencies) found.\n")
     return(NULL)
   }
 
-  dfImports <- df[df$isImport, ]
-  dfEssentialDeps <- df[df$isEssentialRecDep & !df$isImport, ]
-  dfSuggests <- df[df$isSuggestsDep & !(df$isImport | df$isEssentialRecDep), ]
-  # Sort by pkg name
-  dfImports <- dfImports[order(dfImports$Package), ]
-  dfEssentialDeps <- dfEssentialDeps[order(dfEssentialDeps$Package), ]
-  dfSuggests <- dfSuggests[order(dfSuggests$Package), ]
+  .printDep <- function(pkg, version, verbose) {
+    msg <- pkg
+    if(verbose) {
+      msg <- paste0("    ", msg)
+      if(!is.null(version)) msg <- paste0(msg, " (", version,")")
+    } else if(!is.null(version)) {
+      msg <- paste(msg, version)
+    }
+    cat(paste0(msg, "\n"))
+  }
 
-  .printDfSummary <- function(df, dfName) {
+  .printDfSummary <- function(df, dfName=NULL) {
     if(nrow(df)>0) {
-      cat(paste0(dfName, ":\n"))
+      if(!is.null(dfName)) cat(paste0(dfName, ":\n"))
       for(irow in seq_len(nrow(df))) {
-        cat(paste0(
-          "    ", df$Package[irow], " (=", df$Version[irow],")\n"
-        ))
+        .printDep(df$Package[irow], df$Version[irow], verbose)
       }
     }
   }
 
-  cat("Summary of R-pkgs that the code suggests, depends and imports:\n")
-  .printDfSummary(dfSuggests, "Suggests")
-  .printDfSummary(dfEssentialDeps, "Depends")
-  .printDfSummary(dfImports, "Imports")
-  cat("\n")
-  cat("Total:", nrow(df), "R-libs.\n")
-  cat("#Main (imported) R-libs:", nrow(dfImports), "\n")
-  cat("#Essential dependencies for the main R-libs:", nrow(dfEssentialDeps), "\n")
-  if(nrow(dfSuggests)>0) cat("#Suggests-type dependencies:", nrow(dfSuggests), "\n")
-  cat("\n")
+  if(verbose) {
+    dfImports <- df[df$isImport, ]
+    dfEssentialDeps <- df[df$isEssentialRecDep & !df$isImport, ]
+    dfSuggests <- df[df$isSuggestsDep & !(df$isImport | df$isEssentialRecDep), ]
+    # Sort by pkg name
+    dfImports <- dfImports[order(dfImports$Package), ]
+    dfEssentialDeps <- dfEssentialDeps[order(dfEssentialDeps$Package), ]
+    dfSuggests <- dfSuggests[order(dfSuggests$Package), ]
+
+    cat("Summary of R-pkgs that the code suggests, depends and imports:\n")
+    .printDfSummary(dfSuggests, "Suggests")
+    .printDfSummary(dfEssentialDeps, "Depends")
+    .printDfSummary(dfImports, "Imports")
+    cat("\n")
+    cat("Total:", nrow(df), "R-libs.\n")
+    cat("#Main (imported) R-libs:", nrow(dfImports), "\n")
+    cat("#Essential dependencies for the main R-libs:", nrow(dfEssentialDeps), "\n")
+    if(nrow(dfSuggests)>0) cat("#Suggests-type dependencies:", nrow(dfSuggests), "\n")
+  } else {
+    .printDfSummary(df[order(df$Package), ])
+  }
 }

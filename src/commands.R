@@ -1,29 +1,20 @@
-.getDependenciesSummaryDf <- function(args) {
+.getDependenciesSummaryDf <- function(args, verbose=TRUE) {
   # Get imports and deps
-
-  args$path <- normalizePath(args$path, mustWork=TRUE)
-
-  # Ignore the default output dir when parsing R sources
-  args$ignore <- c(args$ignore, .defaultOutRootdirBasename)
-  # Make sure to ignore the calling script itself, as well as its dir
-  args$ignore <- unique(c(
-    args$ignore,
-    paste0("^", callingScriptPath(resolve_symlink=FALSE), "$"),
-    paste0("^", file.path(dirname(callingScriptPath()), ".*"))
-  ))
-
-  cat("Getting imports and dependencies...\n")
-  cat("  * Getting recursive dependencies from", args$repos, "\n")
+  if(verbose) {
+    cat("Getting imports and dependencies...\n")
+    cat("  * Getting recursive dependencies from", args$repos, "\n")
+  }
   availablePkgsDb <- available.packages(repos=args$repos)
   pkgDepsDf <- getImportedPkgsDepsDf(
-    path=args$path,
+    path=args$sources_dir,
     ignore_regex=args$ignore,
     availablePkgsDb=availablePkgsDb,
     includeSuggests=args$include_suggests
   )
   depsSummaryDf <- summarisePkgDepsDf(
     pkgDepsDf,
-    availablePkgsDb=availablePkgsDb
+    availablePkgsDb=availablePkgsDb,
+    userVersionsFile=args$versions_file
   )
   rtn <- list(
     depsSummaryDf=depsSummaryDf,
@@ -39,6 +30,7 @@ install <- function(args) {
   depsSummaryDf <- depsSummaryAndAvPkgs$depsSummaryDf
   invisible(printDepsFromDf(depsSummaryAndAvPkgs$depsSummaryDf))
   if(nrow(depsSummaryDf)==0) quit(status=0)
+  cat("\n")
   installPkgsFromDf(
     df=depsSummaryDf,
     repos=args$repos,
@@ -53,14 +45,19 @@ install <- function(args) {
 }
 
 list_deps <- function(args) {
-  depsSummaryAndAvPkgs <- .getDependenciesSummaryDf(args)
-  invisible(printDepsFromDf(depsSummaryAndAvPkgs$depsSummaryDf))
+  depsSummaryAndAvPkgs <- .getDependenciesSummaryDf(
+    args, verbose=!args$simple_listdeps
+  )
+  invisible(printDepsFromDf(
+    depsSummaryAndAvPkgs$depsSummaryDf, verbose=!args$simple_listdeps
+  ))
 }
 
 create_local_repo <- function(args) {
   cat("Creating local CRAN-like repo under", args$output_dirs$sources, "...\n\n")
   depsSummaryAndAvPkgs <- .getDependenciesSummaryDf(args)
   invisible(printDepsFromDf(depsSummaryAndAvPkgs$depsSummaryDf))
+  cat("\n")
   depsSummaryDf <- depsSummaryAndAvPkgs$depsSummaryDf
   createLocalRepo(pkgsDf=depsSummaryDf, destdir=args$output_dirs$sources)
   cat("Done creating local CRAN-like repo.\n")
