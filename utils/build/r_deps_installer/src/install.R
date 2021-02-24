@@ -23,8 +23,8 @@ getPathToBinary <- function(pkgName, pkgVersion, binDirs) {
     pattPkg <- paste0(pattPkg, "\\.tar\\.gz${1}","|", pattPkg, "\\.tgz${1}")
 
     # Get non-version-specific match
-    candidateFiles <- allBinPaths[grep(pattPkg, basename(allBinPaths))[1]]
-    if(is.na(candidateFiles)) return(NULL)
+    candidateFiles <- allBinPaths[grep(pattPkg, basename(allBinPaths))]
+    if(length(candidateFiles)==0) return(NULL)
 
     # Now narrow down to required version specs
     pkgFile <- NULL
