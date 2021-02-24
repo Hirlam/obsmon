@@ -44,7 +44,7 @@ parser_clean <- subparsers$add_parser(
 ################################################
 for(p in c(parser_install, parser_listdeps, parser_create_local_repo)) {
   p$add_argument(
-    "path",
+    "sources_dir",
     nargs="?",
     default=getwd(),
     help='Directory to be recursively searched for R sources. Default: "."'
@@ -63,6 +63,18 @@ for(p in c(parser_install, parser_listdeps, parser_create_local_repo)) {
     help=paste(
       'Include "suggests"-type dependencies.',
       "See <https://r-pkgs.org/description.html>"
+    )
+  )
+
+  .localVersionsFile <- file.path(getwd(), ".installer_pkg_versions.txt")
+  p$add_argument(
+    "-versions-file",
+    default=ifelse(file.exists(.localVersionsFile), .localVersionsFile, FALSE),
+    help=paste(
+      'Optional file listing pkg versions. Packages not listed will have',
+      'their versions determined by what is found in the used source repos.',
+      'Default: "./.installer_pkg_versions.txt", if it exists, or',
+      '"SOURCES_DIR/.installer_pkg_versions.txt" otherwise.'
     )
   )
 }
@@ -107,7 +119,7 @@ parser_install$add_argument(
 )
 
 parser_install$add_argument(
-  "-ca",
+  "-ca", "--configure-args",
   action="append",
   dest="configure_args",
   default=getOption("configure.args"),
@@ -122,7 +134,7 @@ parser_install$add_argument(
 )
 
 parser_install$add_argument(
-  "-cv",
+  "-cv", "--configure-vars",
   action="append",
   dest="configure_vars",
   default=getOption("configure.vars"),
@@ -164,6 +176,17 @@ parser_clean$add_argument(
 )
 
 
+###################################################
+# Options that apply only to the listdeps command #
+###################################################
+parser_listdeps$add_argument(
+  "--simple",
+  dest="simple_listdeps",
+  action="store_true",
+  help="Keep stdout simple."
+)
+
+
 ###############################
 # Parsing and validating args #
 ###############################
@@ -179,6 +202,31 @@ args <- tryCatch(
     else stop(e$message)
   }
 )
+
+
+###########################
+# Arg checks and defaults #
+###########################
+if("sources_dir" %in% names(args)) {
+  args$sources_dir <- normalizePath(args$sources_dir, mustWork=TRUE)
+  if(("versions_file" %in% names(args)) && isFALSE(args$versions_file)) {
+    args$versions_file <- file.path(
+      args$sources_dir,
+      basename(.localVersionsFile)
+    )
+  }
+}
+
+if("ignore" %in% names(args)) {
+  # Ignore the default output dir when parsing R sources
+  args$ignore <- c(args$ignore, .defaultOutRootdirBasename)
+  # Make sure to ignore the calling script itself, as well as its dir
+  args$ignore <- unique(c(
+    args$ignore,
+    paste0("^", callingScriptPath(resolve_symlink=FALSE), "$"),
+    paste0("^", file.path(dirname(callingScriptPath()), ".*"))
+  ))
+}
 
 if("output_rootdir" %in% names(args)) {
   args$output_rootdir <- normalizePath(args$output_rootdir, mustWork=FALSE)
