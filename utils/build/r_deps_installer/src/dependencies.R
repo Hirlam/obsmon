@@ -95,6 +95,7 @@ parsePkgVersionSpec <- function(pkgSpecification) {
     # Add spaces between comparison operators in deps
     pkgVersion <- gsub("([^[:alnum:]._-]+[[:space:]]*)", "\\1 ", pkgVersion)
     pkgVersion <- gsub("(,[[:space:]]*)", "\\1 ", pkgVersion)
+    pkgVersion <- gsub('[[:space:]]+',' ', pkgVersion)
     return(list(Package=pkgName, Version=pkgVersion))
   },
     error=function(e) {
