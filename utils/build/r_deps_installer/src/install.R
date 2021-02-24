@@ -9,16 +9,53 @@ getPathToBinary <- function(pkgName, pkgVersion, binDirs) {
     pattern="\\.tar\\.gz$|\\.tgz$",
     full.names=TRUE
   )
+
   .pathToBinary <- Vectorize(function(pkgName, pkgVer) {
+    # Match pkgName
     pattPkg <- paste0("^", pkgName, "_{1}")
-    pattPkg <- paste0(pattPkg, pkgVer,"_{1}")
+    # Match any version
+    pattPkg <- paste0(pattPkg, "[[:alnum:].-]{+}_{1}")
+    # Match computer arch
     pattPkg <- paste0(pattPkg, "[a-zA-Z0-9]_?")
+    # Match computer platform
     pattPkg <- paste0(pattPkg, R.Version()$platform, "{1}")
+    # Match file extension
     pattPkg <- paste0(pattPkg, "\\.tar\\.gz${1}","|", pattPkg, "\\.tgz${1}")
-    pkgFile <- allBinPaths[grep(pattPkg, basename(allBinPaths))[1]]
-    if(length(pkgFile)==0 || is.na(pkgFile)) return(NULL)
-    return(pkgFile)
+
+    # Get non-version-specific match
+    candidateFiles <- allBinPaths[grep(pattPkg, basename(allBinPaths))]
+    if(length(candidateFiles)==0) return(NULL)
+
+    # Now narrow down to required version specs
+    pkgFile <- NULL
+    versionSpecs <- unlist(strsplit(pkgVer, "[[:space:]]*,[[:space:]]*"))
+    for(fpath in candidateFiles) {
+      binVer <- unlist(strsplit(basename(fpath), "_", fixed=TRUE))[2]
+      for(verReq in versionSpecs) {
+        # Compare required and available versions
+        operatorAndReqVer <- unlist(strsplit(trimws(verReq),"[[:space:]]{1,}"))
+        op <- operatorAndReqVer[1]
+        refVer <- operatorAndReqVer[2]
+        verReqSatisfied <- do.call(op, list(binVer, refVer))
+
+        # Make sure the comparison really evaluates to TRUE or FALSE
+        if(!(isTRUE(verReqSatisfied) || isFALSE(verReqSatisfied))) {
+          msg <- 'Invalid operator "%s" in deps version specification "%s"'
+          msg <- sprintf(msg, op, paste(pkgName, op, refVer))
+          stop(msg)
+        }
+
+        # If any requirement is breached, no point testing the others
+        if(!verReqSatisfied) break
+      }
+
+      # Return the first file path with a version satisfying reqs
+      if(verReqSatisfied) return(fpath)
+    }
+    # If we haven't returned so far, no file has been found. Return NULL.
+    return(NULL)
   })
+
   return(.pathToBinary(pkgName, pkgVersion))
 }
 
@@ -32,8 +69,31 @@ getPathToBinary <- function(pkgName, pkgVersion, binDirs) {
   file.remove(gzBinFiles)
 }
 
-.installSinglePkg <- function(pkgName, lib, repos, binSaveDir, ...) {
+.install_a_pkg_version <- function(pkgName, version, lib, repos, ...) {
+  # Download source with specified version
+  fpath <- remotes::download_version(pkgName, version=version, repos=repos)
 
+  # install.packages ignores the "keep_outputs" arg if installing from local
+  # files. Let's create a one-pkg tmp CRAN-like repo and make it install from
+  # there instead then. This way we can send output to a logfile.
+  tmpRepo <- file.path(tempdir(), "tmp_repo", pkgName, "src", "contrib")
+  dir.create(tmpRepo, recursive=TRUE)
+  on.exit(unlink(tmpRepo, recursive=TRUE))
+  file.rename(
+    fpath,
+    file.path(tmpRepo, paste0(pkgName, "_", version, ".tar.gz"))
+  )
+  tools::write_PACKAGES(tmpRepo)
+
+  # Install from our temp repo
+  install.packages(
+    pkgName, lib=lib, repos=tmpRepo, type="source",
+    INSTALL_opts=c("--build"), dependencies=FALSE,
+    ...
+  )
+}
+
+.installSinglePkg <- function(pkgName, version, lib, repos, binSaveDir, ...) {
   # Make sure to normalize lib paths before changing wd
   lib <- normalizePath(lib, mustWork=TRUE)
   binSaveDir <- normalizePath(
@@ -48,27 +108,10 @@ getPathToBinary <- function(pkgName, pkgVersion, binDirs) {
   on.exit(.libPaths(libPathsOriginal))
 
   # Installing
-  install.packages(
-    pkgName, lib=lib, repos=repos, type="source",
-    INSTALL_opts=c("--build"), dependencies=FALSE,
-    ...
-  )
+  .install_a_pkg_version(pkgName, version=version, lib=lib, repos=repos, ...)
 
   # Copying compiled binaries, so they are available next time
   .mvPkgsBinsToRepo(getwd(), binSaveDir)
-}
-
-.printOnSameLine <- function(newStatus) {
-  blankLine <- strrep(" ", getOption("width"))
-  cat(paste0("\r", blankLine, "\r", newStatus))
-}
-
-.printInstallStatus <- function(ipkg, npkgs, action, pkgName, pkgVersion) {
-  installStatus <- sprintf(
-    'Install progress %.0f%%, installing R-lib %d/%d: %s (=%s) ... ',
-    100*((ipkg-1) / npkgs), ipkg, npkgs, pkgName, pkgVersion
-  )
-  .printOnSameLine(installStatus)
 }
 
 installPkgsFromDf <- function(
@@ -76,6 +119,7 @@ installPkgsFromDf <- function(
   logfile=NULL, keepFullLog=FALSE, ...
 ) {
   df$binPath <- getPathToBinary(df$Package, df$Version, binDirs=binDirs)
+  unlink(outputDirs$installed, recursive=TRUE)
   dir.create(outputDirs$installed, showWarnings=FALSE, recursive=TRUE)
 
   # Build in a tmpdir to keep user's dir clean
@@ -113,8 +157,8 @@ installPkgsFromDf <- function(
   }
 
   for(irow in seq_len(nrow(df))) {
-    .printInstallStatus(
-      irow, nrow(df), "Installing", df$Package[irow], df$Version[irow]
+    .printProgress(
+      "installing", irow, nrow(df), df$Package[irow], df$Version[irow]
     )
     tryCatch({
       # Try installing from pre-compiled binary first
@@ -130,7 +174,7 @@ installPkgsFromDf <- function(
         tryCatch({
           .installSinglePkg(
             df$Package[irow], lib=outputDirs$installed, repos=repos,
-            binSaveDir=outputDirs$binaries,
+            version=df$Version[irow], binSaveDir=outputDirs$binaries,
             quiet=!liveViewLog, keep_outputs=!liveViewLog, ...
           )
           pkgInstallFailed <- FALSE

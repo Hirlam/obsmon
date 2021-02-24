@@ -17,7 +17,9 @@
   # Make sure we don't include ignored patterns
   allFiles <- allFiles[!grepl(paste(ignore_regex, collapse="|"), allFiles)]
   # Keep only R files
-  return(allFiles[.filesAreR(allFiles)])
+  rFilesMask <- .filesAreR(allFiles)
+  if(any(rFilesMask)) return(allFiles[rFilesMask])
+  else return(c())
 }
 
 .getExplicitlyUsedRPkgs <- function(files) {
@@ -69,18 +71,10 @@
   return(sort(unique(explicitlyUsedPkgs[!(explicitlyUsedPkgs %in% basePackagesR)])))
 }
 
-fillPkgVersion <- Vectorize(function(pkgName, availablePkgsDb) {
-  tryCatch(
-    version <- availablePkgsDb[pkgName, "Version"],
-    error=function(e) NULL
-  )
-}, vectorize.args=c("pkgName"))
-
 getImportedPkgs <- function(path=".", ignore_regex=NULL, availablePkgsDb=NULL) {
   if(is.null(availablePkgsDb)) availablePkgsDb <- available.packages()
   listOfRFiles <- .locateRSources(path=path, ignore_regex=ignore_regex)
   importedPkgs <- .getExplicitlyUsedRPkgs(listOfRFiles)
   df <- data.frame(Package=importedPkgs, stringsAsFactors=FALSE)
-  df$Version <- fillPkgVersion(df$Package, availablePkgsDb=availablePkgsDb)
   return(df)
 }

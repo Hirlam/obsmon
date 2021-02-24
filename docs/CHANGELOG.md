@@ -37,7 +37,9 @@ and this project adheres to [Semantic Versioning](http://semver.org).
 - Sources for R-lib dependencies
     - The new install script has options to create a CRAN-like repo and install
       dependencies from it, if users wish to use such functionality (e.g., to
-      freeze the versions of the used R-libs, as it used to be before this release)
+      freeze the versions of the used R-libs in the same way it used to be before
+      this release). The new install script also supports specifying pkg versions
+      via a "versions file".
 
 ### Fixed
 - Install in R version 4
