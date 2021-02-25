@@ -106,6 +106,26 @@ registerPlotType(
     )
 )
 
+registerPlotType(
+    "Timeseries",
+    plotCreate("plotTimeseries",
+      name="First-Guess Departure Timeseries",
+      dateType="range",
+      queryStub="SELECT DTG, level, fg_dep FROM usage WHERE %s",
+      requiredFields=list("station", "obnumber", "obname", "varname")
+    )
+)
+
+registerPlotType(
+    "Timeseries",
+    plotCreate("plotTimeseries",
+      name="Analysis Departure Timeseries",
+      dateType="range",
+      queryStub="SELECT DTG, level, an_dep FROM usage WHERE %s",
+      requiredFields=list("station", "obnumber", "obname", "varname")
+    )
+)
+
 doPlot.obsFit <- function(p, plotRequest, plotData) {
   fgColor <- "blue"
   anColor <- "red"
@@ -133,7 +153,7 @@ registerPlotType(
                list("obnumber", "obname"))
 )
 
-doPlot.biasCorrection <- function(p, plotRequest, plotData) {
+doPlot.firstGuessTotalTimeseries <- function(p, plotRequest, plotData) {
   varname <- unique(plotData$varname)
   plotData <- filterOutZeroNobsTotal(plotData)
   NextMethod(.Generic, maskColumns=c("nobs_total", "varname")) +
@@ -143,7 +163,7 @@ doPlot.biasCorrection <- function(p, plotRequest, plotData) {
 
 registerPlotType(
     "Timeseries",
-    plotCreate(c("biasCorrection", "plotTimeseries"),
+    plotCreate(c("firstGuessTotalTimeseries", "plotTimeseries"),
                "Bias Correction", "range",
                paste("SELECT DTG, level, varname, nobs_total,",
                      "fg_bias_total, fg_uncorr_total",

@@ -1,0 +1,21 @@
+#!/usr/bin/env Rscript
+# Initialise
+callingScriptPath <- function(resolve_symlink=TRUE) {
+  argv <- commandArgs(trailingOnly=FALSE)
+  path <- sub("--file=", "", argv[grep("--file=", argv)])
+  canonicalPath <- normalizePath(path)
+  if(resolve_symlink) {
+    return(canonicalPath)
+  } else {
+    return(file.path(normalizePath(dirname(path)), basename(path)))
+  }
+}
+source(file.path(dirname(callingScriptPath()), "src", "init.R"))
+
+# Select action based on passed command
+switch(args$command,
+  install=install(args),
+  listdeps=list_deps(args),
+  "create-local-repo"=create_local_repo(args),
+  clean=clean(args)
+)

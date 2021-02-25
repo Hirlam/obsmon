@@ -5,11 +5,63 @@ The format is based on [Keep a Changelog](http://keepachangelog.com)
 and this project adheres to [Semantic Versioning](http://semver.org).
 
 
+## [4.0.0] 2021-02-25
+### Added
+- New plot types:
+    - First Guess Map
+    - Average First Guess Map
+    - First-Guess Departure Timeseries
+    - Analysis Departure Timeseries
+- multiPlots: Ability to generate multiple "single-date" plots.
+      - If multiple dates/cycles are specified using "startDate", "endDate",
+        "nDays" and "cycles", then a multiPlot with multiple single-DTG plots will
+        be created using all combinations of dates and cycles.
+
+### Changed
+- Install script (removed old, put a new one in place)
+- Redefine analysis increment in maps ("fg_dep-an_dep" instead of "an_dep-fg_dep")
+- Remote CRAN mirror address in install script
+- Path to libv8.so (see .Rprofile file) for installs on ECGB
+- multiPlots:
+    - Config options "date" and "cycle" no longer exist. They used to
+      apply to plot types that required a single DTG. Now, for all the plot types,
+      dates and cycles are specified using "startDate", "endDate", "nDays" and
+      "cycles" (the same way it has been done for plots that use a date range).
+      Please check the documentation for more usage details.
+    - "nDays" config parameter now sets the endDate to "startDate + nDays - 1".
+      The previous value was "startDate + nDays".
+    - "startDate" param can now also be zero, in which case it is taken to be
+      "today" -- whatever day today is.
+
+### Removed
+- Sources for R-lib dependencies
+    - The new install script has options to create a CRAN-like repo and install
+      dependencies from it, if users wish to use such functionality (e.g., to
+      freeze the versions of the used R-libs in the same way it used to be before
+      this release). The new install script also supports specifying pkg versions
+      via a "versions file".
+
+### Fixed
+- Install in R version 4
+- "invalid units" error in plots when running on R version 4
+
+
+## [3.11.0] 2020-09-01
+### Added
+- Support to new scatt data format
+- New "First Guess Map" and "Average First Guess Map" plot types
+
+
+## [3.10.0] 2020-06-11
+### Added
+- Support to netatmo stations
+
+
 ## [3.9.0] 2020-03-16
 ### Added
 - metop3 defaults for the GUI's "Satellite" menu
 - Explicit libv8.so path info in the .Rprofile file, so that the
-  V8 R-lib can be loaded on ecgb after their most recent system update
+  V8 R-lib can be loaded on ECGB after their most recent system update
 
 ### Changed
 - Add jitter to scatter plots performed over maps, so user can get
@@ -344,20 +396,3 @@ and this project adheres to [Semantic Versioning](http://semver.org).
 - Dump database
 - Settings tab
 - Environment variables for configuration
-
-
-[3.9.0]: https://git.smhi.se/foum/obsmon/compare/obsmon-3.8.0...obsmon-3.9.0
-[3.8.0]: https://git.smhi.se/foum/obsmon/compare/obsmon-3.7.0...obsmon-3.8.0
-[3.7.0]: https://git.smhi.se/foum/obsmon/compare/obsmon-3.6.0...obsmon-3.7.0
-[3.6.0]: https://git.smhi.se/foum/obsmon/compare/obsmon-3.5.0...obsmon-3.6.0
-[3.5.0]: https://git.smhi.se/foum/obsmon/compare/obsmon-3.4.0...obsmon-3.5.0
-[3.4.0]: https://git.smhi.se/foum/obsmon/compare/obsmon-3.3.2...obsmon-3.4.0
-[3.3.2]: https://git.smhi.se/foum/obsmon/compare/obsmon-3.3.0...obsmon-3.3.2
-[3.3.0]: https://git.smhi.se/foum/obsmon/compare/obsmon-3.2.1...obsmon-3.3.0
-[3.2.1]: https://git.smhi.se/foum/obsmon/compare/obsmon-3.1.1...obsmon-3.2.1
-[3.1.1]: https://git.smhi.se/foum/obsmon/compare/obsmon-3.1.0...obsmon-3.1.1
-[3.1.0]: https://git.smhi.se/foum/obsmon/compare/obsmon-3.0.0...obsmon-3.1.0
-[3.0.0]: https://git.smhi.se/foum/obsmon/compare/obsmon-2.3.0...obsmon-3.0.0
-[2.3.0]: https://git.smhi.se/foum/obsmon/compare/obsmon-2.2.0...obsmon-2.3.0
-[2.2.0]: https://git.smhi.se/foum/obsmon/compare/obsmon-2.1.0...obsmon-2.2.0
-[2.1.0]: https://git.smhi.se/a002160/obsmon/compare/obsmon-2.0.0...obsmon-2.1.0

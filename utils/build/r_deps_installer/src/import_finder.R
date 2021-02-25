@@ -1,5 +1,28 @@
+.filesAreR <- Vectorize(function(fPath) {
+  if(!file.exists(fPath)) return(FALSE)
+  if(tools::file_ext(fPath)=="R") return(TRUE)
+  if(tools::file_ext(fPath)=="") {
+    line = readLines(fPath, n=1, warn=FALSE)
+    if(length(line)>0) return(grepl("Rscript", line, fixed=TRUE, useBytes=TRUE))
+    return(FALSE)
+  }
+  return(FALSE)
+})
 
-getExplicitlyUsedRPkgs <- function(files) {
+.locateRSources <- function(path, ignore_regex=NULL) {
+  # Locate R files (descend recursively through directories)
+  allFiles <- list.files(path=path, recursive=TRUE, full.names=TRUE)
+  # Normalise paths to, e.g., resolve symlinks
+  allFiles <- normalizePath(allFiles)
+  # Make sure we don't include ignored patterns
+  allFiles <- allFiles[!grepl(paste(ignore_regex, collapse="|"), allFiles)]
+  # Keep only R files
+  rFilesMask <- .filesAreR(allFiles)
+  if(any(rFilesMask)) return(allFiles[rFilesMask])
+  else return(c())
+}
+
+.getExplicitlyUsedRPkgs <- function(files) {
   # This routine returns a vector containing the names of the R packages
   # that have explicitly been used in the files listed in the input variable.
   #
@@ -48,3 +71,10 @@ getExplicitlyUsedRPkgs <- function(files) {
   return(sort(unique(explicitlyUsedPkgs[!(explicitlyUsedPkgs %in% basePackagesR)])))
 }
 
+getImportedPkgs <- function(path=".", ignore_regex=NULL, availablePkgsDb=NULL) {
+  if(is.null(availablePkgsDb)) availablePkgsDb <- available.packages()
+  listOfRFiles <- .locateRSources(path=path, ignore_regex=ignore_regex)
+  importedPkgs <- .getExplicitlyUsedRPkgs(listOfRFiles)
+  df <- data.frame(Package=importedPkgs, stringsAsFactors=FALSE)
+  return(df)
+}
