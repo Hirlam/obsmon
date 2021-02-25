@@ -5,7 +5,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com)
 and this project adheres to [Semantic Versioning](http://semver.org).
 
 
-## [Unreleased]
+## [4.0.0] 2021-02-25
 ### Added
 - New plot types:
     - First Guess Map
@@ -396,23 +396,3 @@ and this project adheres to [Semantic Versioning](http://semver.org).
 - Dump database
 - Settings tab
 - Environment variables for configuration
-
-
-[4.0.0]: https://git.smhi.se/foum/obsmon/compare/obsmon-4.0.0...obsmon-3.11.0
-[3.11.0]: https://git.smhi.se/foum/obsmon/compare/obsmon-3.10.0...obsmon-3.11.0
-[3.10.0]: https://git.smhi.se/foum/obsmon/compare/obsmon-3.9.0...obsmon-3.10.0
-[3.9.0]: https://git.smhi.se/foum/obsmon/compare/obsmon-3.8.0...obsmon-3.9.0
-[3.8.0]: https://git.smhi.se/foum/obsmon/compare/obsmon-3.7.0...obsmon-3.8.0
-[3.7.0]: https://git.smhi.se/foum/obsmon/compare/obsmon-3.6.0...obsmon-3.7.0
-[3.6.0]: https://git.smhi.se/foum/obsmon/compare/obsmon-3.5.0...obsmon-3.6.0
-[3.5.0]: https://git.smhi.se/foum/obsmon/compare/obsmon-3.4.0...obsmon-3.5.0
-[3.4.0]: https://git.smhi.se/foum/obsmon/compare/obsmon-3.3.2...obsmon-3.4.0
-[3.3.2]: https://git.smhi.se/foum/obsmon/compare/obsmon-3.3.0...obsmon-3.3.2
-[3.3.0]: https://git.smhi.se/foum/obsmon/compare/obsmon-3.2.1...obsmon-3.3.0
-[3.2.1]: https://git.smhi.se/foum/obsmon/compare/obsmon-3.1.1...obsmon-3.2.1
-[3.1.1]: https://git.smhi.se/foum/obsmon/compare/obsmon-3.1.0...obsmon-3.1.1
-[3.1.0]: https://git.smhi.se/foum/obsmon/compare/obsmon-3.0.0...obsmon-3.1.0
-[3.0.0]: https://git.smhi.se/foum/obsmon/compare/obsmon-2.3.0...obsmon-3.0.0
-[2.3.0]: https://git.smhi.se/foum/obsmon/compare/obsmon-2.2.0...obsmon-2.3.0
-[2.2.0]: https://git.smhi.se/foum/obsmon/compare/obsmon-2.1.0...obsmon-2.2.0
-[2.1.0]: https://git.smhi.se/a002160/obsmon/compare/obsmon-2.0.0...obsmon-2.1.0
