@@ -196,6 +196,7 @@ args <- tryCatch(
     # Set command to .defaultCommand if no command is passed
     argv <- commandArgs(trailingOnly=TRUE)
     firstArgvIsOptArg <- startsWith(argv[1], "-")
+    if(anyNA(firstArgvIsOptArg)) firstArgvIsOptArg <- FALSE
     msgIfMissingCmd <- "error: the following arguments are required: command"
     missCmd <- firstArgvIsOptArg || isTRUE(grepl(msgIfMissingCmd, e$message))
     if(missCmd) parser$parse_args(args=c(.defaultCommand, argv))
