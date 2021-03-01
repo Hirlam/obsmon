@@ -5,7 +5,6 @@ parser <- argparse::ArgumentParser()
 subparsers <- parser$add_subparsers(
   title="Script subcommands",
   dest="command",
-  required=TRUE,
   description=paste(
     "The valid script subcommands are listed below. If no subcommand is",
     paste0('passed, then the "', .defaultCommand, '"'), "mode wil be adopted",
@@ -190,15 +189,20 @@ parser_listdeps$add_argument(
 ###############################
 # Parsing and validating args #
 ###############################
-args <- tryCatch(
-  parser$parse_args(),
+.msgIfMissingCmd <- "error: the following arguments are required: command"
+args <- tryCatch({
+  tmpArgs <- parser$parse_args()
+  if(is.null(tmpArgs$command)) {
+    stop(.msgIfMissingCmd)
+  }
+  tmpArgs
+  },
   error=function(e) {
     # Set command to .defaultCommand if no command is passed
     argv <- commandArgs(trailingOnly=TRUE)
     firstArgvIsOptArg <- startsWith(argv[1], "-")
     if(anyNA(firstArgvIsOptArg)) firstArgvIsOptArg <- FALSE
-    msgIfMissingCmd <- "error: the following arguments are required: command"
-    missCmd <- firstArgvIsOptArg || isTRUE(grepl(msgIfMissingCmd, e$message))
+    missCmd <- firstArgvIsOptArg || isTRUE(grepl(.msgIfMissingCmd, e$message))
     if(missCmd) parser$parse_args(args=c(.defaultCommand, argv))
     else stop(e$message)
   }
