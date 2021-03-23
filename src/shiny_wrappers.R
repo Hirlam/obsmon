@@ -94,46 +94,32 @@ getSelection <- function(session, inputId, choices, select=c("NORMAL", "ALL", "N
 
 updateInputWrapper <- function(
   updateFunc, session, inputId, label=NULL, choices=NULL, selected=NULL,
-  choicesFoundIncache=TRUE, ...
+  ..., finishedCaching=NULL
 ){
   # Update an input using "updateFunc" while preserving the selected options(s)
-  # (if any) as well as keeping track of current choices and labels
-
-  # Attaching new lists "userData$UiLabels" and "userData$UiChoices" to
-  # session if this is the 1st time this routine is run in the session.
-  # These lists will keep track of the current labels and choices in the
-  # UI menus. It seems shiny doesn't have a native method to return those.
-  if(is.null(session$userData$UiLabels)) session$userData$UiLabels <- list()
-  if(is.null(session$userData$UiChoices)) session$userData$UiChoices <- list()
+  # (if any) as well as keeping track of current choices.
 
   # First, update label
-  notCachedLabelMsg <- "(incomplete cache & defaults)"
-  currentLabel <- session$userData$UiLabels[[inputId]]
-  if(is.null(currentLabel)) currentLabel <- getDefLabel(inputId)
-
-  currLabelFlaggedAsNotCached <- isTRUE(grepl(notCachedLabelMsg,currentLabel))
-  needsLabelChange <- {
-    isTRUE(label!=currentLabel) ||
-    (choicesFoundIncache && currLabelFlaggedAsNotCached) ||
-    (!choicesFoundIncache && !currLabelFlaggedAsNotCached)
+  if(!is.null(finishedCaching)) {
+    if(is.null(label)) label <- getDefLabel(inputId)
+    cachingExtraInfo <- NULL
+    if (!finishedCaching) {
+      cachingExtraInfo <- "(caching ongoing)"
+    } else if(length(choices)==0) {
+      cachingExtraInfo <- "(cache info not available)"
+    }
+    label <- paste(label, cachingExtraInfo)
   }
+  updateFunc(session, inputId, label=label)
 
-  if(needsLabelChange) {
-    if(is.null(label)) label <- currentLabel
-    label <- gsub(notCachedLabelMsg, "", label, fixed=TRUE)
-    if(!choicesFoundIncache) label <- paste(label, notCachedLabelMsg)
-    updateFunc(session, inputId, label=label)
-    session$userData$UiLabels[[inputId]] <- label
-  }
-
-  # Now, update items and choices
+  # Now, update choices and selected items (if needed)
   currentChoices <- session$userData$UiChoices[[inputId]]
-  if(is.null(choices) || isTRUE(all.equal(choices,currentChoices)))return(NULL)
+  if(is.null(choices) || isTRUE(all.equal(choices, currentChoices))) {
+    return(NULL)
+  }
 
   selection <- getSelection(session, inputId, choices)
-  updateFunc(
-    session, inputId, choices=choices, selected=selection, label=NULL, ...
-  )
+  updateFunc(session, inputId, choices=choices, selected=selection, ...)
   session$userData$UiChoices[[inputId]] <- choices
 }
 

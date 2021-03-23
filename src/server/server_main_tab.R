@@ -217,7 +217,7 @@ observeEvent({
       newChoices <- combineCachedAndGeneralChoices(obtypes)
     }
     updateSelectInputWrapper(
-      session, "obtype", choices=newChoices, choicesFoundIncache=isCached
+      session, "obtype", choices=newChoices, finishedCaching=isCached
     )
   }
 })
@@ -243,7 +243,7 @@ observeEvent(updateObnames(), {
     newChoices <- combineCachedAndGeneralChoices(obnames)
   }
   updateSelectInputWrapper(
-    session, "obname", choices=newChoices, choicesFoundIncache=isCached
+    session, "obname", choices=newChoices, finishedCaching=isCached
   )
 })
 
@@ -264,7 +264,7 @@ observeEvent(updateScattSatellite(), {
   }
   updateSelectInputWrapper(
     session, "scatt_satellite",
-    choices=newChoices, choicesFoundIncache=isCached
+    choices=newChoices, finishedCaching=isCached
   )
 })
 
@@ -296,7 +296,7 @@ observeEvent(updateVariables(), {
     newChoices <- combineCachedAndGeneralChoices(variables)
   }
   updateSelectInputWrapper(
-    session, "variable", choices=newChoices, choicesFoundIncache=isCached
+    session, "variable", choices=newChoices, finishedCaching=isCached
   )
 })
 
@@ -315,7 +315,7 @@ observeEvent(updateSensor(), {
     newChoices <- combineCachedAndGeneralChoices(sens)
   }
   updateSelectInputWrapper(
-    session, "sensor", choices=newChoices, choicesFoundIncache=isCached
+    session, "sensor", choices=newChoices, finishedCaching=isCached
   )
 })
 
@@ -336,7 +336,7 @@ observeEvent(updateSatellite(), {
     newChoices <- combineCachedAndGeneralChoices(sats)
   }
   updateSelectInputWrapper(
-    session, "satellite", choices=newChoices, choicesFoundIncache=isCached
+    session, "satellite", choices=newChoices, finishedCaching=isCached
   )
 })
 
@@ -355,16 +355,13 @@ channels <- eventReactive(updateChannels(), {
   newChannels <- getChannelsFromCache(
     db, dates, cycles, satname=sat, sensorname=sens
   )
-  if(length(newChannels)==0) {
-    newChannels <- c("Any (cache info not available)"="")
-  } else if(!selectedDtgsAreCached()) {
-    newChannels <- c("Any (cache info incomplete)"="", newChannels)
-  }
-
   return(newChannels)
 })
-observeEvent(channels(), {
-  updateSelectInputWrapper(session, "channels", choices=channels())
+observe({
+  updatePickerInputWrapper(
+    session, "channels", choices=channels(),
+    finishedCaching=selectedDtgsAreCached()
+  )
 })
 observeEvent(input$channelsSelectAny, {
   updateSelectInput(
@@ -442,22 +439,16 @@ observeEvent(updateStations(), {
   )
   stations <- putLabelsInStations(stations, obname)
 
-  stationsAvailable <- length(stations)>0
-
-  notFullyCachedMsg <- NULL
-  if(!selectedDtgsAreCached()) {
-    notFullyCachedMsg <- "(cache info not available)"
-    if(stationsAvailable) notFullyCachedMsg<-"(cache info incomplete)"
-  }
-
   inputName <- "station"
   if(requireSingleStation()) inputName <- "stationSingle"
-  label <- gsub(" $", "", paste("Station", notFullyCachedMsg))
 
   # Lock input if there are no stations to be chosen
-  shinyjs::toggleState(inputName, condition=stationsAvailable)
+  shinyjs::toggleState(inputName, condition=length(stations)>0)
 
-  updatePickerInputWrapper(session, inputName, choices=stations, label=label)
+  updatePickerInputWrapper(
+    session, inputName, choices=stations,
+    finishedCaching=selectedDtgsAreCached()
+  )
 },
   ignoreNULL=TRUE
 )
@@ -516,5 +507,8 @@ observeEvent({
 }, {
     if(isTRUE(input$standardLevelsSwitch)) choices <- availableLevels()$obsmon
     else choices <- availableLevels()$all
-    updatePickerInputWrapper(session, "levels", choices=choices)
+    updatePickerInputWrapper(
+      session, "levels", choices=choices,
+      finishedCaching=selectedDtgsAreCached()
+    )
 }, ignoreNULL=FALSE)
