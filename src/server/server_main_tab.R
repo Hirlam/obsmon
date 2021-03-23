@@ -363,11 +363,6 @@ observe({
     finishedCaching=selectedDtgsAreCached()
   )
 })
-observeEvent(input$channelsSelectAny, {
-  updateSelectInput(
-    session, "channels", choices=channels(), selected=character(0)
-  )
-})
 
 # Update plottype choices according to criteria
 updatePlotType <- reactive({

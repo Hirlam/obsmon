@@ -67,15 +67,17 @@ mainTab <- function() {fluidPage(
           label=getDefLabel("satellite"),
           choices=c()
         ),
-        selectInput("channels",
-          tags$div(getDefLabel("channels"),
-            "(Select",
-            actionLink("channelsSelectAny", "any"),
-            ")"
-          ),
+        pickerInput("channels",
+          label=getDefLabel("channels"),
           choices=c(),
           multiple=TRUE,
-          selectize=FALSE
+          options=list(
+            `live-search`=TRUE,
+            `actions-box`=TRUE,
+            `none-selected-text`="Any",
+            `select-all-text`="Select All Listed",
+            `deselect-all-text`='Select "Any" (no channel filters)'
+          )
         )
       ),
       conditionalPanel(
