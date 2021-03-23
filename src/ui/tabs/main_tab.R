@@ -101,16 +101,17 @@ mainTab <- function() {fluidPage(
           condition = "input.odbBase != 'ecma_sfc' &&
                        input.obtype!='scatt' &&
                        input.obtype!='surface'",
-          selectInput("levels",
-            tags$div(getDefLabel("levels"),
-              "(Select",
-              actionLink("levelsSelectStandard", "standard"),
-              actionLink("levelsSelectAny", "any"),
-              ")"
-            ),
+          pickerInput("levels",
+            label=getDefLabel("levels"),
             choices=c(),
             multiple=TRUE,
-            selectize=FALSE
+            options=list(
+              `live-search`=TRUE,
+              `actions-box`=TRUE,
+              `none-selected-text`="Any",
+              `select-all-text`="Select All Listed",
+              `deselect-all-text`='Select "Any" (no level filters)'
+            )
           )
         )
       ),

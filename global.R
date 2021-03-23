@@ -41,7 +41,9 @@ defaultMenuLabels <- list(
   scatt_satellite="Satellite",
   channels="Channels",
   variable="Variable",
-  levels="Levels",
+  levels=tags$div(
+    "Levels", "(Select", actionLink("levelsSelectStandard", "standard)")
+  ),
   plottype="Type of Plot",
   station="Station"
 )

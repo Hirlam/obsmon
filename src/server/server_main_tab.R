@@ -499,21 +499,20 @@ observeEvent({
   levels <- getLevelsFromCache(
     db, selectedDates(), selectedCycles(), obname, var, stations
   )
-  if(length(levels$all)==0) {
-    levels$all <- c("Any (cache info not available)"="")
-  } else if(!selectedDtgsAreCached()) {
-    levels$all <- c("Any (cache info incomplete)"="", levels$all)
-  }
   availableLevels(levels)
 }, ignoreNULL=FALSE, ignoreInit=FALSE)
 observe({
-  updateSelectInputWrapper(session,"levels",choices=availableLevels()$all)
+  notFullyCachedMsg = NULL
+  if(length(availableLevels()$all) == 0) {
+    notFullyCachedMsg <- "(cache info not available)"
+  } else if(!selectedDtgsAreCached()) {
+    notFullyCachedMsg <- "(cache info incomplete)"
+  }
+  label <- gsub(" $", "", paste(getDefLabel("levels"), notFullyCachedMsg))
+
+  updatePickerInputWrapper(session,"levels",choices=availableLevels()$all, label=label)
 })
 observeEvent(input$levelsSelectStandard, {
-  updateSelectInput(session, "levels",
+  updatePickerInput(session, "levels",
     choices=availableLevels()$all, selected=availableLevels()$obsmon)
-})
-observeEvent(input$levelsSelectAny, {
-  updateSelectInput(session, "levels",
-    choices=availableLevels()$all, selected=character(0))
 })
