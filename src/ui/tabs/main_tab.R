@@ -112,7 +112,14 @@ mainTab <- function() {fluidPage(
               `select-all-text`="Select All Listed",
               `deselect-all-text`='Select "Any" (no level filters)'
             )
-          )
+          ),
+          hidden(materialSwitch(
+            inputId='standardLevelsSwitch',
+            label="List Standard Levels Only",
+            status="warning",
+            inline=TRUE,
+            right=TRUE
+          ))
         )
       ),
       selectInput("plottype",

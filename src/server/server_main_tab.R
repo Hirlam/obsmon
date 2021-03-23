@@ -499,20 +499,22 @@ observeEvent({
   levels <- getLevelsFromCache(
     db, selectedDates(), selectedCycles(), obname, var, stations
   )
+
+  # Toggle the choice between all levels or standard-only
+  hasStandardLevels <- length(levels$obsmon) > 0
+  allLevelsAreStandard <- all(levels$all %in% levels$obsmon)
+  showStandardLevelsToggle <- hasStandardLevels && !allLevelsAreStandard
+  shinyjs::toggle("standardLevelsSwitch", condition=showStandardLevelsToggle)
+
   availableLevels(levels)
 }, ignoreNULL=FALSE, ignoreInit=FALSE)
-observe({
-  notFullyCachedMsg = NULL
-  if(length(availableLevels()$all) == 0) {
-    notFullyCachedMsg <- "(cache info not available)"
-  } else if(!selectedDtgsAreCached()) {
-    notFullyCachedMsg <- "(cache info incomplete)"
-  }
-  label <- gsub(" $", "", paste(getDefLabel("levels"), notFullyCachedMsg))
 
-  updatePickerInputWrapper(session,"levels",choices=availableLevels()$all, label=label)
-})
-observeEvent(input$levelsSelectStandard, {
-  updatePickerInput(session, "levels",
-    choices=availableLevels()$all, selected=availableLevels()$obsmon)
-})
+observeEvent({
+  availableLevels()
+  input$standardLevelsSwitch
+  selectedDtgsAreCached()
+}, {
+    if(isTRUE(input$standardLevelsSwitch)) choices <- availableLevels()$obsmon
+    else choices <- availableLevels()$all
+    updatePickerInputWrapper(session, "levels", choices=choices)
+}, ignoreNULL=FALSE)
