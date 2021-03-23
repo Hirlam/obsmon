@@ -423,8 +423,8 @@ updateStations <- reactive({
 }) %>% throttle(500)
 observeEvent(updateStations(), {
   if(!allowChoosingStation()) {
-    updateSelectInputWrapper(session, "station", choices=c("Any"=""))
-    updateSelectInputWrapper(session, "stationSingle", choices=c("Any"=""))
+    updatePickerInputWrapper(session, "station", choices=c(""))
+    updatePickerInputWrapper(session, "stationSingle", choices=c(""))
   }
   req(allowChoosingStation())
 
@@ -450,18 +450,14 @@ observeEvent(updateStations(), {
     if(stationsAvailable) notFullyCachedMsg<-"(cache info incomplete)"
   }
 
-  if(requireSingleStation()) {
-    inputName <- "stationSingle"
-    label <- gsub(" $", "", paste("Station", notFullyCachedMsg))
-    if(!stationsAvailable) stations <- c("No stations available to choose"="")
-  } else {
-    inputName <- "station"
-    label <- "Station"
-    entryForAnyStation <- c("")
-    names(entryForAnyStation) <- gsub(" $","",paste("Any",notFullyCachedMsg))
-    stations <- c(entryForAnyStation, stations)
-  }
-  updateSelectInputWrapper(session, inputName, choices=stations, label=label)
+  inputName <- "station"
+  if(requireSingleStation()) inputName <- "stationSingle"
+  label <- gsub(" $", "", paste("Station", notFullyCachedMsg))
+
+  # Lock input if there are no stations to be chosen
+  shinyjs::toggleState(inputName, condition=stationsAvailable)
+
+  updatePickerInputWrapper(session, inputName, choices=stations, label=label)
 },
   ignoreNULL=TRUE
 )

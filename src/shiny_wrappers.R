@@ -92,11 +92,11 @@ getSelection <- function(session, inputId, choices, select=c("NORMAL", "ALL", "N
          })
 }
 
-updateSelectInputWrapper <- function(
-  session, inputId, label=NULL, choices=NULL, selected=NULL,
+updateInputWrapper <- function(
+  updateFunc, session, inputId, label=NULL, choices=NULL, selected=NULL,
   choicesFoundIncache=TRUE, ...
 ){
-  # Update a selectInputs while preserving the selected options(s)
+  # Update an input using "updateFunc" while preserving the selected options(s)
   # (if any) as well as keeping track of current choices and labels
 
   # Attaching new lists "userData$UiLabels" and "userData$UiChoices" to
@@ -122,7 +122,7 @@ updateSelectInputWrapper <- function(
     if(is.null(label)) label <- currentLabel
     label <- gsub(notCachedLabelMsg, "", label, fixed=TRUE)
     if(!choicesFoundIncache) label <- paste(label, notCachedLabelMsg)
-    updateSelectInput(session, inputId, label=label)
+    updateFunc(session, inputId, label=label)
     session$userData$UiLabels[[inputId]] <- label
   }
 
@@ -131,12 +131,19 @@ updateSelectInputWrapper <- function(
   if(is.null(choices) || isTRUE(all.equal(choices,currentChoices)))return(NULL)
 
   selection <- getSelection(session, inputId, choices)
-  updateSelectInput(
+  updateFunc(
     session, inputId, choices=choices, selected=selection, label=NULL, ...
   )
   session$userData$UiChoices[[inputId]] <- choices
 }
 
+updateSelectInputWrapper <- function(...) {
+  updateInputWrapper(updateFunc=updateSelectInput, ...)
+}
+
+updatePickerInputWrapper <- function(...) {
+  updateInputWrapper(updateFunc=updatePickerInput, ...)
+}
 
 updateCheckboxGroup <- function(session, inputId, choices, select="NORMAL") {
     if (is.null(choices)) {

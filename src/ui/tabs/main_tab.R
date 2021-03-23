@@ -118,17 +118,26 @@ mainTab <- function() {fluidPage(
         label=getDefLabel("plottype"),
         choices=c()
       ),
-      selectInput("station",
+      pickerInput("station",
         label=getDefLabel("station"),
         choices=c(),
         multiple=TRUE,
-        selectize=FALSE
+        options=list(
+          `live-search`=TRUE,
+          `actions-box`=TRUE,
+          `none-selected-text`="Any",
+          `select-all-text`="Select All Listed",
+          `deselect-all-text`='Select "Any" (no station filters)'
+        )
       ),
-      selectInput("stationSingle",
+      pickerInput("stationSingle",
         label=getDefLabel("station"),
         choices=c(),
         multiple=FALSE,
-        selectize=FALSE
+        options=list(
+          `live-search`=TRUE,
+          `none-selected-text`="No station selected"
+        )
       ),
       fluidRow(
         column(8, dateInput("date", "Date")),
