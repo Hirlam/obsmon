@@ -77,7 +77,7 @@ getSelection <- function(session, inputId, choices, select=c("NORMAL", "ALL", "N
            validChoices <- unlist(choices, use.names=FALSE)
            validSelections <- oldSelection %in% validChoices
            if (is.null(oldSelection)) {
-             choices
+             NULL
            } else if (any(validSelections)) {
              oldSelection[validSelections]
            } else {
