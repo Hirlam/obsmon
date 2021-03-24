@@ -164,7 +164,6 @@ observeEvent({
   selectedDtgs(dtgs)
 })
 
-
 # Update available cycle choices when relevant fields change
 availableCycles <- reactive({
   tryCatch(
@@ -172,10 +171,7 @@ availableCycles <- reactive({
     error=function(w) character(0)
   )
 })
-observeEvent({
-  availableCycles()
-  cacheIsOngoing()
-}, {
+observe({
   updateSelectInputWrapper(session, "cycle", choices=availableCycles())
   updatePickerInputWrapper(session, "cycles", choices=availableCycles())
 })
@@ -183,42 +179,42 @@ observeEvent({
 
 # Initialise some cache-related vars used here but for which proper reactives
 # will be set up in server_cache.R.
+# Flag that it's time to reload info from cache
 cacheIsOngoing <- reactiveVal(FALSE)
-selectedDtgsAreCached <- reactiveVal(FALSE)
-reloadInfoFromCache <- reactiveVal(Sys.time())
-# triggerReadCache and latestTriggerReadCache will be employed to flag the
-# need to retry reading info from cache (eg. if it cannot be found at first)
-latestTriggerReadCache <- reactiveVal(0)
-triggerReadCache <- function() latestTriggerReadCache(Sys.time())
+reloadInfoFromCache <- reactive({
+  activeDb()
+  selectedDtgs()
+  # Use "req" to react only if not writing to cache files
+  return(req(!cacheIsOngoing()))
+}) %>% throttle(1000)
+
+# Keep track of whether data for the selected DTGs are cached or not
+selectedDtgsAreCached <- reactive({
+  req(reloadInfoFromCache())
+  dtgsAreCached(activeDb(), selectedDtgs())
+})
 
 
 # Update obtype
-observeEvent({
-  req(activeDb())
-  selectedDtgs()
-  cacheIsOngoing()
-  reloadInfoFromCache()
- }, {
+observeEvent(reloadInfoFromCache(), {
   db <- activeDb()
   if(isTRUE(db$dbType=="ecma_sfc")) {
-    updateSelectInputWrapper(session,"obtype",choices=c("Surface"="surface"))
+    choices <- c("Surface"="surface")
   } else {
     obtypes <- getObtypes(db, selectedDates(), selectedCycles())
-
     isCached <- selectedDtgsAreCached() && !is.null(obtypes$cached)
     if(isCached) {
-      newChoices <- obtypes$cached
+      choices <- obtypes$cached
     } else {
-      newChoices <- combineCachedAndGeneralChoices(obtypes)
+      choices <- combineCachedAndGeneralChoices(obtypes)
     }
-    updateSelectInputWrapper(session, "obtype", choices=newChoices)
   }
+  updateSelectInputWrapper(session, "obtype", choices=choices)
 })
 
 # Update obnames
 updateObnames <- reactive({
   req(input$obtype)
-  cacheIsOngoing()
   reloadInfoFromCache()
 }) %>% throttle(500)
 observeEvent(updateObnames(), {
@@ -242,9 +238,8 @@ observeEvent(updateObnames(), {
 # Update scatt satnames
 updateScattSatellite <- reactive({
   req(input$obtype=='scatt')
-  cacheIsOngoing()
   reloadInfoFromCache()
-})  %>% throttle(500)
+}) %>% throttle(500)
 observeEvent(updateScattSatellite(), {
   db <- req(activeDb())
 
@@ -290,9 +285,8 @@ observeEvent(updateVariables(), {
 
 # Update sensornames
 updateSensor <- reactive({
-  cacheIsOngoing()
-  reloadInfoFromCache()
   req(input$obtype=="satem")
+  reloadInfoFromCache()
 })  %>% throttle(500)
 observeEvent(updateSensor(), {
   db <- req(activeDb())
@@ -308,8 +302,8 @@ observeEvent(updateSensor(), {
 
 # Update satellite choices for given sensor
 updateSatellite <- reactive({
-  updateSensor()
   req(input$sensor)
+  updateSensor()
 })  %>% throttle(500)
 observeEvent(updateSatellite(), {
   db <- req(activeDb())
@@ -327,8 +321,8 @@ observeEvent(updateSatellite(), {
 
 # Update channel choice for given satellite
 updateChannels <- reactive({
-  updateSatellite()
   req(input$satellite)
+  updateSatellite()
 })  %>% throttle(500)
 channels <- eventReactive(updateChannels(), {
   db <- req(activeDb())
@@ -342,12 +336,7 @@ channels <- eventReactive(updateChannels(), {
   )
   return(newChannels)
 })
-observeEvent({
-  channels()
-  cacheIsOngoing()
-}, {
-  updatePickerInputWrapper(session, "channels", choices=channels())
-})
+observe(updatePickerInputWrapper(session, "channels", choices=channels()))
 
 # Update plottype choices according to criteria
 updatePlotType <- reactive({
@@ -388,7 +377,6 @@ observeEvent({
 # Update stations
 updateStations <- reactive({
   allowChoosingStation()
-  cacheIsOngoing()
   reloadInfoFromCache()
   input$obtype
   input$obname
@@ -451,9 +439,9 @@ observeEvent({
 # that could leave a blank Levels field on the UI upon page refresh
 availableLevels <- reactiveVal(NULL)
 updateLevels <- reactive({
+  req(input$variable)
   selectedStations()
   updateVariables()
-  req(input$variable)
   if(length(availableLevels())==0) invalidateLater(500)
 }) %>% throttle(500)
 observeEvent({
@@ -480,7 +468,7 @@ observeEvent({
 
 observeEvent({
   availableLevels()
-  cacheIsOngoing()
+  reloadInfoFromCache()
   input$standardLevelsSwitch
 }, {
     if(isTRUE(input$standardLevelsSwitch)) choices <- availableLevels()$obsmon

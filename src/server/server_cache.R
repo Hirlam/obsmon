@@ -183,21 +183,6 @@ observeEvent(input$resetCacheConfirmationButton, {
   }
 })
 
-# Flagging that it's time to read info from cache once a batch of
-# files to be cached has been processed processed
-reloadInfoFromCache <- reactive({
-  req(!cacheIsOngoing())
-  req(!pauseCaching())
-}) %>% throttle(1000)
-# Keep track of whether selected DTGs are cached or not
-observeEvent({
-  activeDb()
-  selectedDtgs()
-  reloadInfoFromCache()
-},{
-  selectedDtgsAreCached(dtgsAreCached(req(activeDb()),req(selectedDtgs())))
-})
-
 # Notify progress of caching
 observe(
   shinyjs::toggleElement(
@@ -208,9 +193,11 @@ observe(
 
 observeEvent({
   filesPendingCache()
+  cacheIsOngoing()
+  reloadInfoFromCache()
   pauseCaching()
 },{
-  cacheNotifId="guiCacheNotif"
+  cacheNotifId <- "guiCacheNotif"
   if(isTRUE(selectedDtgsAreCached())) {
     removeNotification(cacheNotifId)
   } else if (pauseCaching()) {

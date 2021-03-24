@@ -326,6 +326,8 @@ dtgsAreCached <- function(db, dtgs) {
   # particular database db belonging to an obsmon experiment.
   # Only consider a DTG to be cached if it is present in both
   # "usage" and "obsmon" cache files
+  if(is.null(db) || is.null(dtgs)) return(FALSE)
+
   cachedDtgs <- NULL
   allDbConsCreatedHere <- c()
   on.exit({

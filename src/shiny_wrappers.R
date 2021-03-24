@@ -108,7 +108,9 @@ updateInputWrapper <- function(
   session$userData$UiChoices[[inputId]] <- choices
 
   if(is.null(selected)) selected <- getSelection(session, inputId, choices)
-  updateFunc(session, inputId, label, choices, selected, ...)
+  updateFunc(
+    session, inputId, label=label, choices=choices, selected=selected, ...
+  )
 }
 
 updateSelectInputWrapper <- function(...) {
