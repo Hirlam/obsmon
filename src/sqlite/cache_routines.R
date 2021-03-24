@@ -321,6 +321,12 @@ getCycleQueryString <- function(cycles=NULL) {
   return(rtn)
 }
 
+getDtgQueryString <- function(dates=NULL, cycles=NULL) {
+  date_str = getDateQueryString(dates)
+  cycles_str = getCycleQueryString(cycles)
+  return(paste(c(date_str, cycles_str), collapse=" AND "))
+}
+
 dtgsAreCached <- function(db, dtgs) {
   # Determine whether a set of dtgs is present in the cached data for a
   # particular database db belonging to an obsmon experiment.
@@ -378,16 +384,14 @@ dtgsAreCached <- function(db, dtgs) {
 
 getObnamesFromCache <- function(db, category, dates, cycles) {
   rtn <- c()
-  dateQueryString <- getDateQueryString(dates)
-  cycleQueryString <- getCycleQueryString(cycles)
-
+  dtgsQueryString <-  getDtgQueryString(dates, cycles)
   for(cacheFilePath in db$cachePaths) {
     con <- dbConnectWrapper(cacheFilePath, read_only=TRUE, showWarnings=FALSE)
     if(is.null(con)) next
     tryCatch({
         queryResult <- dbGetQuery(con, sprintf(
-          "SELECT DISTINCT obname FROM %s_obs WHERE %s AND %s",
-          category, dateQueryString, cycleQueryString
+          "SELECT DISTINCT obname FROM %s_obs WHERE %s",
+          category, dtgsQueryString
         ))
         rtn <- c(rtn, queryResult[['obname']])
       },
@@ -402,9 +406,7 @@ getObnamesFromCache <- function(db, category, dates, cycles) {
 
 getObtypesFromCache <- function(db, dates, cycles) {
   rtn <- c()
-  dateQueryString <- getDateQueryString(dates)
-  cycleQueryString <- getCycleQueryString(cycles)
-
+  dtgsQueryString <-  getDtgQueryString(dates, cycles)
   for(cacheFilePath in db$cachePaths) {
     con <- dbConnectWrapper(cacheFilePath, read_only=TRUE, showWarnings=FALSE)
     if(is.null(con)) next
@@ -414,8 +416,8 @@ getObtypesFromCache <- function(db, dates, cycles) {
           if(!endsWith(dbTable, '_obs')) next
           if(dbTable %in% rtn) next
           queryResult <- dbGetQuery(con, sprintf(
-            "SELECT * FROM %s WHERE %s AND %s LIMIT 1",
-            dbTable, dateQueryString, cycleQueryString
+            "SELECT * FROM %s WHERE %s LIMIT 1",
+            dbTable, dtgsQueryString
           ))
           if(nrow(queryResult)>0) rtn <- c(rtn, gsub("_obs", "", dbTable))
         }
@@ -474,18 +476,16 @@ getCacheTableNameForObname <- function(db, obname) {
 
 getVariablesFromCache <- function(db, dates, cycles, obname, satname=NULL) {
   rtn <- c()
-  dateQueryString <- getDateQueryString(dates)
-  cycleQueryString <- getCycleQueryString(cycles)
+  dtgsQueryString <-  getDtgQueryString(dates, cycles)
   tableName <- getCacheTableNameForObname(db, obname)
-
   for(cacheFilePath in db$cachePaths) {
     con <- dbConnectWrapper(cacheFilePath, read_only=TRUE, showWarnings=FALSE)
     if(is.null(con)) next
     # Try to determine the appropriate cache table for the obname
     tryCatch({
         tableCols <- dbListFields(con, tableName)
-        query <- sprintf("SELECT DISTINCT varname FROM %s WHERE %s AND %s",
-          tableName, dateQueryString, cycleQueryString
+        query <- sprintf("SELECT DISTINCT varname FROM %s WHERE %s",
+          tableName, dtgsQueryString
         )
         if("obname" %in% tableCols) {
           query <- sprintf("%s AND obname='%s'", query, obname)
@@ -509,11 +509,8 @@ getLevelsFromCache <- function(
   db, dates, cycles, obname, varname, stations=NULL
 ) {
   rtn <- list(obsmon=NULL, usage=NULL, all=NULL)
-
-  dateQueryString <- getDateQueryString(dates)
-  cycleQueryString <- getCycleQueryString(cycles)
+  dtgsQueryString <-  getDtgQueryString(dates, cycles)
   tableName <- getCacheTableNameForObname(db, obname)
-
   for(odbTable in c("obsmon", "usage")) {
     if(odbTable=="obsmon" && !is.null(stations)) next
     cacheFilePath <- db$cachePaths[[odbTable]]
@@ -522,8 +519,8 @@ getLevelsFromCache <- function(
     rtn[[odbTable]] <- tryCatch({
         tableCols <- dbListFields(con, tableName)
         query <- sprintf(
-          "SELECT DISTINCT level FROM %s WHERE %s AND %s AND varname='%s'",
-          tableName, dateQueryString, cycleQueryString, varname
+          "SELECT DISTINCT level FROM %s WHERE %s AND varname='%s'",
+          tableName, dtgsQueryString, varname
         )
         if(("statid" %in% tableCols) && length(stations)>0) {
             statidQueryPart <- paste0("statid like '%%%", stations, "%%%'")
@@ -549,10 +546,7 @@ getLevelsFromCache <- function(
 
 getChannelsFromCache <- function(db, dates, cycles, satname, sensorname) {
   rtn <- c()
-
-  dateQueryString <- getDateQueryString(dates)
-  cycleQueryString <- getCycleQueryString(cycles)
-
+  dtgsQueryString <-  getDtgQueryString(dates, cycles)
   for(odbTable in c("obsmon", "usage")) {
     cacheFilePath <- db$cachePaths[[odbTable]]
     con <- dbConnectWrapper(cacheFilePath, read_only=TRUE, showWarnings=FALSE)
@@ -560,9 +554,9 @@ getChannelsFromCache <- function(db, dates, cycles, satname, sensorname) {
     tryCatch({
         query <- sprintf(
           "SELECT DISTINCT level FROM satem_obs WHERE
-           %s AND %s AND satname='%s' AND obname='%s'
+           %s AND satname='%s' AND obname='%s'
            ORDER BY level",
-          dateQueryString, cycleQueryString, satname, sensorname
+          dtgsQueryString, satname, sensorname
         )
         queryResult <- dbGetQuery(con, query)
         rtn <- c(rtn, queryResult[['level']])
@@ -577,19 +571,15 @@ getChannelsFromCache <- function(db, dates, cycles, satname, sensorname) {
 
 getSensornamesFromCache <- function(db, dates, cycles) {
   rtn <- c()
-
-  dateQueryString <- getDateQueryString(dates)
-  cycleQueryString <- getCycleQueryString(cycles)
-
+  dtgsQueryString <-  getDtgQueryString(dates, cycles)
   for(odbTable in c("obsmon", "usage")) {
     cacheFilePath <- db$cachePaths[[odbTable]]
     con <- dbConnectWrapper(cacheFilePath, read_only=TRUE, showWarnings=FALSE)
     if(is.null(con)) next
     tryCatch({
         query <- sprintf(
-          "SELECT DISTINCT obname FROM satem_obs WHERE %s AND %s
-           ORDER BY obname",
-          dateQueryString, cycleQueryString
+          "SELECT DISTINCT obname FROM satem_obs WHERE %s ORDER BY obname",
+          dtgsQueryString
         )
         queryResult <- dbGetQuery(con, query)
         rtn <- c(rtn, queryResult[['obname']])
@@ -605,20 +595,16 @@ getSensornamesFromCache <- function(db, dates, cycles) {
 
 getSatnamesFromCache <- function(db, dates, cycles, sensorname) {
   rtn <- c()
-
-  dateQueryString <- getDateQueryString(dates)
-  cycleQueryString <- getCycleQueryString(cycles)
-
+  dtgsQueryString <-  getDtgQueryString(dates, cycles)
   for(odbTable in c("obsmon", "usage")) {
     cacheFilePath <- db$cachePaths[[odbTable]]
     con <- dbConnectWrapper(cacheFilePath, read_only=TRUE, showWarnings=FALSE)
     if(is.null(con)) next
     tryCatch({
         query <- sprintf(
-          "SELECT DISTINCT satname FROM satem_obs WHERE %s AND %s
-           AND obname='%s'
+          "SELECT DISTINCT satname FROM satem_obs WHERE %s AND obname='%s'
            ORDER BY satname",
-          dateQueryString, cycleQueryString, sensorname
+          dtgsQueryString, sensorname
         )
         queryResult <- dbGetQuery(con, query)
         rtn <- c(rtn, queryResult[['satname']])
@@ -634,19 +620,15 @@ getSatnamesFromCache <- function(db, dates, cycles, sensorname) {
 
 getScattSatnamesFromCache <- function(db, dates, cycles) {
   rtn <- c()
-
-  dateQueryString <- getDateQueryString(dates)
-  cycleQueryString <- getCycleQueryString(cycles)
-
+  dtgsQueryString <-  getDtgQueryString(dates, cycles)
   for(odbTable in c("obsmon", "usage")) {
     cacheFilePath <- db$cachePaths[[odbTable]]
     con <- dbConnectWrapper(cacheFilePath, read_only=TRUE, showWarnings=FALSE)
     if(is.null(con)) next
     tryCatch({
         query <- sprintf(
-          "SELECT DISTINCT satname FROM scatt_obs WHERE %s AND %s
-           ORDER BY satname",
-          dateQueryString, cycleQueryString
+          "SELECT DISTINCT satname FROM scatt_obs WHERE %s ORDER BY satname",
+          dtgsQueryString
         )
         queryResult <- dbGetQuery(con, query)
         rtn <- c(rtn, queryResult[['satname']])
@@ -664,19 +646,16 @@ getStationsFromCache <- function(
     db, dates, cycles, obname, variable, satname=NULL
 ) {
   rtn <- c()
-
-  dateQueryString <- getDateQueryString(dates)
-  cycleQueryString <- getCycleQueryString(cycles)
-
+  dtgsQueryString <-  getDtgQueryString(dates, cycles)
   tableName <- getCacheTableNameForObname(db, obname)
-
   for(cacheFilePath in db$cachePaths) {
     con <- dbConnectWrapper(cacheFilePath, read_only=TRUE, showWarnings=FALSE)
     if(is.null(con)) next
     tryCatch({
         tableCols <- dbListFields(con, tableName)
-        query <- sprintf("SELECT DISTINCT statid FROM %s WHERE %s AND %s",
-          tableName, dateQueryString, cycleQueryString
+        query <- sprintf(
+          "SELECT DISTINCT statid FROM %s WHERE %s",
+          tableName, dtgsQueryString
         )
         if("obname" %in% tableCols) {
           query <- sprintf("%s AND obname='%s'", query, obname)
