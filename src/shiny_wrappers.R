@@ -11,6 +11,7 @@ runAppHandlingBusyPort <- function(
   nAtt <- 0
   lisOnMsgStart <- 'Listening on '
   lisOnMsgMarker <- "------------------------------------"
+  error_msg <- NULL
   while (!success & (nAtt<maxNAtt)) {
     tryCatch(
       {
@@ -24,7 +25,8 @@ runAppHandlingBusyPort <- function(
         runApp(appDir, launch.browser=launch.browser, port=port, ...)
         success <- TRUE
       },
-      error=function(w) {
+      error=function(e) {
+        error_msg <<- e
         flog.warn(paste('Failed to create server using port', port, sep=" "))
         port <<- sample(1024:65535, 1)
         lisOnMsgStart <<- "Port updated: Listening on "
@@ -35,8 +37,9 @@ runAppHandlingBusyPort <- function(
   }
 
   if(!success) {
-    msg <- paste("Failed to create server after", nAtt, "attempts.\n",sep=" ")
-    msg <- paste(msg, "Stopping now.\n", sep=" ")
+    msg <- paste("\nFailed to create server after", nAtt, "attempts.\n")
+    msg <- paste(msg, "Possible reason: ", error_msg, sep="\n")
+    msg <- paste(msg, "Stopping now.", sep="\n")
     stop(msg)
   }
 }
