@@ -131,14 +131,6 @@ updatePickerInputWrapper <- function(...) {
   updateInputWrapper(updateFunc=updatePickerInput, ...)
 }
 
-updateCheckboxGroup <- function(session, inputId, choices, select="NORMAL") {
-    if (is.null(choices)) {
-      return(NULL)
-    }
-    selection <- getSelection(session, inputId, choices, select)
-    updateCheckboxGroupInput(session, inputId,
-                             choices=choices, selected=selection, inline=TRUE)
-}
 
 # Enabling/disabling UI elements
 grepFilter <- function(x, pattern=NULL, except=NULL) {
@@ -157,7 +149,7 @@ disableShinyInputs <- function(input, pattern=NULL, except=NULL) {
   inpNames <- grepFilter(inpNames, pattern, except)
   for(inp in inpNames) {
     shinyjs::disable(inp)
-    if(inp %in% c("channels", "levels", "station", "stationSingle")) {
+    if(inp %in% c("channels", "levels", "cycles", "station", "stationSingle")) {
       # We need to to this for pickerInputs. See issue
       # <https://github.com/dreamRs/shinyWidgets/issues/341>
       shinyjs::runjs(sprintf("$('#%s').selectpicker('refresh');", inp))
@@ -169,7 +161,7 @@ enableShinyInputs <- function(input, pattern=NULL, except=NULL) {
   inpNames <- grepFilter(inpNames, pattern, except)
   for(inp in inpNames) {
     shinyjs::enable(inp)
-    if(inp %in% c("channels", "levels", "station", "stationSingle")) {
+    if(inp %in% c("channels", "levels", "cycles", "station", "stationSingle")) {
       shinyjs::runjs(sprintf("$('#%s').selectpicker('refresh');", inp))
     }
   }

@@ -177,18 +177,9 @@ observeEvent({
   cacheIsOngoing()
 }, {
   updateSelectInputWrapper(session, "cycle", choices=availableCycles())
-  updateCheckboxGroup(session, "cycles", availableCycles())
-})
-observeEvent(input$cyclesSelectAll, {
-  cycles <- req(availableCycles())
-  updateCheckboxGroupInput(session, "cycles",
-    choices=cycles, selected=cycles, inline=TRUE
-  )
-})
-observeEvent(input$cyclesSelectAny, {
-  cycles <- req(availableCycles())
-  updateCheckboxGroupInput(session, "cycles",
-    choices=cycles, selected=character(0), inline=TRUE
+  updatePickerInputWrapper(
+    session, "cycles", choices=availableCycles(),
+    finishedCaching=selectedDtgsAreCached()
   )
 })
 

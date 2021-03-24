@@ -148,15 +148,17 @@ mainTab <- function() {fluidPage(
         column(4, selectInput("cycle", label="Cycle", choices=c()))
       ),
       dateRangeInput("dateRange", "Date Range"),
-      checkboxGroupInput("cycles",
-        label=tags$div("Cycles",
-          "(Select",
-          actionLink("cyclesSelectAll", "all"),
-          actionLink("cyclesSelectAny", "any"),
-          ")"
-        ),
-        inline=TRUE,
-        choices=c()
+      pickerInput("cycles",
+        label=getDefLabel("cycles"),
+        choices=c(),
+        multiple=TRUE,
+        options=list(
+          `live-search`=TRUE,
+          `actions-box`=TRUE,
+          `none-selected-text`="Any",
+          `select-all-text`="Select All Listed",
+          `deselect-all-text`='Select "Any" (no cycle filters)'
+        )
       ),
       conditionalPanel(
         condition = 'output[["showCacheOptions"]]=="TRUE"',
