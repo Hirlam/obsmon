@@ -199,6 +199,13 @@ observeEvent({
 })
 
 # Notify progress of caching
+observe(
+  shinyjs::toggleElement(
+    selector=".caching_info_icon",
+    condition=cacheIsOngoing() && !pauseCaching()
+  )
+)
+
 observeEvent({
   filesPendingCache()
   pauseCaching()

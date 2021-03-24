@@ -1,3 +1,16 @@
+shinyInput_label_embed_caching_icon <- function(tag, ...) {
+  # Add an icon & popover to signal that caching is ongoing
+  shinyInput_label_embed(
+    tag,
+    tags$span(shiny::icon("sync"), class="caching_info_icon") %>%
+    bs_embed_popover(
+      title="Updating...",
+      content = "Caching ongoing. Values may change while this happens."
+    ),
+    ...
+  )
+}
+use_bs_popover()
 
 cacheButtonsGeneralTooltipMsg <- paste0(
   "Use the buttons below only if you really need to make changes to the ",
@@ -46,7 +59,7 @@ mainTab <- function() {fluidPage(
         selectInput("obtype",
           label=getDefLabel("obtype"),
           choices=c()
-        )
+        ) %>% shinyInput_label_embed_caching_icon()
       ),
       conditionalPanel(
         condition = "input.obtype!='satem' &&
@@ -55,18 +68,18 @@ mainTab <- function() {fluidPage(
         selectInput("obname",
           label=getDefLabel("obname"),
           choices=c()
-        )
+        ) %>% shinyInput_label_embed_caching_icon()
       ),
       conditionalPanel(
         condition = "input.obtype == 'satem'",
         selectInput("sensor",
           label=getDefLabel("sensor"),
           choices=c()
-        ),
+        ) %>% shinyInput_label_embed_caching_icon(),
         selectInput("satellite",
           label=getDefLabel("satellite"),
           choices=c()
-        ),
+        ) %>% shinyInput_label_embed_caching_icon(),
         pickerInput("channels",
           label=getDefLabel("channels"),
           choices=c(),
@@ -78,21 +91,21 @@ mainTab <- function() {fluidPage(
             `select-all-text`="Select All Listed",
             `deselect-all-text`='Select "Any" (no channel filters)'
           )
-        )
+        ) %>% shinyInput_label_embed_caching_icon()
       ),
       conditionalPanel(
         condition = "input.obtype == 'scatt'",
         selectInput("scatt_satellite",
           label=getDefLabel("satellite"),
           choices=c()
-        )
+        ) %>% shinyInput_label_embed_caching_icon()
       ),
       conditionalPanel(
         condition = "input.obtype != 'satem'",
         selectInput("variable",
           label=getDefLabel("variable"),
           choices=c()
-        ),
+        ) %>% shinyInput_label_embed_caching_icon(),
         conditionalPanel(
           condition = "input.odbBase != 'ecma_sfc' &&
                        input.obtype!='scatt' &&
@@ -108,7 +121,7 @@ mainTab <- function() {fluidPage(
               `select-all-text`="Select All Listed",
               `deselect-all-text`='Select "Any" (no level filters)'
             )
-          ),
+          ) %>% shinyInput_label_embed_caching_icon(),
           hidden(materialSwitch(
             inputId='standardLevelsSwitch',
             label="List Standard Levels Only",
@@ -133,7 +146,7 @@ mainTab <- function() {fluidPage(
           `select-all-text`="Select All Listed",
           `deselect-all-text`='Select "Any" (no station filters)'
         )
-      ),
+      ) %>% shinyInput_label_embed_caching_icon(),
       pickerInput("stationSingle",
         label=getDefLabel("station"),
         choices=c(),
@@ -142,7 +155,7 @@ mainTab <- function() {fluidPage(
           `live-search`=TRUE,
           `none-selected-text`="No station selected"
         )
-      ),
+      ) %>% shinyInput_label_embed_caching_icon(),
       fluidRow(
         column(8, dateInput("date", "Date")),
         column(4, selectInput("cycle", label="Cycle", choices=c()))

@@ -93,34 +93,19 @@ getSelection <- function(session, inputId, choices, select=c("NORMAL", "ALL", "N
 }
 
 updateInputWrapper <- function(
-  updateFunc, session, inputId, label=NULL, choices=NULL, selected=NULL,
-  ..., finishedCaching=NULL
+  updateFunc, session, inputId, label=NULL, choices=NULL, selected=NULL, ...
 ){
   # Update an input using "updateFunc" while preserving the selected options(s)
-  # (if any) as well as keeping track of current choices.
 
-  # First, update label
-  if(!is.null(finishedCaching)) {
-    if(is.null(label)) label <- getDefLabel(inputId)
-    cachingExtraInfo <- NULL
-    if (!finishedCaching) {
-      cachingExtraInfo <- "(caching ongoing)"
-    } else if(length(choices)==0) {
-      cachingExtraInfo <- "(cache info not available)"
-    }
-    label <- paste(label, cachingExtraInfo)
-  }
-  updateFunc(session, inputId, label=label)
-
-  # Now, update choices and selected items (if needed)
   currentChoices <- session$userData$UiChoices[[inputId]]
   if(is.null(choices) || isTRUE(all.equal(choices, currentChoices))) {
+    # Nothing to be updated
     return(NULL)
   }
-
-  selection <- getSelection(session, inputId, choices)
-  updateFunc(session, inputId, choices=choices, selected=selection, ...)
   session$userData$UiChoices[[inputId]] <- choices
+
+  if(is.null(selected)) selected <- getSelection(session, inputId, choices)
+  updateFunc(session, inputId, label, choices, selected, ...)
 }
 
 updateSelectInputWrapper <- function(...) {

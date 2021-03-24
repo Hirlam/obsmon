@@ -177,10 +177,7 @@ observeEvent({
   cacheIsOngoing()
 }, {
   updateSelectInputWrapper(session, "cycle", choices=availableCycles())
-  updatePickerInputWrapper(
-    session, "cycles", choices=availableCycles(),
-    finishedCaching=selectedDtgsAreCached()
-  )
+  updatePickerInputWrapper(session, "cycles", choices=availableCycles())
 })
 
 
@@ -214,9 +211,7 @@ observeEvent({
     } else {
       newChoices <- combineCachedAndGeneralChoices(obtypes)
     }
-    updateSelectInputWrapper(
-      session, "obtype", choices=newChoices, finishedCaching=isCached
-    )
+    updateSelectInputWrapper(session, "obtype", choices=newChoices)
   }
 })
 
@@ -241,9 +236,7 @@ observeEvent(updateObnames(), {
   } else {
     newChoices <- combineCachedAndGeneralChoices(obnames)
   }
-  updateSelectInputWrapper(
-    session, "obname", choices=newChoices, finishedCaching=isCached
-  )
+  updateSelectInputWrapper(session, "obname", choices=newChoices)
 })
 
 # Update scatt satnames
@@ -262,10 +255,7 @@ observeEvent(updateScattSatellite(), {
   } else {
     newChoices <- combineCachedAndGeneralChoices(sats)
   }
-  updateSelectInputWrapper(
-    session, "scatt_satellite",
-    choices=newChoices, finishedCaching=isCached
-  )
+  updateSelectInputWrapper(session, "scatt_satellite", choices=newChoices)
 })
 
 # Update variable
@@ -295,9 +285,7 @@ observeEvent(updateVariables(), {
   } else {
     newChoices <- combineCachedAndGeneralChoices(variables)
   }
-  updateSelectInputWrapper(
-    session, "variable", choices=newChoices, finishedCaching=isCached
-  )
+  updateSelectInputWrapper(session, "variable", choices=newChoices)
 })
 
 # Update sensornames
@@ -315,9 +303,7 @@ observeEvent(updateSensor(), {
   } else {
     newChoices <- combineCachedAndGeneralChoices(sens)
   }
-  updateSelectInputWrapper(
-    session, "sensor", choices=newChoices, finishedCaching=isCached
-  )
+  updateSelectInputWrapper(session, "sensor", choices=newChoices)
 })
 
 # Update satellite choices for given sensor
@@ -336,9 +322,7 @@ observeEvent(updateSatellite(), {
   } else {
     newChoices <- combineCachedAndGeneralChoices(sats)
   }
-  updateSelectInputWrapper(
-    session, "satellite", choices=newChoices, finishedCaching=isCached
-  )
+  updateSelectInputWrapper(session, "satellite", choices=newChoices)
 })
 
 # Update channel choice for given satellite
@@ -362,10 +346,7 @@ observeEvent({
   channels()
   cacheIsOngoing()
 }, {
-  updatePickerInputWrapper(
-    session, "channels", choices=channels(),
-    finishedCaching=selectedDtgsAreCached()
-  )
+  updatePickerInputWrapper(session, "channels", choices=channels())
 })
 
 # Update plottype choices according to criteria
@@ -445,10 +426,7 @@ observeEvent(updateStations(), {
   # Lock input if there are no stations to be chosen
   shinyjs::toggleState(inputName, condition=length(stations)>0)
 
-  updatePickerInputWrapper(
-    session, inputName, choices=stations,
-    finishedCaching=selectedDtgsAreCached()
-  )
+  updatePickerInputWrapper(session, inputName, choices=stations)
 },
   ignoreNULL=TRUE
 )
@@ -507,8 +485,5 @@ observeEvent({
 }, {
     if(isTRUE(input$standardLevelsSwitch)) choices <- availableLevels()$obsmon
     else choices <- availableLevels()$all
-    updatePickerInputWrapper(
-      session, "levels", choices=choices,
-      finishedCaching=selectedDtgsAreCached()
-    )
+    updatePickerInputWrapper(session, "levels", choices=choices)
 }, ignoreNULL=FALSE)
