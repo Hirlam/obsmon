@@ -70,12 +70,14 @@ shinyjs::show("app-content")
 observeEvent(activeDb(), {
   on.exit(removeNotification("notifIDUpdDbs"))
 
-  dbMinDate <- Sys.Date(); dbMaxDate <- dbMinDate
-  single <- NA; start <- NA; end <- NA
-  errMsg <- ""
+  dbMinDate <- Sys.Date()
+  dbMaxDate <- dbMinDate
+  single <- NULL
+  start <- NULL
+  end <- NULL
+  errMsg <- character(0)
   hasDtgs <- activeDb()$hasDtgs
   if(isTRUE(hasDtgs)) {
-    errMsg <- character(0)
     dbDateRange <- activeDb()$dateRange
     dbMinDate <- dbDateRange[1]
     dbMaxDate <- dbDateRange[2]
