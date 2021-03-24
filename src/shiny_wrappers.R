@@ -155,10 +155,22 @@ grepFilter <- function(x, pattern=NULL, except=NULL) {
 disableShinyInputs <- function(input, pattern=NULL, except=NULL) {
   inpNames <- isolate(names(reactiveValuesToList(input)))
   inpNames <- grepFilter(inpNames, pattern, except)
-  for(inp in inpNames) shinyjs::disable(inp)
+  for(inp in inpNames) {
+    shinyjs::disable(inp)
+    if(inp %in% c("channels", "levels", "station", "stationSingle")) {
+      # We need to to this for pickerInputs. See issue
+      # <https://github.com/dreamRs/shinyWidgets/issues/341>
+      shinyjs::runjs(sprintf("$('#%s').selectpicker('refresh');", inp))
+    }
+  }
 }
 enableShinyInputs <- function(input, pattern=NULL, except=NULL) {
   inpNames <- isolate(names(reactiveValuesToList(input)))
   inpNames <- grepFilter(inpNames, pattern, except)
-  for(inp in inpNames) shinyjs::enable(inp)
+  for(inp in inpNames) {
+    shinyjs::enable(inp)
+    if(inp %in% c("channels", "levels", "station", "stationSingle")) {
+      shinyjs::runjs(sprintf("$('#%s').selectpicker('refresh');", inp))
+    }
+  }
 }
