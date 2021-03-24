@@ -392,7 +392,7 @@ observeEvent(updateStations(), {
 
   db <- req(activeDb())
   dates <- req(selectedDates())
-  cycles <- req(selectedCycles())
+  cycles <- selectedCycles()
   obname <- req(input$obname)
   variable <- req(input$variable)
 
@@ -419,6 +419,7 @@ selectedStations <- reactiveVal(character(0))
 observeEvent({
   input$station
   input$stationSingle
+  requireSingleStation()
 }, {
   if(allowChoosingStation()) {
     if(requireSingleStation()) selectedStations(input$stationSingle)
