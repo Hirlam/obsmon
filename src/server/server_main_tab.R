@@ -103,21 +103,19 @@ observeEvent(activeDb(), {
 }, ignoreNULL=FALSE)
 
 # Signal when required dateType of plot changes value
-dateTypeReqByPlotType <- reactiveVal("single")
+isMultiDtgInput <- reactiveVal(FALSE)
 observeEvent(input$plottype, {
   dateType <- tryCatch(
     plotTypesFlat[[req(input$plottype)]]$dateType,
     error=function(e) {"single"}
   )
-  dateTypeReqByPlotType(dateType)
+  isMultiDtgInput(isTRUE(dateType=="range"))
 })
 # Offer single date or dateRange input according to selected plottype
 # Used to be done via conditionalPanel in ui.R, but that was slow
-observeEvent(dateTypeReqByPlotType(), {
-  shinyjs::toggle("date", condition=dateTypeReqByPlotType()=="single")
-  shinyjs::toggle("dateRange", condition=dateTypeReqByPlotType()=="range")
-  shinyjs::toggle("cycle", condition=dateTypeReqByPlotType()=="single")
-  shinyjs::toggle("cycles", condition=dateTypeReqByPlotType()=="range")
+observeEvent(isMultiDtgInput(), {
+  shinyjs::toggle(selector=".single_dtg_inputs", condition=!isMultiDtgInput())
+  shinyjs::toggle(selector=".multiple_dtg_inputs", condition=isMultiDtgInput())
 })
 
 # Keep track of date(s), cycle(s) and consequently DTG(s) selected in the UI
@@ -126,9 +124,9 @@ selectedDates <- reactiveVal()
 observeEvent({
   input$date
   input$dateRange
-  dateTypeReqByPlotType()
+  isMultiDtgInput()
  }, {
-  if(dateTypeReqByPlotType() %in% c("range")) {
+  if(isMultiDtgInput()) {
     dates <- expandDateRange(input$dateRange[[1]], input$dateRange[[2]])
   } else {
     dates <- strftime(input$date, format="%Y%m%d")
@@ -139,9 +137,9 @@ selectedCycles <- reactiveVal()
 observeEvent({
   input$cycle
   input$cycles
-  dateTypeReqByPlotType()
+  isMultiDtgInput()
  }, {
-  if(dateTypeReqByPlotType() %in% c("range")) {
+  if(isMultiDtgInput()) {
     cycles <- input$cycles
     if(length(cycles)==0) cycles <- sprintf("%02d", 0:24)
   } else {

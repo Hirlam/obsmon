@@ -155,24 +155,34 @@ mainTab <- function() {fluidPage(
           `live-search`=TRUE,
           `none-selected-text`="No station selected"
         )
-      ) %>% shinyInput_label_embed_caching_icon(),
-      fluidRow(
-        column(8, dateInput("date", "Date")),
-        column(4, selectInput("cycle", label="Cycle", choices=c()))
-      ),
-      dateRangeInput("dateRange", "Date Range"),
-      pickerInput("cycles",
-        label=getDefLabel("cycles"),
-        choices=c(),
-        multiple=TRUE,
-        options=list(
-          `live-search`=TRUE,
-          `actions-box`=TRUE,
-          `none-selected-text`="Any",
-          `select-all-text`="Select All Listed",
-          `deselect-all-text`='Select "Any" (no cycle filters)'
+      )) %>% shinyInput_label_embed_caching_icon(),
+      tags$div(
+        class="single_dtg_inputs",
+        fluidRow(
+          column(8, dateInput("date", "Date")),
+          column(4, selectInput("cycle", label="Cycle", choices=c()))
         )
       ),
+      hidden(tags$div(
+        class="multiple_dtg_inputs",
+        fluidRow(
+          column(8, dateRangeInput("dateRange", "Date Range")),
+          column(4,
+            pickerInput("cycles",
+              label=getDefLabel("cycles"),
+              choices=c(),
+              multiple=TRUE,
+              options=list(
+                `live-search`=TRUE,
+                `actions-box`=TRUE,
+                `none-selected-text`="Any",
+                `select-all-text`="All",
+                `deselect-all-text`="Any"
+              )
+            )
+          )
+        )
+      )),
       conditionalPanel(
         condition = 'output[["showCacheOptions"]]=="TRUE"',
         fluidRow(
