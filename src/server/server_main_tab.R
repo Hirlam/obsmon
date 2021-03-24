@@ -62,7 +62,7 @@ activeDb <- reactive({
 }) %>% throttle(100)
 
 # Hide "Loading Obsmon" screen and show the app
-shinyjs::hide(id="loading-content", anim=FALSE, animType="fade")
+shinyjs::hide(id="loading-content", anim=FALSE)
 shinyjs::show("app-content")
 
 # DTG-related reactives and observers
