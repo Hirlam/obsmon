@@ -366,9 +366,7 @@ observeEvent({
   useStationSingle <- allowChoosingStation() && requireSingleStation()
   useStationMulti <- allowChoosingStation() && !requireSingleStation()
 
-  shinyjs::toggleState("station", condition=useStationMulti)
   shinyjs::toggleElement("station", condition=useStationMulti)
-  shinyjs::toggleState("stationSingle", condition=useStationSingle)
   shinyjs::toggleElement("stationSingle", condition=useStationSingle)
 })
 

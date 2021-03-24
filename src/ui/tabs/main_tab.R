@@ -135,7 +135,7 @@ mainTab <- function() {fluidPage(
         label=getDefLabel("plottype"),
         choices=c()
       ),
-      pickerInput("station",
+      hidden(pickerInput("station",
         label=getDefLabel("station"),
         choices=c(),
         multiple=TRUE,
@@ -146,8 +146,8 @@ mainTab <- function() {fluidPage(
           `select-all-text`="Select All Listed",
           `deselect-all-text`='Select "Any" (no station filters)'
         )
-      ) %>% shinyInput_label_embed_caching_icon(),
-      pickerInput("stationSingle",
+      )) %>% shinyInput_label_embed_caching_icon(),
+      hidden(pickerInput("stationSingle",
         label=getDefLabel("station"),
         choices=c(),
         multiple=FALSE,
