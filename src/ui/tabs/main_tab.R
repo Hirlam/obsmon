@@ -33,7 +33,7 @@ mainTab <- function() {fluidPage(
       selectizeInput("experiment",
         multiple=FALSE,
         label=getDefLabel("experiment"),
-        options=list(placeholder='Loading experiments...'),
+        options=list(placeholder='Select experiment'),
         choices=c()
       ),
       selectInput("odbBase",

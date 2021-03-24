@@ -60,7 +60,6 @@ pauseCaching <- reactive({
 })
 
 # Managing the queues of files to be cached/recached
-cacheIsOngoing <- reactiveVal(FALSE)
 observe({
   # Prepare and send batches of data files to be cached
   req(!cacheIsOngoing())
@@ -201,7 +200,7 @@ observeEvent({
 
 # Notify progress of caching
 observeEvent({
-  reloadInfoFromCache()
+  filesPendingCache()
   pauseCaching()
 },{
   cacheNotifId="guiCacheNotif"
@@ -230,4 +229,4 @@ observeEvent({
       id=cacheNotifId, ui=cacheProgressMsg, type="message", duration=NULL
     )
   }
-}, priority=-100)
+}, ignoreNULL=FALSE, priority=-100)
