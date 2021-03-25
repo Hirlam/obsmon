@@ -187,6 +187,7 @@ observeEvent(input$resetCacheConfirmationButton, {
 observe(
   shinyjs::toggleElement(
     selector=".caching_info_icon",
+    anim=TRUE, animType="fade",
     condition=cacheIsOngoing() && !pauseCaching() && !selectedDtgsAreCached()
   )
 )

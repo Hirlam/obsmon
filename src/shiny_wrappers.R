@@ -99,7 +99,6 @@ updateInputWrapper <- function(
   updateFunc, session, inputId, label=NULL, choices=NULL, selected=NULL, ...
 ){
   # Update an input using "updateFunc" while preserving the selected options(s)
-
   currentChoices <- session$userData$UiChoices[[inputId]]
   if(is.null(choices) || isTRUE(all.equal(choices, currentChoices))) {
     # Nothing to be updated
