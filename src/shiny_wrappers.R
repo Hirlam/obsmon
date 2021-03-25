@@ -107,6 +107,9 @@ updateInputWrapper <- function(
   }
   session$userData$UiChoices[[inputId]] <- choices
 
+  shinyjs::show(selector=".updating_info_icon")
+  on.exit(shinyjs::hide(selector=".updating_info_icon"))
+
   if(is.null(selected)) selected <- getSelection(session, inputId, choices)
   updateFunc(
     session, inputId, label=label, choices=choices, selected=selected, ...
