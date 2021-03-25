@@ -68,7 +68,7 @@ mainTab <- function() {fluidPage(
       ),
       conditionalPanel(
         condition = "input.odbBase!='ecma_sfc'",
-        selectInput("obtype",
+        pickerInput("obtype",
           label=getDefLabel("obtype"),
           choices=c()
         ) %>% shinyInput_label_embed_caching_icon()
@@ -77,18 +77,18 @@ mainTab <- function() {fluidPage(
         condition = "input.obtype!='satem' &&
                      input.obtype!='scatt' &&
                      input.obtype!='radar'",
-        selectInput("obname",
+        pickerInput("obname",
           label=getDefLabel("obname"),
           choices=c()
         ) %>% shinyInput_label_embed_caching_icon()
       ),
       conditionalPanel(
         condition = "input.obtype == 'satem'",
-        selectInput("sensor",
+        pickerInput("sensor",
           label=getDefLabel("sensor"),
           choices=c()
         ) %>% shinyInput_label_embed_caching_icon(),
-        selectInput("satellite",
+        pickerInput("satellite",
           label=getDefLabel("satellite"),
           choices=c()
         ) %>% shinyInput_label_embed_caching_icon(),
@@ -107,16 +107,16 @@ mainTab <- function() {fluidPage(
       ),
       conditionalPanel(
         condition = "input.obtype == 'scatt'",
-        selectInput("scatt_satellite",
+        pickerInput("scatt_satellite",
           label=getDefLabel("satellite"),
           choices=c()
         ) %>% shinyInput_label_embed_caching_icon()
       ),
       conditionalPanel(
         condition = "input.obtype != 'satem'",
-        selectInput("variable",
+        pickerInput("variable",
           label=getDefLabel("variable"),
-          choices=c()
+          choices=c(),
         ) %>% shinyInput_label_embed_caching_icon(),
         conditionalPanel(
           condition = "input.odbBase != 'ecma_sfc' &&

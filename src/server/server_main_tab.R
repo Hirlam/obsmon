@@ -207,7 +207,7 @@ observeEvent(reloadInfoFromCache(), {
       choices <- combineCachedAndGeneralChoices(obtypes)
     }
   }
-  updateSelectInputWrapper(session, "obtype", choices=choices)
+  updatePickerInputWrapper(session, "obtype", choices=choices)
 })
 
 # Update obnames
@@ -217,7 +217,7 @@ updateObnames <- reactive({
 }) %>% throttle(500)
 observeEvent(updateObnames(), {
   if(input$obtype=="satem") {
-    updateSelectInputWrapper(session, "obname", choices=c("satem"))
+    updatePickerInputWrapper(session, "obname", choices=c("satem"))
     return()
   }
   obsCategory <- input$obtype
@@ -230,7 +230,7 @@ observeEvent(updateObnames(), {
   } else {
     newChoices <- combineCachedAndGeneralChoices(obnames)
   }
-  updateSelectInputWrapper(session, "obname", choices=newChoices)
+  updatePickerInputWrapper(session, "obname", choices=newChoices)
 })
 
 # Update scatt satnames
@@ -248,7 +248,7 @@ observeEvent(updateScattSatellite(), {
   } else {
     newChoices <- combineCachedAndGeneralChoices(sats)
   }
-  updateSelectInputWrapper(session, "scatt_satellite", choices=newChoices)
+  updatePickerInputWrapper(session, "scatt_satellite", choices=newChoices)
 })
 
 # Update variable
@@ -278,7 +278,7 @@ observeEvent(updateVariables(), {
   } else {
     newChoices <- combineCachedAndGeneralChoices(variables)
   }
-  updateSelectInputWrapper(session, "variable", choices=newChoices)
+  updatePickerInputWrapper(session, "variable", choices=newChoices)
 })
 
 # Update sensornames
@@ -295,7 +295,7 @@ observeEvent(updateSensor(), {
   } else {
     newChoices <- combineCachedAndGeneralChoices(sens)
   }
-  updateSelectInputWrapper(session, "sensor", choices=newChoices)
+  updatePickerInputWrapper(session, "sensor", choices=newChoices)
 })
 
 # Update satellite choices for given sensor
@@ -314,7 +314,7 @@ observeEvent(updateSatellite(), {
   } else {
     newChoices <- combineCachedAndGeneralChoices(sats)
   }
-  updateSelectInputWrapper(session, "satellite", choices=newChoices)
+  updatePickerInputWrapper(session, "satellite", choices=newChoices)
 })
 
 # Update channel choice for given satellite
