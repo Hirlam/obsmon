@@ -6,8 +6,8 @@ shinyInput_label_embed_caching_icon <- function(tag, ...) {
       shiny::icon("spinner", class="fa-spin"), class="caching_info_icon"
     )) %>%
     bs_embed_popover(
-      title="Updating...",
-      content = "Caching ongoing. Values may change while this happens."
+      title="Caching ongoing...",
+      content="Choices may change while this happens",
       trigger="hover"
     ),
     ...
