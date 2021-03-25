@@ -3,21 +3,14 @@ shinyInput_label_embed_caching_icon <- function(tag, ...) {
   shinyInput_label_embed(
     tag,
     tags$span(
-      hidden(tags$span(
-        shiny::icon("spinner", class="fa-spin"), class="caching_info_icon"
-      )) %>%
-      bs_embed_popover(
-        title="Caching ongoing...",
-        content="Choices may change while this happens",
-        trigger="hover"
-      ),
-      hidden(tags$span(
-        shiny::icon("sync", class="fa-spin"), class="updating_info_icon"
-      )) %>%
-      bs_embed_tooltip(
-        title="Updating choices...",
-        trigger="hover"
-      )
+      hidden(shiny::icon("sync", class="fa-spin updating_info_icon")) %>%
+        bs_embed_tooltip(title="Updating choices...", trigger="hover"),
+      hidden(shiny::icon("spinner", class="fa-spin caching_info_icon")) %>%
+        bs_embed_popover(
+          title="Caching ongoing...",
+          content="Choices may change while this happens",
+          trigger="hover"
+        )
     ),
     ...
   )
