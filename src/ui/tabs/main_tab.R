@@ -151,14 +151,6 @@ mainTab <- function() {fluidPage(
           `deselect-all-text`='Select "Any" (no station filters)'
         )
       )) %>% shinyInput_label_embed_caching_icon(),
-      hidden(pickerInput("stationSingle",
-        label=getDefLabel("station"),
-        choices=c(),
-        options=list(
-          `live-search`=TRUE,
-          `none-selected-text`="No station selected"
-        )
-      )) %>% shinyInput_label_embed_caching_icon(),
       tags$div(
         class="single_dtg_inputs",
         fluidRow(

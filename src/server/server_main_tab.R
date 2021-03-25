@@ -357,18 +357,20 @@ allowChoosingStation <- reactive({
      plotSupportsChoosingStations(req(input$plottype), req(input$obtype))
    )
 })
-requireSingleStation <- reactive({
-   plotRequiresSingleStation(req(input$plottype))
-})
-observeEvent({
-  allowChoosingStation()
-  requireSingleStation()
-  }, {
-  useStationSingle <- allowChoosingStation() && requireSingleStation()
-  useStationMulti <- allowChoosingStation() && !requireSingleStation()
+observe(shinyjs::toggleElement("station", condition=allowChoosingStation()))
 
-  shinyjs::toggleElement("station", condition=useStationMulti)
-  shinyjs::toggleElement("stationSingle", condition=useStationSingle)
+requireSingleStation <- reactive(plotRequiresSingleStation(req(input$plottype)))
+observeEvent(requireSingleStation(), {
+  req(allowChoosingStation())
+  updatePickerInputWrapper(
+    session, "station",
+    selected=character(0),
+    options=list(
+      `max-options`=ifelse(requireSingleStation(), 1, FALSE),
+      `actions-box`=!requireSingleStation(),
+      `none-selected-text`=ifelse(requireSingleStation(), "Select station", "Any")
+    )
+  )
 })
 
 # Update stations
@@ -387,7 +389,6 @@ updateStations <- reactive({
 observeEvent(updateStations(), {
   if(!allowChoosingStation()) {
     updatePickerInputWrapper(session, "station", choices=c(""))
-    updatePickerInputWrapper(session, "stationSingle", choices=c(""))
   }
   req(allowChoosingStation())
 
@@ -405,29 +406,10 @@ observeEvent(updateStations(), {
   )
   stations <- putLabelsInStations(stations, obname)
 
-  inputName <- "station"
-  if(requireSingleStation()) inputName <- "stationSingle"
-
   # Lock input if there are no stations to be chosen
-  shinyjs::toggleState(inputName, condition=length(stations)>0)
+  shinyjs::toggleState("station", condition=length(stations)>0)
 
-  updatePickerInputWrapper(session, inputName, choices=stations)
-},
-  ignoreNULL=TRUE
-)
-# Keep track of selected stations
-selectedStations <- reactiveVal(character(0))
-observeEvent({
-  input$station
-  input$stationSingle
-  requireSingleStation()
-}, {
-  if(allowChoosingStation()) {
-    if(requireSingleStation()) selectedStations(input$stationSingle)
-    else selectedStations(input$station[trimws(input$station) != ""])
-  } else {
-    selectedStations(character(0))
-  }
+  updatePickerInputWrapper(session, "station", choices=stations)
 },
   ignoreNULL=TRUE
 )
@@ -438,7 +420,7 @@ observeEvent({
 availableLevels <- reactiveVal(NULL)
 updateLevels <- reactive({
   req(input$variable)
-  selectedStations()
+  input$station
   updateVariables()
   if(length(availableLevels())==0) invalidateLater(500)
 }) %>% throttle(500)
@@ -450,7 +432,7 @@ observeEvent({
   var <- input$variable
 
   stations <- NULL
-  if(allowChoosingStation()) stations <- selectedStations()
+  if(allowChoosingStation()) stations <- input$station
   levels <- getLevelsFromCache(
     db, selectedDates(), selectedCycles(), obname, var, stations
   )

@@ -100,10 +100,7 @@ updateInputWrapper <- function(
 ){
   # Update an input using "updateFunc" while preserving the selected options(s)
   currentChoices <- session$userData$UiChoices[[inputId]]
-  if(is.null(choices) || isTRUE(all.equal(choices, currentChoices))) {
-    # Nothing to be updated
-    return(NULL)
-  }
+  if(isTRUE(all.equal(choices, currentChoices))) return(NULL)
   session$userData$UiChoices[[inputId]] <- choices
 
   # Show/hide "sync" UI icon
