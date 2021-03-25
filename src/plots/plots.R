@@ -385,7 +385,7 @@ plotsBuildCriteria <- function(input) {
     res$excludeLevels <- excludeLevels
   }
 
-  if(obSupportsStationChoice(obname)) {
+  if(!is.null(input$plottype) && obSupportsStationChoice(obname)) {
     station <- input$station
     if(plotRequiresSingleStation(input$plottype)) station<-input$stationSingle
     if(is.null(station) || "" %in% station) station <- character(0)

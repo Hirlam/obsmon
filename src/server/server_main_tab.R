@@ -19,14 +19,14 @@ outputOptions(output, "showCacheOptions", suspendWhenHidden=FALSE)
 # Populate experiment choices
 exptChoices <- reactiveVal(getNewExptChoices())
 observeEvent(exptChoices(), {
-  updateSelectizeInput(session, "experiment", choices=exptChoices())
+  updatePickerInput(session, "experiment", choices=exptChoices())
 },
   ignoreNULL=FALSE
 )
 
 # Update dB choices for currently selected experiment
 observeEvent(input$experiment, {
-  expt <- expts[[input$experiment]]
+  expt <- req(expts[[input$experiment]])
   choices <- unlist(lapply(expt$dbs, function(db) {
     if(isTRUE(dir.exists(db$dir))) db$dbType
   }))
@@ -36,7 +36,7 @@ observeEvent(input$experiment, {
     choices <- c("ERROR: No usable database!"=" ")
     exptHasData <- FALSE
   }
-  updateSelectInputWrapper(session, "odbBase", choices=choices)
+  updatePickerInputWrapper(session, "odbBase", choices=choices)
 
   # Refresh expt choices to reflect their available/unavailable status
   if(!exptHasData) {
@@ -52,13 +52,15 @@ observeEvent(input$experiment, {
   exptChoices(newExptChoices)
 })
 activeDb <- reactive({
+  req(input$odbBase)
+  req(input$experiment)
   showNotification(id="notifIDUpdDbs",
     ui="Retrieving Db info...", type="message", duration=NULL
   )
   # Make sure user cannot request plots before we certify later on that there
   # are available DTGs
   disableShinyInputs(input, except=c("experiment", "odbBase", "^multiPlots*"))
-  expts[[input$experiment]]$dbs[[req(input$odbBase)]]
+  expts[[input$experiment]]$dbs[[input$odbBase]]
 }) %>% throttle(100)
 
 # Hide "Loading Obsmon" screen and show the app
@@ -144,7 +146,6 @@ observeEvent({
     if(length(cycles)==0) cycles <- sprintf("%02d", 0:24)
   } else {
     cycles <- input$cycle
-    if(trimws(cycles)=="") cycles <- NULL
   }
   selectedCycles(sort(cycles, decreasing=FALSE))
 })
@@ -170,7 +171,7 @@ availableCycles <- reactive({
   )
 })
 observe({
-  updateSelectInputWrapper(session, "cycle", choices=availableCycles())
+  updatePickerInputWrapper(session, "cycle", choices=availableCycles())
   updatePickerInputWrapper(session, "cycles", choices=availableCycles())
 })
 
@@ -346,7 +347,7 @@ updatePlotType <- reactive({
 }) %>% throttle(500)
 observeEvent(updatePlotType(), {
   choices <- applicablePlots(req(plotsBuildCriteria(input)))
-  updateSelectInputWrapper(session, "plottype", choices=choices)
+  updatePickerInputWrapper(session, "plottype", choices=choices)
 })
 
 # Decide whether to allow users to select stations

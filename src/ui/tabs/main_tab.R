@@ -48,15 +48,13 @@ mainTab <- function() {fluidPage(
     sidebarPanel(
       width=3,
       use_bs_popover(),
-      selectizeInput("experiment",
-        multiple=FALSE,
+      pickerInput("experiment",
         label=getDefLabel("experiment"),
-        options=list(placeholder='Select experiment'),
-        choices=c()
+        choices=c(),
+        options=list(`live-search`=TRUE, size=10)
       ),
-      selectInput("odbBase",
+      pickerInput("odbBase",
         label=getDefLabel("odbBase"),
-        multiple=FALSE,
         choices=c()
       ),
       conditionalPanel(
@@ -136,9 +134,10 @@ mainTab <- function() {fluidPage(
           ))
         )
       ),
-      selectInput("plottype",
+      pickerInput("plottype",
         label=getDefLabel("plottype"),
-        choices=c()
+        choices=c(),
+        options=list(`dropup-auto`=FALSE, `live-search`=TRUE, size=10)
       ),
       hidden(pickerInput("station",
         label=getDefLabel("station"),
@@ -155,7 +154,6 @@ mainTab <- function() {fluidPage(
       hidden(pickerInput("stationSingle",
         label=getDefLabel("station"),
         choices=c(),
-        multiple=FALSE,
         options=list(
           `live-search`=TRUE,
           `none-selected-text`="No station selected"
@@ -165,7 +163,7 @@ mainTab <- function() {fluidPage(
         class="single_dtg_inputs",
         fluidRow(
           column(8, dateInput("date", "Date")),
-          column(4, selectInput("cycle", label="Cycle", choices=c()))
+          column(4, pickerInput("cycle", label="Cycle", choices=c()))
         )
       ),
       hidden(tags$div(
