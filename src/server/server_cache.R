@@ -86,6 +86,13 @@ observe({
 )
 
 # Finally, cache (or recache) obs as new batches of file paths arrive
+cacheProcPID <- reactiveVal(-1)
+observeEvent(dataFilesForDbAndDtgs(), {
+  # Stop caching if the user changes activeDb or DTGs,
+  # so the relevant files for the new selection are cached instead.
+  req(cacheProcPID() > 0)
+  killProcessTree(cacheProcPID())
+})
 observeEvent({
   newBatchFilesToCache()
   newBatchFilesToRecache()
@@ -113,17 +120,28 @@ observeEvent({
     )
   )
 
-  cacheProcPID <- cacheProc$job$pid
+  thisCacheProcPID <- cacheProc$job$pid
+  cacheProcPID(thisCacheProcPID)
   session$onSessionEnded(function() {
     flog.debug(
       "Session finished: Making sure cache task with PID=%s is killed",
-      cacheProcPID
+      thisCacheProcPID
     )
-    killProcessTree(cacheProcPID)
+    killProcessTree(thisCacheProcPID)
   })
 
   then(cacheProc,
-    onRejected=function(e) {flog.error(e)}
+    onRejected=function(e) {
+      # Make sure we don't leave incomplete cache entries behind
+      flog.error(e)
+      futureCall(
+        FUN=rmObsFromCache,
+        args=list(
+          sourceDbPaths=fPaths,
+          cacheDir=db$cacheDir
+        )
+      )
+    }
   )
   finally(cacheProc, function() {
     if(isRecache) {
@@ -135,9 +153,10 @@ observeEvent({
       newCacheQueue <- cacheQueue[!(cacheQueue %in% fPaths)]
       filesPendingCache(newCacheQueue)
     }
-    killProcessTree(cacheProcPID)
+    killProcessTree(thisCacheProcPID)
     filesBeingCachedNow(NULL)
     cacheIsOngoing(FALSE)
+    cacheProcPID(-1)
   })
 
   # This NULL is necessary in order to prevent the future from blocking

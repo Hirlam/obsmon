@@ -28,6 +28,42 @@ createCacheFiles <- function(cacheDir, dbType=dbTypesRecognised, reset=FALSE){
   return(rtn)
 }
 
+
+removeCacheEntries <- function(sourceDbPath, cacheDir) {
+  db_type <- basename(dirname(dirname(sourceDbPath)))
+  dtg <- basename(dirname(sourceDbPath))
+  date <- as.integer(substr(dtg, start=1, stop=8))
+  cycle <- as.integer(substr(dtg, start=9, stop=10))
+
+  cacheDbConsCreatedHere <- c()
+  on.exit(for(dbCon in cacheDbConsCreatedHere) dbDisconnectWrapper(dbCon))
+
+  for(db_table in c('obsmon', 'usage')) {
+    cacheFileName <- sprintf('%s_%s.db', db_type, db_table)
+    flog.trace(
+      'Reset cache (%s): Erasing data for DTG=%d%02d in cache file %s.',
+      sourceDbPath, date, cycle, cacheFileName
+    )
+    err_msg <- sprintf(
+      "Recache (%s): DTG=%d%02d may not have been reset in cache file %s",
+      sourceDbPath, date, cycle, cacheFileName
+    )
+
+    cacheFilePath <- file.path(cacheDir, cacheFileName)
+    tryCatch({
+      con_cache <- dbConnectWrapper(cacheFilePath)
+      cacheDbConsCreatedHere <- c(cacheDbConsCreatedHere, con_cache)
+      dbExecute(con_cache, sprintf(
+        "DELETE FROM cycles WHERE date=%d AND cycle=%d", date, cycle
+      ))
+    },
+      error=function(e) {flog.warn(err_msg); flog.debug(e)},
+      warning=function(w) {flog.warn(err_msg); flog.debug(w)}
+    )
+  }
+}
+
+
 cacheObsFromFile <- function(sourceDbPath, cacheDir, replaceExisting=FALSE) {
   ###################################
   # Main routine to perform caching #
@@ -99,27 +135,7 @@ cacheObsFromFile <- function(sourceDbPath, cacheDir, replaceExisting=FALSE) {
     ctimeDTGEntry <- as.numeric(ctimeDTGEntry$cdate[1])
     entryExpired <- mtimeSourceDb > ctimeDTGEntry
     overwriteCacheForDTG <- replaceExisting || isTRUE(entryExpired)
-    if(overwriteCacheForDTG) {
-      flog.info(sprintf(
-        'Recaching (%s): Resetting data for DTG=%d%02d in cache file %s.',
-        sourceDbPath, date, cycle, cacheFileName
-      ))
-      removalSuccess <- tryCatch({
-          dbExecute(con_cache, sprintf(
-            "DELETE FROM cycles WHERE date=%d AND cycle=%d", date, cycle
-          ))
-          TRUE
-        },
-        error=function(e) {flog.debug(e); FALSE},
-        warning=function(w) {flog.debug(w); FALSE}
-      )
-      if(!removalSuccess) {
-        flog.warn(
-          "Recache (%s): DTG=%d%02d may not have been reset in cache file %s",
-          sourceDbPath, date, cycle, cacheFileName
-        )
-      }
-    }
+    if(overwriteCacheForDTG) removeCacheEntries(sourceDbPath, cacheDir)
 
     # Do not attempt to cache stuff that has already been cached
     alreadyCached <- tryCatch({
@@ -303,6 +319,16 @@ putObsInCache <- function(sourceDbPaths, cacheDir, replaceExisting=FALSE) {
       ),
       warning=function(w) flog.warn("putObsInCache (%s): %s",sourceDbPath, w),
       error=function(e) flog.error("putObsInCache (%s): %s", sourceDbPath, e)
+    )
+  }
+}
+
+rmObsFromCache <- function(sourceDbPaths, cacheDir) {
+  for(sourceDbPath in sourceDbPaths) {
+    tryCatch(
+      removeCacheEntries(sourceDbPath, cacheDir=cacheDir),
+      warning=function(w) flog.warn("rmObsFromCache (%s): %s",sourceDbPath, w),
+      error=function(e) flog.error("rmObsFromCache (%s): %s", sourceDbPath, e)
     )
   }
 }
