@@ -3,7 +3,7 @@ shinyInput_label_embed_caching_icon <- function(tag, ...) {
   shinyInput_label_embed(
     tag,
     tags$span(
-      shiny::icon("sync", class="fa-spin"), class="caching_info_icon"
+      shiny::icon("spinner", class="fa-spin"), class="caching_info_icon"
     ) %>%
     bs_embed_popover(
       title="Updating...",
