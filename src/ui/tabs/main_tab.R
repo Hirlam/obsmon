@@ -8,11 +8,11 @@ shinyInput_label_embed_caching_icon <- function(tag, ...) {
     bs_embed_popover(
       title="Updating...",
       content = "Caching ongoing. Values may change while this happens."
+      trigger="hover"
     ),
     ...
   )
 }
-use_bs_popover()
 
 cacheButtonsGeneralTooltipMsg <- paste0(
   "Use the buttons below only if you really need to make changes to the ",
@@ -45,6 +45,7 @@ mainTab <- function() {fluidPage(
   sidebarLayout(
     sidebarPanel(
       width=3,
+      use_bs_popover(),
       selectizeInput("experiment",
         multiple=FALSE,
         label=getDefLabel("experiment"),
