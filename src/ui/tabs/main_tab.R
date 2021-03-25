@@ -2,7 +2,9 @@ shinyInput_label_embed_caching_icon <- function(tag, ...) {
   # Add an icon & popover to signal that caching is ongoing
   shinyInput_label_embed(
     tag,
-    tags$span(shiny::icon("sync"), class="caching_info_icon") %>%
+    tags$span(
+      shiny::icon("sync", class="fa-spin"), class="caching_info_icon"
+    ) %>%
     bs_embed_popover(
       title="Updating...",
       content = "Caching ongoing. Values may change while this happens."
