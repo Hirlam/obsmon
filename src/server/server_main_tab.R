@@ -354,7 +354,7 @@ observeEvent(updatePlotType(), {
 allowChoosingStation <- reactive({
    return(
      obSupportsStationChoice(req(input$obname)) &&
-     plotSupportsChoosingStations(req(input$plottype), req(input$obtype))
+     plotSupportsChoosingStations(req(input$plottype))
    )
 })
 observe(shinyjs::toggleElement("station", condition=allowChoosingStation()))

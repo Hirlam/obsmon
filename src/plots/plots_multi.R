@@ -485,10 +485,9 @@ multiPlotsValidateConfig <- function(config) {
       }
       # (ii) Parsing station choices
       stationsConfig <- pc$stations[[obname]]
-      obtype <- getAttrFromMetadata("category", obname=obname)
       allowStationChoice <- (
         obSupportsStationChoice(obname) &&
-        plotSupportsChoosingStations(pc$plotType, obtype)
+        plotSupportsChoosingStations(pc$plotType)
       )
       if(allowStationChoice) {
         if(!is.null(stationsConfig) && !is.list(stationsConfig)) {

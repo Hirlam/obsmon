@@ -181,7 +181,7 @@ applicablePlots <- function(criteria) {
   plots
 }
 
-plotSupportsChoosingStations <- function(plottype=NULL, obtype=NULL) {
+plotSupportsChoosingStations <- function(plottype=NULL) {
   if(is.null(plottype)) return(FALSE)
   infoAboutSelectedPlotType <- plotTypesFlat[[plottype]]
   query <- infoAboutSelectedPlotType$queryStub
