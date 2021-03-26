@@ -51,6 +51,7 @@ observeEvent(input$experiment, {
   }
   exptChoices(newExptChoices)
 })
+
 activeDb <- reactive({
   req(input$odbBase)
   req(input$experiment)
@@ -63,9 +64,6 @@ activeDb <- reactive({
   expts[[input$experiment]]$dbs[[input$odbBase]]
 }) %>% throttle(100)
 
-# Hide "Loading Obsmon" screen and show the app
-shinyjs::hide(id="loading-content", anim=FALSE)
-shinyjs::show("app-content")
 
 # DTG-related reactives and observers
 # Update available choices of dates when changing active database
@@ -183,7 +181,7 @@ cacheIsOngoing <- reactiveVal(FALSE)
 reloadInfoFromCache <- reactive({
   activeDb()
   selectedDtgs()
-  # Use "req" to react only if not writing to cache files
+  # Use "req" to react only after finished writing to cache files
   return(req(!cacheIsOngoing()))
 }) %>% throttle(1000)
 
@@ -255,8 +253,8 @@ observeEvent(updateScattSatellite(), {
 # Update variable
 updateVariables <- reactive({
   req(input$obtype!="satem")
-  updateObnames()
   req(input$obname)
+  reloadInfoFromCache()
   if(input$obtype == 'scatt') {
     updateScattSatellite()
     req(input$scatt_satellite)
@@ -405,14 +403,8 @@ observeEvent(updateStations(), {
       db, dates, cycles, obname, variable, satname=satname
   )
   stations <- putLabelsInStations(stations, obname)
-
-  # Lock input if there are no stations to be chosen
-  shinyjs::toggleState("station", condition=length(stations)>0)
-
   updatePickerInputWrapper(session, "station", choices=stations)
-},
-  ignoreNULL=TRUE
-)
+})
 
 # Update level choices for selected station(s) and variable
 # Defining availableLevels as an eventReactive was causing an issue
@@ -422,6 +414,7 @@ updateLevels <- reactive({
   req(input$variable)
   input$station
   updateVariables()
+  reloadInfoFromCache()
   if(length(availableLevels())==0) invalidateLater(500)
 }) %>% throttle(500)
 observeEvent({
@@ -444,11 +437,10 @@ observeEvent({
   shinyjs::toggle("standardLevelsSwitch", condition=showStandardLevelsToggle)
 
   availableLevels(levels)
-}, ignoreNULL=FALSE, ignoreInit=FALSE)
+}, ignoreNULL=FALSE)
 
 observeEvent({
   availableLevels()
-  reloadInfoFromCache()
   input$standardLevelsSwitch
 }, {
     if(isTRUE(input$standardLevelsSwitch)) choices <- availableLevels()$obsmon

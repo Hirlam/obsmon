@@ -194,6 +194,8 @@ observeEvent(input$resetCacheConfirmationButton, {
   status <- createCacheFiles(cacheDir=req(activeDb()$cacheDir), reset=TRUE)
   removeModal()
   if(status==0) {
+    # Trigger a re-cache after erasing
+    recacheRequested(TRUE)
     showModal(
       modalDialog("The experiment cache has been reset", easyClose=TRUE)
     )
@@ -216,14 +218,11 @@ observeEvent({
   cacheIsOngoing()
   reloadInfoFromCache()
   pauseCaching()
+  recacheRequested()
 },{
   cacheNotifId <- "guiCacheNotif"
-  if(isTRUE(selectedDtgsAreCached())) {
-    removeNotification(cacheNotifId)
-  } else if (pauseCaching()) {
-    showNotification(
-      id=cacheNotifId, ui="Caching paused", duration=2
-    )
+  if (pauseCaching()) {
+    showNotification(id=cacheNotifId, ui="Caching paused", duration=2)
   } else {
     totalNFiles <- length(req(dataFilesForDbAndDtgs()))
     cacheProgressMsg <- tryCatch({
@@ -243,4 +242,5 @@ observeEvent({
       id=cacheNotifId, ui=cacheProgressMsg, type="message", duration=NULL
     )
   }
+  if(nCachedFiles==totalNFiles) removeNotification(cacheNotifId)
 }, ignoreNULL=FALSE, priority=-100)
