@@ -69,7 +69,6 @@ activeDb <- reactive({
 # Update available choices of dates when changing active database
 observeEvent(activeDb(), {
   on.exit(removeNotification("notifIDUpdDbs"))
-
   dbMinDate <- Sys.Date()
   dbMaxDate <- dbMinDate
   single <- NULL

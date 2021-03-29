@@ -221,26 +221,35 @@ observeEvent({
   recacheRequested()
 },{
   cacheNotifId <- "guiCacheNotif"
-  if (pauseCaching()) {
-    showNotification(id=cacheNotifId, ui="Caching paused", duration=2)
-  } else {
-    totalNFiles <- length(req(dataFilesForDbAndDtgs()))
-    cacheProgressMsg <- tryCatch({
-      nFilesPendingCache <- length(unique(c(
-        filesPendingCache(), filesPendingRecache())
-      ))
-      nCachedFiles <- totalNFiles - nFilesPendingCache
-      sprintf(
-        "Caching selected DTGs: %d%%",
-        round(100.0 * nCachedFiles / totalNFiles)
+  totalNFiles <- tryCatch(
+    length(dataFilesForDbAndDtgs()),
+    error=function(e) NULL
+  )
+  nFilesPendingCache <- tryCatch(
+    length(unique(c(filesPendingCache(), filesPendingRecache()))),
+    error=function(e) NULL
+  )
+  nCachedFiles <- tryCatch(
+    totalNFiles - nFilesPendingCache,
+    error=function(e) NULL
+  )
+
+  if (isTRUE(cacheIsOngoing())) {
+    if (isTRUE(pauseCaching())) {
+      showNotification(id=cacheNotifId, ui="Caching paused", duration=2)
+    } else {
+      cacheProgressMsg <- tryCatch(
+        sprintf(
+          "Caching selected DTGs: %d%%",
+          round(100.0 * nCachedFiles / totalNFiles)
+        ),
+        error=function(e) {return("Caching selected DTGs...")}
       )
-    },
-      warning=function(w) {return("Caching selected DTGs...")},
-      error=function(e) {return("Caching selected DTGs...")}
-    )
-    showNotification(
-      id=cacheNotifId, ui=cacheProgressMsg, type="message", duration=NULL
-    )
+      showNotification(
+        id=cacheNotifId, ui=cacheProgressMsg, type="message", duration=NULL
+      )
+    }
   }
-  if(nCachedFiles==totalNFiles) removeNotification(cacheNotifId)
+
+  if(isTRUE(nCachedFiles==totalNFiles)) removeNotification(cacheNotifId)
 }, ignoreNULL=FALSE, priority=-100)
