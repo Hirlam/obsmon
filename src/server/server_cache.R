@@ -60,7 +60,6 @@ pauseCaching <- reactive({
 })
 
 # Managing the queues of files to be cached/recached
-cacheIsOngoing <- reactiveVal(FALSE)
 observe({
   # Prepare and send batches of data files to be cached
   req(!cacheIsOngoing())
@@ -87,6 +86,13 @@ observe({
 )
 
 # Finally, cache (or recache) obs as new batches of file paths arrive
+cacheProcPID <- reactiveVal(-1)
+observeEvent(dataFilesForDbAndDtgs(), {
+  # Stop caching if the user changes activeDb or DTGs,
+  # so the relevant files for the new selection are cached instead.
+  req(cacheProcPID() > 0)
+  killProcessTree(cacheProcPID())
+})
 observeEvent({
   newBatchFilesToCache()
   newBatchFilesToRecache()
@@ -114,17 +120,28 @@ observeEvent({
     )
   )
 
-  cacheProcPID <- cacheProc$job$pid
+  thisCacheProcPID <- cacheProc$job$pid
+  cacheProcPID(thisCacheProcPID)
   session$onSessionEnded(function() {
     flog.debug(
       "Session finished: Making sure cache task with PID=%s is killed",
-      cacheProcPID
+      thisCacheProcPID
     )
-    killProcessTree(cacheProcPID)
+    killProcessTree(thisCacheProcPID)
   })
 
   then(cacheProc,
-    onRejected=function(e) {flog.error(e)}
+    onRejected=function(e) {
+      # Make sure we don't leave incomplete cache entries behind
+      flog.error(e)
+      futureCall(
+        FUN=rmObsFromCache,
+        args=list(
+          sourceDbPaths=fPaths,
+          cacheDir=db$cacheDir
+        )
+      )
+    }
   )
   finally(cacheProc, function() {
     if(isRecache) {
@@ -136,9 +153,10 @@ observeEvent({
       newCacheQueue <- cacheQueue[!(cacheQueue %in% fPaths)]
       filesPendingCache(newCacheQueue)
     }
-    killProcessTree(cacheProcPID)
+    killProcessTree(thisCacheProcPID)
     filesBeingCachedNow(NULL)
     cacheIsOngoing(FALSE)
+    cacheProcPID(-1)
   })
 
   # This NULL is necessary in order to prevent the future from blocking
@@ -176,6 +194,8 @@ observeEvent(input$resetCacheConfirmationButton, {
   status <- createCacheFiles(cacheDir=req(activeDb()$cacheDir), reset=TRUE)
   removeModal()
   if(status==0) {
+    # Trigger a re-cache after erasing
+    recacheRequested(TRUE)
     showModal(
       modalDialog("The experiment cache has been reset", easyClose=TRUE)
     )
@@ -184,50 +204,52 @@ observeEvent(input$resetCacheConfirmationButton, {
   }
 })
 
-# Flagging that it's time to read info from cache once a batch of
-# files to be cached has been processed processed
-reloadInfoFromCache <- reactive({
-  req(!cacheIsOngoing())
-  req(!pauseCaching())
-}) %>% throttle(1000)
-# Keep track of whether selected DTGs are cached or not
-observeEvent({
-  activeDb()
-  selectedDtgs()
-  reloadInfoFromCache()
-},{
-  selectedDtgsAreCached(dtgsAreCached(req(activeDb()),req(selectedDtgs())))
-})
-
 # Notify progress of caching
+observe(
+  shinyjs::toggleElement(
+    selector=".caching_info_icon",
+    anim=TRUE, animType="fade",
+    condition=cacheIsOngoing() && !pauseCaching() && !selectedDtgsAreCached()
+  )
+)
+
 observeEvent({
+  filesPendingCache()
+  cacheIsOngoing()
   reloadInfoFromCache()
   pauseCaching()
+  recacheRequested()
 },{
-  cacheNotifId="guiCacheNotif"
-  if(isTRUE(selectedDtgsAreCached())) {
-    removeNotification(cacheNotifId)
-  } else if (pauseCaching()) {
-    showNotification(
-      id=cacheNotifId, ui="Caching paused", duration=2
-    )
-  } else {
-    totalNFiles <- length(req(dataFilesForDbAndDtgs()))
-    cacheProgressMsg <- tryCatch({
-      nFilesPendingCache <- length(unique(c(
-        filesPendingCache(), filesPendingRecache())
-      ))
-      nCachedFiles <- totalNFiles - nFilesPendingCache
-      sprintf(
-        "Caching selected DTGs: %d%%",
-        round(100.0 * nCachedFiles / totalNFiles)
+  cacheNotifId <- "guiCacheNotif"
+  totalNFiles <- tryCatch(
+    length(dataFilesForDbAndDtgs()),
+    error=function(e) NULL
+  )
+  nFilesPendingCache <- tryCatch(
+    length(unique(c(filesPendingCache(), filesPendingRecache()))),
+    error=function(e) NULL
+  )
+  nCachedFiles <- tryCatch(
+    totalNFiles - nFilesPendingCache,
+    error=function(e) NULL
+  )
+
+  if (isTRUE(cacheIsOngoing())) {
+    if (isTRUE(pauseCaching())) {
+      showNotification(id=cacheNotifId, ui="Caching paused", duration=2)
+    } else {
+      cacheProgressMsg <- tryCatch(
+        sprintf(
+          "Caching selected DTGs: %d%%",
+          round(100.0 * nCachedFiles / totalNFiles)
+        ),
+        error=function(e) {return("Caching selected DTGs...")}
       )
-    },
-      warning=function(w) {return("Caching selected DTGs...")},
-      error=function(e) {return("Caching selected DTGs...")}
-    )
-    showNotification(
-      id=cacheNotifId, ui=cacheProgressMsg, type="message", duration=NULL
-    )
+      showNotification(
+        id=cacheNotifId, ui=cacheProgressMsg, type="message", duration=NULL
+      )
+    }
   }
-}, priority=-100)
+
+  if(isTRUE(nCachedFiles==totalNFiles)) removeNotification(cacheNotifId)
+}, ignoreNULL=FALSE, priority=-100)

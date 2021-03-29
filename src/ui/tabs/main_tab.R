@@ -1,3 +1,20 @@
+shinyInput_label_embed_caching_icon <- function(tag, ...) {
+  # Add an icon & popover to signal that caching is ongoing
+  shinyInput_label_embed(
+    tag,
+    tags$span(
+      hidden(shiny::icon("sync", class="fa-spin updating_info_icon")) %>%
+        bs_embed_tooltip(title="Updating choices...", trigger="hover"),
+      hidden(shiny::icon("spinner", class="fa-spin caching_info_icon")) %>%
+        bs_embed_popover(
+          title="Caching ongoing...",
+          content="Choices may change while this happens",
+          trigger="hover"
+        )
+    ),
+    ...
+  )
+}
 
 cacheButtonsGeneralTooltipMsg <- paste0(
   "Use the buttons below only if you really need to make changes to the ",
@@ -30,121 +47,137 @@ mainTab <- function() {fluidPage(
   sidebarLayout(
     sidebarPanel(
       width=3,
-      selectizeInput("experiment",
-        multiple=FALSE,
+      use_bs_popover(),
+      pickerInput("experiment",
         label=getDefLabel("experiment"),
-        options=list(placeholder='Loading experiments...'),
-        choices=c()
+        choices=c(),
+        options=list(`live-search`=TRUE, size=10)
       ),
-      selectInput("odbBase",
+      pickerInput("odbBase",
         label=getDefLabel("odbBase"),
-        multiple=FALSE,
         choices=c()
       ),
       conditionalPanel(
         condition = "input.odbBase!='ecma_sfc'",
-        selectInput("obtype",
+        pickerInput("obtype",
           label=getDefLabel("obtype"),
-          choices=c(),
-          selectize=FALSE
-        )
+          choices=c()
+        ) %>% shinyInput_label_embed_caching_icon()
       ),
       conditionalPanel(
         condition = "input.obtype!='satem' &&
                      input.obtype!='scatt' &&
                      input.obtype!='radar'",
-        selectInput("obname",
+        pickerInput("obname",
           label=getDefLabel("obname"),
-          choices=c(),
-          selectize=FALSE
-        )
+          choices=c()
+        ) %>% shinyInput_label_embed_caching_icon()
       ),
       conditionalPanel(
         condition = "input.obtype == 'satem'",
-        selectInput("sensor",
+        pickerInput("sensor",
           label=getDefLabel("sensor"),
-          choices=c(),
-          selectize=FALSE
-        ),
-        selectInput("satellite",
+          choices=c()
+        ) %>% shinyInput_label_embed_caching_icon(),
+        pickerInput("satellite",
           label=getDefLabel("satellite"),
-          choices=c(),
-          selectize=FALSE
-        ),
-        selectInput("channels",
-          tags$div(getDefLabel("channels"),
-            "(Select",
-            actionLink("channelsSelectAny", "any"),
-            ")"
-          ),
+          choices=c()
+        ) %>% shinyInput_label_embed_caching_icon(),
+        pickerInput("channels",
+          label=getDefLabel("channels"),
           choices=c(),
           multiple=TRUE,
-          selectize=FALSE
-        )
+          options=list(
+            `live-search`=TRUE,
+            `actions-box`=TRUE,
+            `none-selected-text`="Any",
+            `select-all-text`="Select All Listed",
+            `deselect-all-text`='Select "Any" (no channel filters)'
+          )
+        ) %>% shinyInput_label_embed_caching_icon()
       ),
       conditionalPanel(
         condition = "input.obtype == 'scatt'",
-        selectInput("scatt_satellite",
+        pickerInput("scatt_satellite",
           label=getDefLabel("satellite"),
-          choices=c(),
-          selectize=FALSE
-        )
+          choices=c()
+        ) %>% shinyInput_label_embed_caching_icon()
       ),
       conditionalPanel(
         condition = "input.obtype != 'satem'",
-        selectInput("variable",
+        pickerInput("variable",
           label=getDefLabel("variable"),
           choices=c(),
-          selectize=FALSE
-        ),
+        ) %>% shinyInput_label_embed_caching_icon(),
         conditionalPanel(
           condition = "input.odbBase != 'ecma_sfc' &&
                        input.obtype!='scatt' &&
                        input.obtype!='surface'",
-          selectInput("levels",
-            tags$div(getDefLabel("levels"),
-              "(Select",
-              actionLink("levelsSelectStandard", "standard"),
-              actionLink("levelsSelectAny", "any"),
-              ")"
-            ),
+          pickerInput("levels",
+            label=getDefLabel("levels"),
             choices=c(),
             multiple=TRUE,
-            selectize=FALSE
-          )
+            options=list(
+              `live-search`=TRUE,
+              `actions-box`=TRUE,
+              `none-selected-text`="Any",
+              `select-all-text`="Select All Listed",
+              `deselect-all-text`='Select "Any" (no level filters)'
+            )
+          ) %>% shinyInput_label_embed_caching_icon(),
+          hidden(materialSwitch(
+            inputId='standardLevelsSwitch',
+            label="List Standard Levels Only",
+            status="warning",
+            inline=TRUE,
+            right=TRUE
+          ))
         )
       ),
-      selectInput("plottype",
+      pickerInput("plottype",
         label=getDefLabel("plottype"),
-        choices=c()
+        choices=c(),
+        options=list(`dropup-auto`=FALSE, `live-search`=TRUE, size=10)
       ),
-      selectInput("station",
+      hidden(pickerInput("station",
         label=getDefLabel("station"),
         choices=c(),
         multiple=TRUE,
-        selectize=FALSE
+        options=list(
+          `live-search`=TRUE,
+          `actions-box`=TRUE,
+          `none-selected-text`="Any",
+          `select-all-text`="Select All Listed",
+          `deselect-all-text`='Select "Any" (no station filters)'
+        )
+      )) %>% shinyInput_label_embed_caching_icon(),
+      tags$div(
+        class="single_dtg_inputs",
+        fluidRow(
+          column(8, dateInput("date", "Date")),
+          column(4, pickerInput("cycle", label="Cycle", choices=c()))
+        )
       ),
-      selectInput("stationSingle",
-        label=getDefLabel("station"),
-        choices=c(),
-        multiple=FALSE,
-        selectize=FALSE
-      ),
-      fluidRow(
-        column(8, dateInput("date", "Date")),
-        column(4, selectInput("cycle", label="Cycle", choices=c()))
-      ),
-      dateRangeInput("dateRange", "Date Range"),
-      checkboxGroupInput("cycles",
-        label=tags$div("Cycles",
-          "(Select",
-          actionLink("cyclesSelectAll", "all"),
-          actionLink("cyclesSelectAny", "any"),
-          ")"
-        ),
-        inline=TRUE,
-        choices=c()
-      ),
+      hidden(tags$div(
+        class="multiple_dtg_inputs",
+        fluidRow(
+          column(8, dateRangeInput("dateRange", "Date Range")),
+          column(4,
+            pickerInput("cycles",
+              label=getDefLabel("cycles"),
+              choices=c(),
+              multiple=TRUE,
+              options=list(
+                `live-search`=TRUE,
+                `actions-box`=TRUE,
+                `none-selected-text`="Any",
+                `select-all-text`="All",
+                `deselect-all-text`="Any"
+              )
+            )
+          )
+        )
+      )),
       conditionalPanel(
         condition = 'output[["showCacheOptions"]]=="TRUE"',
         fluidRow(

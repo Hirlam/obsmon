@@ -25,6 +25,7 @@ tmp/
 .installer_local_R-libs/
 batch_mode_plots/
 Rprof.out
+failed_install*.log
 
 # Stuff we do NOT want to ignore
 !config.toml.example

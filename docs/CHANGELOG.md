@@ -4,6 +4,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com)
 and this project adheres to [Semantic Versioning](http://semver.org).
 
+## [Unreleased]
+### Added
+- Button to toggle "show only standard levels" (when applicable)
+- Icons to notify about UI field values being cached or refreshed
+### Changed
+- Searchable fields in main tab
+- Style of UI fields "Cycles", "Levels", "Channels"
+- Interrupt cache if user changes experiment/database/DTG, and start
+  caching the relevant files for the new selection.
+### Fixed
+- Missing bias panel in "Station Diagnostics Plot" if variable != "apd"
+- Missing error message when server cannot be created
+
 
 ## [4.0.0] 2021-02-25
 ### Added

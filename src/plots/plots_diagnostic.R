@@ -165,7 +165,8 @@ comparisonPlotStatic <- function(p, plotRequest, plotData) {
     compDf["an"] <- plotData[["obsvalue"]]-plotData[["an_dep"]]
   }
   compDf$panel <- "Comparison"
-  if (plotRequest$criteria$varname=="apd") {
+
+  if ("biascrl" %in% names(plotData)) {
     bias <- plotData[["biascrl"]]
     compDf["rawobs"] <- plotData[["obsvalue"]]+bias
     biasDf <- data.frame("Date"=plotData[["DTG"]],

@@ -181,7 +181,7 @@ applicablePlots <- function(criteria) {
   plots
 }
 
-plotSupportsChoosingStations <- function(plottype=NULL, obtype=NULL) {
+plotSupportsChoosingStations <- function(plottype=NULL) {
   if(is.null(plottype)) return(FALSE)
   infoAboutSelectedPlotType <- plotTypesFlat[[plottype]]
   query <- infoAboutSelectedPlotType$queryStub
@@ -387,7 +387,6 @@ plotsBuildCriteria <- function(input) {
 
   if(obSupportsStationChoice(obname)) {
     station <- input$station
-    if(plotRequiresSingleStation(input$plottype)) station<-input$stationSingle
     if(is.null(station) || "" %in% station) station <- character(0)
     res$station <- station
   }

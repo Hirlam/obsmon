@@ -11,6 +11,7 @@ runAppHandlingBusyPort <- function(
   nAtt <- 0
   lisOnMsgStart <- 'Listening on '
   lisOnMsgMarker <- "------------------------------------"
+  error_msg <- NULL
   while (!success & (nAtt<maxNAtt)) {
     tryCatch(
       {
@@ -24,7 +25,8 @@ runAppHandlingBusyPort <- function(
         runApp(appDir, launch.browser=launch.browser, port=port, ...)
         success <- TRUE
       },
-      error=function(w) {
+      error=function(e) {
+        error_msg <<- e
         flog.warn(paste('Failed to create server using port', port, sep=" "))
         port <<- sample(1024:65535, 1)
         lisOnMsgStart <<- "Port updated: Listening on "
@@ -35,8 +37,9 @@ runAppHandlingBusyPort <- function(
   }
 
   if(!success) {
-    msg <- paste("Failed to create server after", nAtt, "attempts.\n",sep=" ")
-    msg <- paste(msg, "Stopping now.\n", sep=" ")
+    msg <- paste("\nFailed to create server after", nAtt, "attempts.\n")
+    msg <- paste(msg, "Possible reason: ", error_msg, sep="\n")
+    msg <- paste(msg, "Stopping now.", sep="\n")
     stop(msg)
   }
 }
@@ -77,7 +80,7 @@ getSelection <- function(session, inputId, choices, select=c("NORMAL", "ALL", "N
            validChoices <- unlist(choices, use.names=FALSE)
            validSelections <- oldSelection %in% validChoices
            if (is.null(oldSelection)) {
-             choices
+             NULL
            } else if (any(validSelections)) {
              oldSelection[validSelections]
            } else {
@@ -92,60 +95,33 @@ getSelection <- function(session, inputId, choices, select=c("NORMAL", "ALL", "N
          })
 }
 
-updateSelectInputWrapper <- function(
-  session, inputId, label=NULL, choices=NULL, selected=NULL,
-  choicesFoundIncache=TRUE, ...
+updateInputWrapper <- function(
+  updateFunc, session, inputId, label=NULL, choices=NULL, selected=NULL, ...
 ){
-  # Update a selectInputs while preserving the selected options(s)
-  # (if any) as well as keeping track of current choices and labels
-
-  # Attaching new lists "userData$UiLabels" and "userData$UiChoices" to
-  # session if this is the 1st time this routine is run in the session.
-  # These lists will keep track of the current labels and choices in the
-  # UI menus. It seems shiny doesn't have a native method to return those.
-  if(is.null(session$userData$UiLabels)) session$userData$UiLabels <- list()
-  if(is.null(session$userData$UiChoices)) session$userData$UiChoices <- list()
-
-  # First, update label
-  notCachedLabelMsg <- "(incomplete cache & defaults)"
-  currentLabel <- session$userData$UiLabels[[inputId]]
-  if(is.null(currentLabel)) currentLabel <- getDefLabel(inputId)
-
-  currLabelFlaggedAsNotCached <- isTRUE(grepl(notCachedLabelMsg,currentLabel))
-  needsLabelChange <- {
-    isTRUE(label!=currentLabel) ||
-    (choicesFoundIncache && currLabelFlaggedAsNotCached) ||
-    (!choicesFoundIncache && !currLabelFlaggedAsNotCached)
-  }
-
-  if(needsLabelChange) {
-    if(is.null(label)) label <- currentLabel
-    label <- gsub(notCachedLabelMsg, "", label, fixed=TRUE)
-    if(!choicesFoundIncache) label <- paste(label, notCachedLabelMsg)
-    updateSelectInput(session, inputId, label=label)
-    session$userData$UiLabels[[inputId]] <- label
-  }
-
-  # Now, update items and choices
+  # Update an input using "updateFunc" while preserving the selected options(s)
   currentChoices <- session$userData$UiChoices[[inputId]]
-  if(is.null(choices) || isTRUE(all.equal(choices,currentChoices)))return(NULL)
-
-  selection <- getSelection(session, inputId, choices)
-  updateSelectInput(
-    session, inputId, choices=choices, selected=selection, label=NULL, ...
-  )
+  if(isTRUE(all.equal(choices, currentChoices))) return(NULL)
   session$userData$UiChoices[[inputId]] <- choices
+
+  # Show/hide "sync" UI icon
+  cssSelector<-sprintf('.control-label[for="%s"] .updating_info_icon', inputId)
+  shinyjs::show(selector=cssSelector, anim=TRUE, animType="fade")
+  on.exit(shinyjs::hide(selector=cssSelector, anim=TRUE, animType="fade"))
+
+  if(is.null(selected)) selected <- getSelection(session, inputId, choices)
+  updateFunc(
+    session, inputId, label=label, choices=choices, selected=selected, ...
+  )
 }
 
-
-updateCheckboxGroup <- function(session, inputId, choices, select="NORMAL") {
-    if (is.null(choices)) {
-      return(NULL)
-    }
-    selection <- getSelection(session, inputId, choices, select)
-    updateCheckboxGroupInput(session, inputId,
-                             choices=choices, selected=selection, inline=TRUE)
+updateSelectInputWrapper <- function(...) {
+  updateInputWrapper(updateFunc=updateSelectInput, ...)
 }
+
+updatePickerInputWrapper <- function(...) {
+  updateInputWrapper(updateFunc=updatePickerInput, ...)
+}
+
 
 # Enabling/disabling UI elements
 grepFilter <- function(x, pattern=NULL, except=NULL) {
@@ -163,9 +139,16 @@ disableShinyInputs <- function(input, pattern=NULL, except=NULL) {
   inpNames <- isolate(names(reactiveValuesToList(input)))
   inpNames <- grepFilter(inpNames, pattern, except)
   for(inp in inpNames) shinyjs::disable(inp)
+  # We need the code below for pickerInputs. See
+  # <https://github.com/dreamRs/shinyWidgets/issues/341>
+  # <https://stackoverflow.com/a/27317528>
+  shinyjs::runjs("$('.selectpicker').prop('disabled', true);")
+  shinyjs::runjs("$('.selectpicker').selectpicker('refresh');")
 }
 enableShinyInputs <- function(input, pattern=NULL, except=NULL) {
   inpNames <- isolate(names(reactiveValuesToList(input)))
   inpNames <- grepFilter(inpNames, pattern, except)
   for(inp in inpNames) shinyjs::enable(inp)
+  shinyjs::runjs("$('.selectpicker').prop('disabled', false);")
+  shinyjs::runjs("$('.selectpicker').selectpicker('refresh');")
 }
