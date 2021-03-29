@@ -198,7 +198,7 @@ observeEvent(reloadInfoFromCache(), {
     choices <- c("Surface"="surface")
   } else {
     obtypes <- getObtypes(db, selectedDates(), selectedCycles())
-    isCached <- selectedDtgsAreCached() && !is.null(obtypes$cached)
+    isCached <- selectedDtgsAreCached() && length(obtypes$cached)>0
     if(isCached) {
       choices <- obtypes$cached
     } else {
@@ -222,7 +222,7 @@ observeEvent(updateObnames(), {
   db <- req(activeDb())
 
   obnames <- getObnames(db, obsCategory, selectedDates(), selectedCycles())
-  isCached <- selectedDtgsAreCached() && !is.null(obnames$cached)
+  isCached <- selectedDtgsAreCached() && length(obnames$cached)>0
   if(isCached) {
     newChoices <- obnames$cached
   } else {
@@ -240,7 +240,7 @@ observeEvent(updateScattSatellite(), {
   db <- req(activeDb())
 
   sats <- getAvailableScattSatnames(db, selectedDates(), selectedCycles())
-  isCached <- selectedDtgsAreCached() && !is.null(sats$cached)
+  isCached <- selectedDtgsAreCached() && length(sats$cached)>0
   if(isCached) {
     newChoices <- sats$cached
   } else {
@@ -270,7 +270,7 @@ observeEvent(updateVariables(), {
   variables <- getVariables(
       db, selectedDates(), selectedCycles(), input$obname, satname
   )
-  isCached <- selectedDtgsAreCached() && !is.null(variables$cached)
+  isCached <- selectedDtgsAreCached() && length(variables$cached)>0
   if(isCached) {
     newChoices <- variables$cached
   } else {
@@ -287,7 +287,7 @@ updateSensor <- reactive({
 observeEvent(updateSensor(), {
   db <- req(activeDb())
   sens <- getAvailableSensornames(db, selectedDates(), selectedCycles())
-  isCached <- selectedDtgsAreCached() && !is.null(sens$cached)
+  isCached <- selectedDtgsAreCached() && length(sens$cached)>0
   if(isCached) {
     newChoices <- sens$cached
   } else {
@@ -306,7 +306,7 @@ observeEvent(updateSatellite(), {
   sens <- input$sensor
 
   sats <- getAvailableSatnames(db, selectedDates(), selectedCycles(), sens)
-  isCached <- selectedDtgsAreCached() && !is.null(sats$cached)
+  isCached <- selectedDtgsAreCached() && length(sats$cached)>0
   if(isCached) {
     newChoices <- sats$cached
   } else {
@@ -338,8 +338,8 @@ observe(updatePickerInputWrapper(session, "channels", choices=channels()))
 updatePlotType <- reactive({
   input$obtype
   input$obname
-  req(!is.null(input$variable) ||
-    (!is.null(input$satellite) && !is.null(input$sensor))
+  req(length(input$variable)>0 ||
+    (length(input$satellite) * length(input$sensor)>0)
   )
 }) %>% throttle(500)
 observeEvent(updatePlotType(), {

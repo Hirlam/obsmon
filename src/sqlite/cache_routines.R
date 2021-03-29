@@ -426,7 +426,7 @@ getObnamesFromCache <- function(db, category, dates, cycles) {
     )
     dbDisconnectWrapper(con)
   }
-  if(length(rtn)==0) rtn <- NULL
+  if(length(rtn)==0) rtn <- character(0)
   return(sort(unique(rtn)))
 }
 
@@ -453,7 +453,7 @@ getObtypesFromCache <- function(db, dates, cycles) {
     )
     dbDisconnectWrapper(con)
   }
-  if(length(rtn)==0) rtn <- NULL
+  if(length(rtn)==0) rtn <- character(0)
   return(sort(unique(rtn)))
 }
 
@@ -527,7 +527,7 @@ getVariablesFromCache <- function(db, dates, cycles, obname, satname=NULL) {
     )
     dbDisconnectWrapper(con)
   }
-  if(length(rtn)==0) rtn <- NULL
+  if(length(rtn)==0) rtn <- character(0)
   return(sort(unique(rtn)))
 }
 
@@ -560,8 +560,8 @@ getLevelsFromCache <- function(
         queryResult <- dbGetQuery(con, query)
         queryResult[['level']]
       },
-      error=function(e) NULL,
-      warning=function(w) NULL
+      error=function(e) character(0),
+      warning=function(w) character(0)
     )
     dbDisconnectWrapper(con)
   }
@@ -592,6 +592,7 @@ getChannelsFromCache <- function(db, dates, cycles, satname, sensorname) {
     )
     dbDisconnectWrapper(con)
   }
+  if(length(rtn)==0) rtn <- character(0)
   return(sort(unique(rtn)))
 }
 
@@ -615,7 +616,7 @@ getSensornamesFromCache <- function(db, dates, cycles) {
     )
     dbDisconnectWrapper(con)
   }
-  if(length(rtn)==0) rtn <- NULL
+  if(length(rtn)==0) rtn <- character(0)
   return(sort(unique(rtn)))
 }
 
@@ -640,7 +641,7 @@ getSatnamesFromCache <- function(db, dates, cycles, sensorname) {
     )
     dbDisconnectWrapper(con)
   }
-  if(length(rtn)==0) rtn <- NULL
+  if(length(rtn)==0) rtn <- character(0)
   return(sort(unique(rtn)))
 }
 
@@ -664,7 +665,7 @@ getScattSatnamesFromCache <- function(db, dates, cycles) {
     )
     dbDisconnectWrapper(con)
   }
-  if(length(rtn)==0) rtn <- NULL
+  if(length(rtn)==0) rtn <- character(0)
   return(sort(unique(rtn)))
 }
 
@@ -698,7 +699,7 @@ getStationsFromCache <- function(
     )
     dbDisconnectWrapper(con)
   }
-  if(length(rtn)==0) rtn <- NULL
+  if(length(rtn)==0) rtn <- character(0)
   return(sort(unique(rtn)))
 }
 
@@ -717,8 +718,8 @@ combineCachedAndGeneralChoices <- function(attr) {
 getObnames <- function(db, category, dates, cycles) {
   cached <- getObnamesFromCache(db, category, dates, cycles)
   general <- getAttrFromMetadata('obname', category=category)
-  if(!is.null(general)) names(general) <- lapply(general, strLowDashToTitle)
-  if(!is.null(cached)) names(cached) <- lapply(cached, strLowDashToTitle)
+  if(length(general)>0) names(general) <- lapply(general, strLowDashToTitle)
+  if(length(cached)>0) names(cached) <- lapply(cached, strLowDashToTitle)
   return(list(cached=cached, general=general))
 }
 
