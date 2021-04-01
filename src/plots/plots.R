@@ -55,6 +55,15 @@ plotClass <- setRefClass("obsmonPlot",
         stop("Field 'stationChoiceType', if passed, should be one of: 'single', 'multiple'")
       }
 
+      # Make sure "station" is listed as one of the wanted fields if
+      # stationChoiceType is passed
+      if (
+        (length(.self$stationChoiceType) > 0) &&
+        !("station" %in% .self$getRetrievedSqliteFields())
+      ) {
+        .self$requiredDataFields <- c(.self$requiredDataFields, "station")
+      }
+
       # Validate plottingFunction
       func <- .self$plottingFunction
       if (class(func) != "uninitializedField" && typeof(func) != "closure") {

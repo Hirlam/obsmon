@@ -3,6 +3,7 @@ context("Plotting engine")
 workingDir <- getwd()
 setwd("../..")
 capture.output(source("src/init.R"))
+capture.output(source("src/plots/plots.R"))
 setwd(workingDir)
 
 test_that("plot can be instaciated", {
@@ -232,8 +233,17 @@ test_that("stationChoiceType, if passed, must be one of 'single, 'multiple'", {
   }
 })
 
-# Test that, if stationChoiceType is passed but "station" not in any requested
-#   data, than "station" gets added to "requiredDataFields", with a warning
+test_that("'station' is included in fields if stationChoiceType passed", {
+  newPlot <- plotClass(
+    name="name",
+    category="category",
+    dataX="some_colname",
+    dataY=list("some_colname"),
+    stationChoiceType="single"
+  )
+  expect_true("station" %in% newPlot$getRetrievedSqliteFields())
+})
+
 # Test that needed columns are in getQueryStub
 # Test that table is "usage" if station in needed sqlite cols
 # Test that table is "obsmon" if station not in needed sqlite cols
