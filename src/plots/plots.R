@@ -1,462 +1,153 @@
-plotlySaveAsFigDimensions <- list(height=755, width=1200)
+plotClass <- setRefClass("obsmonPlot",
+  fields=list(
+    name="character",
+    category="character",
+    dateType="character",
+    requiredDataFields="list",
+    extraDataFields="list",
+    stationChoiceType="character",
+    dataX="character", # Name of the field that will be in the plots' x
+    dataY="list", # Names of the fields that will be in the plots' y
+    xUnits="character",
+    yUnits="character",
+    plottingFunction="ANY"
+  ),
+  methods=list(
+    ############################
+    initialize = function(...) {
+      callSuper(...)
 
-renamePlotlyTraces <- function(plot, labels) {
-  # Renames the traces in plotly plot "plot" according to the
-  # namesd list passed as "labels". Leaves trace names intact if
-  # they are not listed in "labels".
-  iTrace <- 0
-  for(pData in plot$x$data) {
-    iTrace <- iTrace + 1
-    traceLabel <- labels[[pData$name]]
-    if(is.null(traceLabel)) next
-    plot <- plot %>% style(name=traceLabel, traces=iTrace)
-  }
-  return(plot)
-}
+      # Validate mandatory args
+      for (field in c("name", "category", "dataX", "dataY")) {
+        if(length(.self$field(field))==0) stop(sprintf("Missing parameter '%s'", field))
+      }
+      
 
-levelsLableForPlots <- function(obnumber, varname=character(0)) {
-  strObnumber <- as.character(obnumber)
-  obstype <- getAttrFromMetadata("category", obnumber=obnumber)
-  quantity <- "Pressure"
-  if(obstype=="surface" || (isTRUE(strObnumber=="13") && !isTRUE(varname=="rh"))) {
-    quantity <- "Height"
-  }
-  label <- sprintf("%s [%s]", quantity, units[[tolower(quantity)]])
-  return(label)
-}
+      varnameRegex <- "^[a-zA-Z_$][a-zA-Z_$0-9]*$"
+      # Validate dataX
+      if(!isTRUE(grepl(varnameRegex, .self$dataX))) {
+        stop(paste("Invalid value for the 'dataX' field:", .self$dataX))
+      }
 
-coord_flip_wrapper <- function(..., default=FALSE) {
-  # Adds the argument "default" to the original ggplot's coord_flip.
-  # This gets rid of the annoying "Coordinate system already present. Adding
-  # new coordinate system, which will replace the existing one" warning which
-  # is otherwise issued when trying to modify the x and y limits in plots that
-  # use cood_flip
-  # Adapted from <https://github.com/tidyverse/ggplot2/issues/2799>
-  cf <- coord_flip(...)
-  cf$default <- default
-  return(cf)
-}
-
-plotIsPlotly <- function(myPlot) {
-  # To be used in the server logic to determine whether to use regular
-  # (non-interactive) or plotly (interactive) plot outputs.
-  rtn <- any(c("plotly", "plotlyhtmlwidget") %in% class(myPlot))
-  return(rtn)
-}
-
-configPlotlyWrapper <- function(...) {
-  # Wrapper to plotly's config function, with some useful defaults
-  # For a list of all config options, please visit
-  # <https://github.com/plotly/plotly.js/blob/master/src/plot_api/plot_config.js>
-  # Se allso <https://plotly-r.com/control-modebar.html>
-  argList <- list(...)
-  argNames <- names(argList)
-  if(!("displaylogo" %in% argNames)) argList$displaylogo <- FALSE
-  if(!("cloud" %in% argNames)) argList$cloud <- FALSE
-  if(!("scrollZoom" %in% argNames)) argList$scrollZoom <- TRUE
-
-  # Defaults for what users are allowed to edit in the plots
-  if(!("editable" %in% argNames)) argList$editable <- TRUE
-  editsOpts <- list(
-    titleText=FALSE,
-    shapePosition=FALSE
-  )
-  if("edits" %in% argNames) {
-    for(name in names(argList$edits)) {
-      editsOpts[[name]] <- argList$edits[[name]]
-    }
-  }
-  argList$edits <- editsOpts
-
-  # Defaults for saving figures
-  toImageButtonOpts <- list(
-    filename="obsmon_plot",
-    format="png",
-    height=plotlySaveAsFigDimensions$height,
-    width=plotlySaveAsFigDimensions$width
-  )
-  if("toImageButtonOptions" %in% argNames) {
-    for(name in names(argList$toImageButtonOptions)) {
-      toImageButtonOpts[[name]] <- argList$toImageButtonOptions[[name]]
-    }
-  }
-  argList$toImageButtonOptions <- toImageButtonOpts
-
-  return(do.call(config, argList))
-}
-
-getStationsForPlotTitle <- function(plotRequest, plotData, limit=5) {
-  crit <- plotRequest$criteria
-  if(length(crit$station)==0) {
-    stations <- character(0)
-  } else {
-    stations <- paste(sort(unique(plotData$statLabel)), collapse=", ")
-    if(stations=="") stations<-paste(sort(unique(crit$station)),collapse=", ")
-    if(stations=="") stations <- character(0)
-  }
-  if(length(stations)>limit) stations <- character(0)
-  return(stations)
-}
-
-addTitleToPlot <- function(myPlot, title) {
-  if(is.null(myPlot) || is.null(title)) return(myPlot)
-  newPlot <- tryCatch({
-    if(is.ggplot(myPlot)) {
-      myPlot + ggtitle(title) + theme(plot.title=element_text(hjust=0.5))
-    } else if("plotly" %in% class(myPlot)) {
-      yTitle <- attr(myPlot, "yTitle")
-      if(is.null(yTitle)) yTitle <- 1.0
-      # Use an annotation instead of an actual title, as otherwise plotly
-      # will fail to put it in the correct position without overlaps (and
-      # it also won't allow users to change the position of the text)
-      myPlot %>% add_annotations(
-          text=title,
-          showarrow=FALSE,
-          font=list(size=20),
-          xref="paper", xanchor="center", x=0.5,
-          # Push y a bit above 1 as, otherwise, the title may overlap with the
-          # plot when using ggplotly on a ggplot object containing facet_wraps
-          yref="paper", yanchor="bottom", y=yTitle
-      ) %>% layout(title=FALSE)
-    } else {
-      grid.arrange(myPlot, top=textGrob(title, gp=gpar(fontsize=13)))
-    }
-    },
-    error=function(e) {
-      flog.error("addTitleToPlot: Problems setting plot title: %s", e)
-      myPlot
-    }
-  )
-  return(newPlot)
-}
-
-plotExportedDataInfo <- function(plot) {
-  header <- paste0(
-    paste("# Plot title:", plot$title, "\n"),
-    sprintf(
-      "# Data retrieved by Obsmon v%s on %s using the following query:\n",
-      obsmonVersion, strftime(Sys.time(), format="%Y-%m-%d %H:%M:%S %Z")
-    ),
-    paste0("# ", plot$queryUsed, "\n"),
-    paste("\n")
-  )
-}
-
-plotTypesHierarchical <- list()
-plotTypesFlat <- list()
-
-registerPlotCategory <- function(category) {
-  if (category %in% plotTypesHierarchical) {
-    flog.error("Category %s is already registered. Discarding.", category)
-    return(NULL)
-  }
-  plotTypesHierarchical[[category]] <<- list()
-}
-
-registerPlotType <- function(category, plotType) {
-  if (plotType$name %in% names(plotTypesFlat)) {
-    flog.error("Plottype '%s' is already registered. Discarding.", plotType$name)
-    return(NULL)
-  }
-  categoryList <- plotTypesHierarchical[[category]]
-  if (is.null(categoryList)) {
-    flog.error("Unknown plottype category %s, discarding plottype '%s'.",
-               category, plotType$name)
-    return(NULL)
-  }
-  plotTypesFlat[[plotType$name]] <<- plotType
-  categoryList <- as.list(c(categoryList, plotType$name))
-  plotTypesHierarchical[[category]] <<- categoryList
-}
-
-applicablePlots <- function(criteria) {
-  plots <- list()
-  for (categoryName in names(plotTypesHierarchical)) {
-    category <- unlist(plotTypesHierarchical[[categoryName]], use.names=FALSE)
-    choices <- names(Filter(partial(plotIsApplicable,
-                                    criteria=criteria),
-                            plotTypesFlat[category]))
-    plots[[categoryName]] <- as.list(choices)
-  }
-  plots
-}
-
-plotSupportsChoosingStations <- function(plottype=NULL) {
-  if(is.null(plottype)) return(FALSE)
-  infoAboutSelectedPlotType <- plotTypesFlat[[plottype]]
-  query <- infoAboutSelectedPlotType$queryStub
-  # StationIDs are not stored in the "obsmon" table, only in "usage"
-  queryIsFromUsage <- grepl("FROM{1}[[:space:]]+usage",query,ignore.case=TRUE)
-  return(isTRUE(queryIsFromUsage))
-}
-
-plotRequiresSingleStation <- function(plottype=NULL) {
-  plotReqFields <- plotTypesFlat[[plottype]]$requiredFields
-  return(isTRUE("station" %in% plotReqFields))
-}
-
-putLabelsInStations <- function(stations=NULL, obname=NULL) {
-  if(length(stations)==0) return(stations)
-  if(isTRUE(obname=="synop")) {
-    stationLabels <- c()
-    for(statID in stations) {
-      statName <- tryCatch(synopStations[statID], error=function(e) NA)
-      label <- statID
-      if(!anyNA(statName)) label <- sprintf("%s (%s)", statID, statName)
-      stationLabels <- c(stationLabels, label)
-    }
-    names(stations) <- stationLabels
-  } else {
-    names(stations) <- stations
-  }
-  return(stations)
-}
-
-# Define generics
-plotBuildQuery <- function(p, plotRequest) UseMethod ("plotBuildQuery")
-plotGenerate <- function(p, plotRequest, plotData, interactive) UseMethod("plotGenerate")
-plotIsApplicable <- function(p, criteria) UseMethod("plotIsApplicable")
-plotTitle <- function(p, plotRequest, plotData) UseMethod("plotTitle")
-doMap <- function(p, plotRequest, plotData) UseMethod("doMap")
-doPlot <- function(p, plotRequest, plotData) UseMethod("doPlot")
-doPlotly <- function(p, plotRequest, plotData) UseMethod("doPlotly")
-
-# Provide defaults
-doPlotly.default <- function(p, plotRequest, plotData) {
-  # Generate a regular ggplot2 plot and then use plotly's
-  # ggplotly function to convert it to a plotly object
-  ggplotPlot <- doPlot(p, plotRequest, plotData)
-  plotlyPlot <- ggplotly(ggplotPlot,
-    tooltip=c("x","y")
-  ) %>%
-    layout(
-      margin=list(t=100),
-      legend=list(orientation="v", yanchor="center", y=0.5)
-    )
-  return(plotlyPlot)
-}
-
-plotBuildQuery.default <- function(p, plotRequest) {
-  sprintf(p$queryStub, buildWhereClause(plotRequest$criteria))
-}
-
-noDataPlot <- function(msg) {
-  ggplot() +
-    annotate("text", x=0, y=0, size=8, label=msg) +
-    theme(
-      panel.background = element_rect(fill="grey90"),
-      panel.grid.major = element_blank(),
-      panel.grid.minor = element_blank(),
-      axis.title.x=element_blank(),
-      axis.text.x=element_blank(),
-      axis.ticks.x=element_blank(),
-      axis.title.y=element_blank(),
-      axis.text.y=element_blank(),
-      axis.ticks.y=element_blank()
-    )
-}
-
-plotGenerate.default <- function(p, plotRequest, plotData, interactive) {
-  if (plotRequest$criteria$obnumber==7 && ("level" %in% colnames(plotData))) {
-    names(plotData)[names(plotData)=="level"] <- "channel"
-  }
-  result <- list(title=plotTitle(p, plotRequest, plotData))
-  if(length(result$title)==0) flog.warn("plotGenerate: Empty plot title")
-  if (!isTRUE(nrow(plotData)>0)) {
-    result$obmap <- NULL
-    if(is.null(plotData)) {
-      msg <- paste0(
-        "Could not produce plot: ",
-        "The required data file(s) might be inaccessible.\n"
-      )
-    } else {
-      msg <- "Query returned no data"
-    }
-    result$obplot <- noDataPlot(msg)
-  } else {
-    result$obmap <- doMap(p, plotRequest, plotData)
-    result$obplot <- NULL
-    if(interactive) {
-      result$obplot <- tryCatch(
-        doPlotly(p, plotRequest, plotData),
-        error=function(e){
-          flog.debug('plotGenerate: Failure making plot "%s" interactive: %s',
-            p$name, e
-          )
-          return(NULL)
+      # Validate dataY entries
+      .self$dataY <- unique(.self$dataY)
+      for (name in .self$dataY) {
+        if(!isTRUE(grepl(varnameRegex, name))) {
+          stop(paste("Field 'dataY' contains invalid column names:", name))
         }
-      )
-    }
-    if(is.null(result$obplot)) result$obplot <- doPlot(p,plotRequest,plotData)
-  }
-  result
-}
-
-plotIsApplicable.default <- function(p, criteria) {
-  requiredNames <- names(p$requiredFields)
-  if (is.null(requiredNames)) {
-    all(p$requiredFields %in% names(criteria))
-  } else {
-    res <- mapply(function(n, v) ifelse(n == "",
-                                        v %in% names(criteria),
-                                        criteria[[n]] %in% v),
-                  requiredNames, p$requiredFields)
-    all(res)
-  }
-}
-
-plotTitle.default <- function(p, plotRequest, plotData) {
-  crit <- plotRequest$criteria
-  if(as.character(crit$obnumber)=="7") {
-    detail <- sprintf("sensor=%s, satname=%s", crit$obname, crit$satname)
-  } else {
-    detail <- sprintf("obname=%s, varname=%s", crit$obname, crit$varname)
-  }
-  title <- sprintf(
-    "%s: %s\ndb=%s, DTG=%s, %s",
-    plotRequest$expName, p$name,
-    plotRequest$dbType, formatDtg(crit$dtg), detail
-  )
-  return(title)
-}
-
-doMap.default <- function(p, plotRequest, plotData) {
-  NULL
-}
-
-plotCreate <- function(clazz, name, dateType, queryStub, requiredFields, ...) {
-  p <- list()
-  p$dateType <- dateType
-  p$name <- name
-  p$queryStub <- queryStub
-  p$requiredFields <- requiredFields
-  p <- c(p, list(...))
-  class(p) <- clazz
-  p
-}
-
-
-postProcessQueriedPlotData <- function(plotData) {
-  UseMethod("postProcessQueriedPlotData")
-}
-
-postProcessQueriedPlotData.default <- function(plotData) {plotData}
-
-# Functions used in in server.R
-# Build named list of plot criteria
-getPlotDtgCriteriaFromUiInput <- function(input) {
-  dtgCrit <- tryCatch(
-    switch(plotTypesFlat[[input$plottype]]$dateType,
-      "single"=date2dtg(input$date, input$cycle),
-      "range"={
-        dateRange <- sort(input$dateRange)
-        list(dateRange[1], dateRange[2], input$cycles)
       }
-    ),
-    error=function(e) NULL
-  )
-  return(dtgCrit)
-}
 
-plotsBuildCriteria <- function(input) {
-  res <- list()
-  res$info <- list()
-  obname <- input$obname
-  res$obnumber <- getAttrFromMetadata('obnumber', obname=obname)
-  if (isTRUE(obname=='satem')) {
-    res$obname <- input$sensor
-    res$satname <- input$satellite
-    levels <- input$channels
-    excludeLevels <- input$excludeChannels
-  } else {
-    if (isTRUE(obname=='scatt')) {
-      res$satname <- input$scatt_satellite
-    }
-    res$obname <- obname
-    res$varname <- input$variable
-    levels <- input$levels
-    excludeLevels <- input$excludeLevels
-  }
-
-  res$levels <- list()
-  if(length(levels)>0 && levels!="") res$levels <- levels
-  res$excludeLevels <- list()
-  if(length(excludeLevels)>0 && excludeLevels!="") {
-    res$excludeLevels <- excludeLevels
-  }
-
-  if(obSupportsStationChoice(obname)) {
-    station <- input$station
-    if(is.null(station) || "" %in% station) station <- character(0)
-    res$station <- station
-  }
-
-  res$dtg <- getPlotDtgCriteriaFromUiInput(input)
-
-  return(res)
-}
-# Perform plotting
-preparePlots <- function(
-  plotter, plotRequest, db, interactive, progressFile=NULL
-) {
-  tryCatch({
-    isWindspeed <- "varname" %in% names(plotRequest$criteria) &&
-      plotRequest$criteria$varname %in% c("ff", "ff10m")
-    query <- NULL
-    if (isWindspeed) {
-      plotData <- buildFfData(db, plotter, plotRequest)
-    } else {
-      query <- plotBuildQuery(plotter, plotRequest)
-      plotData <- performQuery(
-        db, query, plotRequest$criteria$dtg, progressFile=progressFile
-      )
-      # Postprocessing plotData returned by performQuery.
-      # This may be useful, e.g., if performing averages over a
-      # picked date range.
-      plotData <- postProcessQueriedPlotData(plotData)
-    }
-    if(isTRUE(nrow(plotData)>0)) {
-      statIds <- c()
-      for(statid in plotData$statid) {
-        statid <- gsub(" ", "", gsub("'", "", statid))
-        statIds <- c(statIds, statid)
+      # Validate requiredDataFields and extraDataFields entries
+      for(field in c("requiredDataFields", "extraDataFields")) {
+        .self$field(field, unique(.self$field(field)))
+        if(length(.self$field(field))>0) {
+          for (name in .self$field(field)) {
+            if(!isTRUE(grepl(varnameRegex, name))) {
+              stop(sprintf("Field '%s' contains invalid column names: %s", field, name))
+            }
+          }
+        }
       }
-      obname <- plotRequest$criteria$obname
-      if(isTRUE(plotRequest$criteria$obnumber==7)) obname="satem"
-      stations <- putLabelsInStations(statIds, obname)
-      plotData$statLabel <- names(stations)
+
+      # Validate stationChoiceType
+      stationType <- .self$stationChoiceType
+      if(length(stationType)>0 && !(stationType %in% c("single", "multiple"))) {
+        stop("Field 'stationChoiceType', if passed, should be one of: 'single', 'multiple'")
+      }
+
+      # Validate plottingFunction
+      func <- .self$plottingFunction
+      if (class(func) != "uninitializedField" && typeof(func) != "closure") {
+        stop("Field 'plottingFunction' is not a function")
+      }
+
+      # Validate dateType
+      if(length(.self$dateType)==0) .self$dateType <- "single"
+      if(!isTRUE(.self$dateType %in% c("single", "range"))) {
+        stop("Field 'dateType' must be one of: 'single', 'range'")
+      }
+    },
+    ############################
+    supportsStationSelection = function() {
+      return(isTRUE("station" %in% .self$getRetrievedSqliteFields()))
+    },
+    ############################
+    requiresSingleStation = function() {
+      return(isTRUE(.self$stationChoiceType == "single"))
+    },
+    ############################
+    getRetrievedSqliteFields = function() {
+      dbCols <- c(
+        .self$dataX,
+        .self$dataY,
+        .self$requiredDataFields,
+        .self$extraDataFields
+      )
+      return(unique(dbCols)) 
+    },
+    ############################
+    getQueryStub = function() {
+      # stationIDs are not stored in the "obsmon" table, only in "usage"
+      dbTable <- ifelse(.self$supportsStationSelection(), "usage", "obsmon")
+      stub <- paste(
+        "SELECT",
+        paste(.self$getRetrievedSqliteFields(), collapse=", "),
+        "FROM", dbTable, "WHERE %s"
+      )
+      return (stub)      
+    },
+    ############################
+    uiInput2SqliteQuery = function(input) {
+      # Previously named "plotBuildQuery"
+      sqliteParams <- .self$uiInput2SqliteParams(input)
+      return(sprintf(.self$getQueryStub(), buildWhereClause(sqliteParams)))
+    },
+    ############################
+    uiInput2SqliteParams = function(input) {
+      # Previously called "plotsBuildCriteria"
+      res <- list()
+      obname <- input$obname
+      res$obnumber <- getAttrFromMetadata('obnumber', obname=obname)
+      if (isTRUE(obname=='satem')) {
+        res$obname <- input$sensor
+        res$satname <- input$satellite
+        levels <- input$channels
+        excludeLevels <- input$excludeChannels
+      } else {
+        if (isTRUE(obname=='scatt')) {
+          res$satname <- input$scatt_satellite
+        }
+        res$obname <- obname
+        res$varname <- input$variable
+        levels <- input$levels
+        excludeLevels <- input$excludeLevels
+      }
+
+      res$levels <- list()
+      if(length(levels)>0 && levels!="") res$levels <- levels
+      res$excludeLevels <- list()
+      if(length(excludeLevels)>0 && excludeLevels!="") {
+        res$excludeLevels <- excludeLevels
+      }
+
+      if(obSupportsStationChoice(obname)) {
+        station <- input$station
+        if(is.null(station) || "" %in% station) station <- character(0)
+        res$station <- station
+      }
+
+      res$dtg <- tryCatch(
+        switch(.self$dateType,
+          "single"=date2dtg(input$date, input$cycle),
+          "range"={
+            dateRange <- sort(input$dateRange)
+            list(dateRange[1], dateRange[2], input$cycles)
+          }
+        ),
+        error=function(e) NULL
+      )
+
+      return(res)
     }
-
-    res <- plotGenerate(plotter,plotRequest,plotData,interactive=interactive)
-    res[["queryUsed"]] <- query
-    res[["plotData"]] <- plotData
-    return(res)
-  },
-  error=function(e) {flog.error(paste("preparePlots:", e)); NULL}
   )
-}
-
-preparePlotsCapturingOutput <- function(...) {
-  # We call preparePlots asyncronously in the shiny app to make it possible
-  # to cancel plots. Catching the output is useful in this case because we
-  # want to suppress an annoying blank line that is printed out every time a
-  # plot is cancelled, but we don't want to prevent any error message from
-  # being shown. The output produced by preparePlots will, if not empty, be
-  # printed out upon completion of the async task.
-  output <- capture.output({
-    plots <- preparePlots(...)
-  }, type="message")
-  output <- trimws(paste(output, collapse="\n"))
-  if(output=="") output <- character(0)
-  return(list(plots=plots, output=output))
-}
-
-# Helper functions for plot progress bar
-readPlotProgressFile <- function(path) {
-  fContents <- tryCatch(unlist(read.table(path), use.names=FALSE),
-    error=function(e) NULL,
-    warning=function(w) NULL
-  )
-  rtn <- list(current=fContents[1], total=fContents[2])
-  return(rtn)
-}
+)

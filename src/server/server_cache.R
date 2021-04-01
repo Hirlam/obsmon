@@ -56,7 +56,7 @@ observeEvent(dataFilesForDbAndDtgs(), {
 
 # Pause the caching engine if a plot or multiPlot is being performed
 pauseCaching <- reactive({
-  isTRUE(currentPlotPid()>-1) || isTRUE(multiPlotCurrentPid()>-1)
+  isTRUE(currentPlotPid()>-1) #|| isTRUE(multiPlotCurrentPid()>-1)
 })
 
 # Managing the queues of files to be cached/recached

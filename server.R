@@ -136,7 +136,7 @@ shinyServer(function(input, output, session) {
   source("src/server/server_main_tab.R", local=TRUE)
   source("src/server/server_cache.R", local=TRUE)
   source("src/server/server_main_tab_plots.R", local=TRUE)
-  source("src/server/server_multiplots.R", local=TRUE)
+  #source("src/server/server_multiplots.R", local=TRUE)
   source("src/server/server_doc_tab.R", local=TRUE)
 
   # Hide "Loading Obsmon" screen and show the app
