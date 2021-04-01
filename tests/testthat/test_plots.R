@@ -244,6 +244,30 @@ test_that("'station' is included in fields if stationChoiceType passed", {
   expect_true("station" %in% newPlot$getRetrievedSqliteFields())
 })
 
-# Test that needed columns are in getQueryStub
+test_that("'usage' table is queried if station selection is supported", {
+  newPlot <- plotClass(
+    name="name",
+    category="category",
+    dataX="some_colname",
+    dataY=list("some_colname"),
+    extraDataFields=list("station")
+  )
+  expect_true(
+    grepl("FROM usage", newPlot$getQueryStub(), fixed=TRUE)
+  )
+})
+
+test_that("'obsmon' table is queried if station selection is not supported", {
+  newPlot <- plotClass(
+    name="name",
+    category="category",
+    dataX="some_colname",
+    dataY=list("some_colname")
+  )
+  expect_true(
+    grepl("FROM obsmon", newPlot$getQueryStub(), fixed=TRUE)
+  )
+})
+
 # Test that table is "usage" if station in needed sqlite cols
 # Test that table is "obsmon" if station not in needed sqlite cols
