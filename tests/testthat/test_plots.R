@@ -7,18 +7,18 @@ capture.output(source("src/plots/plots.R"))
 setwd(workingDir)
 
 test_that("plot can be instaciated", {
-  newPlot <- plotClass(
+  newPlot <- plotType(
     name="Name",
     category="Category",
     dataX="some_colname",
     dataY=list("some_colname")
   )
-  expect_s4_class(plot, "obsmonPlot")
+  expect_s4_class(plot, "obsmonPlotType")
 })
 
 test_that("cannot create nameless plot", {
   expect_error(
-    newPlot <- plotClass(
+    newPlot <- plotType(
       category="Category",
       dataX="some_colname",
       dataY=list("some_colname")
@@ -30,7 +30,7 @@ test_that("cannot create nameless plot", {
 
 test_that("name is set correctly", {
   plotName <- "my new plot"
-  newPlot <- plotClass(
+  newPlot <- plotType(
     name=plotName,
     category="Category",
     dataX="some_colname",
@@ -41,7 +41,7 @@ test_that("name is set correctly", {
 
 test_that("cannot create plot without category", {
   expect_error(
-    newPlot <- plotClass(
+    newPlot <- plotType(
       name="Name",
       dataX="some_colname",
       dataY=list("some_colname")
@@ -53,7 +53,7 @@ test_that("cannot create plot without category", {
 
 test_that("category is set correctly", {
   plotCategory <- "my category"
-  newPlot <- plotClass(
+  newPlot <- plotType(
     name="Name",
     category=plotCategory,
     dataX="some_colname",
@@ -63,7 +63,7 @@ test_that("category is set correctly", {
 })
 
 test_that("default dateType is 'single'", {
-  newPlot <- plotClass(
+  newPlot <- plotType(
     name="Name",
     category="Category",
     dataX="some_colname",
@@ -74,7 +74,7 @@ test_that("default dateType is 'single'", {
 
 test_that("dateType must be one of 'single, 'range'", {
   expect_error(
-    newPlot <- plotClass(
+    newPlot <- plotType(
       name="name",
       category="category",
       dataX="some_colname",
@@ -86,7 +86,7 @@ test_that("dateType must be one of 'single, 'range'", {
   )
 
   for (dateType in c("single", "range")) {
-    newPlot <- plotClass(
+    newPlot <- plotType(
       name="name",
       category="category",
       dataX="some_colname",
@@ -100,7 +100,7 @@ test_that("dateType must be one of 'single, 'range'", {
 test_that("datax cannot be an invalid varname", {
   invalidColname <- "a name with spaces"
   expect_error(
-    plotClass(
+    plotType(
       name="name",
       category="category",
       dataX=invalidColname,
@@ -116,7 +116,7 @@ test_that("datax cannot be an invalid varname", {
 test_that("dataY cannot contain invalid varnames", {
   invalidColname <- "a name with spaces"
   expect_error(
-    plotClass(
+    plotType(
       name="name",
       category="category",
       dataX="some_colname",
@@ -132,7 +132,7 @@ test_that("dataY cannot contain invalid varnames", {
 test_that("extraDataFields cannot contain invalid varnames", {
   invalidColname <- "a name with spaces"
   expect_error(
-    plotClass(
+    plotType(
       name="name",
       category="category",
       dataX="some_colname",
@@ -147,7 +147,7 @@ test_that("extraDataFields cannot contain invalid varnames", {
 })
 
 test_that("queryStub contains cols from dataX, dataY and extraDataFields", {
-  newPlot <- plotClass(
+  newPlot <- plotType(
     name="name",
     category="category",
     dataX="col_a",
@@ -168,7 +168,7 @@ test_that("queryStub contains cols from dataX, dataY and extraDataFields", {
 
 test_that("non-function plottingFunction raises error", {
   expect_error(
-    newPlot <- plotClass(
+    newPlot <- plotType(
       name="name",
       category="category",
       dataX="some_colname",
@@ -182,7 +182,7 @@ test_that("non-function plottingFunction raises error", {
 
 test_that("plottingFunction can be set to function", {
   plotFunc <- function(data) {data}
-  newPlot <- plotClass(
+  newPlot <- plotType(
     name="name",
     category="category",
     dataX="some_colname",
@@ -193,7 +193,7 @@ test_that("plottingFunction can be set to function", {
 })
 
 test_that("default stationChoiceType is character(0)", {
-  newPlot <- plotClass(
+  newPlot <- plotType(
     name="Name",
     category="Category",
     dataX="some_colname",
@@ -205,7 +205,7 @@ test_that("default stationChoiceType is character(0)", {
 
 test_that("stationChoiceType, if passed, must be one of 'single, 'multiple'", {
   expect_error(
-    newPlot <- plotClass(
+    newPlot <- plotType(
       name="name",
       category="category",
       dataX="some_colname",
@@ -217,7 +217,7 @@ test_that("stationChoiceType, if passed, must be one of 'single, 'multiple'", {
   )
 
   for (stationChoiceType in c("single", "multiple")) {
-    newPlot <- plotClass(
+    newPlot <- plotType(
       name="name",
       category="category",
       dataX="some_colname",
@@ -234,7 +234,7 @@ test_that("stationChoiceType, if passed, must be one of 'single, 'multiple'", {
 })
 
 test_that("'station' is included in fields if stationChoiceType passed", {
-  newPlot <- plotClass(
+  newPlot <- plotType(
     name="name",
     category="category",
     dataX="some_colname",
@@ -245,7 +245,7 @@ test_that("'station' is included in fields if stationChoiceType passed", {
 })
 
 test_that("'usage' table is queried if station selection is supported", {
-  newPlot <- plotClass(
+  newPlot <- plotType(
     name="name",
     category="category",
     dataX="some_colname",
@@ -258,7 +258,7 @@ test_that("'usage' table is queried if station selection is supported", {
 })
 
 test_that("'obsmon' table is queried if station selection is not supported", {
-  newPlot <- plotClass(
+  newPlot <- plotType(
     name="name",
     category="category",
     dataX="some_colname",

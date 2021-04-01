@@ -1,4 +1,4 @@
-plotClass <- setRefClass("obsmonPlot",
+plotType <- setRefClass("obsmonPlotType",
   fields=list(
     name="character",
     category="character",
