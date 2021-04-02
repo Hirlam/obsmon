@@ -164,5 +164,13 @@ obsmonPlot <- setRefClass(Class="obsmonPlot",
     db="obsmonDatabase",
     params="list", # List like the shiny "input" from the UI
     data="data.frame"
+  ),
+  methods=list(
+    fetchData = function() {
+      query <- .self$parentType$uiInput2SqliteQuery(params)
+      sqliteParams <- .self$parentType$uiInput2SqliteParams(params)
+      dtgs <- sqliteParams$dtg
+      .self$data <- performQuery(db=.self$db, query=query, dtgs=dtgs)
+    }
   )
 )

@@ -282,3 +282,18 @@ test_that("obsmonPlot can be instanciated", {
   )
   expect_s4_class(newPlot, "obsmonPlot")
 })
+
+test_that("obsmonPlot 'fetchData' works", {
+  newPlot <- obsmonPlot(
+    parentType=mockPlotType,
+    db=obsmonDb,
+    params=mockUiInput
+  )
+  expect_equal(sum(dim(newPlot$data)), 0)
+  newPlot$fetchData()
+  expect_gt(prod(dim(newPlot$data)), 0)
+  expect_setequal(
+    colnames(newPlot$data),
+    newPlot$parentType$getRetrievedSqliteFields()
+  )
+})
