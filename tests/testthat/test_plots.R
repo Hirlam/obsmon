@@ -209,7 +209,7 @@ test_that("stationChoiceType, if passed, must be one of 'single, 'multiple'", {
   }
 })
 
-test_that("'station' is included in fields if stationChoiceType passed", {
+test_that("'statid' is included in fields if stationChoiceType passed", {
   newPlot <- plotType(
     name="name",
     category="category",
@@ -217,7 +217,7 @@ test_that("'station' is included in fields if stationChoiceType passed", {
     dataY=list("some_colname"),
     stationChoiceType="single"
   )
-  expect_true("station" %in% newPlot$getRetrievedSqliteFields())
+  expect_true("statid" %in% newPlot$getRetrievedSqliteFields())
 })
 
 test_that("'usage' table is queried if station selection is supported", {
@@ -226,7 +226,7 @@ test_that("'usage' table is queried if station selection is supported", {
     category="category",
     dataX="some_colname",
     dataY=list("some_colname"),
-    extraDataFields=list("station")
+    extraDataFields=list("statid")
   )
   expect_true(
     grepl("FROM usage", newPlot$getQueryStub(), fixed=TRUE)

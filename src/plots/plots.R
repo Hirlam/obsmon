@@ -52,13 +52,13 @@ plotType <- setRefClass(Class="obsmonPlotType",
         stop("Field 'stationChoiceType', if passed, should be one of: 'single', 'multiple'")
       }
 
-      # Make sure "station" is listed as one of the wanted fields if
+      # Make sure "statid" is listed as one of the wanted fields if
       # stationChoiceType is passed
       if (
         (length(.self$stationChoiceType) > 0) &&
-        !("station" %in% .self$getRetrievedSqliteFields())
+        !("statid" %in% .self$getRetrievedSqliteFields())
       ) {
-        .self$requiredDataFields <- c(.self$requiredDataFields, "station")
+        .self$requiredDataFields <- c(.self$requiredDataFields, "statid")
       }
 
       # Validate plottingFunction
@@ -75,7 +75,7 @@ plotType <- setRefClass(Class="obsmonPlotType",
     },
     ############################
     supportsStationSelection = function() {
-      return(isTRUE("station" %in% .self$getRetrievedSqliteFields()))
+      return(isTRUE("statid" %in% .self$getRetrievedSqliteFields()))
     },
     ############################
     requiresSingleStation = function() {
