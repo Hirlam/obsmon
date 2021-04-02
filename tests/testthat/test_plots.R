@@ -317,3 +317,14 @@ test_that("defaultGenerate function adds createdByDefaultGenerate attr", {
   graphicsObj <- newPlot$defaultGenerate()
   expect_true(attr(graphicsObj, "createdByDefaultGenerate"))
 })
+
+test_that("'generate' uses 'defaultGenerate' if parentType$plottingFunction missing", {
+  newPlot <- obsmonPlot(
+    parentType=mockPlotType,
+    db=obsmonDb,
+    params=mockUiInput
+  )
+  expect_s4_class(newPlot$parentType$plottingFunction, "uninitializedField")
+  graphicsObj <- newPlot$generate()
+  expect_true(attr(graphicsObj, "createdByDefaultGenerate"))
+})

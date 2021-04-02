@@ -10,7 +10,7 @@ plotType <- setRefClass(Class="obsmonPlotType",
     dataY="list", # Names of the fields that will be in the plots' y
     xUnits="character",
     yUnits="character",
-    plottingFunction="ANY"
+    plottingFunction="ANY" # A function of 1 argument: The data.
   ),
   methods=list(
     ############################
@@ -191,6 +191,14 @@ obsmonPlot <- setRefClass(Class="obsmonPlot",
       )
       attributes(graph)$createdByDefaultGenerate <- TRUE
       return(graph)
+    },
+    ############################
+    generate = function() {
+      if(class(.self$parentType$plottingFunction) == "uninitializedField") {
+        return(.self$defaultGenerate())
+      }
+      if(length(.self$data)==0) .self$fetchData()
+      return(.self$parentType$plottingFunction(.self$data))
     }
   )
 )
