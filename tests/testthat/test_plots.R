@@ -1,31 +1,19 @@
-context("Plotting engine")
-
 workingDir <- getwd()
 setwd("../..")
 capture.output(source("src/init.R"))
 capture.output(source("src/plots/plots.R"))
 setwd(workingDir)
 
-test_that("plot can be instaciated", {
+context("PlotType objects")
+
+test_that("obsmonPlotType can be instaciated", {
   newPlot <- plotType(
     name="Name",
     category="Category",
     dataX="some_colname",
     dataY=list("some_colname")
   )
-  expect_s4_class(plot, "obsmonPlotType")
-})
-
-test_that("cannot create nameless plot", {
-  expect_error(
-    newPlot <- plotType(
-      category="Category",
-      dataX="some_colname",
-      dataY=list("some_colname")
-    ),
-    regex="Missing parameter 'name'",
-    fixed=TRUE
-  )
+  expect_s4_class(newPlot, "obsmonPlotType")
 })
 
 test_that("name is set correctly", {
@@ -37,18 +25,6 @@ test_that("name is set correctly", {
     dataY=list("some_colname")
   )
   expect_equal(newPlot$name, plotName)
-})
-
-test_that("cannot create plot without category", {
-  expect_error(
-    newPlot <- plotType(
-      name="Name",
-      dataX="some_colname",
-      dataY=list("some_colname")
-    ),
-    regex="Missing parameter 'category'",
-    fixed=TRUE
-  )
 })
 
 test_that("category is set correctly", {

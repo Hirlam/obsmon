@@ -1,4 +1,4 @@
-plotType <- setRefClass("obsmonPlotType",
+plotType <- setRefClass(Class="obsmonPlotType",
   fields=list(
     name="character",
     category="character",
@@ -17,19 +17,16 @@ plotType <- setRefClass("obsmonPlotType",
     initialize = function(...) {
       callSuper(...)
 
-      # Validate mandatory args
-      for (field in c("name", "category", "dataX", "dataY")) {
-        if(length(.self$field(field))==0) stop(sprintf("Missing parameter '%s'", field))
-      }
-      
+      if(length(.self$dataX)==0) .self$dataX <- "x"
+      if(length(.self$dataY)==0) .self$dataY <- list("y")
 
+      # Validate dataX and dataY entries
       varnameRegex <- "^[a-zA-Z_$][a-zA-Z_$0-9]*$"
-      # Validate dataX
+
       if(!isTRUE(grepl(varnameRegex, .self$dataX))) {
         stop(paste("Invalid value for the 'dataX' field:", .self$dataX))
       }
 
-      # Validate dataY entries
       .self$dataY <- unique(.self$dataY)
       for (name in .self$dataY) {
         if(!isTRUE(grepl(varnameRegex, name))) {
