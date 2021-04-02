@@ -176,6 +176,8 @@ obsmonPlot <- setRefClass(Class="obsmonPlot",
     defaultGenerate = function() {
       if(length(.self$data)==0) .self$fetchData()
       dataColsToPlot <- c(.self$parentType$dataX, unlist(.self$parentType$dataY))
+      # melt data so we can plot multiple curves (sharing same x-axis), each
+      # with a different color and symbol
       df <- melt(.self$data[dataColsToPlot], id=.self$parentType$dataX)
       graph <- plot_ly(
         df,
@@ -187,6 +189,7 @@ obsmonPlot <- setRefClass(Class="obsmonPlot",
         color=~variable,
         symbol=~variable
       )
+      attributes(graph)$createdByDefaultGenerate <- TRUE
       return(graph)
     }
   )
