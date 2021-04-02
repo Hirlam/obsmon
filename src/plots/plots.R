@@ -157,3 +157,12 @@ plotType <- setRefClass(Class="obsmonPlotType",
     }
   )
 )
+
+obsmonPlot <- setRefClass(Class="obsmonPlot",
+  fields=list(
+    parentType="obsmonPlotType",
+    db="obsmonDatabase",
+    params="list", # List like the shiny "input" from the UI
+    data="data.frame"
+  )
+)

@@ -1,4 +1,5 @@
 workingDir <- getwd()
+untar("test_data/mock_experiment.tgz", exdir="test_data")
 setwd("../..")
 capture.output(source("src/init.R"))
 capture.output(source("src/plots/plots.R"))
@@ -6,7 +7,7 @@ setwd(workingDir)
 
 context("PlotType objects")
 
-test_that("obsmonPlotType can be instaciated", {
+test_that("obsmonPlotType can be instanciated", {
   newPlot <- plotType(
     name="Name",
     category="Category",
@@ -245,5 +246,39 @@ test_that("'obsmon' table is queried if station selection is not supported", {
   )
 })
 
-# Test that table is "usage" if station in needed sqlite cols
-# Test that table is "obsmon" if station not in needed sqlite cols
+
+#########################
+context("Plot objects")
+#########################
+
+mockPlotType <- plotType(
+  name="First Guess and Analysis Departure",
+  category="Statistical",
+  dataX="level",
+  dataY=list("fg_bias_total", "an_bias_total", "fg_rms_total", "an_rms_total"),
+  requiredDataFields=list("obnumber", "obname")
+)
+
+mockUiInput <- list(
+  obname="aircraft",
+  variable="t",
+  levels=c(22500, 27500, 35000, 45000),
+  date=c("2019-08-06"),
+  cycle=c(15),
+  dateRange=c("2021-08-06", "2021-08-06"),
+  cycles=c(0, 3, 6, 9, 12, 15, 18, 21)
+)
+
+obsmonDb <- obsmonDatabaseClass(
+  dbType="ecma",
+  dir="./test_data/mock_experiment/ecma"
+)
+
+test_that("obsmonPlot can be instanciated", {
+  newPlot <- obsmonPlot(
+    parentType=mockPlotType,
+    db=obsmonDb,
+    params=mockUiInput
+  )
+  expect_s4_class(newPlot, "obsmonPlot")
+})
