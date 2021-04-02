@@ -171,6 +171,23 @@ obsmonPlot <- setRefClass(Class="obsmonPlot",
       sqliteParams <- .self$parentType$uiInput2SqliteParams(params)
       dtgs <- sqliteParams$dtg
       .self$data <- performQuery(db=.self$db, query=query, dtgs=dtgs)
+    },
+    ############################
+    defaultGenerate = function() {
+      if(length(.self$data)==0) .self$fetchData()
+      dataColsToPlot <- c(.self$parentType$dataX, unlist(.self$parentType$dataY))
+      df <- melt(.self$data[dataColsToPlot], id=.self$parentType$dataX)
+      graph <- plot_ly(
+        df,
+        x=as.formula(paste0("~", .self$parentType$dataX)),
+        y=~value,
+        type="scatter",
+        mode='lines+markers',
+        marker = list(size=15),
+        color=~variable,
+        symbol=~variable
+      )
+      return(graph)
     }
   )
 )

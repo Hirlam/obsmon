@@ -297,3 +297,13 @@ test_that("obsmonPlot 'fetchData' works", {
     newPlot$parentType$getRetrievedSqliteFields()
   )
 })
+
+test_that("defaultGenerate function produces plotly plot", {
+  newPlot <- obsmonPlot(
+    parentType=mockPlotType,
+    db=obsmonDb,
+    params=mockUiInput
+  )
+  graphicsObj <- newPlot$defaultGenerate()
+  expect_s3_class(graphicsObj, "plotly")
+})
