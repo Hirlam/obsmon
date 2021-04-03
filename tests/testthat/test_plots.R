@@ -469,3 +469,32 @@ test_that("obsmonPlotRegistry refuses to register plots with same name", {
       fixed=TRUE
     )
 })
+
+test_that("getCategorisedPlotTypes puts plotTypes in correct categories", {
+  plotType1 <- plotType(name="Plot Type 1", category="Category A")
+  plotType2 <- plotType(name="Plot Type 2", category="Category B")
+  plotType3 <- plotType(name="Plot Type 3", category="Category C")
+  plotType4 <- plotType(name="Plot Type 4", category="Category A")
+  plotType5 <- plotType(name="Plot Type 5", category="Category B")
+
+  plotRegistry <- obsmonPlotRegistry()
+  categories <- c()
+  for (pType in c(plotType1, plotType2, plotType3, plotType4, plotType5)) {
+    plotRegistry$register(pType)
+    categories <- c(categories, pType$category)
+  }
+  categories <- unique(categories)
+
+  categorisedPlotTypes <- plotRegistry$getCategorisedPlotTypes()
+  expect_equal(length(categorisedPlotTypes), length(categories))
+
+  newPlotRegistry <- obsmonPlotRegistry()
+  for (categ in categories) {
+    plotTypesInCategory <- categorisedPlotTypes[[categ]]
+    for (pType in plotTypesInCategory) {
+      expect_equal(pType$category, categ)
+      newPlotRegistry$register(pType)
+    }
+  }
+  expect_mapequal(newPlotRegistry$plotTypes, plotRegistry$plotTypes)
+})
