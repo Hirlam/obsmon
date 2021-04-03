@@ -302,3 +302,6 @@ obsmonPlotRegistry <- setRefClass(Class="obsmonPlotRegistry",
     }
   )
 )
+
+# Create the plot registry that will be used throughout
+plotRegistry <- obsmonPlotRegistry()
