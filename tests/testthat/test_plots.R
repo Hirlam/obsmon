@@ -435,14 +435,15 @@ context("obsmonPlotRegistry")
 test_that("obsmonPlotRegistry can be instanciated", {
     plotRegistry <- obsmonPlotRegistry()
     expect_s4_class(plotRegistry, "obsmonPlotRegistry")
+    expect_equal(length(plotRegistry$plotTypes), 0)
 })
 
-test_that("obsmonPlotRegistry can register plot types", {
+test_that("obsmonPlotRegistry can register plots with plotType args", {
     plotRegistry <- obsmonPlotRegistry()
-    prevNumRegPlotTypes <-length(plotRegistry$plotTypes)
-    expect_equal(prevNumRegPlotTypes, 0)
+    prevNumRegPlotTypes <- 0
     for(plotType in c(mockPlotType, mockNonInteractivePlotType)) {
-      plotRegistry$register(plotType)
+      plotRegistry$registerPlotType(plotType)
+
       nRegPlotTypes <- length(plotRegistry$plotTypes)
       expect_equal(nRegPlotTypes, prevNumRegPlotTypes + 1)
       expect_equal(
@@ -453,15 +454,43 @@ test_that("obsmonPlotRegistry can register plot types", {
     }
 })
 
+test_that("obsmonPlotRegistry can register plots with regular args", {
+  plotRegistry <- obsmonPlotRegistry()
+  plotRegistry$registerPlotType(name="foo", category="bar")
+  expect_equal(length(plotRegistry$plotTypes), 1)
+  expect_equal(
+    plotRegistry$plotTypes[[1]],
+    plotType(name="foo", category="bar")
+  )
+})
+
+test_that("obsmonPlotRegistry reg via args and plotType are equivalent", {
+    names <- c("foo", "bar")
+    categories <- c("baz", "qux")
+    plotRegistry1 <- obsmonPlotRegistry()
+    plotRegistry2 <- obsmonPlotRegistry()
+    for (i in seq_along(names)) {
+      plotRegistry1$registerPlotType(plotType(
+        name=names[i],
+        category=categories[i]
+      ))
+      plotRegistry2$registerPlotType(
+        name=names[i],
+        category=categories[i]
+      )
+    }
+    expect_equal(plotRegistry1$plotTypes, plotRegistry2$plotTypes)
+})
+
 test_that("obsmonPlotRegistry refuses to register plots with same name", {
     plotType1 <- mockPlotType$copy()
     plotType2 <- mockNonInteractivePlotType$copy()
     plotType2$name <- plotType1$name
 
     plotRegistry <- obsmonPlotRegistry()
-    plotRegistry$register(plotType1)
+    plotRegistry$registerPlotType(plotType1)
     expect_error(
-      plotRegistry$register(plotType2),
+      plotRegistry$registerPlotType(plotType2),
       regex=sprintf(
         'Cannot register plot "%s": Name is already registered.',
         plotType2$name
@@ -480,7 +509,7 @@ test_that("getCategorisedPlotTypes puts plotTypes in correct categories", {
   plotRegistry <- obsmonPlotRegistry()
   categories <- c()
   for (pType in c(plotType1, plotType2, plotType3, plotType4, plotType5)) {
-    plotRegistry$register(pType)
+    plotRegistry$registerPlotType(pType)
     categories <- c(categories, pType$category)
   }
   categories <- unique(categories)
@@ -493,7 +522,7 @@ test_that("getCategorisedPlotTypes puts plotTypes in correct categories", {
     plotTypesInCategory <- categorisedPlotTypes[[categ]]
     for (pType in plotTypesInCategory) {
       expect_equal(pType$category, categ)
-      newPlotRegistry$register(pType)
+      newPlotRegistry$registerPlotType(pType)
     }
   }
   expect_mapequal(newPlotRegistry$plotTypes, plotRegistry$plotTypes)
