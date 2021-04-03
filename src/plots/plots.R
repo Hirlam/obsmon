@@ -11,6 +11,7 @@ plotType <- setRefClass(Class="obsmonPlotType",
     xUnits="character",
     yUnits="character",
     interactive="logical",
+    dataPostProcessingFunction="ANY", # A function of 1 arg: data (data.frame)
     plottingFunction="ANY" # A function of 1 arg: plot (an obsmonPlot object)
   ),
   methods=list(
@@ -182,7 +183,11 @@ obsmonPlot <- setRefClass(Class="obsmonPlot",
         .self$parentType$dataX,
         unlist(.self$parentType$dataY)
       )
-      return(.self$rawData[dataColsToPlot])
+      rtn <- .self$rawData[dataColsToPlot]
+      if(class(.self$parentType$dataPostProcessingFunction) != "uninitializedField") {
+        rtn <- .self$parentType$dataPostProcessingFunction(rtn)
+      }
+      return(rtn)
     },
     ############################
     fetchRawData = function() {

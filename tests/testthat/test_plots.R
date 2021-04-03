@@ -298,6 +298,12 @@ mockPlotType <- plotType(
 mockNonInteractivePlotType <- mockPlotType$copy()
 mockNonInteractivePlotType$interactive <- FALSE
 
+mockPlotTypeWithDataPP <- mockPlotType$copy()
+mockPlotTypeWithDataPP$dataPostProcessingFunction <- function(data) {
+  data$an_bias_total <- 2.0 * data$an_bias_total
+  return (data)
+}
+
 mockUiInput <- list(
   obname="aircraft",
   variable="t",
@@ -358,6 +364,23 @@ test_that("data contains all fields needed for X and Y", {
     colnames(newPlot$data),
     c(newPlot$parentType$dataX, newPlot$parentType$dataY)
   )
+})
+
+test_that("dataPostProcessingFunction works", {
+  newPlot <- obsmonPlot(
+    parentType=mockPlotType,
+    db=obsmonDb,
+    params=mockUiInput
+  )
+  newPlotWithDataPP <- obsmonPlot(
+    parentType=mockPlotTypeWithDataPP,
+    db=obsmonDb,
+    params=mockUiInput
+  )
+  testData <- newPlotWithDataPP$parentType$dataPostProcessingFunction(
+    data.frame(newPlot$data)
+  )
+  expect_equal(newPlotWithDataPP$data, testData)
 })
 
 test_that("defaultGenerate function produces plotly if plot interactive", {
