@@ -322,18 +322,41 @@ test_that("obsmonPlot can be instanciated", {
   expect_s4_class(newPlot, "obsmonPlot")
 })
 
-test_that("obsmonPlot 'fetchData' works", {
+test_that("obsmonPlot 'fetchRawData' works", {
   newPlot <- obsmonPlot(
     parentType=mockPlotType,
     db=obsmonDb,
     params=mockUiInput
   )
-  expect_equal(sum(dim(newPlot$data)), 0)
-  newPlot$fetchData()
-  expect_gt(prod(dim(newPlot$data)), 0)
+  expect_equal(sum(dim(newPlot$rawData)), 0)
+  newPlot$fetchRawData()
+  expect_gt(prod(dim(newPlot$rawData)), 0)
+  expect_setequal(
+    colnames(newPlot$rawData),
+    newPlot$parentType$getRetrievedSqliteFields()
+  )
+})
+
+test_that("Accessing data automatically fetches rawData", {
+  newPlot <- obsmonPlot(
+    parentType=mockPlotType,
+    db=obsmonDb,
+    params=mockUiInput
+  )
+  expect_equal(sum(dim(newPlot$rawData)), 0)
+  data <- newPlot$data
+  expect_gt(prod(dim(newPlot$rawData)), 0)
+})
+
+test_that("data contains all fields needed for X and Y", {
+  newPlot <- obsmonPlot(
+    parentType=mockPlotType,
+    db=obsmonDb,
+    params=mockUiInput
+  )
   expect_setequal(
     colnames(newPlot$data),
-    newPlot$parentType$getRetrievedSqliteFields()
+    c(newPlot$parentType$dataX, newPlot$parentType$dataY)
   )
 })
 

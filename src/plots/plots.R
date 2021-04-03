@@ -188,22 +188,29 @@ obsmonPlot <- setRefClass(Class="obsmonPlot",
     parentType="obsmonPlotType",
     db="obsmonDatabase",
     params="list", # List like the shiny "input" from the UI
-    data="data.frame"
+    rawData="data.frame",
+    data=function() {
+      if(length(.self$rawData)==0) .self$fetchRawData()
+      dataColsToPlot <- c(
+        .self$parentType$dataX,
+        unlist(.self$parentType$dataY)
+      )
+      return(.self$rawData[dataColsToPlot])
+    }
   ),
   methods=list(
-    fetchData = function() {
-      query <- .self$parentType$uiInput2SqliteQuery(params)
-      sqliteParams <- .self$parentType$uiInput2SqliteParams(params)
-      dtgs <- sqliteParams$dtg
-      .self$data <- performQuery(db=.self$db, query=query, dtgs=dtgs)
+    fetchRawData = function() {
+      .self$rawData <- performQuery(
+        db=.self$db,
+        query=.self$parentType$uiInput2SqliteQuery(.self$params),
+        dtgs=.self$parentType$uiInput2SqliteParams(.self$params)$dtg
+      )
     },
     ############################
     defaultGenerate = function() {
-      if(length(.self$data)==0) .self$fetchData()
-      dataColsToPlot <- c(.self$parentType$dataX, unlist(.self$parentType$dataY))
       # melt data so we can plot multiple curves (sharing same x-axis), each
       # with a different color and symbol
-      df <- melt(.self$data[dataColsToPlot], id=.self$parentType$dataX)
+      df <- melt(.self$data, id=.self$parentType$dataX)
       if(.self$parentType$interactive) {
         graph <- plot_ly(
           df,
@@ -237,13 +244,10 @@ obsmonPlot <- setRefClass(Class="obsmonPlot",
         return(.self$defaultGenerate())
       }
 
-      if(length(.self$data)==0) .self$fetchData()
       plot <- .self$parentType$plottingFunction(.self)
-
       if(.self$parentType$interactive && !("plotly" %in% class(plot))) {
         plot <- .self$parentType$ggplotlyWrapper(plot)
       }
-
       return(plot)
     }
   )
