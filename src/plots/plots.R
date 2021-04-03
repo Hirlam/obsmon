@@ -107,59 +107,6 @@ plotType <- setRefClass(Class="obsmonPlotType",
       return (stub)      
     },
     ############################
-    uiInput2SqliteQuery = function(input) {
-      # Previously named "plotBuildQuery"
-      sqliteParams <- .self$uiInput2SqliteParams(input)
-      return(sprintf(.self$getQueryStub(), buildWhereClause(sqliteParams)))
-    },
-    ############################
-    uiInput2SqliteParams = function(input) {
-      # Previously called "plotsBuildCriteria"
-      res <- list()
-      obname <- input$obname
-      res$obnumber <- getAttrFromMetadata('obnumber', obname=obname)
-      if (isTRUE(obname=='satem')) {
-        res$obname <- input$sensor
-        res$satname <- input$satellite
-        levels <- input$channels
-        excludeLevels <- input$excludeChannels
-      } else {
-        if (isTRUE(obname=='scatt')) {
-          res$satname <- input$scatt_satellite
-        }
-        res$obname <- obname
-        res$varname <- input$variable
-        levels <- input$levels
-        excludeLevels <- input$excludeLevels
-      }
-
-      res$levels <- list()
-      if(length(levels)>0 && levels!="") res$levels <- levels
-      res$excludeLevels <- list()
-      if(length(excludeLevels)>0 && excludeLevels!="") {
-        res$excludeLevels <- excludeLevels
-      }
-
-      if(obSupportsStationChoice(obname)) {
-        station <- input$station
-        if(is.null(station) || "" %in% station) station <- character(0)
-        res$station <- station
-      }
-
-      res$dtg <- tryCatch(
-        switch(.self$dateType,
-          "single"=date2dtg(input$date, input$cycle),
-          "range"={
-            dateRange <- sort(input$dateRange)
-            list(dateRange[1], dateRange[2], input$cycles)
-          }
-        ),
-        error=function(e) NULL
-      )
-
-      return(res)
-    },
-    ############################
     ggplotlyWrapper = function(ggplotPlot) {
       # Generate a regular ggplot2 plot and then use plotly's
       # ggplotly function to convert it to a plotly object
@@ -196,14 +143,23 @@ obsmonPlot <- setRefClass(Class="obsmonPlot",
         unlist(.self$parentType$dataY)
       )
       return(.self$rawData[dataColsToPlot])
+    },
+    sqliteQuery = function() {
+      # Previously named "plotBuildQuery"
+      return(
+        sprintf(
+          .self$parentType$getQueryStub(),
+          buildWhereClause(.self$getSqliteCriteriaFromParams())
+        )
+      )
     }
   ),
   methods=list(
     fetchRawData = function() {
       .self$rawData <- performQuery(
         db=.self$db,
-        query=.self$parentType$uiInput2SqliteQuery(.self$params),
-        dtgs=.self$parentType$uiInput2SqliteParams(.self$params)$dtg
+        query=.self$sqliteQuery,
+        dtgs=.self$getSqliteCriteriaFromParams()$dtg
       )
     },
     ############################
@@ -249,6 +205,60 @@ obsmonPlot <- setRefClass(Class="obsmonPlot",
         plot <- .self$parentType$ggplotlyWrapper(plot)
       }
       return(plot)
+    },
+    ############################
+    getSqliteCriteriaFromParams = function() {
+      # Previously called "plotsBuildCriteria"
+      # plotRequest <- list()
+      # plotRequest$expName <- req(input$experiment)
+      # plotRequest$dbType <- db$dbType
+      # plotRequest$criteria <- plotsBuildCriteria(input)
+      # For windspeed:
+      # plotRequest$criteria$varname <- uName
+      # plotRequest$criteria$varname <- vName
+      res <- list()
+      obname <- .self$params$obname
+      res$obnumber <- getAttrFromMetadata('obnumber', obname=obname)
+      if (isTRUE(obname=='satem')) {
+        res$obname <- .self$params$sensor
+        res$satname <- .self$params$satellite
+        levels <- .self$params$channels
+        excludeLevels <- .self$params$excludeChannels
+      } else {
+        if (isTRUE(obname=='scatt')) {
+          res$satname <- .self$params$scatt_satellite
+        }
+        res$obname <- obname
+        res$varname <- .self$params$variable
+        levels <- .self$params$levels
+        excludeLevels <- .self$params$excludeLevels
+      }
+
+      res$levels <- list()
+      if(length(levels)>0 && levels!="") res$levels <- levels
+      res$excludeLevels <- list()
+      if(length(excludeLevels)>0 && excludeLevels!="") {
+        res$excludeLevels <- excludeLevels
+      }
+
+      if(obSupportsStationChoice(obname)) {
+        station <- .self$params$station
+        if(is.null(station) || "" %in% station) station <- character(0)
+        res$station <- station
+      }
+
+      res$dtg <- tryCatch(
+        switch(.self$parentType$dateType,
+          "single"=date2dtg(.self$params$date, .self$params$cycle),
+          "range"={
+            dateRange <- sort(.self$params$dateRange)
+            list(dateRange[1], dateRange[2], .self$params$cycles)
+          }
+        ),
+        error=function(e) NULL
+      )
+
+      return(res)
     }
   )
 )
