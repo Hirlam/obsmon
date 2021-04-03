@@ -116,7 +116,7 @@ sourceObsmonFiles <- function() {
   source("src/experiments.R")
   #source("src/plots/colors.R")
   source("src/plots/plots.R")
-  #source("src/plots/plots_statistical.R")
+  source("src/plots/plots_statistical.R")
   #source("src/plots/plots_diagnostic.R")
   #source("src/plots/plots_timeseries.R")
   #source("src/plots/plots_maps.R")

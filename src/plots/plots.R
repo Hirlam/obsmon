@@ -305,3 +305,29 @@ obsmonPlotRegistry <- setRefClass(Class="obsmonPlotRegistry",
 
 # Create the plot registry that will be used throughout
 plotRegistry <- obsmonPlotRegistry()
+
+#######################################################
+# Some utility functions used when defining the plots #
+#######################################################
+levelsLableForPlots <- function(obnumber, varname=character(0)) {
+  strObnumber <- as.character(obnumber)
+  obstype <- getAttrFromMetadata("category", obnumber=obnumber)
+  quantity <- "Pressure"
+  if(obstype=="surface" || (isTRUE(strObnumber=="13") && !isTRUE(varname=="rh"))) {
+    quantity <- "Height"
+  }
+  label <- sprintf("%s [%s]", quantity, units[[tolower(quantity)]])
+  return(label)
+}
+
+coord_flip_wrapper <- function(..., default=FALSE) {
+  # Adds the argument "default" to the original ggplot's coord_flip.
+  # This gets rid of the annoying "Coordinate system already present. Adding
+  # new coordinate system, which will replace the existing one" warning which
+  # is otherwise issued when trying to modify the x and y limits in plots that
+  # use cood_flip
+  # Adapted from <https://github.com/tidyverse/ggplot2/issues/2799>
+  cf <- coord_flip(...)
+  cf$default <- default
+  return(cf)
+}

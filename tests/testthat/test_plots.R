@@ -1,11 +1,15 @@
 workingDir <- getwd()
 untar("test_data/mock_experiment.tgz", exdir="test_data")
 setwd("../..")
-capture.output(source("src/init.R"))
-capture.output(source("src/plots/plots.R"))
+sink("/dev/null")
+source("src/init.R")
+sink()
 setwd(workingDir)
 
+
+############################
 context("PlotType objects")
+############################
 
 test_that("obsmonPlotType can be instanciated", {
   newPlot <- plotType(
@@ -429,6 +433,7 @@ test_that("'generate' uses 'defaultGenerate' if parentType$plottingFunction miss
   }
 })
 
+
 ###########################################
 context("obsmonPlotRegistry")
 ###########################################
@@ -529,4 +534,21 @@ test_that("getCategorisedPlotTypes puts plotTypes in correct categories", {
     }
   }
   expect_mapequal(newPlotRegistry$plotTypes, plotRegistry$plotTypes)
+})
+
+
+####################################################################
+context("Implemented obsmon plots")
+####################################################################
+
+test_that("plotTypes in actual obsmon plotRegistry can produce plots", {
+  for (pType in plotRegistry$plotTypes) {
+    newPlot <- obsmonPlot(
+      parentType=pType,
+      db=obsmonDb,
+      params=mockUiInput
+    )
+    graphicsObj <- newPlot$generate()
+    expect_s3_class(graphicsObj, "plotly")
+  }
 })
