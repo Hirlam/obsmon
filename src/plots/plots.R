@@ -263,3 +263,16 @@ obsmonPlot <- setRefClass(Class="obsmonPlot",
     }
   )
 )
+
+obsmonPlotRegistry <- setRefClass(Class="obsmonPlotRegistry",
+  fields=list(
+    plotTypes="list"
+  ),
+  methods=list(
+    register = function(plot) {
+      newEntry <- list(plot)
+      names(newEntry) <- plot$name
+      .self$plotTypes <- c(.self$plotTypes, newEntry)
+    }
+  )
+)

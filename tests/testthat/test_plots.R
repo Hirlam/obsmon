@@ -296,6 +296,7 @@ mockPlotType <- plotType(
 )
 
 mockNonInteractivePlotType <- mockPlotType$copy()
+mockNonInteractivePlotType$name <- "First Guess and Analysis Departure (static)"
 mockNonInteractivePlotType$interactive <- FALSE
 
 mockPlotTypeWithDataPP <- mockPlotType$copy()
@@ -426,4 +427,28 @@ test_that("'generate' uses 'defaultGenerate' if parentType$plottingFunction miss
     graphicsObj <- newPlot$generate()
     expect_true(attr(graphicsObj, "createdByDefaultGenerate"))
   }
+})
+
+###########################################
+context("obsmonPlotRegistry")
+###########################################
+test_that("obsmonPlotRegistry can be instanciated", {
+    plotRegistry <- obsmonPlotRegistry()
+    expect_s4_class(plotRegistry, "obsmonPlotRegistry")
+})
+
+test_that("obsmonPlotRegistry can register plot types", {
+    plotRegistry <- obsmonPlotRegistry()
+    prevNumRegPlotTypes <-length(plotRegistry$plotTypes)
+    expect_equal(prevNumRegPlotTypes, 0)
+    for(plotType in c(mockPlotType, mockNonInteractivePlotType)) {
+      plotRegistry$register(plotType)
+      nRegPlotTypes <- length(plotRegistry$plotTypes)
+      expect_equal(nRegPlotTypes, prevNumRegPlotTypes + 1)
+      expect_equal(
+        plotType,
+        plotRegistry$plotTypes[[nRegPlotTypes]]
+      )
+      prevNumRegPlotTypes <- nRegPlotTypes
+    }
 })
