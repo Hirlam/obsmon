@@ -127,6 +127,60 @@ plotType <- setRefClass(Class="obsmonPlotType",
         }
       )
       return(plotlyPlot)
+    },
+    ############################
+    getSqliteParamsFromUiParams = function(paramsAsInUiInput) {
+      # Previously called "plotsBuildCriteria"
+      # plotRequest <- list()
+      # plotRequest$expName <- req(input$experiment)
+      # plotRequest$dbType <- db$dbType
+      # plotRequest$criteria <- plotsBuildCriteria(input)
+      # For windspeed:
+      # plotRequest$criteria$varname <- uName
+      # plotRequest$criteria$varname <- vName
+      res <- list()
+      obname <- paramsAsInUiInput$obname
+      res$obnumber <- getAttrFromMetadata('obnumber', obname=obname)
+      if (isTRUE(obname=='satem')) {
+        res$obname <- paramsAsInUiInput$sensor
+        res$satname <- paramsAsInUiInput$satellite
+        levels <- paramsAsInUiInput$channels
+        excludeLevels <- paramsAsInUiInput$excludeChannels
+      } else {
+        if (isTRUE(obname=='scatt')) {
+          res$satname <- paramsAsInUiInput$scatt_satellite
+        }
+        res$obname <- obname
+        res$varname <- paramsAsInUiInput$variable
+        levels <- paramsAsInUiInput$levels
+        excludeLevels <- paramsAsInUiInput$excludeLevels
+      }
+
+      res$levels <- list()
+      if(length(levels)>0 && levels!="") res$levels <- levels
+      res$excludeLevels <- list()
+      if(length(excludeLevels)>0 && excludeLevels!="") {
+        res$excludeLevels <- excludeLevels
+      }
+
+      if(obSupportsStationChoice(obname)) {
+        station <- paramsAsInUiInput$station
+        if(is.null(station) || "" %in% station) station <- character(0)
+        res$station <- station
+      }
+
+      res$dtg <- tryCatch(
+        switch(.self$dateType,
+          "single"=date2dtg(paramsAsInUiInput$date, paramsAsInUiInput$cycle),
+          "range"={
+            dateRange <- sort(paramsAsInUiInput$dateRange)
+            list(dateRange[1], dateRange[2], paramsAsInUiInput$cycles)
+          }
+        ),
+        error=function(e) NULL
+      )
+
+      return(res)
     }
   )
 )
@@ -138,7 +192,10 @@ obsmonPlot <- setRefClass(Class="obsmonPlot",
     paramsAsInUiInput="list",
     rawData="data.frame",
     data = function() {.self$getDataFromRawData()},
-    sqliteQuery = function() {.self$getSqliteQuery()}
+    sqliteQuery = function() {.self$getSqliteQuery()},
+    paramsAsInSqliteDbs = function() {
+      .self$parentType$getSqliteParamsFromUiParams(.self$paramsAsInUiInput)
+    }
   ),
   methods=list(
     generate = function() {
@@ -194,7 +251,7 @@ obsmonPlot <- setRefClass(Class="obsmonPlot",
       .self$rawData <- performQuery(
         db=.self$db,
         query=.self$sqliteQuery,
-        dtgs=.self$getSqliteParamsFromUiParams()$dtg
+        dtgs=.self$paramsAsInSqliteDbs$dtg
       )
     },
     ############################
@@ -203,66 +260,9 @@ obsmonPlot <- setRefClass(Class="obsmonPlot",
       return(
         sprintf(
           .self$parentType$getQueryStub(),
-          buildWhereClause(.self$getSqliteParamsFromUiParams())
+          buildWhereClause(.self$paramsAsInSqliteDbs)
         )
       )
-    },
-    ############################
-    getSqliteParamsFromUiParams = function() {
-      # Previously called "plotsBuildCriteria"
-      # plotRequest <- list()
-      # plotRequest$expName <- req(input$experiment)
-      # plotRequest$dbType <- db$dbType
-      # plotRequest$criteria <- plotsBuildCriteria(input)
-      # For windspeed:
-      # plotRequest$criteria$varname <- uName
-      # plotRequest$criteria$varname <- vName
-      res <- list()
-      obname <- .self$paramsAsInUiInput$obname
-      res$obnumber <- getAttrFromMetadata('obnumber', obname=obname)
-      if (isTRUE(obname=='satem')) {
-        res$obname <- .self$paramsAsInUiInput$sensor
-        res$satname <- .self$paramsAsInUiInput$satellite
-        levels <- .self$paramsAsInUiInput$channels
-        excludeLevels <- .self$paramsAsInUiInput$excludeChannels
-      } else {
-        if (isTRUE(obname=='scatt')) {
-          res$satname <- .self$paramsAsInUiInput$scatt_satellite
-        }
-        res$obname <- obname
-        res$varname <- .self$paramsAsInUiInput$variable
-        levels <- .self$paramsAsInUiInput$levels
-        excludeLevels <- .self$paramsAsInUiInput$excludeLevels
-      }
-
-      res$levels <- list()
-      if(length(levels)>0 && levels!="") res$levels <- levels
-      res$excludeLevels <- list()
-      if(length(excludeLevels)>0 && excludeLevels!="") {
-        res$excludeLevels <- excludeLevels
-      }
-
-      if(obSupportsStationChoice(obname)) {
-        station <- .self$paramsAsInUiInput$station
-        if(is.null(station) || "" %in% station) station <- character(0)
-        res$station <- station
-      }
-
-      res$dtg <- tryCatch(
-        switch(.self$parentType$dateType,
-          "single"=date2dtg(
-            .self$paramsAsInUiInput$date,
-            .self$paramsAsInUiInput$cycle
-          ),
-          "range"={
-            dateRange <- sort(.self$paramsAsInUiInput$dateRange)
-            list(dateRange[1], dateRange[2], .self$paramsAsInUiInput$cycles)
-          }
-        ),
-        error=function(e) NULL
-      )
-
-      return(res)
     }
   )
 )
