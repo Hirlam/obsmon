@@ -246,6 +246,42 @@ test_that("'obsmon' table is queried if station selection is not supported", {
   )
 })
 
+test_that("ggplotlyWrapper produces plotly from ggplot", {
+  newPlot <- plotType(
+    name="name",
+    category="category",
+    dataX="some_colname",
+    dataY=list("some_colname")
+  )
+  ggplotPlot <- ggplot() + theme_void()
+  plotlyPlot <- newPlot$ggplotlyWrapper(ggplotPlot)
+  expect_s3_class(plotlyPlot, "plotly")
+})
+
+test_that("ggplotlyWrapper returns original obj if not ggplot, with warning", {
+  newPlot <- plotType(
+    name="name",
+    category="category",
+    dataX="some_colname",
+    dataY=list("some_colname")
+  )
+  randomObj <- list()
+
+  # capture.output is being used to check for the warning content because
+  # futile.logger warnings are not caught by testthat::expect_warning
+  output <- capture.output(
+    returnedObj <- newPlot$ggplotlyWrapper(randomObj),
+    type="message"
+  )
+  expect_true(grepl(
+    sprintf('Failure making plot "%s" interactive',  newPlot$name),
+    output,
+    fixed=TRUE
+  ))
+
+  expect_identical(randomObj, returnedObj)
+})
+
 
 #########################
 context("Plot objects")
@@ -258,6 +294,9 @@ mockPlotType <- plotType(
   dataY=list("fg_bias_total", "an_bias_total", "fg_rms_total", "an_rms_total"),
   requiredDataFields=list("obnumber", "obname")
 )
+
+mockNonInteractivePlotType <- mockPlotType$copy()
+mockNonInteractivePlotType$interactive <- FALSE
 
 mockUiInput <- list(
   obname="aircraft",
@@ -298,7 +337,7 @@ test_that("obsmonPlot 'fetchData' works", {
   )
 })
 
-test_that("defaultGenerate function produces plotly plot", {
+test_that("defaultGenerate function produces plotly if plot interactive", {
   newPlot <- obsmonPlot(
     parentType=mockPlotType,
     db=obsmonDb,
@@ -308,23 +347,37 @@ test_that("defaultGenerate function produces plotly plot", {
   expect_s3_class(graphicsObj, "plotly")
 })
 
-test_that("defaultGenerate function adds createdByDefaultGenerate attr", {
+test_that("defaultGenerate function produces ggplot if plot non-interactive", {
   newPlot <- obsmonPlot(
-    parentType=mockPlotType,
+    parentType=mockNonInteractivePlotType,
     db=obsmonDb,
     params=mockUiInput
   )
   graphicsObj <- newPlot$defaultGenerate()
-  expect_true(attr(graphicsObj, "createdByDefaultGenerate"))
+  expect_s3_class(graphicsObj, "ggplot")
+})
+
+test_that("defaultGenerate function adds createdByDefaultGenerate attr", {
+  for(parentType in c(mockPlotType, mockNonInteractivePlotType)) {
+    newPlot <- obsmonPlot(
+      parentType=parentType,
+      db=obsmonDb,
+      params=mockUiInput
+    )
+    graphicsObj <- newPlot$defaultGenerate()
+    expect_true(attr(graphicsObj, "createdByDefaultGenerate"))
+  }
 })
 
 test_that("'generate' uses 'defaultGenerate' if parentType$plottingFunction missing", {
-  newPlot <- obsmonPlot(
-    parentType=mockPlotType,
-    db=obsmonDb,
-    params=mockUiInput
-  )
-  expect_s4_class(newPlot$parentType$plottingFunction, "uninitializedField")
-  graphicsObj <- newPlot$generate()
-  expect_true(attr(graphicsObj, "createdByDefaultGenerate"))
+  for(parentType in c(mockPlotType, mockNonInteractivePlotType)) {
+    newPlot <- obsmonPlot(
+      parentType=parentType,
+      db=obsmonDb,
+      params=mockUiInput
+    )
+    expect_s4_class(newPlot$parentType$plottingFunction, "uninitializedField")
+    graphicsObj <- newPlot$generate()
+    expect_true(attr(graphicsObj, "createdByDefaultGenerate"))
+  }
 })

@@ -10,7 +10,8 @@ plotType <- setRefClass(Class="obsmonPlotType",
     dataY="list", # Names of the fields that will be in the plots' y
     xUnits="character",
     yUnits="character",
-    plottingFunction="ANY" # A function of 1 argument: The data.
+    interactive="logical",
+    plottingFunction="ANY" # A function of 1 arg: plot (an obsmonPlot object)
   ),
   methods=list(
     ############################
@@ -33,6 +34,9 @@ plotType <- setRefClass(Class="obsmonPlotType",
           stop(paste("Field 'dataY' contains invalid column names:", name))
         }
       }
+
+      # Make plot interative by default
+      if(length(.self$interactive)==0) .self$interactive <- TRUE
 
       # Validate requiredDataFields and extraDataFields entries
       for(field in c("requiredDataFields", "extraDataFields")) {
@@ -154,6 +158,27 @@ plotType <- setRefClass(Class="obsmonPlotType",
       )
 
       return(res)
+    },
+    ############################
+    ggplotlyWrapper = function(ggplotPlot) {
+      # Generate a regular ggplot2 plot and then use plotly's
+      # ggplotly function to convert it to a plotly object
+      plotlyPlot <- tryCatch({
+        ggplotly(ggplotPlot, tooltip=c("x","y")) %>%
+          layout(
+            margin=list(t=100),
+            legend=list(orientation="v", yanchor="center", y=0.5)
+          )
+        },
+        error=function(e){
+          flog.warn(
+            'ggplotlyWrapper: Failure making plot "%s" interactive: %s',
+            .self$name, e
+          )
+          return(ggplotPlot)
+        }
+      )
+      return(plotlyPlot)
     }
   )
 )
@@ -179,16 +204,30 @@ obsmonPlot <- setRefClass(Class="obsmonPlot",
       # melt data so we can plot multiple curves (sharing same x-axis), each
       # with a different color and symbol
       df <- melt(.self$data[dataColsToPlot], id=.self$parentType$dataX)
-      graph <- plot_ly(
-        df,
-        x=as.formula(paste0("~", .self$parentType$dataX)),
-        y=~value,
-        type="scatter",
-        mode='lines+markers',
-        marker = list(size=15),
-        color=~variable,
-        symbol=~variable
-      )
+      if(.self$parentType$interactive) {
+        graph <- plot_ly(
+          df,
+          x=as.formula(paste0("~", .self$parentType$dataX)),
+          y=~value,
+          type="scatter",
+          mode='lines+markers',
+          marker = list(size=15),
+          color=~variable,
+          symbol=~variable
+        )
+      } else {
+        graph <- ggplot(data=df) +
+          aes_string(
+            x=.self$parentType$dataX,
+            y="value",
+            group="variable",
+            colour="variable",
+            shape="variable",
+            fill="variable"
+          ) +
+          geom_point(size=4) +
+          geom_line()
+      }
       attributes(graph)$createdByDefaultGenerate <- TRUE
       return(graph)
     },
@@ -197,8 +236,15 @@ obsmonPlot <- setRefClass(Class="obsmonPlot",
       if(class(.self$parentType$plottingFunction) == "uninitializedField") {
         return(.self$defaultGenerate())
       }
+
       if(length(.self$data)==0) .self$fetchData()
-      return(.self$parentType$plottingFunction(.self$data))
+      plot <- .self$parentType$plottingFunction(.self)
+
+      if(.self$parentType$interactive && !("plotly" %in% class(plot))) {
+        plot <- .self$parentType$ggplotlyWrapper(plot)
+      }
+
+      return(plot)
     }
   )
 )
