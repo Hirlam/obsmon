@@ -452,3 +452,20 @@ test_that("obsmonPlotRegistry can register plot types", {
       prevNumRegPlotTypes <- nRegPlotTypes
     }
 })
+
+test_that("obsmonPlotRegistry refuses to register plots with same name", {
+    plotType1 <- mockPlotType$copy()
+    plotType2 <- mockNonInteractivePlotType$copy()
+    plotType2$name <- plotType1$name
+
+    plotRegistry <- obsmonPlotRegistry()
+    plotRegistry$register(plotType1)
+    expect_error(
+      plotRegistry$register(plotType2),
+      regex=sprintf(
+        'Cannot register plot "%s": Name is already registered.',
+        plotType2$name
+      ),
+      fixed=TRUE
+    )
+})

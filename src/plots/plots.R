@@ -270,6 +270,12 @@ obsmonPlotRegistry <- setRefClass(Class="obsmonPlotRegistry",
   ),
   methods=list(
     register = function(plot) {
+      if(plot$name %in% names(.self$plotTypes)) {
+        stop(sprintf(
+          'Cannot register plot "%s": Name is already registered.',
+          plot$name
+        ))
+      }
       newEntry <- list(plot)
       names(newEntry) <- plot$name
       .self$plotTypes <- c(.self$plotTypes, newEntry)
