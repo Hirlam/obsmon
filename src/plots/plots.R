@@ -156,30 +156,22 @@ obsmonPlot <- setRefClass(Class="obsmonPlot",
       # melt data so we can plot multiple curves (sharing same x-axis), each
       # with a different color and symbol
       df <- melt(.self$data, id=.self$parentType$dataX)
+      graph <- ggplot(data=df) +
+        aes_string(
+          x=.self$parentType$dataX,
+          y="value",
+          group="variable",
+          colour="variable",
+          shape="variable",
+          fill="variable"
+        ) +
+        geom_point(size=4) +
+        geom_line()
+
       if(.self$parentType$interactive) {
-        graph <- plot_ly(
-          df,
-          x=as.formula(paste0("~", .self$parentType$dataX)),
-          y=~value,
-          type="scatter",
-          mode='lines+markers',
-          marker = list(size=15),
-          color=~variable,
-          symbol=~variable
-        )
-      } else {
-        graph <- ggplot(data=df) +
-          aes_string(
-            x=.self$parentType$dataX,
-            y="value",
-            group="variable",
-            colour="variable",
-            shape="variable",
-            fill="variable"
-          ) +
-          geom_point(size=4) +
-          geom_line()
+        graph <- .self$parentType$ggplotlyWrapper(graph)
       }
+
       attributes(graph)$createdByDefaultGenerate <- TRUE
       return(graph)
     },
