@@ -135,7 +135,7 @@ obsmonPlot <- setRefClass(Class="obsmonPlot",
   fields=list(
     parentType="obsmonPlotType",
     db="obsmonDatabase",
-    params="list", # List like the shiny "input" from the UI
+    paramsAsInUiInput="list",
     rawData="data.frame",
     data = function() {.self$getDataFromRawData()},
     sqliteQuery = function() {.self$getSqliteQuery()}
@@ -194,7 +194,7 @@ obsmonPlot <- setRefClass(Class="obsmonPlot",
       .self$rawData <- performQuery(
         db=.self$db,
         query=.self$sqliteQuery,
-        dtgs=.self$getSqliteCriteriaFromParams()$dtg
+        dtgs=.self$getSqliteParamsFromUiParams()$dtg
       )
     },
     ############################
@@ -203,12 +203,12 @@ obsmonPlot <- setRefClass(Class="obsmonPlot",
       return(
         sprintf(
           .self$parentType$getQueryStub(),
-          buildWhereClause(.self$getSqliteCriteriaFromParams())
+          buildWhereClause(.self$getSqliteParamsFromUiParams())
         )
       )
     },
     ############################
-    getSqliteCriteriaFromParams = function() {
+    getSqliteParamsFromUiParams = function() {
       # Previously called "plotsBuildCriteria"
       # plotRequest <- list()
       # plotRequest$expName <- req(input$experiment)
@@ -218,21 +218,21 @@ obsmonPlot <- setRefClass(Class="obsmonPlot",
       # plotRequest$criteria$varname <- uName
       # plotRequest$criteria$varname <- vName
       res <- list()
-      obname <- .self$params$obname
+      obname <- .self$paramsAsInUiInput$obname
       res$obnumber <- getAttrFromMetadata('obnumber', obname=obname)
       if (isTRUE(obname=='satem')) {
-        res$obname <- .self$params$sensor
-        res$satname <- .self$params$satellite
-        levels <- .self$params$channels
-        excludeLevels <- .self$params$excludeChannels
+        res$obname <- .self$paramsAsInUiInput$sensor
+        res$satname <- .self$paramsAsInUiInput$satellite
+        levels <- .self$paramsAsInUiInput$channels
+        excludeLevels <- .self$paramsAsInUiInput$excludeChannels
       } else {
         if (isTRUE(obname=='scatt')) {
-          res$satname <- .self$params$scatt_satellite
+          res$satname <- .self$paramsAsInUiInput$scatt_satellite
         }
         res$obname <- obname
-        res$varname <- .self$params$variable
-        levels <- .self$params$levels
-        excludeLevels <- .self$params$excludeLevels
+        res$varname <- .self$paramsAsInUiInput$variable
+        levels <- .self$paramsAsInUiInput$levels
+        excludeLevels <- .self$paramsAsInUiInput$excludeLevels
       }
 
       res$levels <- list()
@@ -243,17 +243,20 @@ obsmonPlot <- setRefClass(Class="obsmonPlot",
       }
 
       if(obSupportsStationChoice(obname)) {
-        station <- .self$params$station
+        station <- .self$paramsAsInUiInput$station
         if(is.null(station) || "" %in% station) station <- character(0)
         res$station <- station
       }
 
       res$dtg <- tryCatch(
         switch(.self$parentType$dateType,
-          "single"=date2dtg(.self$params$date, .self$params$cycle),
+          "single"=date2dtg(
+            .self$paramsAsInUiInput$date,
+            .self$paramsAsInUiInput$cycle
+          ),
           "range"={
-            dateRange <- sort(.self$params$dateRange)
-            list(dateRange[1], dateRange[2], .self$params$cycles)
+            dateRange <- sort(.self$paramsAsInUiInput$dateRange)
+            list(dateRange[1], dateRange[2], .self$paramsAsInUiInput$cycles)
           }
         ),
         error=function(e) NULL

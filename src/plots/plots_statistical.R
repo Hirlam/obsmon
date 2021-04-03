@@ -1,5 +1,5 @@
 firstGuessAndAnPlottingFunction <-  function(plot) {
-  sqliteParams <- plot$getSqliteCriteriaFromParams()
+  sqliteParams <- plot$getSqliteParamsFromUiParams()
   plotData <- plot$data
 
   strObnumber <- as.character(sqliteParams$obnumber)

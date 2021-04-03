@@ -328,7 +328,7 @@ test_that("obsmonPlot can be instanciated", {
   newPlot <- obsmonPlot(
     parentType=mockPlotType,
     db=obsmonDb,
-    params=mockUiInput
+    paramsAsInUiInput=mockUiInput
   )
   expect_s4_class(newPlot, "obsmonPlot")
 })
@@ -337,7 +337,7 @@ test_that("obsmonPlot 'fetchRawData' works", {
   newPlot <- obsmonPlot(
     parentType=mockPlotType,
     db=obsmonDb,
-    params=mockUiInput
+    paramsAsInUiInput=mockUiInput
   )
   expect_equal(sum(dim(newPlot$rawData)), 0)
   newPlot$fetchRawData()
@@ -352,7 +352,7 @@ test_that("Accessing data automatically fetches rawData", {
   newPlot <- obsmonPlot(
     parentType=mockPlotType,
     db=obsmonDb,
-    params=mockUiInput
+    paramsAsInUiInput=mockUiInput
   )
   expect_equal(sum(dim(newPlot$rawData)), 0)
   data <- newPlot$data
@@ -363,7 +363,7 @@ test_that("data contains all fields needed for X and Y", {
   newPlot <- obsmonPlot(
     parentType=mockPlotType,
     db=obsmonDb,
-    params=mockUiInput
+    paramsAsInUiInput=mockUiInput
   )
   expect_setequal(
     colnames(newPlot$data),
@@ -375,12 +375,12 @@ test_that("dataPostProcessingFunction works", {
   newPlot <- obsmonPlot(
     parentType=mockPlotType,
     db=obsmonDb,
-    params=mockUiInput
+    paramsAsInUiInput=mockUiInput
   )
   newPlotWithDataPP <- obsmonPlot(
     parentType=mockPlotTypeWithDataPP,
     db=obsmonDb,
-    params=mockUiInput
+    paramsAsInUiInput=mockUiInput
   )
   testData <- newPlotWithDataPP$parentType$dataPostProcessingFunction(
     data.frame(newPlot$data)
@@ -392,7 +392,7 @@ test_that("defaultGenerate function produces plotly if plot interactive", {
   newPlot <- obsmonPlot(
     parentType=mockPlotType,
     db=obsmonDb,
-    params=mockUiInput
+    paramsAsInUiInput=mockUiInput
   )
   graphicsObj <- newPlot$defaultGenerate()
   expect_s3_class(graphicsObj, "plotly")
@@ -402,7 +402,7 @@ test_that("defaultGenerate function produces ggplot if plot non-interactive", {
   newPlot <- obsmonPlot(
     parentType=mockNonInteractivePlotType,
     db=obsmonDb,
-    params=mockUiInput
+    paramsAsInUiInput=mockUiInput
   )
   graphicsObj <- newPlot$defaultGenerate()
   expect_s3_class(graphicsObj, "ggplot")
@@ -413,7 +413,7 @@ test_that("defaultGenerate function adds createdByDefaultGenerate attr", {
     newPlot <- obsmonPlot(
       parentType=parentType,
       db=obsmonDb,
-      params=mockUiInput
+      paramsAsInUiInput=mockUiInput
     )
     graphicsObj <- newPlot$defaultGenerate()
     expect_true(attr(graphicsObj, "createdByDefaultGenerate"))
@@ -425,7 +425,7 @@ test_that("'generate' uses 'defaultGenerate' if parentType$plottingFunction miss
     newPlot <- obsmonPlot(
       parentType=parentType,
       db=obsmonDb,
-      params=mockUiInput
+      paramsAsInUiInput=mockUiInput
     )
     expect_s4_class(newPlot$parentType$plottingFunction, "uninitializedField")
     graphicsObj <- newPlot$generate()
@@ -546,7 +546,7 @@ test_that("plotTypes in actual obsmon plotRegistry can produce plots", {
     newPlot <- obsmonPlot(
       parentType=pType,
       db=obsmonDb,
-      params=mockUiInput
+      paramsAsInUiInput=mockUiInput
     )
     graphicsObj <- newPlot$generate()
     expect_s3_class(graphicsObj, "plotly")
