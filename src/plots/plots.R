@@ -136,31 +136,20 @@ obsmonPlot <- setRefClass(Class="obsmonPlot",
     db="obsmonDatabase",
     params="list", # List like the shiny "input" from the UI
     rawData="data.frame",
-    data=function() {
-      if(length(.self$rawData)==0) .self$fetchRawData()
-      dataColsToPlot <- c(
-        .self$parentType$dataX,
-        unlist(.self$parentType$dataY)
-      )
-      return(.self$rawData[dataColsToPlot])
-    },
-    sqliteQuery = function() {
-      # Previously named "plotBuildQuery"
-      return(
-        sprintf(
-          .self$parentType$getQueryStub(),
-          buildWhereClause(.self$getSqliteCriteriaFromParams())
-        )
-      )
-    }
+    data = function() {.self$getDataFromRawData()},
+    sqliteQuery = function() {.self$getSqliteQuery()}
   ),
   methods=list(
-    fetchRawData = function() {
-      .self$rawData <- performQuery(
-        db=.self$db,
-        query=.self$sqliteQuery,
-        dtgs=.self$getSqliteCriteriaFromParams()$dtg
-      )
+    generate = function() {
+      if(class(.self$parentType$plottingFunction) == "uninitializedField") {
+        return(.self$defaultGenerate())
+      }
+
+      plot <- .self$parentType$plottingFunction(.self)
+      if(.self$parentType$interactive && !("plotly" %in% class(plot))) {
+        plot <- .self$parentType$ggplotlyWrapper(plot)
+      }
+      return(plot)
     },
     ############################
     defaultGenerate = function() {
@@ -195,16 +184,31 @@ obsmonPlot <- setRefClass(Class="obsmonPlot",
       return(graph)
     },
     ############################
-    generate = function() {
-      if(class(.self$parentType$plottingFunction) == "uninitializedField") {
-        return(.self$defaultGenerate())
-      }
-
-      plot <- .self$parentType$plottingFunction(.self)
-      if(.self$parentType$interactive && !("plotly" %in% class(plot))) {
-        plot <- .self$parentType$ggplotlyWrapper(plot)
-      }
-      return(plot)
+    getDataFromRawData = function() {
+      if(length(.self$rawData)==0) .self$fetchRawData()
+      dataColsToPlot <- c(
+        .self$parentType$dataX,
+        unlist(.self$parentType$dataY)
+      )
+      return(.self$rawData[dataColsToPlot])
+    },
+    ############################
+    fetchRawData = function() {
+      .self$rawData <- performQuery(
+        db=.self$db,
+        query=.self$sqliteQuery,
+        dtgs=.self$getSqliteCriteriaFromParams()$dtg
+      )
+    },
+    ############################
+    getSqliteQuery = function() {
+      # Previously named "plotBuildQuery"
+      return(
+        sprintf(
+          .self$parentType$getQueryStub(),
+          buildWhereClause(.self$getSqliteCriteriaFromParams())
+        )
+      )
     },
     ############################
     getSqliteCriteriaFromParams = function() {
