@@ -12,7 +12,14 @@ plotType <- setRefClass(Class="obsmonPlotType",
     yUnits="character",
     interactive="logical",
     dataPostProcessingFunction="ANY", # A function of 1 arg: data (data.frame)
-    plottingFunction="ANY" # A function of 1 arg: plot (an obsmonPlot object)
+    plottingFunction="ANY", # A function of 1 arg: plot (an obsmonPlot object)
+    ############################
+    supportsStationSelection = function(...) {
+      return(isTRUE("statid" %in% .self$getRetrievedSqliteFields()))
+    },
+    requiresSingleStation = function(...) {
+      return(isTRUE(.self$stationChoiceType == "single"))
+    }
   ),
   methods=list(
     ############################
@@ -79,14 +86,6 @@ plotType <- setRefClass(Class="obsmonPlotType",
       }
     },
     ############################
-    supportsStationSelection = function() {
-      return(isTRUE("statid" %in% .self$getRetrievedSqliteFields()))
-    },
-    ############################
-    requiresSingleStation = function() {
-      return(isTRUE(.self$stationChoiceType == "single"))
-    },
-    ############################
     getRetrievedSqliteFields = function() {
       dbCols <- c(
         .self$dataX,
@@ -94,18 +93,18 @@ plotType <- setRefClass(Class="obsmonPlotType",
         .self$requiredDataFields,
         .self$extraDataFields
       )
-      return(unique(dbCols)) 
+      return(unique(dbCols))
     },
     ############################
     getQueryStub = function() {
       # stationIDs are not stored in the "obsmon" table, only in "usage"
-      dbTable <- ifelse(.self$supportsStationSelection(), "usage", "obsmon")
+      dbTable <- ifelse(.self$supportsStationSelection, "usage", "obsmon")
       stub <- paste(
         "SELECT",
         paste(.self$getRetrievedSqliteFields(), collapse=", "),
         "FROM", dbTable, "WHERE %s"
       )
-      return (stub)      
+      return (stub)
     },
     ############################
     ggplotlyWrapper = function(ggplotPlot) {

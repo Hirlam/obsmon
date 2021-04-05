@@ -181,7 +181,7 @@ test_that("default stationChoiceType is character(0)", {
     dataY=list("some_colname")
   )
   expect_identical(newPlot$stationChoiceType, character(0))
-  expect_false(newPlot$requiresSingleStation())
+  expect_false(newPlot$requiresSingleStation)
 })
 
 test_that("stationChoiceType, if passed, must be one of 'single, 'multiple'", {
@@ -207,9 +207,9 @@ test_that("stationChoiceType, if passed, must be one of 'single, 'multiple'", {
     )
     expect_equal(newPlot$stationChoiceType, stationChoiceType)
     if(stationChoiceType == "single") {
-      expect_true(newPlot$requiresSingleStation())
+      expect_true(newPlot$requiresSingleStation)
    } else {
-      expect_false(newPlot$requiresSingleStation())
+      expect_false(newPlot$requiresSingleStation)
    }
   }
 })
