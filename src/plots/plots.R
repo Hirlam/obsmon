@@ -290,15 +290,14 @@ obsmonPlotRegistry <- setRefClass(Class="obsmonPlotRegistry",
       .self$plotTypes <- c(.self$plotTypes, newEntry)
     },
     #########################
-    getCategorisedPlotTypes = function() {
+    getCategorisedPlotTypeNames = function(pTypes=list()) {
       rtn <- list()
-      for (pType in .self$plotTypes) {
-        newEntry <- list(pType)
-        names(newEntry) <- pType$name
+      if(length(pTypes)==0) pTypes <- .self$plotTypes
+      for (pType in pTypes) {
         if (pType$category %in% names(rtn)) {
-          rtn[[pType$category]] <- c(rtn[[pType$category]], newEntry)
+          rtn[[pType$category]] <- c(rtn[[pType$category]], list(pType$name))
         } else {
-          rtn[[pType$category]] <- newEntry
+          rtn[[pType$category]] <- list(pType$name)
         }
       }
       return(rtn)
