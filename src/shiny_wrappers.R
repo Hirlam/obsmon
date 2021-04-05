@@ -27,7 +27,10 @@ runAppHandlingBusyPort <- function(
       },
       error=function(e) {
         error_msg <<- e
-        flog.warn(paste('Failed to create server using port', port, sep=" "))
+        flog.warn(
+          'Failed to create server using port %s. Issued error msg: %s',
+          port, e
+        )
         port <<- sample(1024:65535, 1)
         lisOnMsgStart <<- "Port updated: Listening on "
         lisOnMsgMarker <<- "-------------------------------------------------"
