@@ -343,7 +343,7 @@ runObsmonStandAlone <- function(cmdLineArgs) {
     displayMode <- NULL
     if(cmdLineArgs$debug) {
       Rprof()
-      options(shiny.reactlog=TRUE, error=traceback)
+      options(shiny.reactlog=TRUE, error=traceback, shiny.error=browser)
       displayMode <- "showcase"
     }
     runAppHandlingBusyPort(
