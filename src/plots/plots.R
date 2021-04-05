@@ -115,7 +115,8 @@ plotType <- setRefClass(Class="obsmonPlotType",
           layout(
             margin=list(t=100),
             legend=list(orientation="v", yanchor="center", y=0.5)
-          )
+          ) %>%
+          configPlotlyWrapper()
         },
         error=function(e){
           flog.warn(
@@ -332,4 +333,46 @@ coord_flip_wrapper <- function(..., default=FALSE) {
   cf <- coord_flip(...)
   cf$default <- default
   return(cf)
+}
+
+configPlotlyWrapper <- function(...) {
+  # Wrapper to plotly's config function, with some useful defaults
+  # For a list of all config options, please visit
+  # <https://github.com/plotly/plotly.js/blob/master/src/plot_api/plot_config.js>
+  # Se allso <https://plotly-r.com/control-modebar.html>
+  argList <- list(...)
+  argNames <- names(argList)
+  if(!("displaylogo" %in% argNames)) argList$displaylogo <- FALSE
+  if(!("cloud" %in% argNames)) argList$cloud <- FALSE
+  if(!("scrollZoom" %in% argNames)) argList$scrollZoom <- TRUE
+
+  # Defaults for what users are allowed to edit in the plots
+  if(!("editable" %in% argNames)) argList$editable <- TRUE
+  editsOpts <- list(
+    titleText=FALSE,
+    shapePosition=FALSE
+  )
+  if("edits" %in% argNames) {
+    for(name in names(argList$edits)) {
+      editsOpts[[name]] <- argList$edits[[name]]
+    }
+  }
+  argList$edits <- editsOpts
+
+  # Defaults for saving figures
+  plotlySaveAsFigDimensions <- list(height=755, width=1200)
+  toImageButtonOpts <- list(
+    filename="obsmon_plot",
+    format="png",
+    height=plotlySaveAsFigDimensions$height,
+    width=plotlySaveAsFigDimensions$width
+  )
+  if("toImageButtonOptions" %in% argNames) {
+    for(name in names(argList$toImageButtonOptions)) {
+      toImageButtonOpts[[name]] <- argList$toImageButtonOptions[[name]]
+    }
+  }
+  argList$toImageButtonOptions <- toImageButtonOpts
+
+  return(do.call(config, argList))
 }
