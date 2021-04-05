@@ -190,9 +190,10 @@ obsmonPlot <- setRefClass(Class="obsmonPlot",
     db="obsmonDatabase",
     paramsAsInUiInput="list",
     rawData="data.frame",
-    data = function() {.self$getDataFromRawData()},
-    sqliteQuery = function() {.self$getSqliteQuery()},
-    paramsAsInSqliteDbs = function() {
+    ##############################
+    data = function(...) {.self$getDataFromRawData()},
+    sqliteQuery = function(...) {.self$getSqliteQuery()},
+    paramsAsInSqliteDbs = function(...) {
       .self$parentType$getSqliteParamsFromUiParams(.self$paramsAsInUiInput)
     }
   ),
