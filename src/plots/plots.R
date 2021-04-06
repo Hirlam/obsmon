@@ -156,17 +156,17 @@ plotType <- setRefClass(Class="obsmonPlotType",
         excludeLevels <- paramsAsInUiInput$excludeLevels
       }
 
-      res$levels <- list()
-      if(length(levels)>0 && levels!="") res$levels <- levels
+      res$level <- list()
+      if(length(levels)>0 && levels!="") res$level <- levels
       res$excludeLevels <- list()
       if(length(excludeLevels)>0 && excludeLevels!="") {
         res$excludeLevels <- excludeLevels
       }
 
       if(obSupportsStationChoice(obname)) {
-        station <- paramsAsInUiInput$station
-        if(is.null(station) || "" %in% station) station <- character(0)
-        res$station <- station
+        stations <- paramsAsInUiInput$station
+        if(is.null(stations) || "" %in% stations) stations <- character(0)
+        res$statid <- stations
       }
 
       res$dtg <- tryCatch(
