@@ -129,6 +129,15 @@ plotType <- setRefClass(Class="obsmonPlotType",
       return(plotlyPlot)
     },
     ############################
+    isCompatibleWithUiParams = function(paramsAsInUiInput) {
+      # See former "plotIsApplicable"
+      sqliteParams <- .self$getSqliteParamsFromUiParams(paramsAsInUiInput)
+      for (param in .self$requiredDataFields) {
+        if (length(sqliteParams[[param]])==0) return (FALSE)
+      }
+      return (TRUE)
+    },
+    ############################
     getSqliteParamsFromUiParams = function(paramsAsInUiInput) {
       # Previously called "plotsBuildCriteria"
       # plotRequest <- list()
@@ -291,9 +300,19 @@ obsmonPlotRegistry <- setRefClass(Class="obsmonPlotRegistry",
       .self$plotTypes <- c(.self$plotTypes, newEntry)
     },
     #########################
-    getCategorisedPlotTypeNames = function(pTypes=list()) {
+    getCategorisedPlotTypeNames = function(compatibleWithUiInputParams=NULL) {
       rtn <- list()
-      if(length(pTypes)==0) pTypes <- .self$plotTypes
+
+      if(is.null(compatibleWithUiInputParams)) {
+        pTypes <- .self$plotTypes
+      } else {
+        pTypes <- list()
+        for (pType in .self$plotTypes) {
+          if(!pType$isCompatibleWithUiParams(compatibleWithUiInputParams)) next
+          pTypes <- c(pTypes, pType)
+        }
+      }
+
       for (pType in pTypes) {
         if (pType$category %in% names(rtn)) {
           rtn[[pType$category]] <- c(rtn[[pType$category]], list(pType$name))

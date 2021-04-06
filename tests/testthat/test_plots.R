@@ -537,6 +537,46 @@ test_that("getCategorisedPlotTypeNames puts plotTypes in correct categories", {
   expect_mapequal(newPlotRegistry$plotTypes, plotRegistry$plotTypes)
 })
 
+test_that("isCompatibleWithUiParams works", {
+  plotRegistry <- obsmonPlotRegistry()
+  pType <- plotType(
+    name="foo",
+    category="foo category",
+    requiredDataFields=list("statid")
+  )
+  expect_true(pType$isCompatibleWithUiParams(list(station="foo")))
+  expect_false(pType$isCompatibleWithUiParams(list(station=character(0))))
+  expect_false(pType$isCompatibleWithUiParams(list(station=NULL)))
+  expect_false(pType$isCompatibleWithUiParams(list(obname="bar")))
+})
+
+test_that("getCategorisedPlotTypeNames works with compatibility filters", {
+  plotRegistry <- obsmonPlotRegistry()
+  plotRegistry$registerPlotType(
+    name="foo",
+    category="foo category",
+    requiredDataFields=list("statid")
+  )
+  plotRegistry$registerPlotType(
+    name="bar",
+    category="bar category",
+    requiredDataFields=list("obname")
+  )
+
+  fooCompatible <- plotRegistry$getCategorisedPlotTypeNames(
+    compatibleWithUiInputParams=list(station="some station")
+  )
+  barCompatible <- plotRegistry$getCategorisedPlotTypeNames(
+    compatibleWithUiInputParams=list(obname="some obname")
+  )
+  fullyIncompatibleMissingParamValue <-  plotRegistry$getCategorisedPlotTypeNames(
+    compatibleWithUiInputParams=list(station=character(0))
+  )
+  expect_equal(names(fooCompatible), "foo category")
+  expect_equal(names(barCompatible), "bar category")
+  expect_equal(fullyIncompatibleMissingParamValue, list())
+})
+
 
 ####################################################################
 context("Implemented obsmon plots")
