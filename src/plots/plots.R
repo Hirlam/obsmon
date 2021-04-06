@@ -257,11 +257,12 @@ obsmonPlot <- setRefClass(Class="obsmonPlot",
       return(rtn)
     },
     ############################
-    fetchRawData = function() {
+    fetchRawData = function(...) {
       .self$rawData <- performQuery(
         db=.self$db,
         query=.self$sqliteQuery,
-        dtgs=.self$paramsAsInSqliteDbs$dtg
+        dtgs=.self$paramsAsInSqliteDbs$dtg,
+        ...
       )
     },
     ############################
