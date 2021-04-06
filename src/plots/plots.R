@@ -13,6 +13,7 @@ plotType <- setRefClass(Class="obsmonPlotType",
     interactive="logical",
     dataPostProcessingFunction="ANY", # A function of 1 arg: data (data.frame)
     plottingFunction="ANY", # A function of 1 arg: plot (an obsmonPlot object)
+    plotTitleFunction="ANY", # A function of 1 arg: plot (an obsmonPlot object)
     ############################
     supportsStationSelection = function(...) {
       return(isTRUE("statid" %in% .self$getRetrievedSqliteFields()))
@@ -73,10 +74,13 @@ plotType <- setRefClass(Class="obsmonPlotType",
         .self$requiredDataFields <- c(.self$requiredDataFields, "statid")
       }
 
-      # Validate plottingFunction
-      func <- .self$plottingFunction
-      if (class(func) != "uninitializedField" && typeof(func) != "closure") {
-        stop("Field 'plottingFunction' is not a function")
+      # Validate fields ending with "Function"
+      for (field in names(.self$getRefClass()$fields())) {
+        if(!endsWith(field, "Function")) next
+        func <- .self$field(field)
+        if (class(func) != "uninitializedField" && typeof(func) != "closure") {
+          stop(sprintf("Field '%s' is not a function", field))
+        }
       }
 
       # Validate dateType
@@ -205,18 +209,21 @@ obsmonPlot <- setRefClass(Class="obsmonPlot",
     sqliteQuery = function(...) {.self$getSqliteQuery()},
     paramsAsInSqliteDbs = function(...) {
       .self$parentType$getSqliteParamsFromUiParams(.self$paramsAsInUiInput)
-    }
+    },
+    title = function(...) {.self$getTitle()}
   ),
   methods=list(
     generate = function() {
       if(class(.self$parentType$plottingFunction) == "uninitializedField") {
-        return(.self$defaultGenerate())
+        plot <- .self$defaultGenerate()
+      } else {
+        plot <- .self$parentType$plottingFunction(.self)
+        if(.self$parentType$interactive && !("plotly" %in% class(plot))) {
+          plot <- .self$parentType$ggplotlyWrapper(plot)
+        }
       }
 
-      plot <- .self$parentType$plottingFunction(.self)
-      if(.self$parentType$interactive && !("plotly" %in% class(plot))) {
-        plot <- .self$parentType$ggplotlyWrapper(plot)
-      }
+      plot <- plot %>% addTitleToPlot(.self$title)
       return(plot)
     },
     ############################
@@ -274,6 +281,37 @@ obsmonPlot <- setRefClass(Class="obsmonPlot",
           buildWhereClause(.self$paramsAsInSqliteDbs)
         )
       )
+    },
+    ###########################
+    getTitle = function() {
+      if(class(.self$parentType$plotTitleFunction) != "uninitializedField") {
+        return(.self$parentType$plotTitleFunction(.self))
+      }
+
+      sqliteParams <- .self$paramsAsInSqliteDbs
+
+      rtn <- ""
+      if(length(.self$paramsAsInUiInput$experiment) > 0) {
+        rtn <- paste0(.self$paramsAsInUiInput$experiment, ": ")
+      }
+
+      rtn <- paste0(rtn, .self$parentType$name, "\n")
+
+      if(length(.self$paramsAsInUiInput$odbBase)>0) {
+        rtn <- paste0(rtn, "db=", .self$paramsAsInUiInput$odbBase)
+      }
+
+      dtgs <- formatDtg(sqliteParams$dtg)
+      if(length(dtgs)>0) {
+        rtn <- sprintf("%s, DTG=%s", rtn, dtgs)
+      }
+
+      for (param in names(sqliteParams)) {
+        if (param == "dtg") next
+        if (length(sqliteParams[[param]]) == 0) next
+        rtn <- sprintf("%s, %s=%s", rtn, param, sqliteParams[[param]])
+      }
+      return (rtn)
     }
   )
 )
@@ -395,4 +433,39 @@ configPlotlyWrapper <- function(...) {
   argList$toImageButtonOptions <- toImageButtonOpts
 
   return(do.call(config, argList))
+}
+
+addTitleToPlot <- function(myPlot, title) {
+  if(length(title)==0) {
+    flog.warn("addTitleToPlot: Empty title")
+    return(myPlot)
+  }
+  newPlot <- tryCatch({
+    if(is.ggplot(myPlot)) {
+      myPlot + ggtitle(title) + theme(plot.title=element_text(hjust=0.5))
+    } else if("plotly" %in% class(myPlot)) {
+      yTitle <- attr(myPlot, "yTitle")
+      if(is.null(yTitle)) yTitle <- 1.0
+      # Use an annotation instead of an actual title, as otherwise plotly
+      # will fail to put it in the correct position without overlaps (and
+      # it also won't allow users to change the position of the text)
+      myPlot %>% add_annotations(
+          text=title,
+          showarrow=FALSE,
+          font=list(size=20),
+          xref="paper", xanchor="center", x=0.5,
+          # Push y a bit above 1 as, otherwise, the title may overlap with the
+          # plot when using ggplotly on a ggplot object containing facet_wraps
+          yref="paper", yanchor="bottom", y=yTitle
+      ) %>% layout(title=FALSE)
+    } else {
+      grid.arrange(myPlot, top=textGrob(title, gp=gpar(fontsize=13)))
+    }
+    },
+    error=function(e) {
+      flog.error("addTitleToPlot: Problems setting plot title: %s", e)
+      myPlot
+    }
+  )
+  return(newPlot)
 }

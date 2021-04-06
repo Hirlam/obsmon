@@ -162,7 +162,7 @@ test_that("non-function plottingFunction raises error", {
 })
 
 test_that("plottingFunction can be set to function", {
-  plotFunc <- function(data) {data}
+  plotFunc <- function(plot) {plot}
   newPlot <- plotType(
     name="name",
     category="category",
@@ -171,6 +171,32 @@ test_that("plottingFunction can be set to function", {
     plottingFunction=plotFunc
   )
   expect_identical(plotFunc, newPlot$plottingFunction)
+})
+
+test_that("non-function plotTitleFunction raises error", {
+  expect_error(
+    newPlot <- plotType(
+      name="name",
+      category="category",
+      dataX="some_colname",
+      dataY=list("some_colname"),
+      plotTitleFunction="A"
+    ),
+    regex="Field 'plotTitleFunction' is not a function",
+    fixed=TRUE
+  )
+})
+
+test_that("plotTitleFunction can be set to function", {
+  plotTitleFunc <- function(plot) {""}
+  newPlot <- plotType(
+    name="name",
+    category="category",
+    dataX="some_colname",
+    dataY=list("some_colname"),
+    plotTitleFunction=plotTitleFunc
+  )
+  expect_identical(plotTitleFunc, newPlot$plotTitleFunction)
 })
 
 test_that("default stationChoiceType is character(0)", {
