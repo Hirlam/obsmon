@@ -3,13 +3,10 @@ plotType <- setRefClass(Class="obsmonPlotType",
     name="character",
     category="character",
     dateType="character",
+    dataFieldsInPlotData="list",
     dataFieldsInSqliteWhereClause="list",
     extraDataFields="list",
     stationChoiceType="character",
-    dataX="character", # Name of the field that will be in the plots' x
-    dataY="list", # Names of the fields that will be in the plots' y
-    xUnits="character",
-    yUnits="character",
     interactive="logical",
     dataPostProcessingFunction="ANY", # A function of 1 arg: data (data.frame)
     plottingFunction="ANY", # A function of 1 arg: plot (an obsmonPlot object)
@@ -27,28 +24,16 @@ plotType <- setRefClass(Class="obsmonPlotType",
     initialize = function(...) {
       callSuper(...)
 
-      if(length(.self$dataX)==0) .self$dataX <- "x"
-      if(length(.self$dataY)==0) .self$dataY <- list("y")
-
-      # Validate dataX and dataY entries
-      varnameRegex <- "^[a-zA-Z_$][a-zA-Z_$0-9]*$"
-
-      if(!isTRUE(grepl(varnameRegex, .self$dataX))) {
-        stop(paste("Invalid value for the 'dataX' field:", .self$dataX))
-      }
-
-      .self$dataY <- unique(.self$dataY)
-      for (name in .self$dataY) {
-        if(!isTRUE(grepl(varnameRegex, name))) {
-          stop(paste("Field 'dataY' contains invalid column names:", name))
-        }
-      }
-
       # Make plot interative by default
       if(length(.self$interactive)==0) .self$interactive <- TRUE
 
       # Validate dataFieldsInSqliteWhereClause and extraDataFields entries
-      for(field in c("dataFieldsInSqliteWhereClause", "extraDataFields")) {
+      varnameRegex <- "^[a-zA-Z_$][a-zA-Z_$0-9]*$"
+      for(field in c(
+        "dataFieldsInSqliteWhereClause",
+        "dataFieldsInPlotData",
+        "extraDataFields"
+      )) {
         .self$field(field, unique(.self$field(field)))
         if(length(.self$field(field))>0) {
           for (name in .self$field(field)) {
@@ -95,8 +80,7 @@ plotType <- setRefClass(Class="obsmonPlotType",
     ############################
     getRetrievedSqliteFields = function() {
       dbCols <- c(
-        .self$dataX,
-        .self$dataY,
+        .self$dataFieldsInPlotData,
         .self$dataFieldsInSqliteWhereClause,
         .self$extraDataFields
       )
@@ -238,10 +222,11 @@ obsmonPlot <- setRefClass(Class="obsmonPlot",
     defaultGenerate = function() {
       # melt data so we can plot multiple curves (sharing same x-axis), each
       # with a different color and symbol
-      df <- melt(.self$data, id=.self$parentType$dataX)
+      data_colnames <- colnames(.self$data)
+      df <- melt(.self$data, id=data_colnames[1])
       graph <- ggplot(data=df) +
         aes_string(
-          x=.self$parentType$dataX,
+          x=data_colnames[1],
           y="value",
           group="variable",
           colour="variable",
@@ -261,14 +246,16 @@ obsmonPlot <- setRefClass(Class="obsmonPlot",
     ############################
     getDataFromRawData = function() {
       if(length(.self$rawData)==0) .self$fetchRawData()
-      dataColsToPlot <- c(
-        .self$parentType$dataX,
-        unlist(.self$parentType$dataY)
-      )
-      rtn <- .self$rawData[dataColsToPlot]
+      rtn <- data.frame(.self$rawData)
+
       if(class(.self$parentType$dataPostProcessingFunction) != "uninitializedField") {
         rtn <- .self$parentType$dataPostProcessingFunction(rtn)
       }
+
+      if(length(.self$parentType$dataFieldsInPlotData)>0) {
+        rtn <- rtn[unlist(.self$parentType$dataFieldsInPlotData)]
+      }
+
       return(rtn)
     },
     ############################

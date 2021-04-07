@@ -12,132 +12,63 @@ context("PlotType objects")
 ############################
 
 test_that("obsmonPlotType can be instanciated", {
-  newPlot <- plotType(
-    name="Name",
-    category="Category",
-    dataX="some_colname",
-    dataY=list("some_colname")
-  )
-  expect_s4_class(newPlot, "obsmonPlotType")
+  expect_s4_class(plotType(), "obsmonPlotType")
 })
 
 test_that("name is set correctly", {
   plotName <- "my new plot"
-  newPlot <- plotType(
-    name=plotName,
-    category="Category",
-    dataX="some_colname",
-    dataY=list("some_colname")
-  )
+  newPlot <- plotType(name=plotName)
   expect_equal(newPlot$name, plotName)
 })
 
 test_that("category is set correctly", {
   plotCategory <- "my category"
-  newPlot <- plotType(
-    name="Name",
-    category=plotCategory,
-    dataX="some_colname",
-    dataY=list("some_colname")
-  )
+  newPlot <- plotType(category=plotCategory)
   expect_equal(newPlot$category, plotCategory)
 })
 
 test_that("default dateType is 'single'", {
-  newPlot <- plotType(
-    name="Name",
-    category="Category",
-    dataX="some_colname",
-    dataY=list("some_colname")
-  )
-  expect_equal(newPlot$dateType, "single")
+  expect_equal(plotType()$dateType, "single")
 })
 
 test_that("dateType must be one of 'single, 'range'", {
   expect_error(
-    newPlot <- plotType(
-      name="name",
-      category="category",
-      dataX="some_colname",
-      dataY=list("some_colname"),
-      dateType="some_invalid_dateType"
-    ),
+    newPlot <- plotType(dateType="some_invalid_dateType"),
     regex="Field 'dateType' must be one of: 'single', 'range'",
     fixed=TRUE
   )
 
   for (dateType in c("single", "range")) {
-    newPlot <- plotType(
-      name="name",
-      category="category",
-      dataX="some_colname",
-      dataY=list("some_colname"),
-      dateType=dateType
-    )
+    newPlot <- plotType(dateType=dateType)
     expect_equal(newPlot$dateType, dateType)
   }
 })
 
-test_that("datax cannot be an invalid varname", {
+test_that("Data fields cannot contain invalid varnames", {
   invalidColname <- "a name with spaces"
-  expect_error(
-    plotType(
-      name="name",
-      category="category",
-      dataX=invalidColname,
-      dataY=list("some_colname")
-    ),
-    regex=paste0(
-      "^Invalid value for the 'dataX' field: ",
-      invalidColname, "$"
-    ),
-  )
+  for(field in c(
+    "dataFieldsInSqliteWhereClause",
+    "dataFieldsInPlotData",
+    "extraDataFields"
+  )) {
+    dataFieldArg <- list(list(invalidColname))
+    names(dataFieldArg) <- field
+    expect_error(
+      do.call(plotType, dataFieldArg),
+      regex=sprintf(
+        "^Field '%s' contains invalid column names: %s$", field, invalidColname
+      ),
+    )
+  }
 })
 
-test_that("dataY cannot contain invalid varnames", {
-  invalidColname <- "a name with spaces"
-  expect_error(
-    plotType(
-      name="name",
-      category="category",
-      dataX="some_colname",
-      dataY=list("colname_1", invalidColname)
-    ),
-    regex=paste0(
-      "^Field 'dataY' contains invalid column names: ",
-      invalidColname, "$"
-    ),
-  )
-})
-
-test_that("extraDataFields cannot contain invalid varnames", {
-  invalidColname <- "a name with spaces"
-  expect_error(
-    plotType(
-      name="name",
-      category="category",
-      dataX="some_colname",
-      dataY=list("some_colname"),
-      extraDataFields=list("colname_1", invalidColname)
-    ),
-    regex=paste0(
-      "^Field 'extraDataFields' contains invalid column names: ",
-      invalidColname, "$"
-    ),
-  )
-})
-
-test_that("queryStub contains cols from dataX, dataY and extraDataFields", {
+test_that("queryStub contains dataFieldsInPlotData and extraDataFields cols", {
   newPlot <- plotType(
-    name="name",
-    category="category",
-    dataX="col_a",
-    dataY=list("col_b", "col_c", "col_d"),
+    dataFieldsInPlotData=list("col_a", "col_b", "col_c", "col_d"),
     extraDataFields=list("col_e", "col_f")
   )
   expected_cols <- paste(c(
-    newPlot$dataX,
-    newPlot$dataY,
+    newPlot$dataFieldsInPlotData,
     newPlot$extraDataFields
     ),
     collapse=", "
@@ -149,13 +80,7 @@ test_that("queryStub contains cols from dataX, dataY and extraDataFields", {
 
 test_that("non-function plottingFunction raises error", {
   expect_error(
-    newPlot <- plotType(
-      name="name",
-      category="category",
-      dataX="some_colname",
-      dataY=list("some_colname"),
-      plottingFunction="A"
-    ),
+    newPlot <- plotType(plottingFunction="foo"),
     regex="Field 'plottingFunction' is not a function",
     fixed=TRUE
   )
@@ -163,25 +88,13 @@ test_that("non-function plottingFunction raises error", {
 
 test_that("plottingFunction can be set to function", {
   plotFunc <- function(plot) {plot}
-  newPlot <- plotType(
-    name="name",
-    category="category",
-    dataX="some_colname",
-    dataY=list("some_colname"),
-    plottingFunction=plotFunc
-  )
+  newPlot <- plotType(plottingFunction=plotFunc)
   expect_identical(plotFunc, newPlot$plottingFunction)
 })
 
 test_that("non-function plotTitleFunction raises error", {
   expect_error(
-    newPlot <- plotType(
-      name="name",
-      category="category",
-      dataX="some_colname",
-      dataY=list("some_colname"),
-      plotTitleFunction="A"
-    ),
+    newPlot <- plotType(plotTitleFunction="foo"),
     regex="Field 'plotTitleFunction' is not a function",
     fixed=TRUE
   )
@@ -189,48 +102,25 @@ test_that("non-function plotTitleFunction raises error", {
 
 test_that("plotTitleFunction can be set to function", {
   plotTitleFunc <- function(plot) {""}
-  newPlot <- plotType(
-    name="name",
-    category="category",
-    dataX="some_colname",
-    dataY=list("some_colname"),
-    plotTitleFunction=plotTitleFunc
-  )
+  newPlot <- plotType(plotTitleFunction=plotTitleFunc)
   expect_identical(plotTitleFunc, newPlot$plotTitleFunction)
 })
 
 test_that("default stationChoiceType is character(0)", {
-  newPlot <- plotType(
-    name="Name",
-    category="Category",
-    dataX="some_colname",
-    dataY=list("some_colname")
-  )
+  newPlot <- plotType()
   expect_identical(newPlot$stationChoiceType, character(0))
   expect_false(newPlot$requiresSingleStation)
 })
 
 test_that("stationChoiceType, if passed, must be one of 'single, 'multiple'", {
   expect_error(
-    newPlot <- plotType(
-      name="name",
-      category="category",
-      dataX="some_colname",
-      dataY=list("some_colname"),
-      stationChoiceType="some_invalid_stationChoiceType"
-    ),
+    newPlot <- plotType(stationChoiceType="foo"),
     regex="Field 'stationChoiceType', if passed, should be one of: 'single', 'multiple'",
     fixed=TRUE
   )
 
   for (stationChoiceType in c("single", "multiple")) {
-    newPlot <- plotType(
-      name="name",
-      category="category",
-      dataX="some_colname",
-      dataY=list("some_colname"),
-      stationChoiceType=stationChoiceType
-    )
+    newPlot <- plotType(stationChoiceType=stationChoiceType)
     expect_equal(newPlot$stationChoiceType, stationChoiceType)
     if(stationChoiceType == "single") {
       expect_true(newPlot$requiresSingleStation)
@@ -241,60 +131,45 @@ test_that("stationChoiceType, if passed, must be one of 'single, 'multiple'", {
 })
 
 test_that("'statid' is included in fields if stationChoiceType passed", {
-  newPlot <- plotType(
-    name="name",
-    category="category",
-    dataX="some_colname",
-    dataY=list("some_colname"),
-    stationChoiceType="single"
-  )
+  newPlot <- plotType(stationChoiceType="single")
   expect_true("statid" %in% newPlot$getRetrievedSqliteFields())
 })
 
 test_that("'usage' table is queried if station selection is supported", {
-  newPlot <- plotType(
-    name="name",
-    category="category",
-    dataX="some_colname",
-    dataY=list("some_colname"),
-    extraDataFields=list("statid")
-  )
-  expect_true(
-    grepl("FROM usage", newPlot$getQueryStub(), fixed=TRUE)
-  )
+  newPlot <- plotType(extraDataFields=list("statid"))
+  expect_true(grepl("FROM usage", newPlot$getQueryStub(), fixed=TRUE))
 })
 
 test_that("'obsmon' table is queried if station selection is not supported", {
-  newPlot <- plotType(
-    name="name",
-    category="category",
-    dataX="some_colname",
-    dataY=list("some_colname")
-  )
-  expect_true(
-    grepl("FROM obsmon", newPlot$getQueryStub(), fixed=TRUE)
-  )
+  expect_true(grepl("FROM obsmon", plotType()$getQueryStub(), fixed=TRUE))
 })
 
+#test_that("All needed data db columns are in the sqlite query", {
+#  newPlot <- plotType(
+#    name="name",
+#    category="category",
+#    dataX="some_colname",
+#    dataY=list("a", "b", "c", "d"),
+#    dataFieldsInSqliteWhereClause=list("e", "f"),
+#    extraDataFields=list("g", "h")
+#  )
+#  patt <- "SELECT (.,[[:space:]]+)*%s(,?[[:space:]]+)(.+[[:space:]]+)?FROM"
+#  for(property in c("dataX", "dataY", "dataFieldsInSqliteWhereClause", "extraDataFields")){
+#    for (colname in newPlot$field(property)) {
+#      print(paste(colname, newPlot$getQueryStub()))
+#      expect_true(grepl(sprintf(patt, colname), newPlot$getQueryStub()))
+#    }
+#  }
+#})
+
 test_that("ggplotlyWrapper produces plotly from ggplot", {
-  newPlot <- plotType(
-    name="name",
-    category="category",
-    dataX="some_colname",
-    dataY=list("some_colname")
-  )
   ggplotPlot <- ggplot() + theme_void()
-  plotlyPlot <- newPlot$ggplotlyWrapper(ggplotPlot)
+  plotlyPlot <- plotType()$ggplotlyWrapper(ggplotPlot)
   expect_s3_class(plotlyPlot, "plotly")
 })
 
 test_that("ggplotlyWrapper returns original obj if not ggplot, with warning", {
-  newPlot <- plotType(
-    name="name",
-    category="category",
-    dataX="some_colname",
-    dataY=list("some_colname")
-  )
+  newPlot <- plotType(name="Foo Plot")
   randomObj <- list()
 
   # capture.output is being used to check for the warning content because
@@ -320,8 +195,9 @@ context("Plot objects")
 mockPlotType <- plotType(
   name="First Guess and Analysis Departure",
   category="Statistical",
-  dataX="level",
-  dataY=list("fg_bias_total", "an_bias_total", "fg_rms_total", "an_rms_total"),
+  dataFieldsInPlotData=list(
+    "level", "fg_bias_total", "an_bias_total", "fg_rms_total", "an_rms_total"
+  ),
   dataFieldsInSqliteWhereClause=list("obnumber", "obname")
 )
 
@@ -385,7 +261,7 @@ test_that("Accessing data automatically fetches rawData", {
   expect_gt(prod(dim(newPlot$rawData)), 0)
 })
 
-test_that("data contains all fields needed for X and Y", {
+test_that("data contains all fields in dataFieldsInPlotData", {
   newPlot <- obsmonPlot(
     parentType=mockPlotType,
     db=obsmonDb,
@@ -393,7 +269,7 @@ test_that("data contains all fields needed for X and Y", {
   )
   expect_setequal(
     colnames(newPlot$data),
-    c(newPlot$parentType$dataX, newPlot$parentType$dataY)
+    newPlot$parentType$dataFieldsInPlotData
   )
 })
 
