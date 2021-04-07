@@ -248,12 +248,12 @@ obsmonPlot <- setRefClass(Class="obsmonPlot",
       if(length(.self$rawData)==0) .self$fetchRawData()
       rtn <- data.frame(.self$rawData)
 
-      if(class(.self$parentType$dataPostProcessingFunction) != "uninitializedField") {
-        rtn <- .self$parentType$dataPostProcessingFunction(rtn)
-      }
-
       if(length(.self$parentType$dataFieldsInPlotData)>0) {
         rtn <- rtn[unlist(.self$parentType$dataFieldsInPlotData)]
+      }
+
+      if(class(.self$parentType$dataPostProcessingFunction) != "uninitializedField") {
+        rtn <- .self$parentType$dataPostProcessingFunction(rtn)
       }
 
       return(rtn)
