@@ -77,7 +77,7 @@ firstGuessAndAnPlottingFunction <-  function(plot) {
 plotRegistry$registerPlotType(plotType(
   name="First Guess and Analysis Departure",
   category="Statistical",
-  dataFieldsInPlotData=list(
+  dataFieldsInRetrievedPlotData=list(
     "level", "fg_bias_total", "an_bias_total", "fg_rms_total", "an_rms_total"
   ),
   dataFieldsInSqliteWhereClause=list("obnumber", "obname"),

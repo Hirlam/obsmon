@@ -48,7 +48,7 @@ test_that("Data fields cannot contain invalid varnames", {
   invalidColname <- "a name with spaces"
   for(field in c(
     "dataFieldsInSqliteWhereClause",
-    "dataFieldsInPlotData",
+    "dataFieldsInRetrievedPlotData",
     "extraDataFields"
   )) {
     dataFieldArg <- list(list(invalidColname))
@@ -62,13 +62,13 @@ test_that("Data fields cannot contain invalid varnames", {
   }
 })
 
-test_that("queryStub contains dataFieldsInPlotData and extraDataFields cols", {
+test_that("queryStub contains dataFieldsInRetrievedPlotData and extraDataFields cols", {
   newPlot <- plotType(
-    dataFieldsInPlotData=list("col_a", "col_b", "col_c", "col_d"),
+    dataFieldsInRetrievedPlotData=list("col_a", "col_b", "col_c", "col_d"),
     extraDataFields=list("col_e", "col_f")
   )
   expected_cols <- paste(c(
-    newPlot$dataFieldsInPlotData,
+    newPlot$dataFieldsInRetrievedPlotData,
     newPlot$extraDataFields
     ),
     collapse=", "
@@ -195,7 +195,7 @@ context("Plot objects")
 mockPlotType <- plotType(
   name="First Guess and Analysis Departure",
   category="Statistical",
-  dataFieldsInPlotData=list(
+  dataFieldsInRetrievedPlotData=list(
     "level", "fg_bias_total", "an_bias_total", "fg_rms_total", "an_rms_total"
   ),
   dataFieldsInSqliteWhereClause=list("obnumber", "obname")
@@ -261,7 +261,7 @@ test_that("Accessing data automatically fetches rawData", {
   expect_gt(prod(dim(newPlot$rawData)), 0)
 })
 
-test_that("data contains all fields in dataFieldsInPlotData", {
+test_that("data contains all fields in dataFieldsInRetrievedPlotData", {
   newPlot <- obsmonPlot(
     parentType=mockPlotType,
     db=obsmonDb,
@@ -269,7 +269,7 @@ test_that("data contains all fields in dataFieldsInPlotData", {
   )
   expect_setequal(
     colnames(newPlot$data),
-    newPlot$parentType$dataFieldsInPlotData
+    newPlot$parentType$dataFieldsInRetrievedPlotData
   )
 })
 

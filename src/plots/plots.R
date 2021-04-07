@@ -3,7 +3,7 @@ plotType <- setRefClass(Class="obsmonPlotType",
     name="character",
     category="character",
     dateType="character",
-    dataFieldsInPlotData="list",
+    dataFieldsInRetrievedPlotData="list",
     dataFieldsInSqliteWhereClause="list",
     extraDataFields="list",
     stationChoiceType="character",
@@ -30,8 +30,8 @@ plotType <- setRefClass(Class="obsmonPlotType",
       # Validate dataFieldsInSqliteWhereClause and extraDataFields entries
       varnameRegex <- "^[a-zA-Z_$][a-zA-Z_$0-9]*$"
       for(field in c(
+        "dataFieldsInRetrievedPlotData",
         "dataFieldsInSqliteWhereClause",
-        "dataFieldsInPlotData",
         "extraDataFields"
       )) {
         .self$field(field, unique(.self$field(field)))
@@ -80,7 +80,7 @@ plotType <- setRefClass(Class="obsmonPlotType",
     ############################
     getRetrievedSqliteFields = function() {
       dbCols <- c(
-        .self$dataFieldsInPlotData,
+        .self$dataFieldsInRetrievedPlotData,
         .self$dataFieldsInSqliteWhereClause,
         .self$extraDataFields
       )
@@ -248,8 +248,8 @@ obsmonPlot <- setRefClass(Class="obsmonPlot",
       if(length(.self$rawData)==0) .self$fetchRawData()
       rtn <- data.frame(.self$rawData)
 
-      if(length(.self$parentType$dataFieldsInPlotData)>0) {
-        rtn <- rtn[unlist(.self$parentType$dataFieldsInPlotData)]
+      if(length(.self$parentType$dataFieldsInRetrievedPlotData)>0) {
+        rtn <- rtn[unlist(.self$parentType$dataFieldsInRetrievedPlotData)]
       }
 
       if(class(.self$parentType$dataPostProcessingFunction) != "uninitializedField") {
@@ -303,7 +303,7 @@ obsmonPlot <- setRefClass(Class="obsmonPlot",
 
       for (param in names(sqliteParams)) {
         if (param %in% c("dtg", "obnumber")) next
-        if (param %in% .self$parentType$dataFieldsInPlotData) next
+        if (param %in% .self$parentType$dataFieldsInRetrievedPlotData) next
         if (length(sqliteParams[[param]]) == 0) next
         vals <- sqliteParams[[param]]
         if (length(vals) > 1) {
