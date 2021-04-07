@@ -568,12 +568,19 @@ test_that("isCompatibleWithUiParams works", {
   pType <- plotType(
     name="foo",
     category="foo category",
-    requiredDataFields=list("statid")
+    # "statid" is a special field whose absence should not lead to FALSE
+    requiredDataFields=list("statid", "obname")
   )
-  expect_true(pType$isCompatibleWithUiParams(list(station="foo")))
-  expect_false(pType$isCompatibleWithUiParams(list(station=character(0))))
-  expect_false(pType$isCompatibleWithUiParams(list(station=NULL)))
-  expect_false(pType$isCompatibleWithUiParams(list(obname="bar")))
+
+  expect_true(
+    pType$isCompatibleWithUiParams(
+      list(obname="foo", station="some_station_id")
+    )
+  )
+  expect_true(pType$isCompatibleWithUiParams(list(obname="foo")))
+  expect_false(pType$isCompatibleWithUiParams(list(station="some_station")))
+  expect_false(pType$isCompatibleWithUiParams(list(obname=NULL)))
+  expect_false(pType$isCompatibleWithUiParams(list(obnumber="bar")))
 })
 
 test_that("getCategorisedPlotTypeNames works with compatibility filters", {
@@ -581,22 +588,23 @@ test_that("getCategorisedPlotTypeNames works with compatibility filters", {
   plotRegistry$registerPlotType(
     name="foo",
     category="foo category",
-    requiredDataFields=list("statid")
+    # "statid" is a special field. See isCompatibleWithUiParams test.
+    requiredDataFields=list("statid", "obname")
   )
   plotRegistry$registerPlotType(
     name="bar",
     category="bar category",
-    requiredDataFields=list("obname")
+    requiredDataFields=list("varname")
   )
 
   fooCompatible <- plotRegistry$getCategorisedPlotTypeNames(
-    compatibleWithUiInputParams=list(station="some station")
+    compatibleWithUiInputParams=list(obname="some_obname")
   )
   barCompatible <- plotRegistry$getCategorisedPlotTypeNames(
-    compatibleWithUiInputParams=list(obname="some obname")
+    compatibleWithUiInputParams=list(variable="some_varname")
   )
   fullyIncompatibleMissingParamValue <-  plotRegistry$getCategorisedPlotTypeNames(
-    compatibleWithUiInputParams=list(station=character(0))
+    compatibleWithUiInputParams=list(obname=character(0), varname=character(0))
   )
   expect_equal(names(fooCompatible), "foo category")
   expect_equal(names(barCompatible), "bar category")

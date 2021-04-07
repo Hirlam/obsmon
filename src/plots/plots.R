@@ -137,6 +137,10 @@ plotType <- setRefClass(Class="obsmonPlotType",
       # See former "plotIsApplicable"
       sqliteParams <- .self$getSqliteParamsFromUiParams(paramsAsInUiInput)
       for (param in .self$requiredDataFields) {
+        # statid is a bit special because, in the server, we use the
+        # obsmonPlotType objects themselves to decide whether to show
+        # or hide station selection menus
+        if (param=="statid") next
         if (length(sqliteParams[[param]])==0) return (FALSE)
       }
       return (TRUE)
@@ -151,6 +155,7 @@ plotType <- setRefClass(Class="obsmonPlotType",
       # For windspeed:
       # plotRequest$criteria$varname <- uName
       # plotRequest$criteria$varname <- vName
+      # TODO: Make this more general (in case of future addition of new params)
       res <- list()
       obname <- paramsAsInUiInput$obname
       res$obnumber <- getAttrFromMetadata('obnumber', obname=obname)
