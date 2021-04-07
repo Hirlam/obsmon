@@ -79,6 +79,6 @@ plotRegistry$registerPlotType(plotType(
   category="Statistical",
   dataX="level",
   dataY=list("fg_bias_total", "an_bias_total", "fg_rms_total", "an_rms_total"),
-  requiredDataFields=list("obnumber", "obname"),
+  dataFieldsInSqliteWhereClause=list("obnumber", "obname"),
   plottingFunction=firstGuessAndAnPlottingFunction
 ))

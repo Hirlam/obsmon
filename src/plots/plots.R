@@ -3,7 +3,7 @@ plotType <- setRefClass(Class="obsmonPlotType",
     name="character",
     category="character",
     dateType="character",
-    requiredDataFields="list",
+    dataFieldsInSqliteWhereClause="list",
     extraDataFields="list",
     stationChoiceType="character",
     dataX="character", # Name of the field that will be in the plots' x
@@ -47,8 +47,8 @@ plotType <- setRefClass(Class="obsmonPlotType",
       # Make plot interative by default
       if(length(.self$interactive)==0) .self$interactive <- TRUE
 
-      # Validate requiredDataFields and extraDataFields entries
-      for(field in c("requiredDataFields", "extraDataFields")) {
+      # Validate dataFieldsInSqliteWhereClause and extraDataFields entries
+      for(field in c("dataFieldsInSqliteWhereClause", "extraDataFields")) {
         .self$field(field, unique(.self$field(field)))
         if(length(.self$field(field))>0) {
           for (name in .self$field(field)) {
@@ -71,7 +71,10 @@ plotType <- setRefClass(Class="obsmonPlotType",
         (length(.self$stationChoiceType) > 0) &&
         !("statid" %in% .self$getRetrievedSqliteFields())
       ) {
-        .self$requiredDataFields <- c(.self$requiredDataFields, "statid")
+        .self$dataFieldsInSqliteWhereClause <- c(
+          .self$dataFieldsInSqliteWhereClause,
+          "statid"
+        )
       }
 
       # Validate fields ending with "Function"
@@ -94,7 +97,7 @@ plotType <- setRefClass(Class="obsmonPlotType",
       dbCols <- c(
         .self$dataX,
         .self$dataY,
-        .self$requiredDataFields,
+        .self$dataFieldsInSqliteWhereClause,
         .self$extraDataFields
       )
       return(unique(dbCols))
@@ -136,7 +139,7 @@ plotType <- setRefClass(Class="obsmonPlotType",
     isCompatibleWithUiParams = function(paramsAsInUiInput) {
       # See former "plotIsApplicable"
       sqliteParams <- .self$getSqliteParamsFromUiParams(paramsAsInUiInput)
-      for (param in .self$requiredDataFields) {
+      for (param in .self$dataFieldsInSqliteWhereClause) {
         # statid is a bit special because, in the server, we use the
         # obsmonPlotType objects themselves to decide whether to show
         # or hide station selection menus

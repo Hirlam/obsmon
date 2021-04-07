@@ -322,7 +322,7 @@ mockPlotType <- plotType(
   category="Statistical",
   dataX="level",
   dataY=list("fg_bias_total", "an_bias_total", "fg_rms_total", "an_rms_total"),
-  requiredDataFields=list("obnumber", "obname")
+  dataFieldsInSqliteWhereClause=list("obnumber", "obname")
 )
 
 mockNonInteractivePlotType <- mockPlotType$copy()
@@ -569,7 +569,7 @@ test_that("isCompatibleWithUiParams works", {
     name="foo",
     category="foo category",
     # "statid" is a special field whose absence should not lead to FALSE
-    requiredDataFields=list("statid", "obname")
+    dataFieldsInSqliteWhereClause=list("statid", "obname")
   )
 
   expect_true(
@@ -589,12 +589,12 @@ test_that("getCategorisedPlotTypeNames works with compatibility filters", {
     name="foo",
     category="foo category",
     # "statid" is a special field. See isCompatibleWithUiParams test.
-    requiredDataFields=list("statid", "obname")
+    dataFieldsInSqliteWhereClause=list("statid", "obname")
   )
   plotRegistry$registerPlotType(
     name="bar",
     category="bar category",
-    requiredDataFields=list("varname")
+    dataFieldsInSqliteWhereClause=list("varname")
   )
 
   fooCompatible <- plotRegistry$getCategorisedPlotTypeNames(
