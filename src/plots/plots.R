@@ -380,7 +380,7 @@ levelsLableForPlots <- function(obnumber, varname=character(0)) {
   if(obstype=="surface" || (isTRUE(strObnumber=="13") && !isTRUE(varname=="rh"))) {
     quantity <- "Height"
   }
-  label <- sprintf("%s [%s]", quantity, units[[tolower(quantity)]])
+  label <- sprintf("%s [%s]", quantity, getUnits(tolower(quantity)))
   return(label)
 }
 

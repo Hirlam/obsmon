@@ -37,7 +37,7 @@ stationVerticalProfilePlottingFunction <- function(plot) {
   # Axes' labels
   varname <- sqliteParams$varname
   xlab <- levelsLableForPlots(sqliteParams$obnumber, varname)
-  ylab <- sprintf("%s [%s]", varname, units[[varname]])
+  ylab <- sprintf("%s [%s]", varname, getUnits(varname))
   obplot <- obplot + labs(x=xlab, y=ylab)
 
   # Set x-axis limits and flipping axes

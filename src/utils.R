@@ -169,25 +169,32 @@ readSynopStations <- function() {
 }
 synopStations <- readSynopStations()
 
-units <- list(
-    "u"    = "m/s",
-    "ff"   = "m/s",
-    "u10m" = "m/s",
-    "ff10m"= "m/s",
-    "apd"  = "m",
-    "v"    = "m/s",
-    "v10m" = "m/s",
-    "t2m"  = "K",
-    "t"    = "K",
-    "q"    = "kg/m3",
-    "z"    = "m",
-    "rh2m" = "%",
-    "snow" = "kg/m2",
-    "rad"  = "K",
-    "radv" = "m/s",
-    "dbz"  = "db",
-    "rh"   = "%",
-    "bend_angle" = "rad",
-    "pressure" = "Pa",
-    "height" = "m"
-)
+getUnits <- function(quantityName) {
+  rtn <- tryCatch(
+    switch(
+      "u"    = "m/s",
+      "ff"   = "m/s",
+      "u10m" = "m/s",
+      "ff10m"= "m/s",
+      "apd"  = "m",
+      "v"    = "m/s",
+      "v10m" = "m/s",
+      "t2m"  = "K",
+      "t"    = "K",
+      "q"    = "kg/m3",
+      "z"    = "m",
+      "rh2m" = "%",
+      "snow" = "kg/m2",
+      "rad"  = "K",
+      "radv" = "m/s",
+      "dbz"  = "db",
+      "rh"   = "%",
+      "bend_angle" = "rad",
+      "pressure" = "Pa",
+      "height" = "m"
+    ),
+    error=function(e) NULL
+  )
+  if(is.null(rtn)) rtn <- "unknown units"
+  return(rtn)
+}
