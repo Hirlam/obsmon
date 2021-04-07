@@ -302,9 +302,17 @@ obsmonPlot <- setRefClass(Class="obsmonPlot",
       }
 
       for (param in names(sqliteParams)) {
-        if (param == "dtg") next
+        if (param %in% c("dtg", "obnumber")) next
+        if (param %in% .self$parentType$dataFieldsInPlotData) next
         if (length(sqliteParams[[param]]) == 0) next
-        rtn <- sprintf("%s, %s=%s", rtn, param, sqliteParams[[param]])
+        vals <- sqliteParams[[param]]
+        if (length(vals) > 1) {
+          if(length(vals)>5) {
+            vals <- c(vals[1:2], "...", vals[(length(vals)-1):length(vals)])
+          }
+          vals <- paste0("[", paste(vals, collapse=", "), "]")
+        }
+        rtn <- sprintf("%s, %s=%s", rtn, param, vals)
       }
       return (rtn)
     }
