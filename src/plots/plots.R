@@ -260,12 +260,18 @@ obsmonPlot <- setRefClass(Class="obsmonPlot",
     },
     ############################
     fetchRawData = function(...) {
-      .self$rawData <- performQuery(
+      fetchedData <- performQuery(
         db=.self$db,
         query=.self$sqliteQuery,
         dtgs=.self$paramsAsInSqliteDbs$dtg,
         ...
       )
+      if(is.null(fetchedData)) {
+        colnames <- .self$parentType$getRetrievedSqliteFields()
+        fetchedData <- data.frame(matrix(ncol=length(colnames), nrow=0))
+        colnames(fetchedData) <- colnames
+      }
+      .self$rawData <- fetchedData
     },
     ############################
     getSqliteQuery = function() {
