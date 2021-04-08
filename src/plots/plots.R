@@ -36,7 +36,13 @@ plotType <- setRefClass(Class="obsmonPlotType",
       )) {
         .self$field(field, unique(.self$field(field)))
         if(length(.self$field(field))>0) {
-          for (name in .self$field(field)) {
+          fieldValues <- .self$field(field)
+          sqlColnames <- c()
+          for (val in fieldValues) {
+            if(is.list(val)) sqlColnames <- c(sqlColnames, names(val))
+            else sqlColnames <- c(sqlColnames, val)
+          }
+          for (name in sqlColnames) {
             if(!isTRUE(grepl(varnameRegex, name))) {
               stop(sprintf("Field '%s' contains invalid column names: %s", field, name))
             }
@@ -79,9 +85,18 @@ plotType <- setRefClass(Class="obsmonPlotType",
     },
     ############################
     getRetrievedSqliteFields = function() {
+      dataFieldsInWhereClause <- c()
+      for (item in .self$dataFieldsInSqliteWhereClause) {
+        if (is.list(item)) {
+          dataFieldsInWhereClause <- c(dataFieldsInWhereClause, names(item))
+        } else {
+          dataFieldsInWhereClause <- c(dataFieldsInWhereClause, item)
+        }
+      }
+
       dbCols <- c(
         .self$dataFieldsInRetrievedPlotData,
-        .self$dataFieldsInSqliteWhereClause,
+        dataFieldsInWhereClause,
         .self$extraDataFields
       )
       return(unique(dbCols))
@@ -123,12 +138,25 @@ plotType <- setRefClass(Class="obsmonPlotType",
     isCompatibleWithUiParams = function(paramsAsInUiInput) {
       # See former "plotIsApplicable"
       sqliteParams <- .self$getSqliteParamsFromUiParams(paramsAsInUiInput)
-      for (param in .self$dataFieldsInSqliteWhereClause) {
-        # statid is a bit special because, in the server, we use the
-        # obsmonPlotType objects themselves to decide whether to show
-        # or hide station selection menus
-        if (param=="statid") next
-        if (length(sqliteParams[[param]])==0) return (FALSE)
+      for (item in .self$dataFieldsInSqliteWhereClause) {
+        if(is.list(item)) {
+          paramsAndValues <- item
+        } else {
+          paramsAndValues <- list(NA)
+          names(paramsAndValues) <- item
+        }
+
+        for (param in names(paramsAndValues)) {
+          # statid is a bit special because, in the server, we use the
+          # obsmonPlotType objects themselves to decide whether to show
+          # or hide station selection menus
+          if (param=="statid") next
+          if (length(sqliteParams[[param]])==0) return (FALSE)
+          paramValue <- paramsAndValues[[param]]
+          if(!is.na(paramValue) && !isTRUE(sqliteParams[[param]]==paramValue)) {
+            return (FALSE)
+          }
+        }
       }
       return (TRUE)
     },

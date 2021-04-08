@@ -445,18 +445,36 @@ test_that("isCompatibleWithUiParams works", {
     name="foo",
     category="foo category",
     # "statid" is a special field whose absence should not lead to FALSE
-    dataFieldsInSqliteWhereClause=list("statid", "obname")
-  )
-
-  expect_true(
-    pType$isCompatibleWithUiParams(
-      list(obname="foo", station="some_station_id")
+    dataFieldsInSqliteWhereClause=list(
+      "statid", "obname", list(varname="bar", level=10)
     )
   )
-  expect_true(pType$isCompatibleWithUiParams(list(obname="foo")))
+
+  # With station
+  expect_true(pType$isCompatibleWithUiParams(list(
+    station="foo",
+    variable="bar",
+    obname="baz",
+    levels=10
+  )))
+
+  # Without station
+  expect_true(pType$isCompatibleWithUiParams(list(
+    obname="foo",
+    variable="bar",
+    levels=10
+  )))
+
+  # Failed element value in valued list
+  expect_false(pType$isCompatibleWithUiParams(list(
+    obname="foo",
+    variable="qux",
+    levels=10
+  )))
+
   expect_false(pType$isCompatibleWithUiParams(list(station="some_station")))
   expect_false(pType$isCompatibleWithUiParams(list(obname=NULL)))
-  expect_false(pType$isCompatibleWithUiParams(list(obnumber="bar")))
+  expect_false(pType$isCompatibleWithUiParams(list(obnumber="foo")))
 })
 
 test_that("getCategorisedPlotTypeNames works with compatibility filters", {
