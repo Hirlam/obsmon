@@ -30,20 +30,19 @@ firstGuessAndAnPlottingFunction <-  function(plot) {
       },
       {
         if(strObnumber=="7") {
-          xVar <- "channel"
+          # Mind that channels appear as "level" in the databases
           xlab <- "Channels"
           ylab <- "Brightness temperature [K]"
         } else {
-          xVar <- "level"
           varname <- sqliteParams$varname
           ylab <- sprintf("%s [%s]", varname, getUnits(varname))
           xlab <- levelsLableForPlots(strObnumber, varname)
         }
-        localPlotData <- melt(plotData, id=c(xVar))
+        localPlotData <- melt(plotData, id="level")
 
         shape_colours <- c("blue", "blue4", "red4", "red")
         obplot <- ggplot(data=localPlotData) +
-          aes_string(x=xVar, y="value",
+          aes_string(x="level", y="value",
             group="variable", colour="variable",
             shape="variable", fill="variable"
           ) +
@@ -64,9 +63,9 @@ firstGuessAndAnPlottingFunction <-  function(plot) {
             # (whichever is added later) from the legend. Not a big deal,
             # but worth pointing out, as this but may be solved in later
             # releases of the plotly package
-            obplot <- obplot + xlim(max(refPressures,localPlotData[[xVar]]),0)
+            obplot <- obplot + xlim(max(refPressures,localPlotData[["level"]]),0)
           } else {
-            obplot <- obplot + xlim(0, max(refHeights,localPlotData[[xVar]]))
+            obplot <- obplot + xlim(0, max(refHeights,localPlotData[["level"]]))
           }
         }
       }
