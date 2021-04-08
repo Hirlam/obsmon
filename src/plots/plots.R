@@ -407,6 +407,22 @@ plotRegistry <- obsmonPlotRegistry()
 #######################################################
 # Some utility functions used when defining the plots #
 #######################################################
+noDataPlot <- function(msg) {
+  ggplot() +
+    annotate("text", x=0, y=0, size=8, label=msg) +
+    theme(
+      panel.background = element_rect(fill="grey90"),
+      panel.grid.major = element_blank(),
+      panel.grid.minor = element_blank(),
+      axis.title.x=element_blank(),
+      axis.text.x=element_blank(),
+      axis.ticks.x=element_blank(),
+      axis.title.y=element_blank(),
+      axis.text.y=element_blank(),
+      axis.ticks.y=element_blank()
+    )
+}
+
 levelsLableForPlots <- function(obnumber, varname=character(0)) {
   strObnumber <- as.character(obnumber)
   obstype <- getAttrFromMetadata("category", obnumber=obnumber)
