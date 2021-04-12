@@ -335,6 +335,36 @@ test_that("'generate' uses 'defaultGenerate' if parentType$plottingFunction miss
   }
 })
 
+test_that("generateLeafletMap returns NULL if no leafletPlottingFunction & 'map' not in category", {
+  newPlot <- obsmonPlot(
+    parentType=mockPlotType,
+    db=obsmonDb,
+    paramsAsInUiInput=mockUiInput
+  )
+  shouldBeNULL <- newPlot$generateLeafletMap()
+  expect_null(shouldBeNULL)
+})
+
+test_that("'generateLeafletMap' gens leaflet if no leafletPlottingFunction but 'map' in category", {
+  mapPlotType <- plotType(
+    name="Observation Usage",
+    category="Maps",
+    dateType="single",
+    dataFieldsInRetrievedPlotData=list(
+      "latitude", "longitude", "level", "statid", "active", "rejected",
+      "passive", "blacklisted", "anflag", "obsvalue"
+    ),
+    dataFieldsInSqliteWhereClause=list("obnumber", "obname")
+  )
+  newPlot <- obsmonPlot(
+    parentType=mapPlotType,
+    db=obsmonDb,
+    paramsAsInUiInput=mockUiInput
+  )
+  leafletMap <- newPlot$generateLeafletMap()
+  expect_true("leaflet" %in% class(leafletMap))
+})
+
 
 ###########################################
 context("obsmonPlotRegistry")

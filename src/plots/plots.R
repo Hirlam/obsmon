@@ -10,6 +10,7 @@ plotType <- setRefClass(Class="obsmonPlotType",
     interactive="logical",
     dataPostProcessingFunction="ANY", # A function of 1 arg: data (data.frame)
     plottingFunction="ANY", # A function of 1 arg: plot (an obsmonPlot object)
+    leafletPlottingFunction="ANY", # A function of 1 arg: plot (an obsmonPlot object)
     plotTitleFunction="ANY", # A function of 1 arg: plot (an obsmonPlot object)
     ############################
     supportsStationSelection = function(...) {
@@ -272,6 +273,63 @@ obsmonPlot <- setRefClass(Class="obsmonPlot",
       return(graph)
     },
     ############################
+    generateLeafletMap = function() {
+      if(class(.self$parentType$leafletPlottingFunction) != "uninitializedField") {
+        return(.self$parentType$leafletPlottingFunction(.self))
+      }
+      return(.self$defaultGenerateLeafletMap())
+    },
+    ############################
+    defaultGenerateLeafletMap = function() {
+      if(!("maps" %in% tolower(parentType$category))) return(NULL)
+      # Use "check.names=FALSE" so that names such as "fg_dep+biascrl"
+      # are not modified
+      localPlotData <- data.frame(.self$data, check.names=FALSE)
+
+      for (colname in colnames(.self$data)) {
+        localPlotData$popupContents <- paste(
+          localPlotData$popupContents,
+          sprintf("%s: %s<br>", colname, localPlotData[[colname]])
+        )
+      }
+
+      dataColumn <- unname(attributes(.self$data)$comment["dataColumn"])
+      if(is.null(dataColumn)) {
+        dataColumn <- colnames(.self$data)[ncol(.self$data)]
+      }
+      cm <- .getSuitableColorScale(localPlotData[dataColumn])
+      dataPallete <- colorNumeric(
+        palette=cm$palette,
+        domain=cm$domain
+      )
+
+      leafletMap <- leaflet(data=localPlotData) %>%
+        addTiles() %>%
+        addProviderTiles(
+          "Esri.WorldStreetMap",
+          options=providerTileOptions(opacity=0.5)
+        ) %>%
+        addCircleMarkers(
+          lng=~longitude,
+          lat=~latitude,
+          popup=~popupContents,
+          fillColor=as.formula(sprintf("~dataPallete(`%s`)", dataColumn)),
+          fillOpacity=0.5,
+          stroke=FALSE,
+          weight=1,
+          opacity=1,
+          color="black",
+          clusterOptions=markerClusterOptions(disableClusteringAtZoom=6)
+        ) %>%
+        addLegend(
+          "topright",
+          pal=dataPallete,
+          values=as.formula(sprintf("~`%s`", dataColumn)),
+          opacity=1
+        )
+      return(leafletMap)
+    },
+    ############################
     getDataFromRawData = function() {
       if(length(.self$rawData)==0) .self$fetchRawData()
       rtn <- data.frame(.self$rawData)
@@ -521,4 +579,42 @@ addTitleToPlot <- function(myPlot, title) {
     }
   )
   return(newPlot)
+}
+
+.getSuitableColorScale <- function(plotData) {
+  # Use a divergent colormat whenever there's change of sign
+  # in the data, but use a sequential colormap otherwise.
+  # Red/blue colors will represent +/- values.
+  cm <- list(name=NULL, palette=NULL, direction=NULL, domain=NULL)
+  dataColumnName <- unname(attributes(plotData)$comment["dataColumn"])
+  if(is.null(dataColumnName)) {
+    dataColumnName <- colnames(plotData)[ncol(plotData)]
+  }
+
+  dataRange <- range(plotData[[dataColumnName]])
+  if (prod(dataRange) >= 0) {
+    spread <- diff(dataRange)
+    if (sign(sum(dataRange)) < 0) {
+      cm$name <- "Blues"
+      cm$direction <- -1
+      mincol <- dataRange[1]
+      snapToZero <- dataRange[2]^2 < spread
+      maxcol <- ifelse(snapToZero, 0., dataRange[2])
+    } else {
+      cm$name <- "Reds"
+      cm$direction <- 1
+      maxcol <- dataRange[2]
+      snapToZero <- dataRange[1]^2 < spread
+      mincol <- ifelse(snapToZero, 0., dataRange[1])
+    }
+  } else {
+    cm$name <- "RdBu"
+    cm$direction <- -1
+    maxcol <- max(abs(dataRange))
+    mincol <- -maxcol
+  }
+  cm$palette <- brewer.pal(brewer.pal.info[cm$name,]$maxcolors, cm$name)
+  if(cm$direction < 0) cm$palette <- rev(cm$palette)
+  cm$domain <- c(mincol, maxcol)
+  return(cm)
 }
