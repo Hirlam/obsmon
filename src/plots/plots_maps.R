@@ -202,9 +202,46 @@
   return(plotlyMap)
 }
 
+###################################
+# helpers for making leaflet maps #
+###################################
+.getLeafletMapZoomLevel <- function(plotData) {
+  dataColumn <- unname(attributes(plotData)$comment["dataColumn"])
+  if(is.null(dataColumn)) {
+    dataColumn <- colnames(plotData)[ncol(plotData)]
+  }
+  zoomLevel <- 4
+  zoomLevels <- c(2000, 4000, 6000, 10000, 15000, 45000, 70000, 90000)
+  for ( i in 2:length(zoomLevels)){
+    if ((length(plotData[[dataColumn]]) > zoomLevels[i-1])
+        & (length(plotData[[dataColumn]]) <= zoomLevels[i])){
+      zoomLevel <- i+3
+    }
+  }
+  return(zoomLevel)
+}
+
+.fillDataWithLeafletRadiusInfo <- function(plotData) {
+  dataColumn <- unname(attributes(plotData)$comment["dataColumn"])
+  if (max(plotData[[dataColumn]]) > 0) {
+    plotData$radius <- 10.0 * (
+      abs(plotData[[dataColumn]])/max(abs(plotData[[dataColumn]]))
+    )
+    if (length(plotData$radius) > 0) {
+      for (i in 1:length(plotData$radius)) {
+        if (plotData$radius[i] < 3) { plotData$radius[i]=3}
+      }
+    }
+  } else {
+    plotData$radius <- 5
+  }
+  return(plotData)
+}
+
 ####################################################
 # plotting functions passed when registering plots #
 ####################################################
+# a) combined ggploy/plotly (shown in "plot" tab in the UI)
 .mapUsagePlottingFunction <- function(plot) {
   if(nrow(plot$data)==0) return(noDataPlot("No data to plot."))
   if(plot$parentType$interactive) {
@@ -223,6 +260,76 @@
   }
 }
 
+# b) leaflet (shown in "map" tab in the UI)
+.mapThresholdLeafletPlottingFunction <- function(plot) {
+  plotData <- .fillDataWithLeafletRadiusInfo(plot$data)
+  dataColumn <- unname(attributes(plotData)$comment["dataColumn"])
+  zoomLevel <- .getLeafletMapZoomLevel(plotData)
+
+  cm <- .getSuitableColorScale(plotData)
+  dataPal <- colorNumeric(palette=cm$palette, domain=cm$domain)
+  legendPal <- colorNumeric(palette=rev(cm$palette), domain=cm$domain)
+
+  leafletMap <- leaflet(data=plotData) %>%
+    addProviderTiles(
+      "Esri.WorldStreetMap",
+      options=providerTileOptions(opacity=0.5)
+    ) %>%
+    addCircleMarkers(
+      lng=~longitude,
+      lat=~latitude,
+      popup=.getLeafletPopupContents(plot$data),
+      radius=~radius,
+      fillColor=as.formula(sprintf("~dataPal(`%s`)", dataColumn)),
+      fillOpacity=.7,
+      stroke=FALSE,
+      weight=1,
+      opacity=1,
+      color="black",
+      clusterOptions=markerClusterOptions(disableClusteringAtZoom=zoomLevel)
+    ) %>%
+    addLegend(
+      "topright",
+      pal=legendPal,
+      values=as.formula(sprintf("~`%s`", dataColumn)),
+      opacity=1
+    )
+  return(leafletMap)
+}
+
+.mapUsageLeafletPlottingFunction <- function(plot) {
+  zoomLevel <- .getLeafletMapZoomLevel(plot$data)
+  pallete <- colorFactor(
+    c("green", "blue", "black", "grey", "magenta3", "red"),
+    domain=c("Active", "Active(2)", "Blacklisted", "NA", "Passive", "Rejected")
+  )
+
+  leafletMap <- leaflet(data=plot$data) %>%
+    addProviderTiles(
+      "Esri.WorldStreetMap",
+      options=providerTileOptions(opacity=0.5)
+    ) %>%
+    addCircleMarkers(
+      lng=~longitude,
+      lat=~latitude,
+      popup=.getLeafletPopupContents(plot$data),
+      radius=8,
+      stroke=FALSE,
+      fillColor=~pallete(status),
+      fillOpacity=.5,
+      weight=1,
+      opacity=1,
+      color="black",
+      clusterOptions=markerClusterOptions(disableClusteringAtZoom=zoomLevel)
+    ) %>%
+    addLegend(
+      "topright",
+      pal=pallete,
+      values=~status,
+      opacity=1
+    )
+  return(leafletMap)
+}
 
 ##################
 # Register plots #
@@ -237,6 +344,7 @@ plotRegistry$registerPlotType(
   ),
   dataFieldsInSqliteWhereClause=list("obnumber", "obname"),
   plottingFunction=.mapUsagePlottingFunction,
+  leafletPlottingFunction=.mapUsageLeafletPlottingFunction,
   dataPostProcessingFunction = function(data) {
     status <- rep("NA", nrow(data))
     status <- ifelse(data$anflag == 0, "Rejected", status)
@@ -262,6 +370,7 @@ plotRegistry$registerPlotType(
   ),
   dataFieldsInSqliteWhereClause=list("obnumber", "obname"),
   plottingFunction=.mapThresholdPlottingFunction,
+  leafletPlottingFunction=.mapThresholdLeafletPlottingFunction,
   dataPostProcessingFunction = function(data) {
     comment(data) <- c(dataColumn="fg_dep")
     return(data)
@@ -277,6 +386,7 @@ plotRegistry$registerPlotType(
   ),
   dataFieldsInSqliteWhereClause=list("obnumber", "obname"),
   plottingFunction=.mapThresholdPlottingFunction,
+  leafletPlottingFunction=.mapThresholdLeafletPlottingFunction,
   dataPostProcessingFunction = function(data) {
     data[["fg_dep+biascrl"]] <- data$fg_dep + data$biascrl
     comment(data) <- c(dataColumn="fg_dep+biascrl")
@@ -293,6 +403,7 @@ plotRegistry$registerPlotType(
   ),
   dataFieldsInSqliteWhereClause=list("obnumber", "obname"),
   plottingFunction=.mapThresholdPlottingFunction,
+  leafletPlottingFunction=.mapThresholdLeafletPlottingFunction,
   dataPostProcessingFunction = function(data) {
     comment(data) <- c(dataColumn="an_dep")
     return(data)
@@ -308,6 +419,7 @@ plotRegistry$registerPlotType(
   ),
   dataFieldsInSqliteWhereClause=list("obnumber", "obname"),
   plottingFunction=.mapThresholdPlottingFunction,
+  leafletPlottingFunction=.mapThresholdLeafletPlottingFunction,
   dataPostProcessingFunction = function(data) {
     data[["fg_dep-an_dep"]] <- data$fg_dep - data$an_dep
     comment(data) <- c(dataColumn="fg_dep-an_dep")
@@ -324,6 +436,7 @@ plotRegistry$registerPlotType(
   ),
   dataFieldsInSqliteWhereClause=list("obnumber", "obname"),
   plottingFunction=.mapThresholdPlottingFunction,
+  leafletPlottingFunction=.mapThresholdLeafletPlottingFunction,
   dataPostProcessingFunction = function(data) {
     comment(data) <- c(dataColumn="biascrl")
     return(data)
@@ -339,6 +452,7 @@ plotRegistry$registerPlotType(
   ),
   dataFieldsInSqliteWhereClause=list("obnumber", "obname"),
   plottingFunction=.mapThresholdPlottingFunction,
+  leafletPlottingFunction=.mapThresholdLeafletPlottingFunction,
   dataPostProcessingFunction = function(data) {
     comment(data) <- c(dataColumn="obsvalue")
     return(data)
@@ -354,6 +468,7 @@ plotRegistry$registerPlotType(
   ),
   dataFieldsInSqliteWhereClause=list("obnumber", "obname"),
   plottingFunction=.mapThresholdPlottingFunction,
+  leafletPlottingFunction=.mapThresholdLeafletPlottingFunction,
   dataPostProcessingFunction = function(data) {
     data[["obsvalue-fg_dep"]] <- data$obsvalue - data$fg_dep
     comment(data) <- c(dataColumn="obsvalue-fg_dep")
