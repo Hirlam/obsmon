@@ -146,7 +146,7 @@
   ggplotMap <- .getStaticGenericMapPlot(plot) +
     geom_point(
       data=plot$data,
-      aes(x=longitude, y=latitude, fill=plotValues),
+      aes(x=longitude, y=latitude, fill=dataColumn),
       size=3,
       shape=21,
       colour="gray50",
