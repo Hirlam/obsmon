@@ -1,3 +1,6 @@
+##################################
+# helpers for making ggplot maps #
+##################################
 .getStaticGenericMapPlot <- function(plot) {
   # Former doPlot.plotMap
   x1 <- min(plot$data$longitude)-2
@@ -15,6 +18,64 @@
   return(ggplotMap)
 }
 
+.mapUsageStaticPlottingFunction <- function(plot) {
+  ggplotMap <- .getStaticGenericMapPlot(plot) +
+    geom_point(
+      data=plot$data,
+      aes(x=longitude, y=latitude, colour=status, shape=status, fill=status),
+      size=2, alpha=.75
+    ) +
+    scale_shape_manual(
+      name="Legend",
+      values=c(
+        "Active"=21, "Active(2)"=21, "Rejected"=22, "Passive"=23,
+        "Blacklisted"=24, "NA"=13
+      )
+    ) +
+    scale_fill_manual(
+      name="Legend",
+      values=c(
+        "Active"="green", "Active(2)"="blue", "Rejected"="red",
+        "Passive"="magenta3", "Blacklisted"="black", "NA"=NA
+      )
+    ) +
+    scale_colour_manual(
+      name="Legend",
+      values=c(
+        "Active"="green", "Active(2)"="blue", "Rejected"="red",
+        "Passive"="black", "Blacklisted"="black", "NA"="grey"
+      )
+    )
+  return(ggplotMap)
+}
+
+.mapThresholdStaticPlottingFunction <- function(plot) {
+  cm <- .getSuitableColorScale(plot$data)
+  dataColumnName <- unname(attributes(plot$data)$comment["dataColumn"])
+
+  ggplotMap <- .getStaticGenericMapPlot(plot) +
+    geom_point(
+      data=plot$data,
+      aes(x=longitude, y=latitude, fill=dataColumn),
+      size=3,
+      shape=21,
+      colour="gray50",
+      alpha=.5,
+      stroke=0.
+    ) +
+    scale_fill_distiller(
+      dataColumnName,
+      palette=cm$name,
+      direction=cm$direction,
+      limits=cm$domain
+    )
+
+    return(ggplotMap)
+}
+
+##################################
+# helpers for making plotly maps #
+##################################
 .getInteractiveGenericMapPlot <- function(plot) {
   # Former doPlotly.plotMap
   myPlotly <- plot_geo(
@@ -55,37 +116,6 @@
       )
     )
   return(myPlotly)
-}
-
-.mapUsageStaticPlottingFunction <- function(plot) {
-  ggplotMap <- .getStaticGenericMapPlot(plot) +
-    geom_point(
-      data=plot$data,
-      aes(x=longitude, y=latitude, colour=status, shape=status, fill=status),
-      size=2, alpha=.75
-    ) +
-    scale_shape_manual(
-      name="Legend",
-      values=c(
-        "Active"=21, "Active(2)"=21, "Rejected"=22, "Passive"=23,
-        "Blacklisted"=24, "NA"=13
-      )
-    ) +
-    scale_fill_manual(
-      name="Legend",
-      values=c(
-        "Active"="green", "Active(2)"="blue", "Rejected"="red",
-        "Passive"="magenta3", "Blacklisted"="black", "NA"=NA
-      )
-    ) +
-    scale_colour_manual(
-      name="Legend",
-      values=c(
-        "Active"="green", "Active(2)"="blue", "Rejected"="red",
-        "Passive"="black", "Blacklisted"="black", "NA"="grey"
-      )
-    )
-  return(ggplotMap)
 }
 
 .mapUsageInteractivePlottingFunction <- function(plot) {
@@ -130,39 +160,6 @@
   return(plotlyMap)
 }
 
-.mapUsagePlottingFunction <- function(plot) {
-  if(nrow(plot$data)==0) return(noDataPlot("No data to plot."))
-  if(plot$parentType$interactive) {
-    return(.mapUsageInteractivePlottingFunction(plot))
-  } else {
-    return(.mapUsageStaticPlottingFunction(plot))
-  }
-}
-
-.mapThresholdStaticPlottingFunction <- function(plot) {
-  cm <- .getSuitableColorScale(plot$data)
-  dataColumnName <- unname(attributes(plot$data)$comment["dataColumn"])
-
-  ggplotMap <- .getStaticGenericMapPlot(plot) +
-    geom_point(
-      data=plot$data,
-      aes(x=longitude, y=latitude, fill=dataColumn),
-      size=3,
-      shape=21,
-      colour="gray50",
-      alpha=.5,
-      stroke=0.
-    ) +
-    scale_fill_distiller(
-      dataColumnName,
-      palette=cm$name,
-      direction=cm$direction,
-      limits=cm$domain
-    )
-
-    return(ggplotMap)
-}
-
 .mapThresholdInteractivePlottingFunction <- function(plot) {
   cm <- .getSuitableColorScale(plot$data)
   dataColumnName <- unname(attributes(plot$data)$comment["dataColumn"])
@@ -203,6 +200,18 @@
     )
 
   return(plotlyMap)
+}
+
+####################################################
+# plotting functions passed when registering plots #
+####################################################
+.mapUsagePlottingFunction <- function(plot) {
+  if(nrow(plot$data)==0) return(noDataPlot("No data to plot."))
+  if(plot$parentType$interactive) {
+    return(.mapUsageInteractivePlottingFunction(plot))
+  } else {
+    return(.mapUsageStaticPlottingFunction(plot))
+  }
 }
 
 .mapThresholdPlottingFunction <- function(plot) {
