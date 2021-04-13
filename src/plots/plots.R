@@ -290,11 +290,13 @@ obsmonPlot <- setRefClass(Class="obsmonPlot",
       if(is.null(dataColumn)) {
         dataColumn <- colnames(.self$data)[ncol(.self$data)]
       }
-      cm <- .getSuitableColorScale(localPlotData[dataColumn])
-      dataPallete <- colorNumeric(
-        palette=cm$palette,
-        domain=cm$domain
-      )
+
+      if(is.numeric(localPlotData[[dataColumn]])) {
+        cm <- .getSuitableColorScale(localPlotData[dataColumn])
+        dataPallete <- colorNumeric(palette=cm$palette, domain=cm$domain)
+      } else {
+        dataPallete <- colorFactor("RdYlBu", domain = NULL)
+      }
 
       leafletMap <- leaflet(data=localPlotData) %>%
         addTiles() %>%
