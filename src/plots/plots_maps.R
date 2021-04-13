@@ -58,21 +58,9 @@
 }
 
 .mapUsageStaticPlottingFunction <- function(plot) {
-  plotData <- plot$data
-  status <- rep("NA", nrow(plotData))
-  status <- ifelse(plotData$anflag == 0, "Rejected", status)
-  status <- ifelse(plotData$active  > 0, "Active", status)
-  status <- ifelse(plotData$rejected > 0, "Rejected", status)
-  status <- ifelse(plotData$passive > 0, "Passive", status)
-  status <- ifelse(plotData$blacklisted > 0, "Blacklisted", status)
-  status <- ifelse(plotData$anflag  > 0, "Active(2)", status)
-  status <- ifelse(plotData$anflag == 4, "Rejected", status)
-  status <- ifelse(plotData$anflag == 8, "Blacklisted", status)
-  plotData$status <- status
-
   ggplotMap <- .getStaticGenericMapPlot(plot) +
     geom_point(
-      data=plotData[rev(order(status)),],
+      data=plot$data,
       aes(x=longitude, y=latitude, colour=status, shape=status, fill=status),
       size=2, alpha=.75
     ) +
@@ -101,18 +89,6 @@
 }
 
 .mapUsageInteractivePlottingFunction <- function(plot) {
-  plotData <- plot$data
-  status <- rep("NA", nrow(plotData))
-  status <- ifelse(plotData$anflag == 0, "Rejected", status)
-  status <- ifelse(plotData$active  > 0, "Active", status)
-  status <- ifelse(plotData$rejected > 0, "Rejected", status)
-  status <- ifelse(plotData$passive > 0, "Passive", status)
-  status <- ifelse(plotData$blacklisted > 0, "Blacklisted", status)
-  status <- ifelse(plotData$anflag  > 0, "Active(2)", status)
-  status <- ifelse(plotData$anflag == 4, "Rejected", status)
-  status <- ifelse(plotData$anflag == 8, "Blacklisted", status)
-  plotData$status <- status
-
   colors <- c(
     "Active"="green", "Active(2)"="blue",
     "Rejected"="red", "Passive"="magenta3",
@@ -121,15 +97,15 @@
 
   plotlyMap <- .getInteractiveGenericMapPlot(plot) %>%
     add_markers(
-      data=plotData[rev(order(status)),],
+      data=plot$data,
       text=~gsub(
         "\\w*:[[:space:]]*<br />", "",
         gsub(
           "(<br />){2,}", "<br />",
           paste(
-            if("statLabel" %in% names(plotData)) paste("Station:", statLabel),
-            if("level" %in% names(plotData)) paste("Level:", level),
-            if("channel" %in% names(plotData)) paste("Channel:", channel),
+            if("statLabel" %in% names(plot$data)) paste("Station:", statLabel),
+            if("level" %in% names(plot$data)) paste("Level:", level),
+            if("channel" %in% names(plot$data)) paste("Channel:", channel),
             sprintf("Coords: (%.3f\u00B0, %.3f\u00B0)", longitude, latitude),
             paste("Anflag:", anflag),
             paste("Status:", status),
@@ -251,7 +227,21 @@ plotRegistry$registerPlotType(
     "passive", "blacklisted", "anflag", "obsvalue"
   ),
   dataFieldsInSqliteWhereClause=list("obnumber", "obname"),
-  plottingFunction=.mapUsagePlottingFunction
+  plottingFunction=.mapUsagePlottingFunction,
+  dataPostProcessingFunction = function(data) {
+    status <- rep("NA", nrow(data))
+    status <- ifelse(data$anflag == 0, "Rejected", status)
+    status <- ifelse(data$active  > 0, "Active", status)
+    status <- ifelse(data$rejected > 0, "Rejected", status)
+    status <- ifelse(data$passive > 0, "Passive", status)
+    status <- ifelse(data$blacklisted > 0, "Blacklisted", status)
+    status <- ifelse(data$anflag  > 0, "Active(2)", status)
+    status <- ifelse(data$anflag == 4, "Rejected", status)
+    status <- ifelse(data$anflag == 8, "Blacklisted", status)
+    data$status <- status
+    data <- data[rev(order(data$status)),]
+    return(data)
+  }
 )
 
 plotRegistry$registerPlotType(
