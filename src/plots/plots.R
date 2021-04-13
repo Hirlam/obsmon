@@ -286,13 +286,6 @@ obsmonPlot <- setRefClass(Class="obsmonPlot",
       # are not modified
       localPlotData <- data.frame(.self$data, check.names=FALSE)
 
-      for (colname in colnames(.self$data)) {
-        localPlotData$popupContents <- paste(
-          localPlotData$popupContents,
-          sprintf("%s: %s<br>", colname, localPlotData[[colname]])
-        )
-      }
-
       dataColumn <- unname(attributes(.self$data)$comment["dataColumn"])
       if(is.null(dataColumn)) {
         dataColumn <- colnames(.self$data)[ncol(.self$data)]
@@ -312,7 +305,7 @@ obsmonPlot <- setRefClass(Class="obsmonPlot",
         addCircleMarkers(
           lng=~longitude,
           lat=~latitude,
-          popup=~popupContents,
+          popup=.getLeafletPopupContents(.self$data),
           fillColor=as.formula(sprintf("~dataPallete(`%s`)", dataColumn)),
           fillOpacity=0.5,
           stroke=FALSE,
@@ -617,4 +610,14 @@ addTitleToPlot <- function(myPlot, title) {
   if(cm$direction < 0) cm$palette <- rev(cm$palette)
   cm$domain <- c(mincol, maxcol)
   return(cm)
+}
+
+.getLeafletPopupContents <- function(plotData) {
+  for (colname in colnames(plotData)) {
+    plotData$popupContents <- paste(
+      plotData$popupContents,
+      sprintf("%s: %s<br>", colname, plotData[[colname]])
+    )
+  }
+  return(plotData[["popupContents"]])
 }
