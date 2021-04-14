@@ -60,14 +60,8 @@ observeEvent(input$doPlot, {
   # producing the plot fails for whatever reason.
   readyPlot(NULL)
 
-  db <- req(activeDb())
-  plotter <- plotTypesFlat[[req(input$plottype)]]
-  plotRequest <- list()
-  plotRequest$expName <- req(input$experiment)
-  plotRequest$dbType <- db$dbType
-  plotRequest$criteria <- plotsBuildCriteria(input)
-  if(requireSingleStation()) {
-    validStation <- length(plotRequest$criteria$station)==1
+  if(activePlotType()$requiresSingleStation) {
+    validStation <- length(input$station)==1
     if(!validStation) {
       showNotification(
         "This plot requires choosing one station!",
@@ -105,16 +99,20 @@ observeEvent(input$doPlot, {
   }
   shinyjs::hide(selector="#mainArea li a[data-value=plotTab]")
 
-  # Prepare plot asyncronously
-  newFutPlotAndOutput <- futureCall(
-    FUN=preparePlotsCapturingOutput,
-    args=list(
-      plotter=plotter, plotRequest=plotRequest, db=db,
-      interactive=isTRUE(obsmonConfig$general$plotsEnableInteractivity),
-      progressFile=plotProgressFile()
-    )
+  newPlot <- obsmonPlot(
+    parentType=activePlotType(),
+    db=req(activeDb()),
+    paramsAsInUiInput=reactiveValuesToList(input)
   )
-  plotPID <- newFutPlotAndOutput$job$pid
+
+  # Fetch data asyncronously
+  asyncFetchDataOutput <- futureCall(
+    FUN=function(...) {
+      capture.output(newPlot$fetchRawData(...), type="message")
+    },
+    args=list(progressFile=plotProgressFile())
+  )
+  plotPID <- asyncFetchDataOutput$job$pid
   currentPlotPid(plotPID)
   session$onSessionEnded(function() {
     flog.debug(
@@ -124,20 +122,24 @@ observeEvent(input$doPlot, {
     killProcessTree(plotPID)
   })
 
-  then(newFutPlotAndOutput,
+  then(asyncFetchDataOutput,
     onFulfilled=function(value) {
+      # TODO: Move obmap and obplot assignments to where they are being
+      # rendered
+      obmap <- newPlot$generateLeafletMap()
+      obplot <- newPlot$generate()
       # Enable/disable, show/hide appropriate inputs
       # (i) Maps tab
-      if(is.null(value$plots$obmap)) {
+      if(is.null(obmap)) {
         if(input$mainArea=="mapTab") {
           updateTabsetPanel(session, "mainArea", "plotTab")
         }
-        js$disableTab("mapTab")
+        hideTab("mainArea", "mapTab")
       } else {
-        js$enableTab("mapTab")
+        showTab("mainArea", "mapTab")
       }
       # (ii) Interactive or regular plot tabs
-      interactive <- plotIsPlotly(value$plots$obplot)
+      interactive <- "plotly" %in% class(obplot)
       shinyjs::toggle(
         condition=interactive, selector="#mainArea li a[data-value=plotlyTab]"
       )
@@ -153,7 +155,7 @@ observeEvent(input$doPlot, {
       }
 
       # Update readyPlot reactive
-      readyPlot(value$plots)
+      readyPlot(newPlot)
     },
     onRejected=function(e) {
       if(!plotInterrupted()) {
@@ -162,7 +164,7 @@ observeEvent(input$doPlot, {
       }
       # The plot tab does not keep the spinner running if the plot
       # is NULL, but the plotly tab does. Using this to remove the
-      # spinner is the plot fails for whatever reason.
+      # spinner if the plot fails for whatever reason.
       shinyjs::show(selector="#mainArea li a[data-value=plotTab]")
       if(input$mainArea %in% c("plotTab", "plotlyTab")) {
         updateTabsetPanel(session, "mainArea", "plotTab")
@@ -172,7 +174,7 @@ observeEvent(input$doPlot, {
       readyPlot(NULL)
     }
   )
-  plotCleanup <- finally(newFutPlotAndOutput, function() {
+  plotCleanup <- finally(asyncFetchDataOutput, function() {
     currentPlotPid(-1)
     # Reset items related to plot progress bar
     removeNotification(plotStartedNotifId())
@@ -187,8 +189,7 @@ observeEvent(input$doPlot, {
     # Force-kill forked processes
     killProcessTree(plotPID)
     # Printing output produced during async plot, if any
-    resolvedValue <- value(newFutPlotAndOutput)
-    producedOutput <- resolvedValue$output
+    producedOutput <- value(asyncFetchDataOutput)
     if(length(producedOutput)>0) message(paste0(producedOutput, "\n"))
   })
   catch(plotCleanup, function(e) {
@@ -211,45 +212,48 @@ output$mapAndMapTitleContainer <- renderUI(
 output$queryAndTableContainer <- renderUI(
   queryUsedAndDataTableOutput("queryUsed", "dataTable")
 )
+hideTab("mainArea", "mapTab")
 
 # Rendering plot/map/dataTable
 # (i) Rendering plots
 # (i.i) Interactive plot, if plot is a plotly object
 output$plotly <- renderPlotly({
-  req(plotIsPlotly(readyPlot()$obplot))
+  req(readyPlot())
+  obplot <- readyPlot()$generate()
+  req("plotly" %in% class(obplot))
   notifId <- showNotification(
     "Rendering plot...", duration=NULL, type="message"
   )
   on.exit(removeNotification(notifId))
-  readyPlot()$obplot %>%
-    configPlotlyWrapper() %>%
-    addTitleToPlot(readyPlot()$title)
+  obplot
 })
 # (i.ii) Non-interactive plot, if plot is not a plotly object
 output$plot <- renderPlot({
-  if(is.null(readyPlot()$obplot)) return(NULL)
-  req(!plotIsPlotly(readyPlot()$obplot))
+  req(readyPlot())
+  obplot <- readyPlot()$generate()
+  if(is.null(obplot)) return(NULL)
+  req(!("plotly" %in% class(obplot)))
 
   notifId <- showNotification(
     "Rendering plot...", duration=NULL, type="message"
   )
   on.exit(removeNotification(notifId))
 
-  readyPlot()$obplot %>% addTitleToPlot(readyPlot()$title)
+  obplot
 },
   res=96, pointsize=18
 )
 
 # (ii) Rendering dataTables
 output$dataTable <- renderDataTable({
-    if(!is.null(readyPlot()$plotData)) {
+    if(!is.null(readyPlot()$data)) {
       notifId <- showNotification(
         "Rendering data table...", duration=NULL, type="message"
       )
       on.exit(removeNotification(notifId))
     }
     tryCatch(
-      readyPlot()$plotData,
+      readyPlot()$data,
       error=function(e) NULL
     )
   },
@@ -257,7 +261,7 @@ output$dataTable <- renderDataTable({
 )
 output$queryUsed <- renderText(
   tryCatch(
-    readyPlot()$queryUsed,
+    readyPlot()$sqliteQuery,
     error=function(e) NULL
   )
 )
@@ -265,7 +269,7 @@ output$dataTableDownloadAsTxt <- downloadHandler(
   filename = function() "plot_data.txt",
   content = function(file) {
     dataInfo <- plotExportedDataInfo(readyPlot())
-    write.table(readyPlot()$plotData, file, sep="\t", row.names=FALSE)
+    write.table(readyPlot()$data, file, sep="\t", row.names=FALSE)
     write(paste0("\n", dataInfo), file, append=TRUE)
   }
 )
@@ -273,7 +277,7 @@ output$dataTableDownloadAsCsv <- downloadHandler(
   filename = function() "plot_data.csv",
   content = function(file) {
     dataInfo <- plotExportedDataInfo(readyPlot())
-    write.csv(readyPlot()$plotData, file, row.names=FALSE)
+    write.csv(readyPlot()$data, file, row.names=FALSE)
     write(paste0("\n", dataInfo), file, append=TRUE)
   }
 )
@@ -285,7 +289,7 @@ output$map <- renderLeaflet({
   )
   on.exit(removeNotification(notifId))
   tryCatch(
-    readyPlot()$obmap,
+    readyPlot()$generateLeafletMap(),
     error=function(e) NULL
   )
 })

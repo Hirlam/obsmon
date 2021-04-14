@@ -169,6 +169,34 @@ readSynopStations <- function() {
 }
 synopStations <- readSynopStations()
 
+putLabelsInStations <- function(stations=NULL, obname=NULL) {
+  # Used in the server logic
+  if(length(stations)==0) return(stations)
+  if(isTRUE(obname=="synop")) {
+    stationLabels <- c()
+    for(statID in stations) {
+      statName <- tryCatch(synopStations[statID], error=function(e) NA)
+      label <- statID
+      if(!anyNA(statName)) label <- sprintf("%s (%s)", statID, statName)
+      stationLabels <- c(stationLabels, label)
+    }
+    names(stations) <- stationLabels
+  } else {
+    names(stations) <- stations
+  }
+  return(stations)
+}
+
+# Helper function to show progress message when plotting
+readPlotProgressFile <- function(path) {
+  fContents <- tryCatch(unlist(read.table(path), use.names=FALSE),
+    error=function(e) NULL,
+    warning=function(w) NULL
+  )
+  rtn <- list(current=fContents[1], total=fContents[2])
+  return(rtn)
+}
+
 getUnits <- function(quantityName) {
   rtn <- tryCatch(
     switch(
