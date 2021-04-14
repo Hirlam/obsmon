@@ -50,9 +50,10 @@ plotOutputInsideFluidRow <- function(plotOutputId) {
   fluidPage(
     fluidRow(
       column(12, align="center",
-        plotOutput(plotOutputId, height="755px", width="auto")
+        plotOutput(plotOutputId, height="755px", width="auto") %>%
+           withSpinner(color="#0dc5c1")
       )
-    ) %>% withSpinner(color="#0dc5c1")
+    )
   )
 }
 
@@ -60,9 +61,10 @@ plotlyOutputInsideFluidRow <- function(plotlyOutputId) {
   fluidPage(
     fluidRow(
       column(12, align="center",
-        plotlyOutput(plotlyOutputId, height="755px", width="auto")
+        plotlyOutput(plotlyOutputId, height="755px", width="auto") %>%
+          withSpinner(color="#0dc5c1")
       )
-    ) %>% withSpinner(color="#0dc5c1")
+    )
   )
 }
 

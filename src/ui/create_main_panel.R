@@ -35,7 +35,7 @@ createMainPanel <- function(prependToIds=NULL) {
       tabPanel("Map", value=tabPanelValueMapTab,
         uiOutput(uiOutputIdForMapAndTitle)
       ),
-      tabPanel("Query and data", value=tabPanelValueDataTab,
+      tabPanel("Query and Data", value=tabPanelValueDataTab,
         uiOutput(uiOutputIdForQueryAndTable)
       )
     )
