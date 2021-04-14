@@ -402,6 +402,29 @@ obsmonPlot <- setRefClass(Class="obsmonPlot",
         rtn <- sprintf("%s, %s=%s", rtn, param, vals)
       }
       return (rtn)
+    },
+    ###########################
+    exportData = function(file, format) {
+      format <- tolower(format)
+      if(format=="csv") {
+        write.csv(.self$data, file, row.names=FALSE)
+      } else if (format=="txt") {
+        write.table(.self$data, file, sep="\t", row.names=FALSE)
+      } else {
+        flog.error("Format '%s' not supported.", format)
+        return(NULL)
+      }
+
+      dataInfo <- paste0(
+        paste("# Plot title:", .self$title, "\n"),
+        sprintf(
+          "# Data retrieved by Obsmon v%s on %s using the following query:\n",
+          obsmonVersion, strftime(Sys.time(), format="%Y-%m-%d %H:%M:%S %Z")
+        ),
+        paste0("# ", .self$sqliteQuery, "\n"),
+        paste("\n")
+      )
+      write(paste0("\n", dataInfo), file, append=TRUE)
     }
   )
 )

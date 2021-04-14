@@ -267,19 +267,11 @@ output$queryUsed <- renderText(
 )
 output$dataTableDownloadAsTxt <- downloadHandler(
   filename = function() "plot_data.txt",
-  content = function(file) {
-    dataInfo <- plotExportedDataInfo(readyPlot())
-    write.table(readyPlot()$data, file, sep="\t", row.names=FALSE)
-    write(paste0("\n", dataInfo), file, append=TRUE)
-  }
+  content = function(file) req(obsmonPlotObj())$exportData(file, format="txt")
 )
 output$dataTableDownloadAsCsv <- downloadHandler(
   filename = function() "plot_data.csv",
-  content = function(file) {
-    dataInfo <- plotExportedDataInfo(readyPlot())
-    write.csv(readyPlot()$data, file, row.names=FALSE)
-    write(paste0("\n", dataInfo), file, append=TRUE)
-  }
+  content = function(file) req(obsmonPlotObj())$exportData(file, format="csv")
 )
 
 # (iii) Rendering maps
