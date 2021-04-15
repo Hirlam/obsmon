@@ -227,7 +227,7 @@ obsmonDb <- obsmonDatabaseClass(
 )
 
 test_that("obsmonPlot can be instanciated", {
-  newPlot <- obsmonPlot(
+  newPlot <- obsmonPlot$new(
     parentType=mockPlotType,
     db=obsmonDb,
     paramsAsInUiInput=mockUiInput
@@ -236,7 +236,7 @@ test_that("obsmonPlot can be instanciated", {
 })
 
 test_that("obsmonPlot 'fetchRawData' works", {
-  newPlot <- obsmonPlot(
+  newPlot <- obsmonPlot$new(
     parentType=mockPlotType,
     db=obsmonDb,
     paramsAsInUiInput=mockUiInput
@@ -251,7 +251,7 @@ test_that("obsmonPlot 'fetchRawData' works", {
 })
 
 test_that("Accessing data automatically fetches rawData", {
-  newPlot <- obsmonPlot(
+  newPlot <- obsmonPlot$new(
     parentType=mockPlotType,
     db=obsmonDb,
     paramsAsInUiInput=mockUiInput
@@ -262,7 +262,7 @@ test_that("Accessing data automatically fetches rawData", {
 })
 
 test_that("data contains all fields in dataFieldsInRetrievedPlotData", {
-  newPlot <- obsmonPlot(
+  newPlot <- obsmonPlot$new(
     parentType=mockPlotType,
     db=obsmonDb,
     paramsAsInUiInput=mockUiInput
@@ -274,12 +274,12 @@ test_that("data contains all fields in dataFieldsInRetrievedPlotData", {
 })
 
 test_that("dataPostProcessingFunction works", {
-  newPlot <- obsmonPlot(
+  newPlot <- obsmonPlot$new(
     parentType=mockPlotType,
     db=obsmonDb,
     paramsAsInUiInput=mockUiInput
   )
-  newPlotWithDataPP <- obsmonPlot(
+  newPlotWithDataPP <- obsmonPlot$new(
     parentType=mockPlotTypeWithDataPP,
     db=obsmonDb,
     paramsAsInUiInput=mockUiInput
@@ -291,7 +291,7 @@ test_that("dataPostProcessingFunction works", {
 })
 
 test_that("defaultGenerate function produces plotly if plot interactive", {
-  newPlot <- obsmonPlot(
+  newPlot <- obsmonPlot$new(
     parentType=mockPlotType,
     db=obsmonDb,
     paramsAsInUiInput=mockUiInput
@@ -301,7 +301,7 @@ test_that("defaultGenerate function produces plotly if plot interactive", {
 })
 
 test_that("defaultGenerate function produces ggplot if plot non-interactive", {
-  newPlot <- obsmonPlot(
+  newPlot <- obsmonPlot$new(
     parentType=mockNonInteractivePlotType,
     db=obsmonDb,
     paramsAsInUiInput=mockUiInput
@@ -312,7 +312,7 @@ test_that("defaultGenerate function produces ggplot if plot non-interactive", {
 
 test_that("defaultGenerate function adds createdByDefaultGenerate attr", {
   for(parentType in c(mockPlotType, mockNonInteractivePlotType)) {
-    newPlot <- obsmonPlot(
+    newPlot <- obsmonPlot$new(
       parentType=parentType,
       db=obsmonDb,
       paramsAsInUiInput=mockUiInput
@@ -324,7 +324,7 @@ test_that("defaultGenerate function adds createdByDefaultGenerate attr", {
 
 test_that("'generate' uses 'defaultGenerate' if parentType$plottingFunction missing", {
   for(parentType in c(mockPlotType, mockNonInteractivePlotType)) {
-    newPlot <- obsmonPlot(
+    newPlot <- obsmonPlot$new(
       parentType=parentType,
       db=obsmonDb,
       paramsAsInUiInput=mockUiInput
@@ -336,7 +336,7 @@ test_that("'generate' uses 'defaultGenerate' if parentType$plottingFunction miss
 })
 
 test_that("generateLeafletMap returns NULL if no leafletPlottingFunction & 'map' not in category", {
-  newPlot <- obsmonPlot(
+  newPlot <- obsmonPlot$new(
     parentType=mockPlotType,
     db=obsmonDb,
     paramsAsInUiInput=mockUiInput
@@ -356,7 +356,7 @@ test_that("'generateLeafletMap' gens leaflet if no leafletPlottingFunction but '
     ),
     dataFieldsInSqliteWhereClause=list("obnumber", "obname")
   )
-  newPlot <- obsmonPlot(
+  newPlot <- obsmonPlot$new(
     parentType=mapPlotType,
     db=obsmonDb,
     paramsAsInUiInput=mockUiInput
@@ -542,7 +542,7 @@ context("Implemented obsmon plots")
 
 test_that("plotTypes in actual obsmon plotRegistry can produce plots", {
   for (pType in plotRegistry$plotTypes) {
-    newPlot <- obsmonPlot(
+    newPlot <- obsmonPlot$new(
       parentType=pType,
       db=obsmonDb,
       paramsAsInUiInput=mockUiInput

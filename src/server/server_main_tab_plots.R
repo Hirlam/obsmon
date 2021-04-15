@@ -90,7 +90,7 @@ observeEvent(input$doPlot, {
   asyncNewPlotAndOutput <- futureCall(
     FUN=function(parentType, db, paramsAsInUiInput, ...) {
       output <- capture.output({
-        newPlot <- obsmonPlot(
+        newPlot <- obsmonPlot$new(
           parentType=parentType,
           db=db,
           paramsAsInUiInput=paramsAsInUiInput
