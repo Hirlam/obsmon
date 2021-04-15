@@ -99,15 +99,7 @@ observeEvent(input$doPlot, {
     },
     args=list(progressFile=plotProgressFile())
   )
-  plotPID <- asyncFetchDataOutput$job$pid
-  currentPlotPid(plotPID)
-  session$onSessionEnded(function() {
-    flog.debug(
-      "Session finished: Making sure plot task with PID=%s is killed",
-      plotPID
-    )
-    killProcessTree(plotPID)
-  })
+  currentPlotPid(asyncFetchDataOutput$job$pid)
 
   then(asyncFetchDataOutput,
     onFulfilled=function(value) {
@@ -115,16 +107,15 @@ observeEvent(input$doPlot, {
     },
     onRejected=function(e) {
       if(!plotInterrupted()) {
-        showNotification("Could not produce plot", duration=1, type="error")
+        showNotification("Could not fetch plot data", duration=1, type="error")
         flog.error(e)
       }
     }
   )
   plotCleanup <- finally(asyncFetchDataOutput, function() {
+    # Force-kill eventual zombie forked processes and reset pid
+    killProcessTree(currentPlotPid())
     currentPlotPid(-1)
-
-    # Force-kill eventual zombie forked processes
-    killProcessTree(plotPID)
 
     # Reset items related to plot progress bar
     removeNotification(plotStartedNotifId())
