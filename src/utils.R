@@ -200,6 +200,7 @@ readPlotProgressFile <- function(path) {
 getUnits <- function(quantityName) {
   rtn <- tryCatch(
     switch(
+      quantityName,
       "u"    = "m/s",
       "ff"   = "m/s",
       "u10m" = "m/s",
@@ -221,7 +222,13 @@ getUnits <- function(quantityName) {
       "pressure" = "Pa",
       "height" = "m"
     ),
-    error=function(e) NULL
+    error=function(e) {
+      flog.warn(
+        "Could not determine units for quantity '%s': %s",
+        quantityName, e
+      )
+      return(NULL)
+    }
   )
   if(is.null(rtn)) rtn <- "unknown units"
   return(rtn)
