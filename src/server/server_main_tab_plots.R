@@ -148,10 +148,18 @@ observeEvent(input$doPlot, {
 # Finally, producing the output
 nonLeafletPlot <- reactive({
   if (is.null(obsmonPlotObj())) return(NULL)
+  notifId <- showNotification(
+    "Producing plot...", duration=NULL, type="message"
+  )
+  on.exit(removeNotification(notifId))
   obsmonPlotObj()$generate()
 })
 leafletMap <- reactive({
   if (is.null(obsmonPlotObj())) return(NULL)
+  notifId <- showNotification(
+    "Producing leaflet map...", duration=NULL, type="message"
+  )
+  on.exit(removeNotification(notifId))
   obsmonPlotObj()$generateLeafletMap()
 })
 
