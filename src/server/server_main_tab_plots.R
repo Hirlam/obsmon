@@ -86,24 +86,31 @@ observeEvent(input$doPlot, {
   # Trigger creation of progress bar
   plotProgressFile(tempfile(pattern="plotProgress"))
 
-  newPlot <- obsmonPlot(
-    parentType=activePlotType(),
-    db=req(activeDb()),
-    paramsAsInUiInput=reactiveValuesToList(input)
-  )
-
-  # Fetch data asyncronously
-  asyncFetchDataOutput <- futureCall(
-    FUN=function(...) {
-      capture.output(newPlot$fetchRawData(...), type="message")
+  # Fetch raw data asyncronously so app doesn't freeze
+  asyncNewPlotAndOutput <- futureCall(
+    FUN=function(parentType, db, paramsAsInUiInput, ...) {
+      output <- capture.output({
+        newPlot <- obsmonPlot(
+          parentType=parentType,
+          db=db,
+          paramsAsInUiInput=paramsAsInUiInput
+        )
+        newPlot$fetchRawData(...)
+      })
+      return(list(newPlot=newPlot, output=output))
     },
-    args=list(progressFile=plotProgressFile())
+    args=list(
+      parentType=activePlotType(),
+      db=req(activeDb()),
+      paramsAsInUiInput=reactiveValuesToList(input),
+      progressFile=plotProgressFile()
+    )
   )
-  currentPlotPid(asyncFetchDataOutput$job$pid)
+  currentPlotPid(asyncNewPlotAndOutput$job$pid)
 
-  then(asyncFetchDataOutput,
+  then(asyncNewPlotAndOutput,
     onFulfilled=function(value) {
-      obsmonPlotObj(newPlot)
+      obsmonPlotObj(value$newPlot)
     },
     onRejected=function(e) {
       if(!plotInterrupted()) {
@@ -112,7 +119,7 @@ observeEvent(input$doPlot, {
       }
     }
   )
-  plotCleanup <- finally(asyncFetchDataOutput, function() {
+  plotCleanup <- finally(asyncNewPlotAndOutput, function() {
     # Force-kill eventual zombie forked processes and reset pid
     killProcessTree(currentPlotPid())
     currentPlotPid(-1)
@@ -132,7 +139,7 @@ observeEvent(input$doPlot, {
     enableShinyInputs(input, except="^multiPlots*")
 
     # Printing output produced during async plot, if any
-    producedOutput <- value(asyncFetchDataOutput)
+    producedOutput <- value(asyncNewPlotAndOutput)$output
     if(length(producedOutput)>0) message(paste0(producedOutput, "\n"))
   })
   catch(plotCleanup, function(e) {

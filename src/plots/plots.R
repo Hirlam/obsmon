@@ -341,12 +341,14 @@ obsmonPlot <- setRefClass(Class="obsmonPlot",
     },
     ############################
     fetchRawData = function(...) {
+      flog.trace("Fetching raw data for plot '%s'...", .self$title)
       fetchedData <- performQuery(
         db=.self$db,
         query=.self$sqliteQuery,
         dtgs=.self$paramsAsInSqliteDbs$dtg,
         ...
       )
+      flog.trace("Done fetching raw data for plot '%s'", .self$title)
       if(is.null(fetchedData)) {
         colnames <- .self$parentType$getRetrievedSqliteFields()
         fetchedData <- data.frame(matrix(ncol=length(colnames), nrow=0))
