@@ -120,9 +120,9 @@ observeEvent(input$multiPlotsDoPlot, {
   multiPlotsAsyncAndOutput <- futureCall(
     FUN=prepareMultiPlotsCapturingOutput,
     args=list(
-      plotter=plotTypesFlat[[pConfig$plotType]],
-      inputsForAllPlots=inputsForAllPlots, db=db,
-      interactive=isTRUE(obsmonConfig$general$multiPlotsEnableInteractivity),
+      plotType=pConfig$plotType,
+      inputsForAllPlots=inputsForAllPlots,
+      db=db,
       progressFile=multiPlotsProgressFile()
     )
   )
@@ -144,7 +144,7 @@ observeEvent(input$multiPlotsDoPlot, {
       multiPlot(value$plots)
       somePlotHasMap <- FALSE
       for(individualPlot in value$plots) {
-        if(!is.null(individualPlot$obmap)) {
+        if(!is.null(individualPlot$generateLeafletMap())) {
           somePlotHasMap <- TRUE
           break
         }
@@ -199,9 +199,10 @@ observeEvent(input$multiPlotsDoPlot, {
 # (i) Plots
 output$multiPlotsPlotContainer <- renderUI({
   plotOutList <- lapply(seq_along(multiPlot()), function(iPlot) {
+    nonLeafletPlot <- multiPlot()[[iPlot]]$generate()
     if(
       isTRUE(obsmonConfig$general$multiPlotsEnableInteractivity) &&
-      plotIsPlotly(multiPlot()[[iPlot]]$obplot)
+      "plotly" %in% class(nonLeafletPlot)
     ) {
       plotlyOutputInsideFluidRow(multiPlotsGenId(iPlot, type="plot"))
     } else {
@@ -251,40 +252,38 @@ observeEvent(multiPlot(), {
       pName <- multiPlotsGenId(iPlot)
       # Assign plots
       plotOutId <- multiPlotsGenId(iPlot, type="plot")
+      nonLeafletPlot <- multiPlot()[[pName]]$generate()
       if(
         isTRUE(obsmonConfig$general$multiPlotsEnableInteractivity) &&
-        plotIsPlotly(multiPlot()[[pName]]$obplot)
+        "plotly" %in% class(nonLeafletPlot)
       ) {
         output[[plotOutId]] <- renderPlotly({
-          req(multiPlot()[[pName]]$obplot) %>%
+          nonLeafletPlot %>%
             configPlotlyWrapper(
               toImageButtonOptions=list(
                 filename=sprintf("obsmon_multiPlot_%s", iPlot)
               )
-            ) %>%
-            addTitleToPlot(multiPlot()[[pName]]$title)
+            )
         })
       } else {
-        output[[plotOutId]] <- renderPlot({
-          req(multiPlot()[[pName]]$obplot) %>%
-            addTitleToPlot(multiPlot()[[pName]]$title)
-        },
-           res=96, pointsize=18
+        output[[plotOutId]] <- renderPlot(
+          nonLeafletPlot,
+          res=96, pointsize=18
         )
       }
       # Assign maps and map titles
       mapId <- multiPlotsGenId(iPlot, type="map")
       mapTitleId <- multiPlotsGenId(iPlot, type="mapTitle")
-      output[[mapId]] <- renderLeaflet(req(multiPlot()[[pName]]$obmap))
+      output[[mapId]] <- renderLeaflet(req(multiPlot()[[pName]]$generateLeafletMap()))
       output[[mapTitleId]] <- renderText(req(multiPlot()[[pName]]$title))
       # Assign queryUsed and dataTable
       queryUsedId <- multiPlotsGenId(iPlot, type="queryUsed")
       dataTableId <- multiPlotsGenId(iPlot, type="dataTable")
       saveAsTxtId <- paste0(dataTableId, "DownloadAsTxt")
       saveAsCsvId <- paste0(dataTableId, "DownloadAsCsv")
-      output[[queryUsedId]] <- renderText(req(multiPlot()[[pName]]$queryUsed))
+      output[[queryUsedId]] <- renderText(req(multiPlot()[[pName]]$sqliteQuery))
       output[[dataTableId]] <- renderDataTable(
-        req(multiPlot()[[pName]]$plotData), options=list(pageLength=10)
+        req(multiPlot()[[pName]]$data), options=list(pageLength=10)
       )
       output[[saveAsTxtId]] <- downloadHandler(
         filename = function() sprintf("multiplot_%d_data.txt", iPlot),
