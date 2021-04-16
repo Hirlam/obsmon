@@ -226,18 +226,18 @@ obsmonPlot <- setRefClass(Class="obsmonPlot",
     paramsAsInUiInput="list",
     rawData="data.frame",
     ##############################
-    data = function(...) {.self$getDataFromRawData()},
-    sqliteQuery = function(...) {.self$getSqliteQuery()},
+    data = function(...) {.self$.getDataFromRawData()},
+    sqliteQuery = function(...) {.self$.getSqliteQuery()},
     paramsAsInSqliteDbs = function(...) {
       .self$parentType$getSqliteParamsFromUiParams(.self$paramsAsInUiInput)
     },
-    title = function(...) {.self$getTitle()}
+    title = function(...) {.self$.getTitle()}
   ),
   methods=list(
     generate = function() {
       plot <- tryCatch({
         if(class(.self$parentType$plottingFunction) == "uninitializedField") {
-          rtn <- .self$defaultGenerate()
+          rtn <- .self$.defaultGenerate()
         } else {
           rtn <- .self$parentType$plottingFunction(.self)
           if(.self$parentType$interactive && !("plotly" %in% class(rtn))) {
@@ -254,8 +254,56 @@ obsmonPlot <- setRefClass(Class="obsmonPlot",
       )
       return(plot)
     },
+
+    generateLeafletMap = function() {
+      if(class(.self$parentType$leafletPlottingFunction) != "uninitializedField") {
+        return(.self$parentType$leafletPlottingFunction(.self))
+      }
+      return(.self$.defaultGenerateLeafletMap())
+    },
+
+    fetchRawData = function(...) {
+      flog.trace("Fetching raw data for plot '%s'...", .self$title)
+      fetchedData <- performQuery(
+        db=.self$db,
+        query=.self$sqliteQuery,
+        dtgs=.self$paramsAsInSqliteDbs$dtg,
+        ...
+      )
+      flog.trace("Done fetching raw data for plot '%s'", .self$title)
+      if(is.null(fetchedData)) {
+        colnames <- .self$parentType$getRetrievedSqliteFields()
+        fetchedData <- data.frame(matrix(ncol=length(colnames), nrow=0))
+        colnames(fetchedData) <- colnames
+      }
+      .self$rawData <- fetchedData
+    },
+
+    exportData = function(file, format) {
+      format <- tolower(format)
+      if(format=="csv") {
+        write.csv(.self$data, file, row.names=FALSE)
+      } else if (format=="txt") {
+        write.table(.self$data, file, sep="\t", row.names=FALSE)
+      } else {
+        flog.error("Format '%s' not supported.", format)
+        return(NULL)
+      }
+
+      dataInfo <- paste0(
+        paste("# Plot title:", .self$title, "\n"),
+        sprintf(
+          "# Data retrieved by Obsmon v%s on %s using the following query:\n",
+          obsmonVersion, strftime(Sys.time(), format="%Y-%m-%d %H:%M:%S %Z")
+        ),
+        paste0("# ", .self$sqliteQuery, "\n"),
+        paste("\n")
+      )
+      write(paste0("\n", dataInfo), file, append=TRUE)
+    },
+
     ############################
-    defaultGenerate = function() {
+    .defaultGenerate = function() {
       # melt data so we can plot multiple curves (sharing same x-axis), each
       # with a different color and symbol
       data_colnames <- colnames(.self$data)
@@ -279,15 +327,8 @@ obsmonPlot <- setRefClass(Class="obsmonPlot",
       attributes(graph)$createdByDefaultGenerate <- TRUE
       return(graph)
     },
-    ############################
-    generateLeafletMap = function() {
-      if(class(.self$parentType$leafletPlottingFunction) != "uninitializedField") {
-        return(.self$parentType$leafletPlottingFunction(.self))
-      }
-      return(.self$defaultGenerateLeafletMap())
-    },
-    ############################
-    defaultGenerateLeafletMap = function() {
+
+    .defaultGenerateLeafletMap = function() {
       if(!("maps" %in% tolower(parentType$category))) return(NULL)
       # Use "check.names=FALSE" so that names such as "fg_dep+biascrl"
       # are not modified
@@ -331,8 +372,8 @@ obsmonPlot <- setRefClass(Class="obsmonPlot",
         )
       return(leafletMap)
     },
-    ############################
-    getDataFromRawData = function() {
+
+    .getDataFromRawData = function() {
       if(length(.self$rawData)==0) .self$fetchRawData()
       rtn <- data.frame(.self$rawData)
 
@@ -346,25 +387,8 @@ obsmonPlot <- setRefClass(Class="obsmonPlot",
 
       return(rtn)
     },
-    ############################
-    fetchRawData = function(...) {
-      flog.trace("Fetching raw data for plot '%s'...", .self$title)
-      fetchedData <- performQuery(
-        db=.self$db,
-        query=.self$sqliteQuery,
-        dtgs=.self$paramsAsInSqliteDbs$dtg,
-        ...
-      )
-      flog.trace("Done fetching raw data for plot '%s'", .self$title)
-      if(is.null(fetchedData)) {
-        colnames <- .self$parentType$getRetrievedSqliteFields()
-        fetchedData <- data.frame(matrix(ncol=length(colnames), nrow=0))
-        colnames(fetchedData) <- colnames
-      }
-      .self$rawData <- fetchedData
-    },
-    ############################
-    getSqliteQuery = function() {
+
+    .getSqliteQuery = function() {
       # Previously named "plotBuildQuery"
       return(
         sprintf(
@@ -373,8 +397,8 @@ obsmonPlot <- setRefClass(Class="obsmonPlot",
         )
       )
     },
-    ###########################
-    getTitle = function() {
+
+    .getTitle = function() {
       if(class(.self$parentType$plotTitleFunction) != "uninitializedField") {
         return(.self$parentType$plotTitleFunction(.self))
       }
@@ -411,29 +435,6 @@ obsmonPlot <- setRefClass(Class="obsmonPlot",
         rtn <- sprintf("%s, %s=%s", rtn, param, vals)
       }
       return (rtn)
-    },
-    ###########################
-    exportData = function(file, format) {
-      format <- tolower(format)
-      if(format=="csv") {
-        write.csv(.self$data, file, row.names=FALSE)
-      } else if (format=="txt") {
-        write.table(.self$data, file, sep="\t", row.names=FALSE)
-      } else {
-        flog.error("Format '%s' not supported.", format)
-        return(NULL)
-      }
-
-      dataInfo <- paste0(
-        paste("# Plot title:", .self$title, "\n"),
-        sprintf(
-          "# Data retrieved by Obsmon v%s on %s using the following query:\n",
-          obsmonVersion, strftime(Sys.time(), format="%Y-%m-%d %H:%M:%S %Z")
-        ),
-        paste0("# ", .self$sqliteQuery, "\n"),
-        paste("\n")
-      )
-      write(paste0("\n", dataInfo), file, append=TRUE)
     }
   )
 )

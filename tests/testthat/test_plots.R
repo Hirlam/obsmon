@@ -290,39 +290,39 @@ test_that("dataPostProcessingFunction works", {
   expect_equal(newPlotWithDataPP$data, testData)
 })
 
-test_that("defaultGenerate function produces plotly if plot interactive", {
+test_that(".defaultGenerate function produces plotly if plot interactive", {
   newPlot <- obsmonPlot$new(
     parentType=mockPlotType,
     db=obsmonDb,
     paramsAsInUiInput=mockUiInput
   )
-  graphicsObj <- newPlot$defaultGenerate()
+  graphicsObj <- newPlot$.defaultGenerate()
   expect_s3_class(graphicsObj, "plotly")
 })
 
-test_that("defaultGenerate function produces ggplot if plot non-interactive", {
+test_that(".defaultGenerate function produces ggplot if plot non-interactive", {
   newPlot <- obsmonPlot$new(
     parentType=mockNonInteractivePlotType,
     db=obsmonDb,
     paramsAsInUiInput=mockUiInput
   )
-  graphicsObj <- newPlot$defaultGenerate()
+  graphicsObj <- newPlot$.defaultGenerate()
   expect_s3_class(graphicsObj, "ggplot")
 })
 
-test_that("defaultGenerate function adds createdByDefaultGenerate attr", {
+test_that(".defaultGenerate function adds createdByDefaultGenerate attr", {
   for(parentType in c(mockPlotType, mockNonInteractivePlotType)) {
     newPlot <- obsmonPlot$new(
       parentType=parentType,
       db=obsmonDb,
       paramsAsInUiInput=mockUiInput
     )
-    graphicsObj <- newPlot$defaultGenerate()
+    graphicsObj <- newPlot$.defaultGenerate()
     expect_true(attr(graphicsObj, "createdByDefaultGenerate"))
   }
 })
 
-test_that("'generate' uses 'defaultGenerate' if parentType$plottingFunction missing", {
+test_that("'generate' uses '.defaultGenerate' if parentType$plottingFunction missing", {
   for(parentType in c(mockPlotType, mockNonInteractivePlotType)) {
     newPlot <- obsmonPlot$new(
       parentType=parentType,
