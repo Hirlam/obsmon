@@ -235,16 +235,23 @@ obsmonPlot <- setRefClass(Class="obsmonPlot",
   ),
   methods=list(
     generate = function() {
-      if(class(.self$parentType$plottingFunction) == "uninitializedField") {
-        plot <- .self$defaultGenerate()
-      } else {
-        plot <- .self$parentType$plottingFunction(.self)
-        if(.self$parentType$interactive && !("plotly" %in% class(plot))) {
-          plot <- .self$parentType$ggplotlyWrapper(plot)
+      plot <- tryCatch({
+        if(class(.self$parentType$plottingFunction) == "uninitializedField") {
+          rtn <- .self$defaultGenerate()
+        } else {
+          rtn <- .self$parentType$plottingFunction(.self)
+          if(.self$parentType$interactive && !("plotly" %in% class(rtn))) {
+            rtn <- .self$parentType$ggplotlyWrapper(rtn)
+          }
         }
-      }
-
-      plot <- plot %>% addTitleToPlot(.self$title)
+        rtn <- rtn %>% addTitleToPlot(.self$title)
+        return(rtn)
+      },
+        error=function(e) {
+          flog.error(e)
+          NULL
+        }
+      )
       return(plot)
     },
     ############################
