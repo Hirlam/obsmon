@@ -227,16 +227,26 @@ obsmonPlot <- setRefClass(Class="obsmonPlot",
     rawData="data.frame",
     .cache="list",
     ##############################
-    data = function(...) {.self$.getDataFromRawData()},
     hash = function(...) {
       components <- list()
       for (fieldName in names(.self$getRefClass()$fields())) {
-        if(fieldName == "hash") next
         fieldClass <- .self$getRefClass()$fields()[[fieldName]]
         if(fieldClass == "activeBindingFunction") next
+        if(fieldName %in% c("hash", ".cache")) next
         components <- c(components, .self$field(fieldName))
       }
       return(digest::digest(components))
+    },
+    data = function(...) {
+      cachedData <- .self$.cache[[.self$hash]]$data
+      if(!is.null(cachedData)) return(cachedData)
+
+      dataFromRaw <- .self$.getDataFromRawData()
+      .self$.cache[[.self$hash]] <- c(
+        .self$.cache[[.self$hash]],
+        list(data=dataFromRaw)
+      )
+      return(dataFromRaw)
     },
     sqliteQuery = function(...) {.self$.getSqliteQuery()},
     paramsAsInSqliteDbs = function(...) {
@@ -246,6 +256,9 @@ obsmonPlot <- setRefClass(Class="obsmonPlot",
   ),
   methods=list(
     generate = function() {
+      cachedPlot <- .self$.cache[[.self$hash]]$plot
+      if(!is.null(cachedPlot)) return(cachedPlot)
+
       plot <- tryCatch({
         if(class(.self$parentType$plottingFunction) == "uninitializedField") {
           rtn <- .self$.defaultGenerate()
@@ -262,14 +275,29 @@ obsmonPlot <- setRefClass(Class="obsmonPlot",
           NULL
         }
       )
+
+      .self$.cache[[.self$hash]] <- c(
+        .self$.cache[[.self$hash]],
+        list(plot=plot)
+      )
       return(plot)
     },
 
     generateLeafletMap = function() {
+      cachedLeafletMap <- .self$.cache[[.self$hash]]$leafletMap
+      if(!is.null(cachedLeafletMap)) return(cachedLeafletMap)
+
       if(class(.self$parentType$leafletPlottingFunction) != "uninitializedField") {
-        return(.self$parentType$leafletPlottingFunction(.self))
+        leafletMap <- .self$parentType$leafletPlottingFunction(.self)
+      } else {
+        leafletMap <- .self$.defaultGenerateLeafletMap()
       }
-      return(.self$.defaultGenerateLeafletMap())
+
+      .self$.cache[[.self$hash]] <- c(
+        .self$.cache[[.self$hash]],
+        list(leafletMap=leafletMap)
+      )
+      return(leafletMap)
     },
 
     fetchRawData = function(...) {

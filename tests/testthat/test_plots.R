@@ -386,6 +386,23 @@ test_that("'generateLeafletMap' gens leaflet if no leafletPlottingFunction but '
   expect_true("leaflet" %in% class(leafletMap))
 })
 
+test_that("'data', 'generate' and 'generateLeafletMap' cache results", {
+  newPlot <- obsmonPlot$new(
+    parentType=mockPlotType,
+    db=obsmonDb,
+    paramsAsInUiInput=mockUiInput
+  )
+
+  referenceData <- newPlot$data
+  expect_equal(tracemem(referenceData), tracemem(newPlot$data))
+  untracemem(referenceData)
+
+  referenceGraph <- newPlot$generate()
+  expect_equal(tracemem(referenceGraph), tracemem(newPlot$generate()))
+
+  referenceGraph <- newPlot$generateLeafletMap()
+  expect_equal(tracemem(referenceGraph), tracemem(newPlot$generateLeafletMap()))
+})
 
 ###########################################
 context("obsmonPlotRegistry")
