@@ -255,8 +255,7 @@ obsmonPlot <- setRefClass(Class="obsmonPlot",
             rtn <- .self$parentType$ggplotlyWrapper(rtn)
           }
         }
-        rtn <- rtn %>% addTitleToPlot(.self$title)
-        return(rtn)
+        rtn %>% addTitleToPlot(.self$title)
       },
         error=function(e) {
           flog.error(e)
