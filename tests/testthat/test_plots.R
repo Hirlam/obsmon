@@ -193,21 +193,22 @@ context("Plot objects")
 #########################
 
 mockPlotType <- plotType(
-  name="First Guess and Analysis Departure",
-  category="Statistical",
+  name="First Guess Departure Map",
+  category="Maps",
+  dateType="single",
   dataFieldsInRetrievedPlotData=list(
-    "level", "fg_bias_total", "an_bias_total", "fg_rms_total", "an_rms_total"
+    "latitude", "longitude", "level", "statid", "obsvalue", "fg_dep"
   ),
   dataFieldsInSqliteWhereClause=list("obnumber", "obname")
 )
 
 mockNonInteractivePlotType <- mockPlotType$copy()
-mockNonInteractivePlotType$name <- "First Guess and Analysis Departure (static)"
+mockNonInteractivePlotType$name <- "First Guess Departure Map (static)"
 mockNonInteractivePlotType$interactive <- FALSE
 
 mockPlotTypeWithDataPP <- mockPlotType$copy()
 mockPlotTypeWithDataPP$dataPostProcessingFunction <- function(data) {
-  data$an_bias_total <- 2.0 * data$an_bias_total
+  data$obsvalue <- 2.0 * data$obsvalue
   return (data)
 }
 
@@ -354,8 +355,10 @@ test_that("'generate' uses '.defaultGenerate' if parentType$plottingFunction mis
 })
 
 test_that("generateLeafletMap returns NULL if no leafletPlottingFunction & 'map' not in category", {
+  nonMapPlotType <- mockPlotType$copy()
+  nonMapPlotType$category <- "Foo"
   newPlot <- obsmonPlot$new(
-    parentType=mockPlotType,
+    parentType=nonMapPlotType,
     db=obsmonDb,
     paramsAsInUiInput=mockUiInput
   )
