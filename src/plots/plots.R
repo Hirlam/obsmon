@@ -225,8 +225,19 @@ obsmonPlot <- setRefClass(Class="obsmonPlot",
     db="obsmonDatabase",
     paramsAsInUiInput="list",
     rawData="data.frame",
+    .cache="list",
     ##############################
     data = function(...) {.self$.getDataFromRawData()},
+    hash = function(...) {
+      components <- list()
+      for (fieldName in names(.self$getRefClass()$fields())) {
+        if(fieldName == "hash") next
+        fieldClass <- .self$getRefClass()$fields()[[fieldName]]
+        if(fieldClass == "activeBindingFunction") next
+        components <- c(components, .self$field(fieldName))
+      }
+      return(digest::digest(components))
+    },
     sqliteQuery = function(...) {.self$.getSqliteQuery()},
     paramsAsInSqliteDbs = function(...) {
       .self$parentType$getSqliteParamsFromUiParams(.self$paramsAsInUiInput)

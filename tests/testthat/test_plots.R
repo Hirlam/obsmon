@@ -273,6 +273,24 @@ test_that("data contains all fields in dataFieldsInRetrievedPlotData", {
   )
 })
 
+test_that("Hash changes if rawData modified", {
+  newPlot <- obsmonPlot$new(
+    parentType=mockPlotType,
+    db=obsmonDb,
+    paramsAsInUiInput=mockUiInput
+  )
+  newPlot$fetchRawData()
+  initialRawData <- newPlot$rawData
+  initialHash <- newPlot$hash
+
+  newPlot$rawData[,1] <- 10.0 * newPlot$rawData[,1]
+  hashAfterModifyingData <- newPlot$hash
+  expect_false(hashAfterModifyingData == initialHash)
+
+  newPlot$fetchRawData()
+  expect_equal(initialHash, newPlot$hash)
+})
+
 test_that("dataPostProcessingFunction works", {
   newPlot <- obsmonPlot$new(
     parentType=mockPlotType,
