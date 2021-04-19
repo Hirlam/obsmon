@@ -196,6 +196,7 @@ mockPlotType <- plotType(
   name="First Guess Departure Map",
   category="Maps",
   dateType="single",
+  interactive=TRUE,
   dataFieldsInRetrievedPlotData=list(
     "latitude", "longitude", "level", "statid", "obsvalue", "fg_dep"
   ),
