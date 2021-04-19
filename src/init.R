@@ -124,7 +124,7 @@ sourceObsmonFiles <- function() {
   source("src/plots/plots_vertical_profiles.R")
   #source("src/plots/windspeed.R")
   source("src/plots/plots_multi.R")
-  #source("src/plots/plots_batch.R")
+  source("src/plots/plots_batch.R")
   source("src/shiny_wrappers.R")
 }
 
