@@ -525,7 +525,7 @@ plotRegistry <- obsmonPlotRegistry()
 #######################################################
 # Some utility functions used when defining the plots #
 #######################################################
-noDataPlot <- function(msg) {
+errorPlot <- function(msg) {
   ggplot() +
     annotate("text", x=0, y=0, size=8, label=msg) +
     theme(

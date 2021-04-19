@@ -84,7 +84,7 @@ landSeaDeparturesTimeseriesPlotPostProcessingFunction <- function(data) {
 
 # Register higher-level plotting functions
 genericTimeseriesPlottingFunction <- function(plot) {
-  if(nrow(plot$data)==0) return(noDataPlot("No data to plot."))
+  if(nrow(plot$data)==0) return(errorPlot("No data to plot."))
   if(plot$parentType$interactive) {
     return(.getInteractiveGenericTimeseriesPlot(plot))
   } else {
@@ -93,7 +93,7 @@ genericTimeseriesPlottingFunction <- function(plot) {
 }
 
 obsFitTimeseriesPlottingFunction <- function(plot) {
-  if(nrow(plot$data)==0) return(noDataPlot("No data to plot."))
+  if(nrow(plot$data)==0) return(errorPlot("No data to plot."))
 
   fgColor <- "blue"
   anColor <- "red"
@@ -116,7 +116,7 @@ obsFitTimeseriesPlottingFunction <- function(plot) {
 }
 
 firstGuessTotalTimeseriesPlottingFunction <- function(plot) {
-  if(nrow(plot$data)==0) return(noDataPlot("No data to plot."))
+  if(nrow(plot$data)==0) return(errorPlot("No data to plot."))
 
   baseGgplotPlot <- .getStaticGenericTimeseriesPlot(
     plot, maskColumns=c("nobs_total", "varname")
@@ -133,7 +133,7 @@ firstGuessTotalTimeseriesPlottingFunction <- function(plot) {
 }
 
 landSeaDeparturesTimeseriesPlottingFunction <- function(plot) {
-  if(nrow(plot$data)==0) return(noDataPlot("No data to plot."))
+  if(nrow(plot$data)==0) return(errorPlot("No data to plot."))
 
   seaColor <- "blue"
   landColor <- "green"

@@ -243,7 +243,7 @@
 ####################################################
 # a) combined ggploy/plotly (shown in "plot" tab in the UI)
 .mapUsagePlottingFunction <- function(plot) {
-  if(nrow(plot$data)==0) return(noDataPlot("No data to plot."))
+  if(nrow(plot$data)==0) return(errorPlot("No data to plot."))
   if(plot$parentType$interactive) {
     return(.mapUsageInteractivePlottingFunction(plot))
   } else {
@@ -252,7 +252,7 @@
 }
 
 .mapThresholdPlottingFunction <- function(plot) {
-  if(nrow(plot$data)==0) return(noDataPlot("No data to plot."))
+  if(nrow(plot$data)==0) return(errorPlot("No data to plot."))
   if(plot$parentType$interactive) {
     return(.mapThresholdInteractivePlottingFunction(plot))
   } else {
