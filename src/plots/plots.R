@@ -25,8 +25,13 @@ plotType <- setRefClass(Class="obsmonPlotType",
     initialize = function(...) {
       callSuper(...)
 
-      # Make plot interative by default
-      if(length(.self$interactive)==0) .self$interactive <- TRUE
+      if(length(.self$interactive)==0) {
+        # Using "!isFALSE" to catch the "logical(0)" case and
+        # interpret it as "TRUE"
+        .self$interactive <- !isFALSE(
+          obsmonConfig$general$plotsEnableInteractivity
+        )
+      }
 
       # Validate dataFieldsInSqliteWhereClause and extraDataFields entries
       varnameRegex <- "^[a-zA-Z_$][a-zA-Z_$0-9]*$"
