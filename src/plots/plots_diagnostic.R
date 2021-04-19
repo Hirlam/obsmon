@@ -33,7 +33,7 @@
 
 .statPanelStatic <- function(data, column, fill) {
   # Statistics panel (lower panel)
-  if(nrow(data)==0) return(ggplot() + theme_void())
+  if(!isTRUE(nrow(data) > 0)) return(ggplot() + theme_void())
 
   columnName <- substitute(column)
   xLabelPlot <- .diagosticPltLabels[[as.character(columnName)]]
@@ -163,7 +163,7 @@
 
 .comparisonPlotStatic <- function(plotData, hasMinimization) {
   # Comparison plot (upper panel)
-  if(nrow(plotData)==0) return(ggplot() + theme_void())
+  if(!isTRUE(nrow(plotData) > 0)) return(ggplot() + theme_void())
 
   compDf <- data.frame("Date"=plotData[["DTG"]],
                        "obs"=plotData[["obsvalue"]],
