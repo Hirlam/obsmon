@@ -243,15 +243,7 @@ obsmonPlot <- setRefClass(Class="obsmonPlot",
       return(digest::digest(components))
     },
     data = function(...) {
-      cachedData <- .self$.cache[[.self$hash]]$data
-      if(!is.null(cachedData)) return(cachedData)
-
-      dataFromRaw <- .self$.getDataFromRawData()
-      .self$.cache[[.self$hash]] <- c(
-        .self$.cache[[.self$hash]],
-        list(data=dataFromRaw)
-      )
-      return(dataFromRaw)
+      return (.self$.memoise(FUN=.self$.getDataFromRawData, ...))
     },
     sqliteQuery = function(...) {.self$.getSqliteQuery()},
     paramsAsInSqliteDbs = function(...) {
@@ -260,49 +252,12 @@ obsmonPlot <- setRefClass(Class="obsmonPlot",
     title = function(...) {.self$.getTitle()}
   ),
   methods=list(
-    generate = function() {
-      cachedPlot <- .self$.cache[[.self$hash]]$plot
-      if(!is.null(cachedPlot)) return(cachedPlot)
-
-      plot <- tryCatch({
-        if(class(.self$parentType$plottingFunction) == "uninitializedField") {
-          rtn <- .self$.defaultGenerate()
-        } else {
-          rtn <- .self$parentType$plottingFunction(.self)
-          if(.self$parentType$interactive && !("plotly" %in% class(rtn))) {
-            rtn <- .self$parentType$ggplotlyWrapper(rtn)
-          }
-        }
-        rtn %>% addTitleToPlot(.self$title)
-      },
-        error=function(e) {
-          flog.error(e)
-          NULL
-        }
-      )
-
-      .self$.cache[[.self$hash]] <- c(
-        .self$.cache[[.self$hash]],
-        list(plot=plot)
-      )
-      return(plot)
+    generate = function(...) {
+      return (.self$.memoise(FUN=.self$.generate, ...))
     },
 
-    generateLeafletMap = function() {
-      cachedLeafletMap <- .self$.cache[[.self$hash]]$leafletMap
-      if(!is.null(cachedLeafletMap)) return(cachedLeafletMap)
-
-      if(class(.self$parentType$leafletPlottingFunction) != "uninitializedField") {
-        leafletMap <- .self$parentType$leafletPlottingFunction(.self)
-      } else {
-        leafletMap <- .self$.defaultGenerateLeafletMap()
-      }
-
-      .self$.cache[[.self$hash]] <- c(
-        .self$.cache[[.self$hash]],
-        list(leafletMap=leafletMap)
-      )
-      return(leafletMap)
+    generateLeafletMap = function(...) {
+      return (.self$.memoise(FUN=.self$.generateLeafletMap, ...))
     },
 
     fetchRawData = function(...) {
@@ -346,6 +301,33 @@ obsmonPlot <- setRefClass(Class="obsmonPlot",
     },
 
     ############################
+    .generate = function() {
+      plot <- tryCatch({
+        if(class(.self$parentType$plottingFunction) == "uninitializedField") {
+          rtn <- .self$.defaultGenerate()
+        } else {
+          rtn <- .self$parentType$plottingFunction(.self)
+          if(.self$parentType$interactive && !("plotly" %in% class(rtn))) {
+            rtn <- .self$parentType$ggplotlyWrapper(rtn)
+          }
+        }
+        rtn %>% addTitleToPlot(.self$title)
+      },
+        error=function(e) {
+          flog.error(e)
+          NULL
+        }
+      )
+      return(plot)
+    },
+
+    .generateLeafletMap = function() {
+      if(class(.self$parentType$leafletPlottingFunction) != "uninitializedField") {
+        return(.self$parentType$leafletPlottingFunction(.self))
+      }
+      return(.self$.defaultGenerateLeafletMap())
+    },
+
     .defaultGenerate = function() {
       # melt data so we can plot multiple curves (sharing same x-axis), each
       # with a different color and symbol
@@ -478,6 +460,20 @@ obsmonPlot <- setRefClass(Class="obsmonPlot",
         rtn <- sprintf("%s, %s=%s", rtn, param, vals)
       }
       return (rtn)
+    },
+
+    .memoise = function(FUN, ...) {
+      functionName <- substitute(FUN)
+      functionHash <- digest::digest(functionName)
+      cachedValue <- .self$.cache[[.self$hash]][[functionHash]]
+      if(!is.null(cachedValue)) return(cachedValue)
+
+      value <- FUN(...)
+      newCacheEntry <- list(value)
+      names(newCacheEntry) <- functionHash
+      .self$.cache[[.self$hash]] <- c(.self$.cache[[.self$hash]], newCacheEntry)
+
+      return(value)
     }
   )
 )
