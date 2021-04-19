@@ -169,11 +169,11 @@ landSeaDeparturesTimeseriesPlottingFunction <- function(plot) {
 }
 
 hovmollerTimeseriesPlottingFunction <- function(plot) {
-  if(nrow(plot$data)==0) return(noDataPlot("No data to plot."))
+  if(nrow(plot$data)==0) return(errorPlot("No data to plot."))
 
   baseGgplotPlot <- ggplot(plot$data) +
     aes(DTG, level, fill=fg_bias_total) +
-    geom_raster() +
+    geom_tile() +
     labs(x="DATE", y="Channels")
 
   if(plot$parentType$interactive) {
