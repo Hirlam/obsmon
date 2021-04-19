@@ -52,11 +52,14 @@
 .mapThresholdStaticPlottingFunction <- function(plot) {
   cm <- .getSuitableColorScale(plot$data)
   dataColumnName <- unname(attributes(plot$data)$comment["dataColumn"])
+  if(length(dataColumnName) == 0) {
+    flog.error(".mapThresholdStaticPlottingFunction: Empty dataColumnName")
+  }
 
   ggplotMap <- .getStaticGenericMapPlot(plot) +
     geom_point(
       data=plot$data,
-      aes(x=longitude, y=latitude, fill=dataColumn),
+      aes_string(x="longitude", y="latitude", fill=dataColumnName),
       size=3,
       shape=21,
       colour="gray50",
