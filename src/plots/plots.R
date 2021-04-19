@@ -242,6 +242,10 @@ obsmonPlot <- setRefClass(Class="obsmonPlot",
       }
       return(digest::digest(components))
     },
+    chart = function(...) {return (.self$.memoise(FUN=.self$.generate, ...))},
+    leafletMap = function(...) {
+      return (.self$.memoise(FUN=.self$.generateLeafletMap, ...))
+    },
     data = function(...) {
       return (.self$.memoise(FUN=.self$.getDataFromRawData, ...))
     },
@@ -252,14 +256,6 @@ obsmonPlot <- setRefClass(Class="obsmonPlot",
     title = function(...) {.self$.getTitle()}
   ),
   methods=list(
-    generate = function(...) {
-      return (.self$.memoise(FUN=.self$.generate, ...))
-    },
-
-    generateLeafletMap = function(...) {
-      return (.self$.memoise(FUN=.self$.generateLeafletMap, ...))
-    },
-
     fetchRawData = function(...) {
       flog.trace("Fetching raw data for plot '%s'...", .self$title)
       fetchedData <- performQuery(
@@ -371,7 +367,7 @@ obsmonPlot <- setRefClass(Class="obsmonPlot",
         dataPallete <- colorFactor("RdYlBu", domain = NULL)
       }
 
-      leafletMap <- leaflet(data=localPlotData) %>%
+      rtnLeafletMap <- leaflet(data=localPlotData) %>%
         addTiles() %>%
         addProviderTiles(
           "Esri.WorldStreetMap",
@@ -395,7 +391,7 @@ obsmonPlot <- setRefClass(Class="obsmonPlot",
           values=as.formula(sprintf("~`%s`", dataColumn)),
           opacity=1
         )
-      return(leafletMap)
+      return(rtnLeafletMap)
     },
 
     .getDataFromRawData = function() {

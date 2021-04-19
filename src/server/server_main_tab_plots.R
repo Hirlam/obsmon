@@ -153,13 +153,13 @@ observeEvent(input$doPlot, {
 }, priority=2000)
 
 # Finally, producing the output
-nonLeafletPlot <- reactive({
+chart <- reactive({
   if (is.null(obsmonPlotObj())) return(NULL)
   notifId <- showNotification(
     "Producing plot...", duration=NULL, type="message"
   )
   on.exit(removeNotification(notifId))
-  obsmonPlotObj()$generate()
+  obsmonPlotObj()$chart
 })
 leafletMap <- reactive({
   if (is.null(obsmonPlotObj())) return(NULL)
@@ -167,7 +167,7 @@ leafletMap <- reactive({
     "Producing leaflet map...", duration=NULL, type="message"
   )
   on.exit(removeNotification(notifId))
-  obsmonPlotObj()$generateLeafletMap()
+  obsmonPlotObj()$leafletMap
 })
 
 # Enable/disable, show/hide appropriate inputs
@@ -183,7 +183,7 @@ observe({
   }
 
   # (ii) Interactive or regular plot tabs
-  interactive <- "plotly" %in% class(nonLeafletPlot())
+  interactive <- "plotly" %in% class(chart())
   shinyjs::toggle(
     condition=interactive, selector="#mainArea li a[data-value=plotlyTab]"
   )
@@ -213,22 +213,22 @@ output$queryAndTableContainer <- renderUI(
 # (i.i) Interactive plot, if plot is a plotly object
 output$plotly <- renderPlotly({
   if(is.null(obsmonPlotObj())) return(NULL)
-  req("plotly" %in% class(nonLeafletPlot()))
+  req("plotly" %in% class(chart()))
   notifId <- showNotification(
     "Rendering plot...", duration=NULL, type="message"
   )
   on.exit(removeNotification(notifId))
-  nonLeafletPlot()
+  chart()
 })
 # (i.ii) Non-interactive plot, if plot is not a plotly object
 output$plot <- renderPlot({
   if(is.null(obsmonPlotObj())) return(NULL)
-  req(!("plotly" %in% class(nonLeafletPlot())))
+  req(!("plotly" %in% class(chart())))
   notifId <- showNotification(
     "Rendering plot...", duration=NULL, type="message"
   )
   on.exit(removeNotification(notifId))
-  nonLeafletPlot()
+  chart()
 },
   res=96, pointsize=18
 )

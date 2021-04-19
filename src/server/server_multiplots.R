@@ -144,7 +144,7 @@ observeEvent(input$multiPlotsDoPlot, {
       multiPlot(value$plots)
       somePlotHasMap <- FALSE
       for(individualPlot in value$plots) {
-        if(!is.null(individualPlot$generateLeafletMap())) {
+        if(!is.null(individualPlot$leafletMap)) {
           somePlotHasMap <- TRUE
           break
         }
@@ -199,11 +199,7 @@ observeEvent(input$multiPlotsDoPlot, {
 # (i) Plots
 output$multiPlotsPlotContainer <- renderUI({
   plotOutList <- lapply(seq_along(multiPlot()), function(iPlot) {
-    nonLeafletPlot <- multiPlot()[[iPlot]]$generate()
-    if(
-      isTRUE(obsmonConfig$general$multiPlotsEnableInteractivity) &&
-      "plotly" %in% class(nonLeafletPlot)
-    ) {
+    if("plotly" %in% class(multiPlot()[[iPlot]]$chart)) {
       plotlyOutputInsideFluidRow(multiPlotsGenId(iPlot, type="plot"))
     } else {
       plotOutputInsideFluidRow(multiPlotsGenId(iPlot, type="plot"))
@@ -252,13 +248,13 @@ observeEvent(multiPlot(), {
       pName <- multiPlotsGenId(iPlot)
       # Assign plots
       plotOutId <- multiPlotsGenId(iPlot, type="plot")
-      nonLeafletPlot <- multiPlot()[[pName]]$generate()
+      chart <- multiPlot()[[pName]]$chart
       if(
         isTRUE(obsmonConfig$general$multiPlotsEnableInteractivity) &&
-        "plotly" %in% class(nonLeafletPlot)
+        "plotly" %in% class(chart)
       ) {
         output[[plotOutId]] <- renderPlotly({
-          nonLeafletPlot %>%
+          chart %>%
             configPlotlyWrapper(
               toImageButtonOptions=list(
                 filename=sprintf("obsmon_multiPlot_%s", iPlot)
@@ -267,14 +263,14 @@ observeEvent(multiPlot(), {
         })
       } else {
         output[[plotOutId]] <- renderPlot(
-          nonLeafletPlot,
+          chart,
           res=96, pointsize=18
         )
       }
       # Assign maps and map titles
       mapId <- multiPlotsGenId(iPlot, type="map")
       mapTitleId <- multiPlotsGenId(iPlot, type="mapTitle")
-      output[[mapId]] <- renderLeaflet(req(multiPlot()[[pName]]$generateLeafletMap()))
+      output[[mapId]] <- renderLeaflet(req(multiPlot()[[pName]]$leafletMap))
       output[[mapTitleId]] <- renderText(req(multiPlot()[[pName]]$title))
       # Assign queryUsed and dataTable
       queryUsedId <- multiPlotsGenId(iPlot, type="queryUsed")
