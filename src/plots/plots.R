@@ -296,7 +296,9 @@ obsmonPlot <- setRefClass(Class="obsmonPlot",
     ############################
     .generate = function() {
       plot <- tryCatch({
-        if(class(.self$parentType$plottingFunction) == "uninitializedField") {
+        if(nrow(.self$data)==0) {
+          rtn <- errorPlot("Could not produce plot: No data retrieved.")
+        }else if(class(.self$parentType$plottingFunction) == "uninitializedField") {
           rtn <- .self$.defaultGenerate()
         } else {
           rtn <- .self$parentType$plottingFunction(.self)
@@ -304,13 +306,15 @@ obsmonPlot <- setRefClass(Class="obsmonPlot",
             rtn <- .self$parentType$ggplotlyWrapper(rtn)
           }
         }
-        rtn %>% addTitleToPlot(.self$title)
+        rtn
       },
         error=function(e) {
           flog.error(e)
-          NULL
+          errorPlot("Could not produce plot: Please check the logs.")
         }
       )
+
+      plot <- plot %>% addTitleToPlot(.self$title)
       return(plot)
     },
 
