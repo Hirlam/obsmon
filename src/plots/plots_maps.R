@@ -503,6 +503,7 @@ for(templatePlotType in plotRegistry$plotTypes) {
     function(data) {
       # Calculate averages as a post-process step upon the queried data
       data <- templatePT$dataPostProcessingFunction(data)
+      originalDataComments <- comment(data)
 
       groupByCols = intersect(
         c("statid", "latitude", "longitude", "level"), colnames(data)
@@ -514,6 +515,7 @@ for(templatePlotType in plotRegistry$plotTypes) {
       data <- data %>%
         group_by(!!!syms(groupByCols)) %>%
         summarize_all(mean)
+      comment(data) <- originalDataComments
       return(data)
     }
   }

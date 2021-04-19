@@ -397,7 +397,7 @@ obsmonPlot <- setRefClass(Class="obsmonPlot",
 
     .getDataFromRawData = function() {
       if(length(.self$rawData)==0) .self$fetchRawData()
-      rtn <- data.frame(.self$rawData)
+      rtn <- data.frame(.self$rawData, check.names=FALSE)
 
       if(length(.self$parentType$dataFieldsInRetrievedPlotData)>0) {
         rtn <- rtn[unlist(.self$parentType$dataFieldsInRetrievedPlotData)]
