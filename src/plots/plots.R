@@ -173,9 +173,6 @@ plotType <- setRefClass(Class="obsmonPlotType",
       # plotRequest$expName <- req(input$experiment)
       # plotRequest$dbType <- db$dbType
       # plotRequest$criteria <- plotsBuildCriteria(input)
-      # For windspeed:
-      # plotRequest$criteria$varname <- uName
-      # plotRequest$criteria$varname <- vName
       # TODO: Make this more general (in case of future addition of new params)
       res <- list()
       obname <- paramsAsInUiInput$obname
