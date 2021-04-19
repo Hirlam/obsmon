@@ -576,14 +576,30 @@ test_that("getCategorisedPlotTypeNames works with compatibility filters", {
 context("Implemented obsmon plots")
 ####################################################################
 
-test_that("plotTypes in actual obsmon plotRegistry can produce plots", {
+test_that("plotTypes in actual obsmon plotRegistry can produce static plots", {
   for (pType in plotRegistry$plotTypes) {
+    pTypeStatic <- pType$copy()
+    pTypeStatic$interactive <- FALSE
+
     newPlot <- obsmonPlot$new(
-      parentType=pType,
+      parentType=pTypeStatic,
       db=obsmonDb,
       paramsAsInUiInput=mockUiInput
     )
-    graphicsObj <- newPlot$generate()
-    expect_s3_class(graphicsObj, "plotly")
+    expect_s3_class(newPlot$chart, c("ggplot", "gtable"))
+  }
+})
+
+test_that("plotTypes in actual obsmon plotRegistry can produce interactive plots", {
+  for (pType in plotRegistry$plotTypes) {
+    pTypeInteractive <- pType$copy()
+    pTypeInteractive$interactive <- TRUE
+
+    newPlot <- obsmonPlot$new(
+      parentType=pTypeInteractive,
+      db=obsmonDb,
+      paramsAsInUiInput=mockUiInput
+    )
+    expect_s3_class(newPlot$chart, "plotly")
   }
 })
