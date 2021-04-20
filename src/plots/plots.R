@@ -263,13 +263,15 @@ obsmonPlot <- setRefClass(Class="obsmonPlot",
         dtgs=.self$paramsAsInSqliteDbs$dtg,
         ...
       )
-      flog.trace("Done fetching raw data for plot '%s'", .self$title)
       if(is.null(fetchedData)) {
         colnames <- .self$parentType$getRetrievedSqliteFields()
         fetchedData <- data.frame(matrix(ncol=length(colnames), nrow=0))
         colnames(fetchedData) <- colnames
       }
+      fetchedData <- fetchedData[do.call(order, fetchedData),]
+      row.names(fetchedData) <- NULL
       .self$rawData <- fetchedData
+      flog.trace("Done fetching raw data for plot '%s'", .self$title)
     },
 
     exportData = function(file, format) {
