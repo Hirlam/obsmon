@@ -58,6 +58,7 @@ observeEvent(input$doPlot, {
   }
   req(currentPlotPid()==-1)
 
+  # Erase any plot currently on display
   obsmonPlotObj(NULL)
 
   if(activePlotType()$requiresSingleStation && length(input$station) !=1) {
@@ -257,6 +258,7 @@ output$dataTableDownloadAsCsv <- downloadHandler(
 
 # (iii) Rendering leaflet maps
 output$map <- renderLeaflet({
+  if(is.null(leafletMap())) return(NULL)
   notifId <- showNotification(
     "Rendering map...", duration=NULL, type="message"
   )
