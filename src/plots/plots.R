@@ -114,7 +114,7 @@ plotType <- setRefClass(Class="obsmonPlotType",
       # stationIDs are not stored in the "obsmon" table, only in "usage"
       dbTable <- ifelse(.self$supportsStationSelection, "usage", "obsmon")
       stub <- paste(
-        "SELECT",
+        "SELECT DISTINCT",
         paste(.self$getRetrievedSqliteFields(), collapse=", "),
         "FROM", dbTable, "WHERE %s"
       )
