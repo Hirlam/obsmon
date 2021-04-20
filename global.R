@@ -92,7 +92,20 @@ queryUsedAndDataTableOutput <- function(queryUsedOutputId, dataTableOutputId){
   fluidPage(
     fluidRow(
       column(12, align="center",
-        wellPanel(h5("Query used:"), textOutput(queryUsedOutputId)),
+        wellPanel(
+          h5(
+            shiny::icon("info-circle", class="query_info_icon") %>%
+              bs_embed_tooltip(
+                title=paste(
+                  "Rows with incomplete entries are removed",
+                  "from the retrieved data after performing the query."
+                ),
+                trigger="hover"
+              ),
+            "Query used:",
+          ),
+          tags$div(HTML("<b>"), textOutput(queryUsedOutputId), HTML("</b>")),
+        ),
         downloadButton(downloadButtonTxtId, "Download as TXT"),
         downloadButton(downloadButtonCsvId, "Download as CSV"),
         dataTableOutput(dataTableOutputId)
