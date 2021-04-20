@@ -411,7 +411,7 @@ obsmonPlot <- setRefClass(Class="obsmonPlot",
         rtn <- .self$parentType$dataPostProcessingFunction(rtn)
       }
 
-      return(rtn)
+      return(rtn[complete.cases(rtn),])
     },
 
     .getSqliteQuery = function() {
