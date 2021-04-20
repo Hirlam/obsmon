@@ -27,10 +27,10 @@ createMainPanel <- function(prependToIds=NULL) {
     tabsetPanel(
       id=tabsetPanelId,
       tabPanel("Plot", value=tabPanelValuePlotTab,
-        uiOutput(uiOutputIdForPlot)
+        uiOutput(uiOutputIdForPlot) %>% withSpinner(color="#0dc5c1")
       ),
       tabPanel("Plot", value=tabPanelValuePlotlyTab,
-        uiOutput(uiOutputIdForPlotly)
+        uiOutput(uiOutputIdForPlotly) %>% withSpinner(color="#0dc5c1")
       ),
       tabPanel("Map", value=tabPanelValueMapTab,
         uiOutput(uiOutputIdForMapAndTitle)
