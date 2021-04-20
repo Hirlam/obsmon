@@ -684,6 +684,7 @@ addTitleToPlot <- function(myPlot, title) {
 }
 
 .getLeafletPopupContents <- function(plotData) {
+  plotData$popupContents <- ""
   for (colname in colnames(plotData)) {
     plotData$popupContents <- paste(
       plotData$popupContents,
