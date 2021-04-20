@@ -13,6 +13,17 @@ plotType <- setRefClass(Class="obsmonPlotType",
     leafletPlottingFunction="ANY", # A function of 1 arg: plot (an obsmonPlot object)
     plotTitleFunction="ANY", # A function of 1 arg: plot (an obsmonPlot object)
     ############################
+    flattenedDataFieldsInSqliteWhereClause = function(...) {
+      dataFieldsInWhereClause <- c()
+      for (item in .self$dataFieldsInSqliteWhereClause) {
+        if (is.list(item)) {
+          dataFieldsInWhereClause <- c(dataFieldsInWhereClause, names(item))
+        } else {
+          dataFieldsInWhereClause <- c(dataFieldsInWhereClause, item)
+        }
+      }
+      return(dataFieldsInWhereClause)
+    },
     supportsStationSelection = function(...) {
       return(isTRUE("statid" %in% .self$getRetrievedSqliteFields()))
     },
@@ -91,18 +102,9 @@ plotType <- setRefClass(Class="obsmonPlotType",
     },
     ############################
     getRetrievedSqliteFields = function() {
-      dataFieldsInWhereClause <- c()
-      for (item in .self$dataFieldsInSqliteWhereClause) {
-        if (is.list(item)) {
-          dataFieldsInWhereClause <- c(dataFieldsInWhereClause, names(item))
-        } else {
-          dataFieldsInWhereClause <- c(dataFieldsInWhereClause, item)
-        }
-      }
-
       dbCols <- c(
         .self$dataFieldsInRetrievedPlotData,
-        dataFieldsInWhereClause,
+        .self$flattenedDataFieldsInSqliteWhereClause,
         .self$extraDataFields
       )
       return(unique(dbCols))
@@ -425,6 +427,16 @@ obsmonPlot <- setRefClass(Class="obsmonPlot",
         return(.self$parentType$plotTitleFunction(.self))
       }
 
+      valuesList2FormattedStr <- function(vals) {
+        if (length(vals) > 1) {
+          if(length(vals)>5) {
+            vals <- c(vals[1:2], "...", vals[(length(vals)-1):length(vals)])
+          }
+          vals <- paste0("[", paste(vals, collapse=", "), "]")
+        }
+        return(vals)
+      }
+
       sqliteParams <- .self$paramsAsInSqliteDbs
 
       rtn <- ""
@@ -433,6 +445,15 @@ obsmonPlot <- setRefClass(Class="obsmonPlot",
       }
 
       rtn <- paste0(rtn, .self$parentType$name, "\n")
+
+      if(length(.self$paramsAsInUiInput$station)>0) {
+        rtn <- paste0(
+          rtn,
+          "station=",
+          valuesList2FormattedStr(.self$paramsAsInUiInput$station),
+          "\n"
+        )
+      }
 
       if(length(.self$paramsAsInUiInput$odbBase)>0) {
         rtn <- paste0(rtn, "db=", .self$paramsAsInUiInput$odbBase)
@@ -444,17 +465,16 @@ obsmonPlot <- setRefClass(Class="obsmonPlot",
       }
 
       for (param in names(sqliteParams)) {
-        if (param %in% c("dtg", "obnumber")) next
-        if (param %in% .self$parentType$dataFieldsInRetrievedPlotData) next
+        if (param %in% c("dtg", "obnumber", "statid")) next
+        if (param %in%
+            setdiff(
+              .self$parentType$dataFieldsInRetrievedPlotData,
+              .self$parentType$flattenedDataFieldsInSqliteWhereClause
+            )
+        ) next
         if (length(sqliteParams[[param]]) == 0) next
-        vals <- sqliteParams[[param]]
-        if (length(vals) > 1) {
-          if(length(vals)>5) {
-            vals <- c(vals[1:2], "...", vals[(length(vals)-1):length(vals)])
-          }
-          vals <- paste0("[", paste(vals, collapse=", "), "]")
-        }
-        rtn <- sprintf("%s, %s=%s", rtn, param, vals)
+        formattedVals <- valuesList2FormattedStr(sqliteParams[[param]])
+        rtn <- sprintf("%s, %s=%s", rtn, param, formattedVals)
       }
       return (rtn)
     },
