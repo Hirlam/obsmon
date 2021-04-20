@@ -296,19 +296,13 @@ observeEvent(multiPlot(), {
       output[[saveAsTxtId]] <- downloadHandler(
         filename = function() sprintf("multiplot_%d_data.txt", iPlot),
         content = function(file) {
-          multiplotData <- multiPlot()[[pName]]$plotData
-          dataInfo <- plotExportedDataInfo(multiPlot()[[pName]])
-          write.table(multiplotData, file, sep="\t", row.names=FALSE)
-          write(paste0("\n", dataInfo), file, append=TRUE)
+          req(multiPlot()[[pName]])$exportData(file, format="txt")
         }
       )
       output[[saveAsCsvId]] <- downloadHandler(
         filename = function() sprintf("multiplot_%d_data.csv", iPlot),
         content = function(file) {
-          multiplotData <- multiPlot()[[pName]]$plotData
-          dataInfo <- plotExportedDataInfo(multiPlot()[[pName]])
-          write.csv(multiplotData, file, row.names=FALSE)
-          write(paste0("\n", dataInfo), file, append=TRUE)
+          req(multiPlot()[[pName]])$exportData(file, format="csv")
         }
       )
     })
