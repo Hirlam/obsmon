@@ -113,10 +113,17 @@ plotType <- setRefClass(Class="obsmonPlotType",
     getQueryStub = function() {
       # stationIDs are not stored in the "obsmon" table, only in "usage"
       dbTable <- ifelse(.self$supportsStationSelection, "usage", "obsmon")
+      whereStub <- "WHERE %s"
+      if (
+        (dbTable == "obsmon") &&
+        !("nobs_total" %in% .self$getRetrievedSqliteFields())
+      ) {
+        whereStub <- paste(whereStub, "AND (nobs_total > 0)")
+      }
       stub <- paste(
         "SELECT DISTINCT",
         paste(.self$getRetrievedSqliteFields(), collapse=", "),
-        "FROM", dbTable, "WHERE %s"
+        "FROM", dbTable, whereStub
       )
       return (stub)
     },
