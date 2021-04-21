@@ -136,7 +136,7 @@
         gsub(
           "(<br />){2,}", "<br />",
           paste(
-            if("statLabel" %in% names(plot$data)) paste("Station:", statLabel),
+            if("statid" %in% names(plot$data)) paste("Station:", statid),
             if("level" %in% names(plot$data)) paste("Level:", level),
             if("channel" %in% names(plot$data)) paste("Channel:", channel),
             sprintf("Coords: (%.3f\u00B0, %.3f\u00B0)", longitude, latitude),
@@ -174,7 +174,7 @@
         gsub(
           "(<br />){2,}", "<br />",
           paste(
-	    if("statLabel" %in% names(plot$data)) paste("Station:", statLabel),
+	    if("statid" %in% names(plot$data)) paste("Station:", statid),
 	    if("level" %in% names(plot$data)) paste("Level:", level),
 	    if("channel" %in% names(plot$data)) paste("Channel:", channel),
             sprintf("Coords: (%.3f\u00B0, %.3f\u00B0)", longitude, latitude),
