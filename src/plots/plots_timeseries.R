@@ -146,7 +146,9 @@ landSeaDeparturesTimeseriesPlottingFunction <- function(plot) {
     maskColumns=c("nobs_land", "nobs_sea"),
     colours=c(seaColor, seaColor, seaColor, landColor, landColor, landColor),
     shapes=c(ncShape, fgShape, anShape, ncShape, fgShape, anShape)
-  ) + ylab("Brightness Temperature [K]")
+  ) +
+    ylab("Brightness Temperature [K]") +
+    theme(legend.title=element_blank())
 
 
   bottomPlotData <- melt(
@@ -158,12 +160,33 @@ landSeaDeparturesTimeseriesPlottingFunction <- function(plot) {
     geom_bar(stat="identity", position=position_dodge()) +
     scale_fill_manual(values=c(seaColor, landColor)) +
     facet_wrap("level", labeller=label_both) +
-    labs(x="DATE", y="Number of Observations")
+    labs(x="DATE", y="Number of Observations") +
+    theme(legend.title=element_blank())
 
   if(plot$parentType$interactive) {
-    top <- .getInteractiveGenericTimeseriesPlot(baseGgplotPlotTop)
-    bottom <- .getInteractiveGenericTimeseriesPlot(baseGgplotPlotBottom)
-    return(subplot(top, bottom, nrows=2))
+    top <- .getInteractiveGenericTimeseriesPlot(baseGgplotPlotTop) %>%
+      layout(yaxis=list(title="Brightness Temperature [K]"))
+    bottom <- .getInteractiveGenericTimeseriesPlot(baseGgplotPlotBottom) %>%
+      layout(yaxis=list(title="Number of Observations"))
+    interactivePlot <- subplot(
+      top,
+      bottom,
+      nrows=2,
+      margin=0.05,
+      titleX=TRUE,
+      titleY=TRUE
+    ) %>% add_annotations(
+      text="DATE",
+      x=0.5,
+      y=-0.075,
+      xref="paper",
+      yref="paper",
+      textfont=list(size=25),
+      showarrow=FALSE
+    )
+    # Prevent overlap between title and y-axis
+    attr(interactivePlot, "yTitle") <- 1.0375
+    return(interactivePlot)
   }
   return(grid.arrange(baseGgplotPlotTop, baseGgplotPlotBottom, ncol=1))
 }
