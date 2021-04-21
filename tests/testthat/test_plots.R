@@ -228,8 +228,8 @@ obsmonDb <- obsmonDatabaseClass(
   dir="./test_data/mock_experiment/ecma"
 )
 
-test_that("obsmonPlot can be instanciated", {
-  newPlot <- obsmonPlot$new(
+test_that("obsmonPlotClass can be instanciated", {
+  newPlot <- obsmonPlotClass$new(
     parentType=mockPlotType,
     db=obsmonDb,
     paramsAsInUiInput=mockUiInput
@@ -237,8 +237,8 @@ test_that("obsmonPlot can be instanciated", {
   expect_s4_class(newPlot, "obsmonPlot")
 })
 
-test_that("obsmonPlot 'fetchRawData' works", {
-  newPlot <- obsmonPlot$new(
+test_that("obsmonPlotClass 'fetchRawData' works", {
+  newPlot <- obsmonPlotClass$new(
     parentType=mockPlotType,
     db=obsmonDb,
     paramsAsInUiInput=mockUiInput
@@ -253,7 +253,7 @@ test_that("obsmonPlot 'fetchRawData' works", {
 })
 
 test_that("Accessing data automatically fetches rawData", {
-  newPlot <- obsmonPlot$new(
+  newPlot <- obsmonPlotClass$new(
     parentType=mockPlotType,
     db=obsmonDb,
     paramsAsInUiInput=mockUiInput
@@ -264,7 +264,7 @@ test_that("Accessing data automatically fetches rawData", {
 })
 
 test_that("data contains all fields in dataFieldsInRetrievedPlotData", {
-  newPlot <- obsmonPlot$new(
+  newPlot <- obsmonPlotClass$new(
     parentType=mockPlotType,
     db=obsmonDb,
     paramsAsInUiInput=mockUiInput
@@ -276,7 +276,7 @@ test_that("data contains all fields in dataFieldsInRetrievedPlotData", {
 })
 
 test_that("Hash changes if rawData modified", {
-  newPlot <- obsmonPlot$new(
+  newPlot <- obsmonPlotClass$new(
     parentType=mockPlotType,
     db=obsmonDb,
     paramsAsInUiInput=mockUiInput
@@ -294,12 +294,12 @@ test_that("Hash changes if rawData modified", {
 })
 
 test_that("dataPostProcessingFunction works", {
-  newPlot <- obsmonPlot$new(
+  newPlot <- obsmonPlotClass$new(
     parentType=mockPlotType,
     db=obsmonDb,
     paramsAsInUiInput=mockUiInput
   )
-  newPlotWithDataPP <- obsmonPlot$new(
+  newPlotWithDataPP <- obsmonPlotClass$new(
     parentType=mockPlotTypeWithDataPP,
     db=obsmonDb,
     paramsAsInUiInput=mockUiInput
@@ -311,7 +311,7 @@ test_that("dataPostProcessingFunction works", {
 })
 
 test_that(".defaultGenerate function produces plotly if plot interactive", {
-  newPlot <- obsmonPlot$new(
+  newPlot <- obsmonPlotClass$new(
     parentType=mockPlotType,
     db=obsmonDb,
     paramsAsInUiInput=mockUiInput
@@ -321,7 +321,7 @@ test_that(".defaultGenerate function produces plotly if plot interactive", {
 })
 
 test_that(".defaultGenerate function produces ggplot if plot non-interactive", {
-  newPlot <- obsmonPlot$new(
+  newPlot <- obsmonPlotClass$new(
     parentType=mockNonInteractivePlotType,
     db=obsmonDb,
     paramsAsInUiInput=mockUiInput
@@ -332,7 +332,7 @@ test_that(".defaultGenerate function produces ggplot if plot non-interactive", {
 
 test_that(".defaultGenerate function adds createdByDefaultGenerate attr", {
   for(parentType in c(mockPlotType, mockNonInteractivePlotType)) {
-    newPlot <- obsmonPlot$new(
+    newPlot <- obsmonPlotClass$new(
       parentType=parentType,
       db=obsmonDb,
       paramsAsInUiInput=mockUiInput
@@ -344,7 +344,7 @@ test_that(".defaultGenerate function adds createdByDefaultGenerate attr", {
 
 test_that("chart uses '.defaultGenerate' if parentType$plottingFunction missing", {
   for(parentType in c(mockPlotType, mockNonInteractivePlotType)) {
-    newPlot <- obsmonPlot$new(
+    newPlot <- obsmonPlotClass$new(
       parentType=parentType,
       db=obsmonDb,
       paramsAsInUiInput=mockUiInput
@@ -357,7 +357,7 @@ test_that("chart uses '.defaultGenerate' if parentType$plottingFunction missing"
 test_that("leafletMap returns NULL if no leafletPlottingFunction & 'map' not in category", {
   nonMapPlotType <- mockPlotType$copy()
   nonMapPlotType$category <- "Foo"
-  newPlot <- obsmonPlot$new(
+  newPlot <- obsmonPlotClass$new(
     parentType=nonMapPlotType,
     db=obsmonDb,
     paramsAsInUiInput=mockUiInput
@@ -376,7 +376,7 @@ test_that("leafletMap is produced if no leafletPlottingFunction but 'map' in cat
     ),
     dataFieldsInSqliteWhereClause=list("obnumber", "obname")
   )
-  newPlot <- obsmonPlot$new(
+  newPlot <- obsmonPlotClass$new(
     parentType=mapPlotType,
     db=obsmonDb,
     paramsAsInUiInput=mockUiInput
@@ -385,7 +385,7 @@ test_that("leafletMap is produced if no leafletPlottingFunction but 'map' in cat
 })
 
 test_that("'data', 'chart' and 'leafletMap' cache results", {
-  newPlot <- obsmonPlot$new(
+  newPlot <- obsmonPlotClass$new(
     parentType=mockPlotType,
     db=obsmonDb,
     paramsAsInUiInput=mockUiInput
@@ -581,7 +581,7 @@ test_that("plotTypes in actual obsmon plotRegistry can produce static plots", {
     pTypeStatic <- pType$copy()
     pTypeStatic$interactive <- FALSE
 
-    newPlot <- obsmonPlot$new(
+    newPlot <- obsmonPlotClass$new(
       parentType=pTypeStatic,
       db=obsmonDb,
       paramsAsInUiInput=mockUiInput
@@ -595,7 +595,7 @@ test_that("plotTypes in actual obsmon plotRegistry can produce interactive plots
     pTypeInteractive <- pType$copy()
     pTypeInteractive$interactive <- TRUE
 
-    newPlot <- obsmonPlot$new(
+    newPlot <- obsmonPlotClass$new(
       parentType=pTypeInteractive,
       db=obsmonDb,
       paramsAsInUiInput=mockUiInput

@@ -230,7 +230,7 @@ plotTypeClass <- setRefClass(Class="obsmonPlotType",
   )
 )
 
-obsmonPlot <- setRefClass(Class="obsmonPlot",
+obsmonPlotClass <- setRefClass(Class="obsmonPlot",
   fields=list(
     parentType="obsmonPlotType",
     db="obsmonDatabase",

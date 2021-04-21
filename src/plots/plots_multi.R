@@ -173,7 +173,7 @@ prepareMultiPlots <- function(
    if(!is.null(progressFile)) {
      write(c(iPlot, length(inputsForAllPlots)), progressFile, append=FALSE)
    }
-   newPlot <- obsmonPlot$new(
+   newPlot <- obsmonPlotClass$new(
      parentType=plotType,
      db=db,
      paramsAsInUiInput=inputsForAllPlots[[iPlot]]
