@@ -79,7 +79,8 @@ mapAndMapTitleOutput <- function(mapOutputId, mapTitleOutputId) {
     fluidRow(
       column(12, align="center",
         tags$head(tags$style("#map{height:80vh !important;}")),
-        leafletOutput(outputId=mapOutputId, width="auto"),
+        leafletOutput(outputId=mapOutputId, width="auto") %>%
+          withSpinner(color="#0dc5c1"),
         tags$style(type="text/css", "body { overflow-y: scroll; }")
       )
     )
@@ -108,7 +109,7 @@ queryUsedAndDataTableOutput <- function(queryUsedOutputId, dataTableOutputId){
         ),
         downloadButton(downloadButtonTxtId, "Download as TXT"),
         downloadButton(downloadButtonCsvId, "Download as CSV"),
-        dataTableOutput(dataTableOutputId)
+        dataTableOutput(dataTableOutputId) %>% withSpinner(color="#0dc5c1")
       )
     )
   )
