@@ -74,7 +74,7 @@ test_that("queryStub contains dataFieldsInRetrievedPlotData and extraDataFields 
     collapse=", "
   )
   expect_true(
-    grepl(paste("SELECT", expected_cols), newPlot$getQueryStub(), fixed=TRUE)
+    grepl(paste("SELECT DISTINCT", expected_cols), newPlot$getQueryStub(), fixed=TRUE)
   )
 })
 
