@@ -73,7 +73,7 @@ firstGuessAndAnPlottingFunction <-  function(plot) {
   return(obplot)
 }
 
-plotRegistry$registerPlotType(plotType(
+plotRegistry$registerPlotType(
   name="First Guess and Analysis Departure",
   category="Statistical",
   dataFieldsInRetrievedPlotData=list(
@@ -81,4 +81,4 @@ plotRegistry$registerPlotType(plotType(
   ),
   dataFieldsInSqliteWhereClause=list("obnumber", "obname"),
   plottingFunction=firstGuessAndAnPlottingFunction
-))
+)
