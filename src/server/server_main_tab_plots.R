@@ -173,6 +173,7 @@ leafletMap <- reactive({
 
 # Enable/disable, show/hide appropriate inputs
 observe({
+  req(obsmonPlotObj())
   # (i) Maps tab
   if(is.null(leafletMap())) {
     if(input$mainArea=="mapTab") {
