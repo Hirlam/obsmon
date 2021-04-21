@@ -1,4 +1,4 @@
-plotType <- setRefClass(Class="obsmonPlotType",
+plotTypeClass <- setRefClass(Class="obsmonPlotType",
   fields=list(
     name="character",
     category="character",
@@ -514,7 +514,7 @@ obsmonPlotRegistry <- setRefClass(Class="obsmonPlotRegistry",
       if(length(args)==1) {
         plot <- args[[1]]
       } else {
-        plot <- plotType(...)
+        plot <- plotTypeClass$new(...)
       }
       if(plot$name %in% names(.self$plotTypes)) {
         stop(sprintf(

@@ -12,34 +12,34 @@ context("PlotType objects")
 ############################
 
 test_that("obsmonPlotType can be instanciated", {
-  expect_s4_class(plotType(), "obsmonPlotType")
+  expect_s4_class(plotTypeClass(), "obsmonPlotType")
 })
 
 test_that("name is set correctly", {
   plotName <- "my new plot"
-  newPlot <- plotType(name=plotName)
+  newPlot <- plotTypeClass(name=plotName)
   expect_equal(newPlot$name, plotName)
 })
 
 test_that("category is set correctly", {
   plotCategory <- "my category"
-  newPlot <- plotType(category=plotCategory)
+  newPlot <- plotTypeClass(category=plotCategory)
   expect_equal(newPlot$category, plotCategory)
 })
 
 test_that("default dateType is 'single'", {
-  expect_equal(plotType()$dateType, "single")
+  expect_equal(plotTypeClass()$dateType, "single")
 })
 
 test_that("dateType must be one of 'single, 'range'", {
   expect_error(
-    newPlot <- plotType(dateType="some_invalid_dateType"),
+    newPlot <- plotTypeClass(dateType="some_invalid_dateType"),
     regex="Field 'dateType' must be one of: 'single', 'range'",
     fixed=TRUE
   )
 
   for (dateType in c("single", "range")) {
-    newPlot <- plotType(dateType=dateType)
+    newPlot <- plotTypeClass(dateType=dateType)
     expect_equal(newPlot$dateType, dateType)
   }
 })
@@ -54,7 +54,7 @@ test_that("Data fields cannot contain invalid varnames", {
     dataFieldArg <- list(list(invalidColname))
     names(dataFieldArg) <- field
     expect_error(
-      do.call(plotType, dataFieldArg),
+      do.call(plotTypeClass, dataFieldArg),
       regex=sprintf(
         "^Field '%s' contains invalid column names: %s$", field, invalidColname
       ),
@@ -63,7 +63,7 @@ test_that("Data fields cannot contain invalid varnames", {
 })
 
 test_that("queryStub contains dataFieldsInRetrievedPlotData and extraDataFields cols", {
-  newPlot <- plotType(
+  newPlot <- plotTypeClass(
     dataFieldsInRetrievedPlotData=list("col_a", "col_b", "col_c", "col_d"),
     extraDataFields=list("col_e", "col_f")
   )
@@ -80,7 +80,7 @@ test_that("queryStub contains dataFieldsInRetrievedPlotData and extraDataFields 
 
 test_that("non-function plottingFunction raises error", {
   expect_error(
-    newPlot <- plotType(plottingFunction="foo"),
+    newPlot <- plotTypeClass(plottingFunction="foo"),
     regex="Field 'plottingFunction' is not a function",
     fixed=TRUE
   )
@@ -88,13 +88,13 @@ test_that("non-function plottingFunction raises error", {
 
 test_that("plottingFunction can be set to function", {
   plotFunc <- function(plot) {plot}
-  newPlot <- plotType(plottingFunction=plotFunc)
+  newPlot <- plotTypeClass(plottingFunction=plotFunc)
   expect_identical(plotFunc, newPlot$plottingFunction)
 })
 
 test_that("non-function plotTitleFunction raises error", {
   expect_error(
-    newPlot <- plotType(plotTitleFunction="foo"),
+    newPlot <- plotTypeClass(plotTitleFunction="foo"),
     regex="Field 'plotTitleFunction' is not a function",
     fixed=TRUE
   )
@@ -102,25 +102,25 @@ test_that("non-function plotTitleFunction raises error", {
 
 test_that("plotTitleFunction can be set to function", {
   plotTitleFunc <- function(plot) {""}
-  newPlot <- plotType(plotTitleFunction=plotTitleFunc)
+  newPlot <- plotTypeClass(plotTitleFunction=plotTitleFunc)
   expect_identical(plotTitleFunc, newPlot$plotTitleFunction)
 })
 
 test_that("default stationChoiceType is character(0)", {
-  newPlot <- plotType()
+  newPlot <- plotTypeClass()
   expect_identical(newPlot$stationChoiceType, character(0))
   expect_false(newPlot$requiresSingleStation)
 })
 
 test_that("stationChoiceType, if passed, must be one of 'single, 'multiple'", {
   expect_error(
-    newPlot <- plotType(stationChoiceType="foo"),
+    newPlot <- plotTypeClass(stationChoiceType="foo"),
     regex="Field 'stationChoiceType', if passed, should be one of: 'single', 'multiple'",
     fixed=TRUE
   )
 
   for (stationChoiceType in c("single", "multiple")) {
-    newPlot <- plotType(stationChoiceType=stationChoiceType)
+    newPlot <- plotTypeClass(stationChoiceType=stationChoiceType)
     expect_equal(newPlot$stationChoiceType, stationChoiceType)
     if(stationChoiceType == "single") {
       expect_true(newPlot$requiresSingleStation)
@@ -131,21 +131,21 @@ test_that("stationChoiceType, if passed, must be one of 'single, 'multiple'", {
 })
 
 test_that("'statid' is included in fields if stationChoiceType passed", {
-  newPlot <- plotType(stationChoiceType="single")
+  newPlot <- plotTypeClass(stationChoiceType="single")
   expect_true("statid" %in% newPlot$getRetrievedSqliteFields())
 })
 
 test_that("'usage' table is queried if station selection is supported", {
-  newPlot <- plotType(extraDataFields=list("statid"))
+  newPlot <- plotTypeClass(extraDataFields=list("statid"))
   expect_true(grepl("FROM usage", newPlot$getQueryStub(), fixed=TRUE))
 })
 
 test_that("'obsmon' table is queried if station selection is not supported", {
-  expect_true(grepl("FROM obsmon", plotType()$getQueryStub(), fixed=TRUE))
+  expect_true(grepl("FROM obsmon", plotTypeClass()$getQueryStub(), fixed=TRUE))
 })
 
 #test_that("All needed data db columns are in the sqlite query", {
-#  newPlot <- plotType(
+#  newPlot <- plotTypeClass(
 #    name="name",
 #    category="category",
 #    dataX="some_colname",
@@ -164,12 +164,12 @@ test_that("'obsmon' table is queried if station selection is not supported", {
 
 test_that("ggplotlyWrapper produces plotly from ggplot", {
   ggplotPlot <- ggplot() + theme_void()
-  plotlyPlot <- plotType()$ggplotlyWrapper(ggplotPlot)
+  plotlyPlot <- plotTypeClass()$ggplotlyWrapper(ggplotPlot)
   expect_s3_class(plotlyPlot, "plotly")
 })
 
 test_that("ggplotlyWrapper returns original obj if not ggplot, with warning", {
-  newPlot <- plotType(name="Foo Plot")
+  newPlot <- plotTypeClass(name="Foo Plot")
   randomObj <- list()
 
   # capture.output is being used to check for the warning content because
@@ -192,7 +192,7 @@ test_that("ggplotlyWrapper returns original obj if not ggplot, with warning", {
 context("Plot objects")
 #########################
 
-mockPlotType <- plotType(
+mockPlotType <- plotTypeClass(
   name="First Guess Departure Map",
   category="Maps",
   dateType="single",
@@ -366,7 +366,7 @@ test_that("leafletMap returns NULL if no leafletPlottingFunction & 'map' not in 
 })
 
 test_that("leafletMap is produced if no leafletPlottingFunction but 'map' in category", {
-  mapPlotType <- plotType(
+  mapPlotType <- plotTypeClass(
     name="Observation Usage",
     category="Maps",
     dateType="single",
@@ -411,7 +411,7 @@ test_that("obsmonPlotRegistry can be instanciated", {
     expect_equal(length(plotRegistry$plotTypes), 0)
 })
 
-test_that("obsmonPlotRegistry can register plots with plotType args", {
+test_that("obsmonPlotRegistry can register plots with plotTypeClass args", {
     plotRegistry <- obsmonPlotRegistry()
     prevNumRegPlotTypes <- 0
     for(plotType in c(mockPlotType, mockNonInteractivePlotType)) {
@@ -433,17 +433,17 @@ test_that("obsmonPlotRegistry can register plots with regular args", {
   expect_equal(length(plotRegistry$plotTypes), 1)
   expect_equal(
     plotRegistry$plotTypes[[1]],
-    plotType(name="foo", category="bar")
+    plotTypeClass(name="foo", category="bar")
   )
 })
 
-test_that("obsmonPlotRegistry reg via args and plotType are equivalent", {
+test_that("obsmonPlotRegistry reg via args and plotTypeClass are equivalent", {
     names <- c("foo", "bar")
     categories <- c("baz", "qux")
     plotRegistry1 <- obsmonPlotRegistry()
     plotRegistry2 <- obsmonPlotRegistry()
     for (i in seq_along(names)) {
-      plotRegistry1$registerPlotType(plotType(
+      plotRegistry1$registerPlotType(plotTypeClass(
         name=names[i],
         category=categories[i]
       ))
@@ -507,7 +507,7 @@ test_that("getCategorisedPlotTypeNames puts plotTypes in correct categories", {
 
 test_that("isCompatibleWithUiParams works", {
   plotRegistry <- obsmonPlotRegistry()
-  pType <- plotType(
+  pType <- plotTypeClass(
     name="foo",
     category="foo category",
     # "statid" is a special field whose absence should not lead to FALSE
