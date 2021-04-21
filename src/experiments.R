@@ -15,7 +15,7 @@ obsmonDatabaseClass <- setRefClass("obsmonDatabase",
     dbType="character",
     dir="character",
     cacheDir="character",
-    exptName="character",
+    exptName="character", # exptName is optional
     # dtgCache, dtgCacheExpiry and dtgCacheLastUpdated are auxiliary
     # attributes for use in the getDtgs method.
     # dtgCache is a (conveniently organised) copy of the last results returned
@@ -23,7 +23,7 @@ obsmonDatabaseClass <- setRefClass("obsmonDatabase",
     # expire and are renewed if they get older than dtgCacheExpiry seconds.
     # N.B.: This internal DTG cache has nothing to do with obsmon's sql cache.
     dtgCache="list",
-    dtgCacheExpiry="numeric",
+    dtgCacheExpiry="numeric", # In seconds
     dtgCacheLastUpdated="POSIXt",
     # Attributes that use accessor functions
     exptDir=function() {dirname(dir)},
@@ -38,15 +38,11 @@ obsmonDatabaseClass <- setRefClass("obsmonDatabase",
     hasDtgs=function() {length(dtgs)>0}
   ),
   methods=list(
-    initialize=function(
-      dbType, dir, cacheDir, exptName=character(0), dtgCacheExpiry=Inf
-    ) {
-      .self$dbType <- dbType
-      .self$dir <- dir
-      .self$cacheDir <- cacheDir
-      .self$exptName <- exptName
-      # dtgCacheExpiry is given in seconds
-      .self$dtgCacheExpiry <- abs(1.0 * dtgCacheExpiry)
+    initialize=function(...) {
+      callSuper(...)
+      if(length(.self$exptName)==0) .self$exptName <- "Unnamed Experiment"
+      if(length(.self$dtgCacheExpiry)==0) .self$dtgCacheExpiry <- Inf
+      .self$dtgCacheExpiry <- abs(as.double(dtgCacheExpiry))
     },
     getDataFilePaths=function(selectedDtgs=NULL, assertExists=FALSE) {
       if(is.null(selectedDtgs)) selectedDtgs <- .self$dtgs

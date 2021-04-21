@@ -13,6 +13,8 @@ and this project adheres to [Semantic Versioning](http://semver.org).
 - Style of UI fields "Cycles", "Levels", "Channels"
 - Interrupt cache if user changes experiment/database/DTG, and start
   caching the relevant files for the new selection.
+- Land-sea departure plot can now be made interactive
+- Some plots now have slightly different data columns in "Quey and Data"
 ### Fixed
 - Missing bias panel in "Station Diagnostics Plot" if variable != "apd"
 - Missing error message when server cannot be created

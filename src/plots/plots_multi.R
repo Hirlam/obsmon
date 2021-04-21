@@ -39,12 +39,12 @@ multiPlotsMakeShinyInputs <- function(pConfig) {
   inputsForAllPlots <- list()
   plotsCommonInput <- list(
     experiment=pConfig$experiment,
-    plottype=pConfig$plotType,
-    database=pConfig$database
+    plottype=pConfig$plotType$name,
+    odbBase=pConfig$database
   )
 
   # Prepare date/cycle inputs depending on the plot date type
-  if(getPlotDateType(pConfig$plotType) == "single") {
+  if(pConfig$plotType$dateType == "single") {
     # If the multiple dates/cycles are configured in this case, then
     # produce one single plot for each (date, cycle) combination.
     datesForSingleDtgPlot = paste0(seq(
@@ -97,7 +97,7 @@ multiPlotsMakeShinyInputs <- function(pConfig) {
       levelsConfig <- pConfig$levels[[obname]]
       excludeLevelsConfig <- pConfig$excludeLevels[[obname]]
       stationsConfig <- pConfig$stations[[obname]]
-      if(!plotRequiresSingleStation(pConfig$plotType)) {
+      if(!pConfig$plotType$requiresSingleStation) {
         # One plot for each variable, allowing multiple stations in a
         # single plot (if stations are applicable at all)
         for(variable in unlist(pConfig$obs[iObname])) {
@@ -163,7 +163,7 @@ multiPlotsMakeShinyInputs <- function(pConfig) {
 }
 
 prepareMultiPlots <- function(
-  plotter, inputsForAllPlots, db, interactive=FALSE, progressFile=NULL
+  plotType, inputsForAllPlots, db, progressFile=NULL
 ) {
   allPlots <- list()
   for(iPlot in seq_along(inputsForAllPlots)) {
@@ -173,18 +173,12 @@ prepareMultiPlots <- function(
    if(!is.null(progressFile)) {
      write(c(iPlot, length(inputsForAllPlots)), progressFile, append=FALSE)
    }
-   # qp stands for "multiPlot"
-   qpInput <- inputsForAllPlots[[iPlot]]
-   plotRequest <- list()
-   plotRequest$expName <- req(qpInput$experiment)
-   plotRequest$dbType <- qpInput$database
-   plotRequest$criteria <- plotsBuildCriteria(qpInput)
-
-   newPlot <- tryCatch({
-       preparePlots(plotter, plotRequest, db, interactive=interactive)
-     },
-     error=function(e) {flog.error(e); NULL}
+   newPlot <- obsmonPlotClass$new(
+     parentType=plotType,
+     db=db,
+     paramsAsInUiInput=inputsForAllPlots[[iPlot]]
    )
+   newPlot$fetchRawData()
    allPlots[[multiPlotsGenId(iPlot)]] <- newPlot
   }
   return(allPlots)
@@ -261,9 +255,11 @@ multiPlotDbValid <- function(plotConfig) {
   return(valid)
 }
 
-multiPlotPlotTypeValid <- function(plotConfig) {
+multiPlotPlotTypeNameValid <- function(plotConfig) {
   pType <- toLowerTrimAndSingleSpaces(plotConfig$plotType)
-  valid <- isTRUE(pType %in% toLowerTrimAndSingleSpaces(names(plotTypesFlat)))
+  valid <- isTRUE(
+    pType %in% toLowerTrimAndSingleSpaces(names(plotRegistry$plotTypes))
+  )
   if(!valid) {
     flog.error(
       '\n  multiPlot "%s": plotType "%s" not recognised',
@@ -271,10 +267,6 @@ multiPlotPlotTypeValid <- function(plotConfig) {
     )
   }
   return(valid)
-}
-
-getPlotDateType <- function(plotType) {
-  return(plotTypesFlat[[plotType]]$dateType)
 }
 
 datesCompatibleWithPlotType <- function(pConfig) {
@@ -288,7 +280,7 @@ datesCompatibleWithPlotType <- function(pConfig) {
     )
     compatible <- FALSE
   }
-  if((getPlotDateType(pConfig$plotType)=="single") && is.null(pConfig$cycles)) {
+  if((pConfig$plotType$dateType=="single") && is.null(pConfig$cycles)) {
     msg <- paste(msg, "Missing required cycles info.")
     compatible <- FALSE
   }
@@ -324,23 +316,26 @@ multiPlotsValidateConfig <- function(config) {
       validConfig <- FALSE
       invalidDbs <- TRUE
     }
-    if(multiPlotPlotTypeValid(pc)) {
-      # Correct plotType excess spaces and character case
-      tmpPlotType <- toLowerTrimAndSingleSpaces(pc$plotType)
-      for(exactPlotName in names(plotTypesFlat)) {
-        if(tmpPlotType == toLowerTrimAndSingleSpaces(exactPlotName)) {
-          pc$plotType <- exactPlotName
+    if(multiPlotPlotTypeNameValid(pc)) {
+      # Replace plotType: Populate it with an obsmonPlotType obj
+      tmpPlotTypeName <- toLowerTrimAndSingleSpaces(pc$plotType)
+      for(plotTypeObj in plotRegistry$plotTypes) {
+        if(tmpPlotTypeName == toLowerTrimAndSingleSpaces(plotTypeObj$name)) {
+          pc$plotType <- plotTypeObj$copy()
+          pc$plotType$interactive <- isTRUE(
+            obsmonConfig$general$multiPlotsEnableInteractivity
+          )
           break
         }
       }
 
       # Making sure stations are present if they are needed
-      if(plotRequiresSingleStation(pc$plotType) && length(pc$stations)==0) {
+      if(pc$plotType$requiresSingleStation && length(pc$stations)==0) {
         flog.error(
           paste(
             '\n  multiPlot "%s": Missing choice of stations',
             '(required by plotType "%s")'),
-          pc$displayName, pc$plotType
+          pc$displayName, pc$plotType$name
         )
         validConfig <- FALSE
         missingStations <- TRUE
@@ -487,7 +482,7 @@ multiPlotsValidateConfig <- function(config) {
       stationsConfig <- pc$stations[[obname]]
       allowStationChoice <- (
         obSupportsStationChoice(obname) &&
-        plotSupportsChoosingStations(pc$plotType)
+        pc$plotType$supportsStationSelection
       )
       if(allowStationChoice) {
         if(!is.null(stationsConfig) && !is.list(stationsConfig)) {
@@ -497,7 +492,7 @@ multiPlotsValidateConfig <- function(config) {
       } else if(!is.null(stationsConfig)) {
         pc$stations[[obname]] <- NULL
         msg<-paste0('\n multiPlot "',pc$displayName,'": Combination of plot="',
-          pc$plotType,'" and obname="', obname,
+          pc$plotType$name,'" and obname="', obname,
           '" does not support station choices. Ignoring stations.'
         )
         flog.warn(msg)
@@ -520,7 +515,9 @@ multiPlotsValidateConfig <- function(config) {
   }
   if(exists("invalidPlotNames")) {
     msg <- "multiPlots: Please choose your plotType from:"
-    for(plotType in names(plotTypesFlat)) msg <- paste0(msg,"\n  > ",plotType)
+    for(plotTypeName in names(plotRegistry$plotTypes)) {
+      msg <- paste0(msg,"\n  > ",plotTypeName)
+    }
     flog.warn(msg)
   }
   if(exists("invalidDbs")) {

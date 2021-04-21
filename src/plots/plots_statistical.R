@@ -1,15 +1,16 @@
-registerPlotCategory("Statistical")
+firstGuessAndAnPlottingFunction <-  function(plot) {
+  sqliteParams <- plot$paramsAsInSqliteDbs
+  plotData <- plot$data
 
-doPlot.plotStatistical <- function(p, plotRequest, plotData) {
-  strObnumber <- as.character(plotRequest$criteria$obnumber)
+  strObnumber <- as.character(sqliteParams$obnumber)
   switch(
       strObnumber,
       "1"=,
       "4"=,
       "9"={
-        varname <- plotRequest$criteria$varname
+        varname <- sqliteParams$varname
         xlab <- varname
-        ylab <- sprintf("Bias/RMS (%s)", units[[varname]])
+        ylab <- sprintf("Bias/RMS (%s)", getUnits(varname))
         df <- data.frame(
             params=factor(c("FGBias", "AnBias", "FGRMS",  "AnRMS"),
                           c("FGBias", "AnBias", "FGRMS",  "AnRMS")),
@@ -29,20 +30,19 @@ doPlot.plotStatistical <- function(p, plotRequest, plotData) {
       },
       {
         if(strObnumber=="7") {
-          xVar <- "channel"
+          # Mind that channels appear as "level" in the databases
           xlab <- "Channels"
           ylab <- "Brightness temperature [K]"
         } else {
-          xVar <- "level"
-          varname <- plotRequest$criteria$varname
-          ylab <- sprintf("%s [%s]", varname, units[[varname]])
+          varname <- sqliteParams$varname
+          ylab <- sprintf("%s [%s]", varname, getUnits(varname))
           xlab <- levelsLableForPlots(strObnumber, varname)
         }
-        localPlotData <- melt(plotData, id=c(xVar))
+        localPlotData <- melt(plotData, id="level")
 
         shape_colours <- c("blue", "blue4", "red4", "red")
         obplot <- ggplot(data=localPlotData) +
-          aes_string(x=xVar, y="value",
+          aes_string(x="level", y="value",
             group="variable", colour="variable",
             shape="variable", fill="variable"
           ) +
@@ -63,9 +63,9 @@ doPlot.plotStatistical <- function(p, plotRequest, plotData) {
             # (whichever is added later) from the legend. Not a big deal,
             # but worth pointing out, as this but may be solved in later
             # releases of the plotly package
-            obplot <- obplot + xlim(max(refPressures,localPlotData[[xVar]]),0)
+            obplot <- obplot + xlim(max(refPressures,localPlotData[["level"]]),0)
           } else {
-            obplot <- obplot + xlim(0, max(refHeights,localPlotData[[xVar]]))
+            obplot <- obplot + xlim(0, max(refHeights,localPlotData[["level"]]))
           }
         }
       }
@@ -73,14 +73,12 @@ doPlot.plotStatistical <- function(p, plotRequest, plotData) {
   return(obplot)
 }
 
-registerPlotType(
-    "Statistical",
-    plotCreate("plotStatistical",
-               "First Guess and Analysis Departure", "single",
-               paste("SELECT",
-                     "fg_bias_total, an_bias_total,",
-                     "fg_rms_total, an_rms_total, level",
-                     "FROM obsmon WHERE %s",
-                     "ORDER BY level"),
-               list("obnumber", "obname"))
+plotRegistry$registerPlotType(
+  name="First Guess and Analysis Departure",
+  category="Statistical",
+  dataFieldsInRetrievedPlotData=list(
+    "level", "fg_bias_total", "an_bias_total", "fg_rms_total", "an_rms_total"
+  ),
+  dataFieldsInSqliteWhereClause=list("obnumber", "obname"),
+  plottingFunction=firstGuessAndAnPlottingFunction
 )

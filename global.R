@@ -50,9 +50,10 @@ plotOutputInsideFluidRow <- function(plotOutputId) {
   fluidPage(
     fluidRow(
       column(12, align="center",
-        plotOutput(plotOutputId, height="755px", width="auto")
+        plotOutput(plotOutputId, height="755px", width="auto") %>%
+           withSpinner(color="#0dc5c1")
       )
-    ) %>% withSpinner(color="#0dc5c1")
+    )
   )
 }
 
@@ -60,9 +61,10 @@ plotlyOutputInsideFluidRow <- function(plotlyOutputId) {
   fluidPage(
     fluidRow(
       column(12, align="center",
-        plotlyOutput(plotlyOutputId, height="755px", width="auto")
+        plotlyOutput(plotlyOutputId, height="755px", width="auto") %>%
+          withSpinner(color="#0dc5c1")
       )
-    ) %>% withSpinner(color="#0dc5c1")
+    )
   )
 }
 
@@ -77,7 +79,8 @@ mapAndMapTitleOutput <- function(mapOutputId, mapTitleOutputId) {
     fluidRow(
       column(12, align="center",
         tags$head(tags$style("#map{height:80vh !important;}")),
-        leafletOutput(outputId=mapOutputId, width="auto"),
+        leafletOutput(outputId=mapOutputId, width="auto") %>%
+          withSpinner(color="#0dc5c1"),
         tags$style(type="text/css", "body { overflow-y: scroll; }")
       )
     )
@@ -90,10 +93,23 @@ queryUsedAndDataTableOutput <- function(queryUsedOutputId, dataTableOutputId){
   fluidPage(
     fluidRow(
       column(12, align="center",
-        wellPanel(h5("Query used:"), textOutput(queryUsedOutputId)),
+        wellPanel(
+          h5(
+            shiny::icon("info-circle", class="query_info_icon") %>%
+              bs_embed_tooltip(
+                title=paste(
+                  "Rows with incomplete entries are removed",
+                  "from the retrieved data after performing the query."
+                ),
+                trigger="hover"
+              ),
+            "Query used:",
+          ),
+          tags$div(HTML("<b>"), textOutput(queryUsedOutputId), HTML("</b>")),
+        ),
         downloadButton(downloadButtonTxtId, "Download as TXT"),
         downloadButton(downloadButtonCsvId, "Download as CSV"),
-        dataTableOutput(dataTableOutputId)
+        dataTableOutput(dataTableOutputId) %>% withSpinner(color="#0dc5c1")
       )
     )
   )

@@ -102,14 +102,7 @@ observeEvent(activeDb(), {
 }, ignoreNULL=FALSE)
 
 # Signal when required dateType of plot changes value
-isMultiDtgInput <- reactiveVal(FALSE)
-observeEvent(input$plottype, {
-  dateType <- tryCatch(
-    plotTypesFlat[[req(input$plottype)]]$dateType,
-    error=function(e) {"single"}
-  )
-  isMultiDtgInput(isTRUE(dateType=="range"))
-})
+isMultiDtgInput <- reactive(isTRUE(req(activePlotType()$dateType) == "range"))
 # Offer single date or dateRange input according to selected plottype
 # Used to be done via conditionalPanel in ui.R, but that was slow
 observeEvent(isMultiDtgInput(), {
@@ -343,20 +336,23 @@ updatePlotType <- reactive({
   )
 }) %>% throttle(500)
 observeEvent(updatePlotType(), {
-  choices <- applicablePlots(req(plotsBuildCriteria(input)))
+  choices <- plotRegistry$getCategorisedPlotTypeNames(
+    compatibleWithUiInputParams=input
+  )
   updatePickerInputWrapper(session, "plottype", choices=choices)
 })
+activePlotType <- reactive(plotRegistry$plotTypes[[req(input$plottype)]])
 
 # Decide whether to allow users to select stations
 allowChoosingStation <- reactive({
    return(
      obSupportsStationChoice(req(input$obname)) &&
-     plotSupportsChoosingStations(req(input$plottype))
+     activePlotType()$supportsStationSelection
    )
 })
 observe(shinyjs::toggleElement("station", condition=allowChoosingStation()))
 
-requireSingleStation <- reactive(plotRequiresSingleStation(req(input$plottype)))
+requireSingleStation <- reactive(activePlotType()$requiresSingleStation)
 observeEvent(requireSingleStation(), {
   req(allowChoosingStation())
   updatePickerInputWrapper(

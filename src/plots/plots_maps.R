@@ -1,46 +1,88 @@
-registerPlotCategory("Maps")
-
-plotTitle.plotMap <- function(p, plotRequest, plotData) {
-  crit <- plotRequest$criteria
-  stationLabel <- getStationsForPlotTitle(plotRequest, plotData)
-  if(as.character(crit$obnumber)=="7") {
-    levelLabel <- "channels"
-    detail <- sprintf("sensor=%s, satname=%s", crit$obname, crit$satname)
-  } else {
-    levelLabel <- "levels"
-    detail <- sprintf("obname=%s, varname=%s", crit$obname, crit$varname)
-  }
-
-  title <- sprintf("%s: %s", plotRequest$expName, p$name)
-  if(length(stationLabel)>0 && stationLabel!="") {
-    title <- sprintf("%s\nstation=%s", title, stationLabel)
-  }
-  title <- sprintf(
-    "%s\ndb=%s, DTG=%s, %s",
-    title,
-    plotRequest$dbType, formatDtg(crit$dtg), detail
-  )
-  levels <- paste(crit$levels, collapse=", ")
-  if(levels!="") title <- sprintf("%s\n%s: %s", title, levelLabel, levels)
-  return(title)
-}
-
-doPlot.plotMap <- function(p, plotRequest, plotData) {
-  x1 <- min(plotData$longitude)-2
-  x2 <- max(plotData$longitude)+2
-  y1 <- min(plotData$latitude)-2
-  y2 <- max(plotData$latitude)+2
-  ggplot() +
-    geom_path(data=map_data(map="world"),
-              aes(long, lat, group=group),
-              colour="gray50") +
+##################################
+# helpers for making ggplot maps #
+##################################
+.getStaticGenericMapPlot <- function(plot) {
+  # Former doPlot.plotMap
+  x1 <- min(plot$data$longitude)-2
+  x2 <- max(plot$data$longitude)+2
+  y1 <- min(plot$data$latitude)-2
+  y2 <- max(plot$data$latitude)+2
+  ggplotMap <- ggplot() +
+    geom_path(
+      data=map_data(map="world"),
+      aes(long, lat, group=group),
+      colour="gray50"
+    ) +
     coord_map("stereographic", xlim=c(x1, x2), ylim=c(y1, y2)) +
     labs(x="Longitude", y="Latitude")
+  return(ggplotMap)
 }
 
-doPlotly.plotMap <- function(p, plotRequest, plotData) {
+.mapUsageStaticPlottingFunction <- function(plot) {
+  ggplotMap <- .getStaticGenericMapPlot(plot) +
+    geom_point(
+      data=plot$data,
+      aes(x=longitude, y=latitude, colour=status, shape=status, fill=status),
+      size=2, alpha=.75
+    ) +
+    scale_shape_manual(
+      name="Legend",
+      values=c(
+        "Active"=21, "Active(2)"=21, "Rejected"=22, "Passive"=23,
+        "Blacklisted"=24, "NA"=13
+      )
+    ) +
+    scale_fill_manual(
+      name="Legend",
+      values=c(
+        "Active"="green", "Active(2)"="blue", "Rejected"="red",
+        "Passive"="magenta3", "Blacklisted"="black", "NA"=NA
+      )
+    ) +
+    scale_colour_manual(
+      name="Legend",
+      values=c(
+        "Active"="green", "Active(2)"="blue", "Rejected"="red",
+        "Passive"="black", "Blacklisted"="black", "NA"="grey"
+      )
+    )
+  return(ggplotMap)
+}
+
+.mapThresholdStaticPlottingFunction <- function(plot) {
+  cm <- .getSuitableColorScale(plot$data)
+  dataColumnName <- unname(attributes(plot$data)$comment["dataColumn"])
+  if(length(dataColumnName) == 0) {
+    flog.error(".mapThresholdStaticPlottingFunction: Empty dataColumnName")
+  }
+
+  ggplotMap <- .getStaticGenericMapPlot(plot) +
+    geom_point(
+      data=plot$data,
+      aes_string(x="longitude", y="latitude", fill=dataColumnName),
+      size=3,
+      shape=21,
+      colour="gray50",
+      alpha=.5,
+      stroke=0.
+    ) +
+    scale_fill_distiller(
+      dataColumnName,
+      palette=cm$name,
+      direction=cm$direction,
+      limits=cm$domain
+    )
+
+    return(ggplotMap)
+}
+
+##################################
+# helpers for making plotly maps #
+##################################
+.getInteractiveGenericMapPlot <- function(plot) {
+  # Former doPlotly.plotMap
   myPlotly <- plot_geo(
-    data=plotData, lat=~jitter(latitude, 1), lon =~jitter(longitude, 1)
+    data=plot$data, lat=~jitter(latitude, 1), lon =~jitter(longitude, 1)
   ) %>%
     layout(
       margin = list(
@@ -65,12 +107,12 @@ doPlotly.plotMap <- function(p, plotRequest, plotData) {
         coastlinewidth = 0.5,
         countrywidth = 0.5,
         lataxis = list(
-          range = range(plotData$latitude) + c(-1, 1),
+          range = range(plot$data$latitude) + c(-1, 1),
           showgrid = TRUE,
           dtick = 10
         ),
         lonaxis = list(
-          range = range(plotData$longitude) + c(-2, 2),
+          range = range(plot$data$longitude) + c(-2, 2),
           showgrid = TRUE,
           dtick = 15
         )
@@ -79,304 +121,75 @@ doPlotly.plotMap <- function(p, plotRequest, plotData) {
   return(myPlotly)
 }
 
-doMap.plotMap <- function(p, plotRequest, plotData) {
-  x1 <- min(plotData$longitude)-2
-  x2 <- max(plotData$longitude)+2
-  y1 <- min(plotData$latitude)-2
-  y2 <- max(plotData$latitude)+2
-  zoomLevel <- 4
-  zoomLevels <- c(2000, 4000, 6000, 10000, 15000, 45000, 70000, 90000)
-  for ( i in 2:length(zoomLevels)){
-    if ((length(plotData$plotValues) > zoomLevels[i-1])
-        & (length(plotData$plotValues) <= zoomLevels[i])){
-      zoomLevel <- i+3
-    }
-  }
-}
-
-myLabelFormat <- function(
-  prefix = '', suffix = '', between = ' &ndash; ', digits = 3, big.mark = ',',
-  transform = identity, reverseOrder = FALSE
-) {
-
-  formatNum <- function(x) {
-    format(
-      round(transform(x), digits), trim = TRUE, scientific = FALSE,
-      big.mark = big.mark
-    )
-  }
-
-  function(type, ...) {
-    switch(
-      type,
-      numeric = (function(cuts) {
-        if (reverseOrder) {
-          cuts <- sort(cuts, decreasing=T)
-        }
-        paste0(prefix, formatNum(cuts), suffix)
-      })(...),
-      bin = (function(cuts) {
-        if (reverseOrder) {
-          cuts <- sort(cuts, decreasing=T)
-        }
-        n = length(cuts)
-        paste0(prefix, formatNum(cuts[-n]), between, formatNum(cuts[-1]), suffix)
-      })(...),
-      quantile = (function(cuts, p) {
-        if (reverseOrder) {
-          cuts <- sort(cuts, decreasing=T)
-        }
-        n = length(cuts)
-        p = paste0(round(p * 100), '%')
-        cuts = paste0(formatNum(cuts[-n]), between, formatNum(cuts[-1]))
-        # mouse over the legend labels to see the values (quantiles)
-        paste0(
-          '<span title="', cuts, '">', prefix, p[-n], between, p[-1], suffix,
-          '</span>'
-        )
-      })(...),
-      factor = (function(cuts) {
-        if (reverseOrder) {
-          cuts <- sort(cuts, decreasing=T)
-        }
-        paste0(prefix, as.character(transform(cuts)), suffix)
-      })(...)
-    )
-  }
-}
-
-doMap.mapThreshold <- function(p, plotRequest, plotData) {
-  x1 <- min(plotData$longitude)-2
-  x2 <- max(plotData$longitude)+2
-  y1 <- min(plotData$latitude)-2
-  y2 <- max(plotData$latitude)+2
-  zoomLevel <- 4
-  zoomLevels <- c(2000, 4000, 6000, 10000, 15000, 45000, 70000, 90000)
-  for ( i in 2:length(zoomLevels)){
-    if ((length(plotData$plotValues) > zoomLevels[i-1])
-        & (length(plotData$plotValues) <= zoomLevels[i])){
-      zoomLevel <- i+3
-    }
-  }
-
-  if(is.null(plotData$channel)) {
-    plotData$popup <- paste(
-      "Station: ", plotData$statLabel,
-      "<br>Level: ", plotData$level,
-      "<br>Value: ", signif(plotData$plotValues, digits=5)
-    )
-  } else {
-    plotData$popup <- paste(
-      "Sensor: ", plotRequest$criteria$obname,
-      "<br>Satellite: ", plotRequest$criteria$satname,
-      "<br>Channel: ", plotData$channel,
-      "<br>Value: ", signif(plotData$plotValues, digits=5)
-    )
-  }
-  if ( max(plotData$plotValues) > 0 ) {
-    plotData$radius <- (abs(plotData$plotValues)/max(abs(plotData$plotValues)))*10
-    if ( length(plotData$radius) > 0 ) {
-      for (i in 1:length(plotData$radius)) {
-        if ( plotData$radius[i] < 3 ){ plotData$radius[i]=3}
-      }
-    }
-  }else{
-    plotData$radius=5
-  }
-  cm <- getSuitableColorScale(plotData)
-  dataPal <- colorNumeric(palette=cm$palette, domain=cm$domain)
-  legendPal <- colorNumeric(palette=rev(cm$palette), domain=cm$domain)
-  clusterOptions <- markerClusterOptions(disableClusteringAtZoom=zoomLevel)
-  obMap <- leaflet(plotData) %>%
-    addProviderTiles("Esri.WorldStreetMap",
-                     options=providerTileOptions(opacity=0.7)) %>%
-    fitBounds(x1, y1, x2, y2) %>%
-    addCircleMarkers(~longitude, ~latitude, popup=~popup, radius=~radius,
-                     stroke=FALSE, weight=1, opacity=1, color="black",
-                     fillColor=~dataPal(plotValues), fillOpacity=.7,
-                     clusterOptions = clusterOptions) %>%
-    addLegend("topright", pal=legendPal, values=cm$domain, opacity=1,
-              labFormat=myLabelFormat(reverseOrder=T))
-  obMap
-}
-
-doMap.mapUsage <- function(p, plotRequest, plotData) {
-  status <- rep("NA", nrow(plotData))
-  status <- ifelse(plotData$anflag == 0, "Rejected", status)
-  status <- ifelse(plotData$active  > 0, "Active", status)
-  status <- ifelse(plotData$rejected > 0, "Rejected", status)
-  status <- ifelse(plotData$passive > 0, "Passive", status)
-  status <- ifelse(plotData$blacklisted > 0, "Blacklisted", status)
-  status <- ifelse(plotData$anflag  > 0, "Active(2)", status)
-  status <- ifelse(plotData$anflag == 4, "Rejected", status)
-  status <- ifelse(plotData$anflag == 8, "Blacklisted", status)
-  plotData$status <- status
-  x1 <- min(plotData$longitude)-2
-  x2 <- max(plotData$longitude)+2
-  y1 <- min(plotData$latitude)-2
-  y2 <- max(plotData$latitude)+2
-  zoomLevel <- 4
-  zoomLevels <- c(2000, 4000, 6000, 10000, 15000, 45000, 70000, 90000)
-  for ( i in 2:length(zoomLevels)){
-    if ((length(plotData$plotValues) > zoomLevels[i-1])
-        & (length(plotData$plotValues) <= zoomLevels[i])){
-      zoomLevel <- i+3
-    }
-  }
-  pal <- colorFactor(c("green", "blue", "black", "grey", "magenta3", "red"),
-                     domain=c("Active", "Active(2)",
-                              "Blacklisted", "NA", "Passive", "Rejected"))
-
-  if(is.null(plotData$level)) {
-    plotData$popup <- paste(
-      "Sensor: ", plotRequest$criteria$obname,
-      "<br>Satellite: ", plotRequest$criteria$satname,
-      "<br>Channel: ", plotData$channel,
-      "<br>Anflag: ", plotData$anflag,
-      "<br>Status:", plotData$status
-    )
-  } else {
-    plotData$popup <- paste(
-      "Station: ", plotData$statLabel,
-      "<br>Level: ", plotData$level,
-      "<br>Anflag: ", plotData$anflag,
-      "<br>Status:", plotData$status
-    )
-  }
-  clusterOptions <- markerClusterOptions(disableClusteringAtZoom=zoomLevel)
-  obMap <- leaflet(data=plotData[rev(order(status)),]) %>%
-    addProviderTiles("Esri.WorldStreetMap",
-                     options=providerTileOptions(opacity=0.5)) %>%
-    fitBounds(x1, y1, x2, y2 ) %>%
-    addCircleMarkers(~longitude, ~latitude, popup=~popup, radius=8,
-                     stroke=FALSE, weight=1, opacity=1, color="black",
-                     fillColor=~pal(status), fillOpacity=.5,
-                     clusterOptions=clusterOptions) %>%
-    addLegend("topright", pal=pal, values=~status, opacity=1)
-  obMap
-}
-
-doPlot.mapUsage <- function(p, plotRequest, plotData) {
-  status <- rep("NA", nrow(plotData))
-  status <- ifelse(plotData$anflag == 0, "Rejected", status)
-  status <- ifelse(plotData$active  > 0, "Active", status)
-  status <- ifelse(plotData$rejected > 0, "Rejected", status)
-  status <- ifelse(plotData$passive > 0, "Passive", status)
-  status <- ifelse(plotData$blacklisted > 0, "Blacklisted", status)
-  status <- ifelse(plotData$anflag  > 0, "Active(2)", status)
-  status <- ifelse(plotData$anflag == 4, "Rejected", status)
-  status <- ifelse(plotData$anflag == 8, "Blacklisted", status)
-  plotData$status <- status
-  NextMethod() +
-    geom_point(data=plotData[rev(order(status)),],
-               aes(x=longitude, y=latitude,
-                 colour=status, shape=status, fill=status
-               ),
-               size=2, alpha=.75) +
-    scale_shape_manual(name="Legend",
-                        values=c("Active"=21, "Active(2)"=21,
-                                 "Rejected"=22, "Passive"=23,
-                                 "Blacklisted"=24, "NA"=13)) +
-    scale_fill_manual(name="Legend",
-                        values=c("Active"="green", "Active(2)"="blue",
-                                 "Rejected"="red", "Passive"="magenta3",
-                                 "Blacklisted"="black", "NA"=NA)) +
-    scale_colour_manual(name="Legend",
-                        values=c("Active"="green", "Active(2)"="blue",
-                                 "Rejected"="red", "Passive"="black",
-                                 "Blacklisted"="black", "NA"="grey"))
-}
-
-doPlotly.mapUsage <- function(p, plotRequest, plotData) {
-  status <- rep("NA", nrow(plotData))
-  status <- ifelse(plotData$anflag == 0, "Rejected", status)
-  status <- ifelse(plotData$active  > 0, "Active", status)
-  status <- ifelse(plotData$rejected > 0, "Rejected", status)
-  status <- ifelse(plotData$passive > 0, "Passive", status)
-  status <- ifelse(plotData$blacklisted > 0, "Blacklisted", status)
-  status <- ifelse(plotData$anflag  > 0, "Active(2)", status)
-  status <- ifelse(plotData$anflag == 4, "Rejected", status)
-  status <- ifelse(plotData$anflag == 8, "Blacklisted", status)
-  plotData$status <- status
-
+.mapUsageInteractivePlottingFunction <- function(plot) {
   colors <- c(
     "Active"="green", "Active(2)"="blue",
     "Rejected"="red", "Passive"="magenta3",
     "Blacklisted"="black", "NA"="grey"
   )
 
-  myPlotly <- NextMethod()
-  myPlotly <- myPlotly %>%
+  plotlyMap <- .getInteractiveGenericMapPlot(plot) %>%
     add_markers(
-      data=plotData[rev(order(status)),],
-      text=~gsub("\\w*:[[:space:]]*<br />", "", gsub("(<br />){2,}", "<br />", paste(
-	if("statLabel" %in% names(plotData)) paste("Station:", statLabel),
-	if("level" %in% names(plotData)) paste("Level:", level),
-	if("channel" %in% names(plotData)) paste("Channel:", channel),
-        sprintf("Coords: (%.3f\u00B0, %.3f\u00B0)", longitude, latitude),
-        paste("Anflag:", anflag),
-        paste("Status:", status),
-        sep="<br />"
-      ))),
-      marker = list(
-        line = list(
+      data=plot$data,
+      text=~gsub(
+        "\\w*:[[:space:]]*<br />", "",
+        gsub(
+          "(<br />){2,}", "<br />",
+          paste(
+            if("statid" %in% names(plot$data)) paste("Station:", statid),
+            if("level" %in% names(plot$data)) paste("Level:", level),
+            if("channel" %in% names(plot$data)) paste("Channel:", channel),
+            sprintf("Coords: (%.3f\u00B0, %.3f\u00B0)", longitude, latitude),
+            paste("Anflag:", anflag),
+            paste("Status:", status),
+            sep="<br />"
+          )
+        )
+      ),
+      marker=list(
+        line=list(
           color = 'black',
           width = 0.25,
           opacity=0.1
         )
       ),
-      symbol=~status, color=~status, colors=colors, size=2,
+      symbol=~status,
+      color=~status,
+      colors=colors,
+      size=2,
       hoverinfo="text"
     )
 
-  return(myPlotly)
+  return(plotlyMap)
 }
 
-registerPlotType(
-    "Maps",
-    plotCreate(c("mapUsage", "plotMap"),
-               "Observation Usage", "single",
-               paste("SELECT",
-                     "latitude, longitude, level, statid,",
-                     "active, rejected, passive, blacklisted, anflag, obsvalue",
-                     "FROM usage WHERE %s"),
-               list("obnumber", "obname"))
-)
+.mapThresholdInteractivePlottingFunction <- function(plot) {
+  cm <- .getSuitableColorScale(plot$data)
+  dataColumnName <- unname(attributes(plot$data)$comment["dataColumn"])
 
-plotBuildQuery.mapThreshold <- function(p, plotRequest) {
-  sprintf(p$queryStub, p$dataColumn, buildWhereClause(plotRequest$criteria))
-}
-
-doPlot.mapThreshold <- function(p, plotRequest, plotData) {
-  minval <- min(plotData$plotValues)
-  maxval <- max(plotData$plotValues)
-  cm <- getSuitableColorScale(plotData)
-  NextMethod() +
-    geom_point(data=plotData,
-               aes(x=longitude, y=latitude, fill=plotValues),
-               size=3, shape=21, colour="gray50", alpha=.5, stroke=0.) +
-    scale_fill_distiller(p$dataColumn, palette=cm$name,
-                         direction=cm$direction, limits=cm$domain)
-}
-
-doPlotly.mapThreshold <- function(p, plotRequest, plotData) {
-  cm <- getSuitableColorScale(plotData)
-  myPlotly <- NextMethod()
-  myPlotly <- myPlotly %>%
+  plotlyMap <- .getInteractiveGenericMapPlot(plot) %>%
     add_markers(
-      text=~gsub("\\w*:[[:space:]]*<br />", "", gsub("(<br />){2,}", "<br />", paste(
-	if("statLabel" %in% names(plotData)) paste("Station:", statLabel),
-	if("level" %in% names(plotData)) paste("Level:", level),
-	if("channel" %in% names(plotData)) paste("Channel:", channel),
-        sprintf("Coords: (%.3f\u00B0, %.3f\u00B0)", longitude, latitude),
-        paste0(p$dataColumn, ": ", signif(plotValues, digits=5)),
-        sep="<br />"
-      ))),
-      size=2, color=~plotValues, colors=cm$palette,
-      marker = list(
-        line = list(
-          color = 'black',
-          width = 0.25,
+      text=~gsub(
+        "\\w*:[[:space:]]*<br />", "",
+        gsub(
+          "(<br />){2,}", "<br />",
+          paste(
+	    if("statid" %in% names(plot$data)) paste("Station:", statid),
+	    if("level" %in% names(plot$data)) paste("Level:", level),
+	    if("channel" %in% names(plot$data)) paste("Channel:", channel),
+            sprintf("Coords: (%.3f\u00B0, %.3f\u00B0)", longitude, latitude),
+            paste0(dataColumnName, ": ", signif(plot$data[[dataColumnName]], digits=5)),
+            sep="<br />"
+          )
+        )
+      ),
+      size=2,
+      color=as.formula(sprintf("~%s", dataColumnName)),
+      colors=cm$palette,
+      marker=list(
+        line=list(
+          color='black',
+          width=0.25,
           opacity=0.1
         )
       ),
@@ -384,189 +197,330 @@ doPlotly.mapThreshold <- function(p, plotRequest, plotData) {
     ) %>%
     colorbar(
       limits=cm$domain,
-      title=p$dataColumn,
+      title=dataColumnName,
       yanchor="center", y=0.5,
       xanchor="left", x=1.0
     )
-  return(myPlotly)
+
+  return(plotlyMap)
 }
 
-registerPlotType(
-    "Maps",
-    plotCreate(c("mapThreshold", "plotMap"),
-               "First Guess Departure Map", "single",
-               paste("SELECT",
-                     "latitude, longitude, level, statid, obsvalue,",
-                     "(%s) as plotValues",
-                     "FROM usage WHERE %s AND (plotValues NOT NULL)"),
-               list("obnumber", "obname"),
-               dataColumn="fg_dep")
-)
-registerPlotType(
-    "Maps",
-    plotCreate(c("mapThreshold", "plotMap"),
-               "First Guess Departure + Bias Correction Map", "single",
-               paste("SELECT",
-                     "latitude, longitude, level, statid,",
-                     "(%s) as plotValues",
-                     "FROM usage WHERE %s AND",
-                     "fg_dep NOT NULL AND (plotValues NOT NULL)"),
-               list("obnumber", "obname"),
-               dataColumn="fg_dep+biascrl")
-)
-registerPlotType(
-    "Maps",
-    plotCreate(c("mapThreshold", "plotMap"),
-               "Analysis Departure Map", "single",
-               paste("SELECT",
-                     "latitude, longitude, level, statid, obsvalue,",
-                     "(%s) as plotValues",
-                     "FROM usage WHERE %s AND (plotValues NOT NULL)"),
-               list("obnumber", "obname"),
-               dataColumn="an_dep")
-)
-registerPlotType(
-    "Maps",
-    plotCreate(c("mapThreshold", "plotMap"),
-               "Analysis Increment Map", "single",
-               paste("SELECT",
-                     "latitude, longitude, level, statid,",
-                     "obsvalue, fg_dep, an_dep,",
-                     "(%s) as plotValues",
-                     "FROM usage WHERE %s AND (plotValues NOT NULL)"),
-               list("obnumber", "obname"),
-               dataColumn="fg_dep-an_dep")
-)
-registerPlotType(
-    "Maps",
-    plotCreate(c("mapThreshold", "plotMap"),
-               "Bias Correction Map", "single",
-               paste("SELECT",
-                     "latitude, longitude, level, statid,",
-                     "(%s) as plotValues",
-                     "FROM usage WHERE %s AND (plotValues NOT NULL)"),
-               list("obnumber", "obname"),
-               dataColumn="biascrl")
-)
-registerPlotType(
-    "Maps",
-    plotCreate(c("mapThreshold", "plotMap"),
-               "Observations Map", "single",
-               paste("SELECT",
-                     "latitude, longitude, level, statid,",
-                     "(%s) as plotValues",
-                     "FROM usage WHERE %s AND (plotValues NOT NULL)"),
-               list("obnumber", "obname"),
-               dataColumn="obsvalue")
-)
-registerPlotType(
-    "Maps",
-    plotCreate(c("mapThreshold", "plotMap"),
-               "First Guess Map", "single",
-               paste("SELECT",
-                     "latitude, longitude, level, statid, obsvalue, fg_dep,",
-                     "(%s) as plotValues",
-                     "FROM usage WHERE %s AND (plotValues NOT NULL)"),
-               list("obnumber", "obname"),
-               dataColumn="obsvalue-fg_dep")
-)
+###################################
+# helpers for making leaflet maps #
+###################################
+.getLeafletMapZoomLevel <- function(plotData) {
+  dataColumn <- unname(attributes(plotData)$comment["dataColumn"])
+  if(is.null(dataColumn)) {
+    dataColumn <- colnames(plotData)[ncol(plotData)]
+  }
+  zoomLevel <- 4
+  zoomLevels <- c(2000, 4000, 6000, 10000, 15000, 45000, 70000, 90000)
+  for ( i in 2:length(zoomLevels)){
+    if ((length(plotData[[dataColumn]]) > zoomLevels[i-1])
+        & (length(plotData[[dataColumn]]) <= zoomLevels[i])){
+      zoomLevel <- i+3
+    }
+  }
+  return(zoomLevel)
+}
 
-# The "mapThresholdWithRangeAvgs" class is similar to mapThreshold, except
-# that it takes in a date range and supports the selection of multiple cycles.
-# The plotValues will represent an average of the selected dataColumn over the
-# selectes dates and cycles.
-registerPlotCategory("AverageMaps")
-
-postProcessQueriedPlotData.mapThresholdWithRangeAvgs <- function(plotData) {
-  # Columns we don't want to calculate the average for
-  groupBy=c("statid", "latitude", "longitude", "level")
-  # Make sure we don't try to calculate means of non-numeric columns
-  nonNumericCols <- names(which(sapply(plotData, is.numeric)==FALSE))
-  groupBy <- unique(c(groupBy, nonNumericCols))
-  # Remove DTG if present. Doesn't make sense to have it after the averages.
-  plotData <- within(plotData, rm(DTG))
-  # Finally, calculate the averages
-  plotData <- plotData %>%
-    group_by(.dots=groupBy) %>%
-    summarize_all(mean)
+.fillDataWithLeafletRadiusInfo <- function(plotData) {
+  dataColumn <- unname(attributes(plotData)$comment["dataColumn"])
+  if (max(plotData[[dataColumn]]) > 0) {
+    plotData$radius <- 10.0 * (
+      abs(plotData[[dataColumn]])/max(abs(plotData[[dataColumn]]))
+    )
+    if (length(plotData$radius) > 0) {
+      for (i in 1:length(plotData$radius)) {
+        if (plotData$radius[i] < 3) { plotData$radius[i]=3}
+      }
+    }
+  } else {
+    plotData$radius <- 5
+  }
   return(plotData)
 }
 
-registerPlotType(
-    "AverageMaps",
-    plotCreate(c("mapThresholdWithRangeAvgs", "mapThreshold", "plotMap"),
-               "Average First Guess Departure Map", "range",
-               paste("SELECT",
-                     "latitude, longitude, level, statid, obsvalue,",
-                     "(%s) as plotValues",
-                     "FROM usage WHERE %s AND (plotValues NOT NULL)"),
-               list("obnumber", "obname"),
-               dataColumn="fg_dep")
+####################################################
+# plotting functions passed when registering plots #
+####################################################
+# a) combined ggploy/plotly (shown in "plot" tab in the UI)
+.mapUsagePlottingFunction <- function(plot) {
+  if(nrow(plot$data)==0) return(errorPlot("No data to plot."))
+  if(plot$parentType$interactive) {
+    return(.mapUsageInteractivePlottingFunction(plot))
+  } else {
+    return(.mapUsageStaticPlottingFunction(plot))
+  }
+}
+
+.mapThresholdPlottingFunction <- function(plot) {
+  if(nrow(plot$data)==0) return(errorPlot("No data to plot."))
+  if(plot$parentType$interactive) {
+    return(.mapThresholdInteractivePlottingFunction(plot))
+  } else {
+    return(.mapThresholdStaticPlottingFunction(plot))
+  }
+}
+
+# b) leaflet (shown in "map" tab in the UI)
+.mapThresholdLeafletPlottingFunction <- function(plot) {
+  plotData <- .fillDataWithLeafletRadiusInfo(plot$data)
+  dataColumn <- unname(attributes(plotData)$comment["dataColumn"])
+  zoomLevel <- .getLeafletMapZoomLevel(plotData)
+
+  cm <- .getSuitableColorScale(plotData)
+  dataPal <- colorNumeric(palette=cm$palette, domain=cm$domain)
+  legendPal <- colorNumeric(palette=rev(cm$palette), domain=cm$domain)
+
+  leafletMap <- leaflet(data=plotData) %>%
+    addProviderTiles(
+      "Esri.WorldStreetMap",
+      options=providerTileOptions(opacity=0.7)
+    ) %>%
+    addCircleMarkers(
+      lng=~longitude,
+      lat=~latitude,
+      popup=.getLeafletPopupContents(plot$data),
+      radius=~radius,
+      fillColor=as.formula(sprintf("~dataPal(`%s`)", dataColumn)),
+      fillOpacity=.7,
+      stroke=FALSE,
+      weight=1,
+      opacity=1,
+      color="black",
+      clusterOptions=markerClusterOptions(disableClusteringAtZoom=zoomLevel)
+    ) %>%
+    addLegend(
+      "topright",
+      pal=legendPal,
+      title=dataColumn,
+      values=cm$domain,
+      opacity=1,
+      labFormat=labelFormat(transform=function(x) sort(x, decreasing=TRUE))
+    )
+  return(leafletMap)
+}
+
+.mapUsageLeafletPlottingFunction <- function(plot) {
+  zoomLevel <- .getLeafletMapZoomLevel(plot$data)
+  pallete <- colorFactor(
+    c("green", "blue", "black", "grey", "magenta3", "red"),
+    domain=c("Active", "Active(2)", "Blacklisted", "NA", "Passive", "Rejected")
+  )
+
+  leafletMap <- leaflet(data=plot$data) %>%
+    addProviderTiles(
+      "Esri.WorldStreetMap",
+      options=providerTileOptions(opacity=0.7)
+    ) %>%
+    addCircleMarkers(
+      lng=~longitude,
+      lat=~latitude,
+      popup=.getLeafletPopupContents(plot$data),
+      radius=8,
+      stroke=FALSE,
+      fillColor=~pallete(status),
+      fillOpacity=.5,
+      weight=1,
+      opacity=1,
+      color="black",
+      clusterOptions=markerClusterOptions(disableClusteringAtZoom=zoomLevel)
+    ) %>%
+    addLegend(
+      "topright",
+      pal=pallete,
+      values=~status,
+      opacity=1
+    )
+  return(leafletMap)
+}
+
+##################
+# Register plots #
+##################
+plotRegistry$registerPlotType(
+  name="Observation Usage",
+  category="Maps",
+  dateType="single",
+  dataFieldsInRetrievedPlotData=list(
+    "latitude", "longitude", "level", "statid", "active", "rejected",
+    "passive", "blacklisted", "anflag", "obsvalue"
+  ),
+  dataFieldsInSqliteWhereClause=list("obnumber", "obname"),
+  plottingFunction=.mapUsagePlottingFunction,
+  leafletPlottingFunction=.mapUsageLeafletPlottingFunction,
+  dataPostProcessingFunction = function(data) {
+    status <- rep("NA", nrow(data))
+    status <- ifelse(data$anflag == 0, "Rejected", status)
+    status <- ifelse(data$active  > 0, "Active", status)
+    status <- ifelse(data$rejected > 0, "Rejected", status)
+    status <- ifelse(data$passive > 0, "Passive", status)
+    status <- ifelse(data$blacklisted > 0, "Blacklisted", status)
+    status <- ifelse(data$anflag  > 0, "Active(2)", status)
+    status <- ifelse(data$anflag == 4, "Rejected", status)
+    status <- ifelse(data$anflag == 8, "Blacklisted", status)
+    data$status <- status
+    data <- data[rev(order(data$status)),]
+    return(data)
+  }
 )
-registerPlotType(
-    "AverageMaps",
-    plotCreate(c("mapThresholdWithRangeAvgs", "mapThreshold", "plotMap"),
-               "Average First Guess Departure + Bias Correction Map", "range",
-               paste("SELECT",
-                     "latitude, longitude, level, statid,",
-                     "(%s) as plotValues",
-                     "FROM usage WHERE %s AND (plotValues NOT NULL)"),
-               list("obnumber", "obname"),
-               dataColumn="fg_dep+biascrl")
+
+plotRegistry$registerPlotType(
+  name="First Guess Departure Map",
+  category="Maps",
+  dateType="single",
+  dataFieldsInRetrievedPlotData=list(
+    "latitude", "longitude", "level", "statid", "obsvalue", "fg_dep"
+  ),
+  dataFieldsInSqliteWhereClause=list("obnumber", "obname"),
+  plottingFunction=.mapThresholdPlottingFunction,
+  leafletPlottingFunction=.mapThresholdLeafletPlottingFunction,
+  dataPostProcessingFunction = function(data) {
+    comment(data) <- c(dataColumn="fg_dep")
+    return(data)
+  }
 )
-registerPlotType(
-    "AverageMaps",
-    plotCreate(c("mapThresholdWithRangeAvgs", "mapThreshold", "plotMap"),
-               "Average Analysis Departure Map", "range",
-               paste("SELECT",
-                     "latitude, longitude, level, statid, obsvalue,",
-                     "(%s) as plotValues",
-                     "FROM usage WHERE %s AND (plotValues NOT NULL)"),
-               list("obnumber", "obname"),
-               dataColumn="an_dep")
+
+plotRegistry$registerPlotType(
+  name="First Guess Departure + Bias Correction Map",
+  category="Maps",
+  dateType="single",
+  dataFieldsInRetrievedPlotData=list(
+    "latitude", "longitude", "level", "statid", "fg_dep", "biascrl"
+  ),
+  dataFieldsInSqliteWhereClause=list("obnumber", "obname"),
+  plottingFunction=.mapThresholdPlottingFunction,
+  leafletPlottingFunction=.mapThresholdLeafletPlottingFunction,
+  dataPostProcessingFunction = function(data) {
+    data[["fg_dep+biascrl"]] <- data$fg_dep + data$biascrl
+    comment(data) <- c(dataColumn="fg_dep+biascrl")
+    return(data)
+  }
 )
-registerPlotType(
-    "AverageMaps",
-    plotCreate(c("mapThresholdWithRangeAvgs", "mapThreshold", "plotMap"),
-               "Average Analysis Increment Map", "range",
-               paste("SELECT",
-                     "latitude, longitude, level, statid,",
-                     "obsvalue, fg_dep, an_dep,",
-                     "(%s) as plotValues",
-                     "FROM usage WHERE %s AND (plotValues NOT NULL)"),
-               list("obnumber", "obname"),
-               dataColumn="fg_dep-an_dep")
+
+plotRegistry$registerPlotType(
+  name="Analysis Departure Map",
+  category="Maps",
+  dateType="single",
+  dataFieldsInRetrievedPlotData=list(
+    "latitude", "longitude", "level", "statid", "obsvalue", "an_dep"
+  ),
+  dataFieldsInSqliteWhereClause=list("obnumber", "obname"),
+  plottingFunction=.mapThresholdPlottingFunction,
+  leafletPlottingFunction=.mapThresholdLeafletPlottingFunction,
+  dataPostProcessingFunction = function(data) {
+    comment(data) <- c(dataColumn="an_dep")
+    return(data)
+  }
 )
-registerPlotType(
-    "AverageMaps",
-    plotCreate(c("mapThresholdWithRangeAvgs", "mapThreshold", "plotMap"),
-               "Average Bias Correction Map", "range",
-               paste("SELECT",
-                     "latitude, longitude, level, statid,",
-                     "(%s) as plotValues",
-                     "FROM usage WHERE %s AND (plotValues NOT NULL)"),
-               list("obnumber", "obname"),
-               dataColumn="biascrl")
+
+plotRegistry$registerPlotType(
+  name="Analysis Increment Map",
+  category="Maps",
+  dateType="single",
+  dataFieldsInRetrievedPlotData=list(
+    "latitude", "longitude", "level", "statid", "obsvalue", "fg_dep", "an_dep"
+  ),
+  dataFieldsInSqliteWhereClause=list("obnumber", "obname"),
+  plottingFunction=.mapThresholdPlottingFunction,
+  leafletPlottingFunction=.mapThresholdLeafletPlottingFunction,
+  dataPostProcessingFunction = function(data) {
+    data[["fg_dep-an_dep"]] <- data$fg_dep - data$an_dep
+    comment(data) <- c(dataColumn="fg_dep-an_dep")
+    return(data)
+  }
 )
-registerPlotType(
-    "AverageMaps",
-    plotCreate(c("mapThresholdWithRangeAvgs", "mapThreshold", "plotMap"),
-               "Average Observations Map", "range",
-               paste("SELECT",
-                     "latitude, longitude, level, statid,",
-                     "(%s) as plotValues",
-                     "FROM usage WHERE %s AND (plotValues NOT NULL)"),
-               list("obnumber", "obname"),
-               dataColumn="obsvalue")
+
+plotRegistry$registerPlotType(
+  name="Bias Correction Map",
+  category="Maps",
+  dateType="single",
+  dataFieldsInRetrievedPlotData=list(
+    "latitude", "longitude", "level", "statid", "biascrl"
+  ),
+  dataFieldsInSqliteWhereClause=list("obnumber", "obname"),
+  plottingFunction=.mapThresholdPlottingFunction,
+  leafletPlottingFunction=.mapThresholdLeafletPlottingFunction,
+  dataPostProcessingFunction = function(data) {
+    comment(data) <- c(dataColumn="biascrl")
+    return(data)
+  }
 )
-registerPlotType(
-    "AverageMaps",
-    plotCreate(c("mapThresholdWithRangeAvgs", "mapThreshold", "plotMap"),
-               "Average First Guess Map", "range",
-               paste("SELECT",
-                     "latitude, longitude, level, statid, obsvalue, fg_dep,",
-                     "(%s) as plotValues",
-                     "FROM usage WHERE %s AND (plotValues NOT NULL)"),
-               list("obnumber", "obname"),
-               dataColumn="obsvalue-fg_dep")
+
+plotRegistry$registerPlotType(
+  name="Observations Map",
+  category="Maps",
+  dateType="single",
+  dataFieldsInRetrievedPlotData=list(
+    "latitude", "longitude", "level", "statid", "obsvalue"
+  ),
+  dataFieldsInSqliteWhereClause=list("obnumber", "obname"),
+  plottingFunction=.mapThresholdPlottingFunction,
+  leafletPlottingFunction=.mapThresholdLeafletPlottingFunction,
+  dataPostProcessingFunction = function(data) {
+    comment(data) <- c(dataColumn="obsvalue")
+    return(data)
+  }
 )
+
+plotRegistry$registerPlotType(
+  name="First Guess Map",
+  category="Maps",
+  dateType="single",
+  dataFieldsInRetrievedPlotData=list(
+    "latitude", "longitude", "level", "statid", "obsvalue", "fg_dep"
+  ),
+  dataFieldsInSqliteWhereClause=list("obnumber", "obname"),
+  plottingFunction=.mapThresholdPlottingFunction,
+  leafletPlottingFunction=.mapThresholdLeafletPlottingFunction,
+  dataPostProcessingFunction = function(data) {
+    data[["obsvalue-fg_dep"]] <- data$obsvalue - data$fg_dep
+    comment(data) <- c(dataColumn="obsvalue-fg_dep")
+    return(data)
+  }
+)
+
+#################################################
+# Register plots of the "Average Maps" category #
+#################################################
+# These are similar to the ones defined above, except that they take in a date
+# range and support the selection of multiple cycles. The plotted values will
+# represent an average of the data presented in the the corresponding
+# non-average plots over the selected dates and cycles.
+for(templatePlotType in plotRegistry$plotTypes) {
+  if(templatePlotType$category != "Maps") next
+  if(templatePlotType$name == "Observation Usage") next
+  avgMapPlotType <- templatePlotType$copy()
+  avgMapPlotType$name <- paste("Average", templatePlotType$name)
+  avgMapPlotType$category <- paste("Average", templatePlotType$category)
+  avgMapPlotType$dateType <- "range"
+
+  # Defining a generating function for the data post-processing function.
+  # This is important because of lazy-evaluation: otherwise, the last
+  # templatePlotType in the loop will be used in all data post-processing
+  # functions defined in the loop.
+  gendataPostProcessingFunction <- function(templatePT=templatePlotType) {
+    force(templatePT) # Important: Force the evaluation of the func arg.
+    function(data) {
+      # Calculate averages as a post-process step upon the queried data
+      data <- templatePT$dataPostProcessingFunction(data)
+      originalDataComments <- comment(data)
+
+      groupByCols = intersect(
+        c("statid", "latitude", "longitude", "level"), colnames(data)
+      )
+      nonNumericCols <- names(which(sapply(data, is.numeric)==FALSE))
+      colsToDrop <- c("DTG", setdiff(nonNumericCols, groupByCols))
+      data <- data[!(colnames(data) %in% colsToDrop)]
+
+      data <- data %>%
+        group_by(!!!syms(groupByCols)) %>%
+        summarize_all(mean)
+      comment(data) <- originalDataComments
+      return(data)
+    }
+  }
+  avgMapPlotType$dataPostProcessingFunction <- gendataPostProcessingFunction()
+  plotRegistry$registerPlotType(avgMapPlotType)
+}
