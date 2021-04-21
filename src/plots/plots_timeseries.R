@@ -257,7 +257,7 @@ plotRegistry$registerPlotType(
     "DTG", "level", "varname", "nobs_total", "fg_rms_total", "an_rms_total",
     "fg_bias_total", "an_bias_total"
   ),
-  dataFieldsInSqliteWhereClause=list("obnumber", "obname", "varname"),
+  dataFieldsInSqliteWhereClause=list("obnumber", "obname"),
   dataPostProcessingFunction=.filterOutZeroNobsTotal,
   plottingFunction=obsFitTimeseriesPlottingFunction
 )
@@ -269,7 +269,7 @@ plotRegistry$registerPlotType(
   dataFieldsInRetrievedPlotData=list(
     "DTG", "level", "varname", "nobs_total", "fg_bias_total", "fg_uncorr_total"
   ),
-  dataFieldsInSqliteWhereClause=list("obnumber", "obname", "varname"),
+  dataFieldsInSqliteWhereClause=list("obnumber", "obname"),
   dataPostProcessingFunction=.filterOutZeroNobsTotal,
   plottingFunction=firstGuessTotalTimeseriesPlottingFunction
 )
