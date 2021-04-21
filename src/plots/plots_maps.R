@@ -294,8 +294,10 @@
     addLegend(
       "topright",
       pal=legendPal,
-      values=as.formula(sprintf("~`%s`", dataColumn)),
-      opacity=1
+      title=dataColumn,
+      values=cm$domain,
+      opacity=1,
+      labFormat=labelFormat(transform=function(x) sort(x, decreasing=TRUE))
     )
   return(leafletMap)
 }
