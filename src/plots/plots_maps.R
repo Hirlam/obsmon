@@ -276,7 +276,7 @@
   leafletMap <- leaflet(data=plotData) %>%
     addProviderTiles(
       "Esri.WorldStreetMap",
-      options=providerTileOptions(opacity=0.5)
+      options=providerTileOptions(opacity=0.7)
     ) %>%
     addCircleMarkers(
       lng=~longitude,
@@ -312,7 +312,7 @@
   leafletMap <- leaflet(data=plot$data) %>%
     addProviderTiles(
       "Esri.WorldStreetMap",
-      options=providerTileOptions(opacity=0.5)
+      options=providerTileOptions(opacity=0.7)
     ) %>%
     addCircleMarkers(
       lng=~longitude,
