@@ -403,16 +403,16 @@ test_that("'data', 'chart' and 'leafletMap' cache results", {
 })
 
 ###########################################
-context("obsmonPlotRegistry")
+context("obsmonPlotRegistryClass")
 ###########################################
-test_that("obsmonPlotRegistry can be instanciated", {
-    plotRegistry <- obsmonPlotRegistry()
+test_that("obsmonPlotRegistryClass can be instanciated", {
+    plotRegistry <- obsmonPlotRegistryClass()
     expect_s4_class(plotRegistry, "obsmonPlotRegistry")
     expect_equal(length(plotRegistry$plotTypes), 0)
 })
 
-test_that("obsmonPlotRegistry can register plots with plotTypeClass args", {
-    plotRegistry <- obsmonPlotRegistry()
+test_that("obsmonPlotRegistryClass can register plots with plotTypeClass args", {
+    plotRegistry <- obsmonPlotRegistryClass()
     prevNumRegPlotTypes <- 0
     for(plotType in c(mockPlotType, mockNonInteractivePlotType)) {
       plotRegistry$registerPlotType(plotType)
@@ -427,8 +427,8 @@ test_that("obsmonPlotRegistry can register plots with plotTypeClass args", {
     }
 })
 
-test_that("obsmonPlotRegistry can register plots with regular args", {
-  plotRegistry <- obsmonPlotRegistry()
+test_that("obsmonPlotRegistryClass can register plots with regular args", {
+  plotRegistry <- obsmonPlotRegistryClass()
   plotRegistry$registerPlotType(name="foo", category="bar")
   expect_equal(length(plotRegistry$plotTypes), 1)
   expect_equal(
@@ -437,11 +437,11 @@ test_that("obsmonPlotRegistry can register plots with regular args", {
   )
 })
 
-test_that("obsmonPlotRegistry reg via args and plotTypeClass are equivalent", {
+test_that("obsmonPlotRegistryClass reg via args and plotTypeClass are equivalent", {
     names <- c("foo", "bar")
     categories <- c("baz", "qux")
-    plotRegistry1 <- obsmonPlotRegistry()
-    plotRegistry2 <- obsmonPlotRegistry()
+    plotRegistry1 <- obsmonPlotRegistryClass()
+    plotRegistry2 <- obsmonPlotRegistryClass()
     for (i in seq_along(names)) {
       plotRegistry1$registerPlotType(plotTypeClass(
         name=names[i],
@@ -455,12 +455,12 @@ test_that("obsmonPlotRegistry reg via args and plotTypeClass are equivalent", {
     expect_equal(plotRegistry1$plotTypes, plotRegistry2$plotTypes)
 })
 
-test_that("obsmonPlotRegistry refuses to register plots with same name", {
+test_that("obsmonPlotRegistryClass refuses to register plots with same name", {
     plotType1 <- mockPlotType$copy()
     plotType2 <- mockNonInteractivePlotType$copy()
     plotType2$name <- plotType1$name
 
-    plotRegistry <- obsmonPlotRegistry()
+    plotRegistry <- obsmonPlotRegistryClass()
     plotRegistry$registerPlotType(plotType1)
     expect_error(
       plotRegistry$registerPlotType(plotType2),
@@ -482,7 +482,7 @@ test_that("getCategorisedPlotTypeNames puts plotTypes in correct categories", {
   )
   plotCategories <- rep(uniqueCategories, length.out=nPlotTypes)
 
-  plotRegistry <- obsmonPlotRegistry()
+  plotRegistry <- obsmonPlotRegistryClass()
   for (iPlot in seq_along(plotNames)) {
     plotRegistry$registerPlotType(
       name=plotNames[iPlot],
@@ -493,7 +493,7 @@ test_that("getCategorisedPlotTypeNames puts plotTypes in correct categories", {
   categorisedPlotTypeNames <- plotRegistry$getCategorisedPlotTypeNames()
   expect_equal(length(categorisedPlotTypeNames), length(uniqueCategories))
 
-  newPlotRegistry <- obsmonPlotRegistry()
+  newPlotRegistry <- obsmonPlotRegistryClass()
   for (categ in uniqueCategories) {
     pTypeNamesInCategory <- categorisedPlotTypeNames[[categ]]
     for (pTypeName in pTypeNamesInCategory) {
@@ -506,7 +506,7 @@ test_that("getCategorisedPlotTypeNames puts plotTypes in correct categories", {
 })
 
 test_that("isCompatibleWithUiParams works", {
-  plotRegistry <- obsmonPlotRegistry()
+  plotRegistry <- obsmonPlotRegistryClass()
   pType <- plotTypeClass(
     name="foo",
     category="foo category",
@@ -544,7 +544,7 @@ test_that("isCompatibleWithUiParams works", {
 })
 
 test_that("getCategorisedPlotTypeNames works with compatibility filters", {
-  plotRegistry <- obsmonPlotRegistry()
+  plotRegistry <- obsmonPlotRegistryClass()
   plotRegistry$registerPlotType(
     name="foo",
     category="foo category",

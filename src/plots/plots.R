@@ -504,7 +504,7 @@ obsmonPlotClass <- setRefClass(Class="obsmonPlot",
   )
 )
 
-obsmonPlotRegistry <- setRefClass(Class="obsmonPlotRegistry",
+obsmonPlotRegistryClass <- setRefClass(Class="obsmonPlotRegistry",
   fields=list(
     plotTypes="list"
   ),
@@ -553,7 +553,7 @@ obsmonPlotRegistry <- setRefClass(Class="obsmonPlotRegistry",
 )
 
 # Create the plot registry that will be used throughout
-plotRegistry <- obsmonPlotRegistry()
+plotRegistry <- obsmonPlotRegistryClass()
 
 #######################################################
 # Some utility functions used when defining the plots #
