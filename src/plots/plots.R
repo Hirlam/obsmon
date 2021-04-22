@@ -722,3 +722,23 @@ addTitleToPlot <- function(myPlot, title) {
   }
   return(plotData[["popupContents"]])
 }
+
+plotlyJSColorMapNames <- c(
+  "RdBu",
+  "Blackbody",
+  "Bluered",
+  "Blues",
+  "Earth",
+  "Electric",
+  "Greens",
+  "Greys",
+  "Hot",
+  "Jet",
+  "Picnic",
+  "Portland",
+  "Rainbow",
+  "Reds",
+  "Viridis",
+  "YlGnBu",
+  "YlOrRd"
+)
