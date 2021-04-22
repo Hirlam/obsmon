@@ -167,6 +167,37 @@
   cm <- .getSuitableColorScale(plot$data)
   dataColumnName <- unname(attributes(plot$data)$comment["dataColumn"])
 
+  .generatePlotlyUpdateColorScaleButton <- function(colorScaleName) {
+    pallete <- brewer.pal(
+      brewer.pal.info[colorScaleName,]$maxcolors,
+      colorScaleName
+    )
+    pallete <- colorRampPalette(pallete)(25)
+    palleteRgba <- sapply(pallete, plotly::toRGB, USE.NAMES=FALSE)
+
+    colorMap <- t(mapply(c,
+      seq(0, 1, length.out=length(palleteRgba)),
+      palleteRgba
+    ))
+
+    rtn <- list(
+      label=colorScaleName,
+      method="restyle",
+      #args=list("marker.colorscale", colorScaleName)
+      #args=list("marker.colorscale", colorMap)
+      args=list(list(
+        marker.colorscale=colorMap
+      ))
+    )
+    return(rtn)
+  }
+
+  colorMapNames <- rownames(subset(RColorBrewer::brewer.pal.info, category=="div"))
+  updateColorScaleButtons = lapply(
+    colorMapNames,
+    .generatePlotlyUpdateColorScaleButton
+  )
+
   plotlyMap <- .getInteractiveGenericMapPlot(plot) %>%
     add_markers(
       text=~gsub(
@@ -200,6 +231,14 @@
       title=dataColumnName,
       yanchor="center", y=0.5,
       xanchor="left", x=1.0
+    ) %>%
+    layout(
+      updatemenus = list(
+        list(
+          y = 0.8,
+          buttons=updateColorScaleButtons
+        )
+      )
     )
 
   return(plotlyMap)
