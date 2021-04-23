@@ -154,14 +154,13 @@ observeEvent(input$doPlot, {
 }, priority=2000)
 
 # Finally, producing the output
-chart <- reactiveVal()
-observe({
+chart <- reactive({
   if (is.null(obsmonPlotObj())) return(NULL)
   notifId <- showNotification(
     "Producing plot...", duration=NULL, type="message"
   )
   on.exit(removeNotification(notifId))
-  chart(obsmonPlotObj()$chart)
+  obsmonPlotObj()$chart
 })
 leafletMap <- reactive({
   if (is.null(obsmonPlotObj())) return(NULL)
@@ -312,12 +311,17 @@ output$mainAreaPlotEditingOptions <- renderUI({
 })
 
 observeEvent(input$mainTabPlotColorscaleRange,{
-  previousChart <- req(chart())
   cmin <- input$mainTabPlotColorscaleRange[1]
   cmax <- input$mainTabPlotColorscaleRange[2]
-  newChart <- previousChart %>%
-    colorbar(limits=c(cmin, cmax))
-  chart(newChart)
+
+  plotlyProxy(outputId="plotly", session) %>%
+    plotlyProxyInvoke(
+      method="update",
+      list(
+        marker.cmin=cmin,
+        marker.cmax=cmax
+      )
+    )
 })
 
 observeEvent(input$mainTabPlotColorscaleColorMap,{
