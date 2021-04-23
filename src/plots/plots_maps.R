@@ -167,17 +167,6 @@
   cm <- .getSuitableColorScale(plot$data)
   dataColumnName <- unname(attributes(plot$data)$comment["dataColumn"])
 
-  .generatePlotlyUpdateColorScaleButton <- function(colorScaleName) {
-    rtn <- list(
-      label=colorScaleName,
-      method="restyle",
-      args=list(list(
-        marker.colorscale=colorScaleName
-      ))
-    )
-    return(rtn)
-  }
-
   plotlyMap <- .getInteractiveGenericMapPlot(plot) %>%
     add_markers(
       text=~gsub(
@@ -211,17 +200,6 @@
       title=dataColumnName,
       yanchor="center", y=0.5,
       xanchor="left", x=1.0
-    ) %>%
-    layout(
-      updatemenus = list(
-        list(
-          y = 0.8,
-          buttons=lapply(
-            plotlyJSColorMapNames,
-            .generatePlotlyUpdateColorScaleButton
-          )
-        )
-      )
     )
 
   return(plotlyMap)

@@ -285,10 +285,29 @@ output$mainAreaPlotEditingOptions <- renderUI({
   }
   req(all(is.finite(c(cmin, cmax))))
 
-  numericRangeInput(
-    "mainTabPlotColorscaleRange",
-    label="Color Scale Range",
-    value=as.numeric(format(c(cmin, cmax), digits=3))
+  colorMapsDf <- RColorBrewer::brewer.pal.info
+  colorMapChoices <- list()
+  for(categ in unique(colorMapsDf$category)) {
+    colorMapChoices[[categ]] <- rownames(subset(colorMapsDf, category==categ))
+  }
+
+  fluidRow(
+    column(2, pickerInput(
+      "mainTabPlotColorscaleColorMap",
+      label="Color Map",
+      choices=colorMapChoices,
+      multiple=TRUE,
+      options=list(
+        `max-options`=1,
+        `none-selected-text`="Select color map",
+        `live-search`=TRUE
+      )
+    )),
+    column(3, numericRangeInput(
+      "mainTabPlotColorscaleRange",
+      label="Color Scale Range",
+      value=as.numeric(format(c(cmin, cmax), digits=3))
+    ))
   )
 })
 
@@ -299,4 +318,23 @@ observeEvent(input$mainTabPlotColorscaleRange,{
   newChart <- previousChart %>%
     colorbar(limits=c(cmin, cmax))
   chart(newChart)
+})
+
+observeEvent(input$mainTabPlotColorscaleColorMap,{
+  colorScaleName <- input$mainTabPlotColorscaleColorMap
+
+  pallete <- brewer.pal(brewer.pal.info[colorScaleName,]$maxcolors, colorScaleName)
+  pallete <- colorRampPalette(pallete)(25)
+  palleteRgba <- sapply(pallete, plotly::toRGB, USE.NAMES=FALSE)
+
+  colorMap <- t(mapply(c,
+    seq(0, 1, length.out=length(palleteRgba)),
+    palleteRgba
+  ))
+
+  plotlyProxy(outputId="plotly", session) %>%
+    plotlyProxyInvoke(
+      method="restyle",
+      list(marker.colorscale=list(colorMap))
+    )
 })
