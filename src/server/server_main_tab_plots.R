@@ -154,13 +154,14 @@ observeEvent(input$doPlot, {
 }, priority=2000)
 
 # Finally, producing the output
-chart <- reactive({
+chart <- reactiveVal()
+observe({
   if (is.null(obsmonPlotObj())) return(NULL)
   notifId <- showNotification(
     "Producing plot...", duration=NULL, type="message"
   )
   on.exit(removeNotification(notifId))
-  obsmonPlotObj()$chart
+  chart(obsmonPlotObj()$chart)
 })
 leafletMap <- reactive({
   if (is.null(obsmonPlotObj())) return(NULL)
@@ -267,3 +268,35 @@ output$map <- renderLeaflet({
   leafletMap()
 })
 output$mapTitle <- renderText(obsmonPlotObj()$title)
+
+# Interactively update colorbar range in charts where this applies
+output$mainAreaPlotEditingOptions <- renderUI({
+  chart <- req(obsmonPlotObj()$chart)
+  plotData <- req(obsmonPlotObj()$data)
+  #dataColumn <- req(unname(attributes(plotData)$comment["dataColumn"]))
+
+  # TODO: Come up with a way to prevent users from selecting a range
+  #       that leaves data out
+  cmin <- Inf
+  cmax <- -Inf
+  for (dataProperty in chart$x$data) {
+    cmin <- min(cmin, dataProperty$marker$cmin)
+    cmax <- max(cmin, dataProperty$marker$cmax)
+  }
+  req(all(is.finite(c(cmin, cmax))))
+
+  numericRangeInput(
+    "mainTabPlotColorscaleRange",
+    label="Color Scale Range",
+    value=as.numeric(format(c(cmin, cmax), digits=3))
+  )
+})
+
+observeEvent(input$mainTabPlotColorscaleRange,{
+  previousChart <- req(chart())
+  cmin <- input$mainTabPlotColorscaleRange[1]
+  cmax <- input$mainTabPlotColorscaleRange[2]
+  newChart <- previousChart %>%
+    colorbar(limits=c(cmin, cmax))
+  chart(newChart)
+})

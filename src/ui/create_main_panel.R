@@ -38,7 +38,8 @@ createMainPanel <- function(prependToIds=NULL) {
       tabPanel("Query and Data", value=tabPanelValueDataTab,
         uiOutput(uiOutputIdForQueryAndTable)
       )
-    )
+    ),
+    uiOutput(paste0(tabsetPanelId, "PlotEditingOptions"))
   )
   return(rtn)
 }
