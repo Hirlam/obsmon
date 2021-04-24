@@ -290,8 +290,8 @@ output$mainAreaPlotEditingOptions <- renderUI({
     colorMapChoices[[categ]] <- rownames(subset(colorMapsDf, category==categ))
   }
 
-  fluidRow(
-    column(2, pickerInput(
+  tags$div(
+    pickerInput(
       "mainTabPlotColorscaleColorMap",
       label="Color Map",
       choices=colorMapChoices,
@@ -301,12 +301,12 @@ output$mainAreaPlotEditingOptions <- renderUI({
         `none-selected-text`="Select color map",
         `live-search`=TRUE
       )
-    )),
-    column(3, numericRangeInput(
+    ),
+    numericRangeInput(
       "mainTabPlotColorscaleRange",
       label="Color Scale Range",
       value=as.numeric(format(c(cmin, cmax), digits=3))
-    ))
+    )
   )
 })
 
