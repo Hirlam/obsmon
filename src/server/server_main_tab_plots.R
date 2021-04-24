@@ -270,12 +270,9 @@ output$mapTitle <- renderText(obsmonPlotObj()$title)
 
 # Interactively update colorbar range in charts where this applies
 output$mainAreaPlotEditingOptions <- renderUI({
-  chart <- req(obsmonPlotObj()$chart)
-  plotData <- req(obsmonPlotObj()$data)
-  #dataColumn <- req(unname(attributes(plotData)$comment["dataColumn"]))
-
   # TODO: Come up with a way to prevent users from selecting a range
   #       that leaves data out
+  chart <- req(obsmonPlotObj()$chart)
   cmin <- Inf
   cmax <- -Inf
   for (dataProperty in chart$x$data) {
