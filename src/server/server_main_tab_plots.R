@@ -267,3 +267,75 @@ output$map <- renderLeaflet({
   leafletMap()
 })
 output$mapTitle <- renderText(obsmonPlotObj()$title)
+
+# Interactively update colorbar range in charts where this applies
+output$mainAreaPlotEditingOptions <- renderUI({
+  # TODO: Come up with a way to prevent users from selecting a range
+  #       that leaves data out
+  chart <- req(obsmonPlotObj()$chart)
+  cmin <- Inf
+  cmax <- -Inf
+  for (dataProperty in chart$x$data) {
+    cmin <- min(cmin, dataProperty$marker$cmin)
+    cmax <- max(cmin, dataProperty$marker$cmax)
+  }
+  req(all(is.finite(c(cmin, cmax))))
+
+  colorMapsDf <- RColorBrewer::brewer.pal.info
+  colorMapChoices <- list()
+  for(categ in unique(colorMapsDf$category)) {
+    colorMapChoices[[categ]] <- rownames(subset(colorMapsDf, category==categ))
+  }
+
+  tags$div(
+    pickerInput(
+      "mainTabPlotColorscaleColorMap",
+      label="Color Map",
+      choices=colorMapChoices,
+      multiple=TRUE,
+      options=list(
+        `max-options`=1,
+        `none-selected-text`="Select color map",
+        `live-search`=TRUE
+      )
+    ),
+    numericRangeInput(
+      "mainTabPlotColorscaleRange",
+      label="Color Scale Range",
+      value=as.numeric(format(c(cmin, cmax), digits=3))
+    )
+  )
+})
+
+observeEvent(input$mainTabPlotColorscaleRange,{
+  cmin <- input$mainTabPlotColorscaleRange[1]
+  cmax <- input$mainTabPlotColorscaleRange[2]
+
+  plotlyProxy(outputId="plotly", session) %>%
+    plotlyProxyInvoke(
+      method="update",
+      list(
+        marker.cmin=cmin,
+        marker.cmax=cmax
+      )
+    )
+})
+
+observeEvent(input$mainTabPlotColorscaleColorMap,{
+  colorScaleName <- input$mainTabPlotColorscaleColorMap
+
+  pallete <- brewer.pal(brewer.pal.info[colorScaleName,]$maxcolors, colorScaleName)
+  pallete <- colorRampPalette(pallete)(25)
+  palleteRgba <- sapply(pallete, plotly::toRGB, USE.NAMES=FALSE)
+
+  colorMap <- t(mapply(c,
+    seq(0, 1, length.out=length(palleteRgba)),
+    palleteRgba
+  ))
+
+  plotlyProxy(outputId="plotly", session) %>%
+    plotlyProxyInvoke(
+      method="restyle",
+      list(marker.colorscale=list(colorMap))
+    )
+})

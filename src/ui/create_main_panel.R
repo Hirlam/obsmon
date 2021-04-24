@@ -30,7 +30,17 @@ createMainPanel <- function(prependToIds=NULL) {
         uiOutput(uiOutputIdForPlot) %>% withSpinner(color="#0dc5c1")
       ),
       tabPanel("Plot", value=tabPanelValuePlotlyTab,
-        uiOutput(uiOutputIdForPlotly) %>% withSpinner(color="#0dc5c1")
+        div(
+          style="display:flex; align-items:center; justify-items: center;",
+          div(
+            style="flex-grow:1; overflow:auto;",
+            uiOutput(uiOutputIdForPlotly) %>% withSpinner(color="#0dc5c1")
+          ),
+          div(
+            style="float:right;",
+            uiOutput(paste0(tabsetPanelId, "PlotEditingOptions"))
+          )
+        )
       ),
       tabPanel("Map", value=tabPanelValueMapTab,
         uiOutput(uiOutputIdForMapAndTitle)
