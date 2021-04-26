@@ -236,19 +236,7 @@ obsmonPlotClass <- setRefClass(Class="obsmonPlot",
     db="obsmonDatabase",
     paramsAsInUiInput="list",
     rawData="data.frame",
-    .cache="list",
-    .data="data.frame",
     ##############################
-    hash = function(...) {
-      components <- list()
-      for (fieldName in names(.self$getRefClass()$fields())) {
-        fieldClass <- .self$getRefClass()$fields()[[fieldName]]
-        if(fieldClass == "activeBindingFunction") next
-        if(fieldName %in% c("hash", ".cache")) next
-        components <- c(components, .self$field(fieldName))
-      }
-      return(digest::digest(components))
-    },
     chart = function(...) {return (.self$.memoise(FUN=.self$.generate, ...))},
     leafletMap = function(...) {
       return (.self$.memoise(FUN=.self$.generateLeafletMap, ...))
@@ -260,13 +248,26 @@ obsmonPlotClass <- setRefClass(Class="obsmonPlot",
         }
         return (.self$.data)
       }
-      self$.data <- newValue
+      .self$.data <- newValue
     },
     sqliteQuery = function(...) {.self$.getSqliteQuery()},
     paramsAsInSqliteDbs = function(...) {
       .self$parentType$getSqliteParamsFromUiParams(.self$paramsAsInUiInput)
     },
-    title = function(...) {.self$.getTitle()}
+    title = function(...) {.self$.getTitle()},
+    hash = function(...) {
+      components <- list()
+      for (fieldName in names(.self$getRefClass()$fields())) {
+        fieldClass <- .self$getRefClass()$fields()[[fieldName]]
+        if(fieldClass == "activeBindingFunction") next
+        if(fieldName %in% c("hash", ".cache")) next
+        components <- c(components, .self$field(fieldName))
+      }
+      return(digest::digest(components))
+    },
+    ##############################
+    .cache="list",
+    .data="data.frame"
   ),
   methods=list(
     fetchRawData = function(...) {
