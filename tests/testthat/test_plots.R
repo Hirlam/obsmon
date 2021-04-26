@@ -293,6 +293,42 @@ test_that("Hash changes if rawData modified", {
   expect_equal(initialHash, newPlot$hash)
 })
 
+test_that("data can be modified", {
+  newPlot <- obsmonPlotClass$new(
+    parentType=mockPlotType,
+    db=obsmonDb,
+    paramsAsInUiInput=mockUiInput
+  )
+  originalData <- newPlot$data
+  expect_true("level" %in% colnames(originalData))
+
+  newData <- data.frame(originalData, check.names=FALSE)
+  newData$level <- 2 * originalData$level
+  newPlot$data <- newData
+  expect_true(all(
+     newPlot$data$level == 2 * originalData$level
+  ))
+})
+
+test_that("Hash changes if data modified", {
+  newPlot <- obsmonPlotClass$new(
+    parentType=mockPlotType,
+    db=obsmonDb,
+    paramsAsInUiInput=mockUiInput
+  )
+  newPlot$fetchRawData()
+  originalData <- newPlot$data
+  initialHash <- newPlot$hash
+
+  newPlot$data <- rbind(originalData, originalData)
+  hashAfterModifyingData <- newPlot$hash
+
+  expect_false(hashAfterModifyingData == initialHash)
+
+  newPlot$data <- originalData
+  expect_equal(initialHash, newPlot$hash)
+})
+
 test_that("dataPostProcessingFunction works", {
   newPlot <- obsmonPlotClass$new(
     parentType=mockPlotType,

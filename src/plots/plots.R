@@ -237,6 +237,7 @@ obsmonPlotClass <- setRefClass(Class="obsmonPlot",
     paramsAsInUiInput="list",
     rawData="data.frame",
     .cache="list",
+    .data="data.frame",
     ##############################
     hash = function(...) {
       components <- list()
@@ -252,8 +253,14 @@ obsmonPlotClass <- setRefClass(Class="obsmonPlot",
     leafletMap = function(...) {
       return (.self$.memoise(FUN=.self$.generateLeafletMap, ...))
     },
-    data = function(...) {
-      return (.self$.memoise(FUN=.self$.getDataFromRawData, ...))
+    data = function(newValue) {
+      if(missing(newValue)) {
+        if(nrow(.self$.data)==0) {
+          .self$.data <- .self$.getDataFromRawData()
+        }
+        return (.self$.data)
+      }
+      self$.data <- newValue
     },
     sqliteQuery = function(...) {.self$.getSqliteQuery()},
     paramsAsInSqliteDbs = function(...) {
