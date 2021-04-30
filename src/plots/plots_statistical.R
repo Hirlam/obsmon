@@ -10,7 +10,7 @@ firstGuessAndAnPlottingFunction <-  function(plot) {
       "9"={
         varname <- sqliteParams$varname
         xlab <- varname
-        ylab <- sprintf("Bias/RMS (%s)", getUnits(varname))
+        ylab <- sprintf("Bias/RMS [%s]", units(plotData$fg_bias_total))
         df <- data.frame(
             params=factor(c("FGBias", "AnBias", "FGRMS",  "AnRMS"),
                           c("FGBias", "AnBias", "FGRMS",  "AnRMS")),
@@ -29,16 +29,20 @@ firstGuessAndAnPlottingFunction <-  function(plot) {
           theme(legend.position="none")
       },
       {
+        localPlotData <- melt(plotData, id="level")
+
         if(strObnumber=="7") {
           # Mind that channels appear as "level" in the databases
-          xlab <- "Channels"
-          ylab <- "Brightness temperature [K]"
+          xlab <- "Channel"
+          ylab <- "Brightness temperature"
         } else {
-          varname <- sqliteParams$varname
-          ylab <- sprintf("%s [%s]", varname, getUnits(varname))
-          xlab <- levelsLableForPlots(strObnumber, varname)
+          xlab <- sprintf("Level [%s]", units(plotData$level))
+          ylab <- sqliteParams$varname
         }
-        localPlotData <- melt(plotData, id="level")
+        ylab <- tryCatch(
+          sprintf("%s [%s]", ylab, units(plotData$fg_bias_total)),
+          error=function(e) {flog.warn(e); ylab}
+        )
 
         shape_colours <- c("blue", "blue4", "red4", "red")
         obplot <- ggplot(data=localPlotData) +
@@ -52,22 +56,39 @@ firstGuessAndAnPlottingFunction <-  function(plot) {
           geom_line() +
           scale_shape_manual(name=NULL, values=c(22,23,22,23)) +
           scale_colour_manual(name=NULL, values=shape_colours) +
-          scale_fill_manual(name=NULL, values=shape_colours) +
-          coord_flip_wrapper(default=TRUE) +
-          labs(x=xlab, y=ylab)
+          scale_fill_manual(name=NULL, values=shape_colours)
         if(strObnumber=="7") {
           obplot <- obplot + scale_x_continuous(breaks=plotData$channel)
         } else {
-          if(startsWith(tolower(xlab), "pressure")) {
-            # Using xlim causes ggplotly to omit either the shape or the line
-            # (whichever is added later) from the legend. Not a big deal,
-            # but worth pointing out, as this but may be solved in later
-            # releases of the plotly package
-            obplot <- obplot + xlim(max(refPressures,localPlotData[["level"]]),0)
-          } else {
-            obplot <- obplot + xlim(0, max(refHeights,localPlotData[["level"]]))
+          if(ud_are_convertible(units(plotData$level), "Pa")) {
+            # Using xlim causes (i) problems with data frames with units
+            # information, and (ii) ggplotly to omit either the shape or the
+            # line (whichever is added later) from the legend. Item (ii) is not 
+            # a big deal, but worth pointing out, as this but may be solved in
+            # later releases of the plotly package.
+            obplot <- obplot +
+              coord_cartesian(
+                xlim=c(
+                  max(refPressures, localPlotData[["level"]]),
+                  set_units(0, "Pa")
+                ),
+                default=TRUE
+              )
+          } else if (ud_are_convertible(units(plotData$level), "meters")) {
+            obplot <- obplot + xlim(0, max(refHeights, localPlotData[["level"]]))
+            obplot <- obplot +
+              coord_cartesian(
+                xlim=c(
+                  set_units(0, "meters"),
+                  max(refHeights, localPlotData[["level"]]),
+                ),
+                default=TRUE
+              )
           }
         }
+        obplot <- obplot +
+          labs(x=xlab, y=ylab) +
+          coord_flip_wrapper(default=TRUE)
       }
   )
   return(obplot)

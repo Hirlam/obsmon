@@ -245,6 +245,9 @@ obsmonPlotClass <- setRefClass(Class="obsmonPlot",
       if(missing(newValue)) {
         if(nrow(.self$.data)==0) {
           .self$.data <- .self$.getDataFromRawData()
+            .self$.data <- fillObsmonDataFrameWithUnits(
+              .self$.data, varname=.self$paramsAsInUiInput$variable
+            )
         }
         return (.self$.data)
       }
