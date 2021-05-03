@@ -53,7 +53,7 @@ fillObsmonDataFrameWithUnits <- function(df, varname=NULL) {
 )
 
 .quantity2DefaultUnits <- lapply(
-  list(                                  
+  list(
     height = "m",
     apd  = "m",
     z    = "m",
