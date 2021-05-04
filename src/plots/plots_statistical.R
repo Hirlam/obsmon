@@ -10,7 +10,7 @@ firstGuessAndAnPlottingFunction <-  function(plot) {
       "9"={
         varname <- sqliteParams$varname
         xlab <- varname
-        ylab <- sprintf("Bias/RMS (%s)", getUnits(varname))
+        ylab <- sprintf("Bias/RMS (%s)", units(plot$dataWithUnits$fg_bias_total))
         df <- data.frame(
             params=factor(c("FGBias", "AnBias", "FGRMS",  "AnRMS"),
                           c("FGBias", "AnBias", "FGRMS",  "AnRMS")),
@@ -30,15 +30,18 @@ firstGuessAndAnPlottingFunction <-  function(plot) {
       },
       {
         localPlotData <- melt(plotData, id="level")
+
+        yLabUnits <- units(plot$dataWithUnits[[localPlotData[["variable"]][1]]])
         if(strObnumber=="7") {
           # Mind that channels appear as "level" in the databases
           xlab <- "Channel"
-          ylab <- "Brightness temperature [K]"
+          ylab <- "Brightness Temperature"
         } else {
           varname <- sqliteParams$varname
           xlab <- sprintf("Level [%s]", units(plot$dataWithUnits$level))
-          ylab <- sprintf("%s [%s]", varname, getUnits(varname))
+          ylab <- varname
         }
+        ylab <- sprintf("%s [%s]", ylab, yLabUnits)
 
         shape_colours <- c("blue", "blue4", "red4", "red")
         obplot <- ggplot(data=localPlotData) +
