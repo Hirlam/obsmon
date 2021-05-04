@@ -114,7 +114,12 @@ mainTab <- function() {fluidPage(
             ) %>% shinyInput_label_embed_caching_icon()
           ),
           column(6,
-            textInput("variableUnits", label="Units", value=character(0), placeholder="Default")
+            textInput(
+              "variableUnits",
+              label="Units",
+              value=character(0),
+              placeholder="(optional)"
+            )
           )
         ),
         conditionalPanel(
@@ -137,7 +142,12 @@ mainTab <- function() {fluidPage(
               ) %>% shinyInput_label_embed_caching_icon()
             ),
             column(6,
-              textInput("levelsUnits", label="Units", value=character(0), placeholder="Default")
+              textInput(
+                "levelsUnits",
+                label="Units",
+                value=character(0),
+                placeholder="(optional)"
+              )
             )
           ),
           hidden(materialSwitch(
