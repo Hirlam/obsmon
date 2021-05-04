@@ -431,6 +431,16 @@ observeEvent(updateStations(), {
 # Update level choices for selected station(s) and variable
 # Defining availableLevels as an eventReactive was causing an issue
 # that could leave a blank Levels field on the UI upon page refresh
+defaultLevelsUnits <- reactiveVal(NULL)
+observe({
+  req(length(input$variable)>0 && input$variable != "")
+  defaultLevelsUnits(getUnitsForLevels(
+    obname=req(input$obname),
+    varname=input$variable
+  ))
+})
+levelsUnitsChanged <- reactive(input$levelsUnits) %>% debounce(1000)
+
 availableLevels <- reactiveVal(NULL)
 updateLevels <- reactive({
   req(input$variable)
@@ -464,22 +474,30 @@ observeEvent({
 observeEvent({
   availableLevels()
   input$standardLevelsSwitch
+  levelsUnitsChanged()
 }, {
     if(isTRUE(input$standardLevelsSwitch)) choices <- availableLevels()$obsmon
     else choices <- availableLevels()$all
+
+    # Present level choices in the units picked by the user, but make sure
+    # to pass it to the query with the expected (default) units
+    if(length(choices)>0 && length(input$levelsUnits)>0 && input$levelsUnits != "") {
+      choicesWithPickedUnits <- as.numeric(choices)
+      units(choicesWithPickedUnits) <- defaultLevelsUnits()
+      tryCatch({
+        units(choicesWithPickedUnits) <- input$levelsUnits
+        names(choices) <- choicesWithPickedUnits
+      },
+        error=function(e) NULL
+      )
+    }
+
     updatePickerInputWrapper(session, "levels", choices=choices)
 }, ignoreNULL=FALSE)
 
 # Update and validate levelsUnits input
-observeEvent({
-  input$obname
-  input$variable
-}, {
-  req(length(input$variable)>0 && input$variable != "")
-  defaultUnits <- getUnitsForLevels(
-      obname=req(input$obname),
-      varname=input$variable
-  )
+observeEvent(req(defaultLevelsUnits()), {
+  defaultUnits <- defaultLevelsUnits()
   if(length(defaultUnits)==0) defaultUnits <- "unitless"
   updateTextInput(
     session, "levelsUnits",
@@ -487,17 +505,13 @@ observeEvent({
   )
 })
 validateLevelUnits <- reactive({
-  req(input$obname)
-  req(length(input$variable)>0 && input$variable != "")
+  req(defaultLevelsUnits())
   req(length(input$levelsUnits)>0 && input$levelsUnits != "")
 }) %>% debounce(1000)
 observeEvent(validateLevelUnits(), {
   tryCatch({
     testValue <- 1
-    units(testValue) <- getUnitsForLevels(
-      obname=input$obname,
-      varname=input$variable
-    )
+    units(testValue) <- defaultLevelsUnits()
     units(testValue)  <- input$levelsUnits
   },
     error=function(e) {
