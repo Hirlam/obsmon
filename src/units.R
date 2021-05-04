@@ -4,7 +4,9 @@ suppressPackageStartupMessages(library(tibble))
 suppressPackageStartupMessages(library(futile.logger))
 flog.appender(appender.file(stderr()), 'ROOT')
 
-fillObsmonDataFrameWithUnits <- function(df, varname=NULL) {
+fillObsmonDataFrameWithUnits <- function(
+  df, varname=NULL, varUnits=NULL, levelsUnits=NULL
+) {
   if(is.null(varname)) varname <- df$varname
   varname <- unique(varname)
 
@@ -16,10 +18,22 @@ fillObsmonDataFrameWithUnits <- function(df, varname=NULL) {
     if(colname %in% .dataColsWithoutUnits) next
     if (colname == "level") {
       units(df[[colname]]) <- .getUnits("pressure")
+      if(length(levelsUnits)>0 && levelsUnits != "") {
+        tryCatch(
+          units(df[[colname]]) <- levelsUnits,
+          error=function(e) flog.error(e)
+        )
+      }
     } else if (colname %in% c("latitude", "longitude")) {
       units(df[[colname]]) <- .getUnits("coordinate_angles")
     } else {
       units(df[[colname]]) <- obsvalueUnits
+      if(length(varUnits)>0 && varUnits != "") {
+        tryCatch(
+          units(df[[colname]]) <- varUnits,
+          error=function(e) flog.error(e)
+        )
+      }
     }
   }
 
