@@ -241,15 +241,25 @@ obsmonPlotClass <- setRefClass(Class="obsmonPlot",
     leafletMap = function(...) {
       return (.self$.memoise(FUN=.self$.generateLeafletMap, ...))
     },
-    data = function(newValue) {
+
+    data = function(...) {
+      # Remove units from data used in plot, as ggplot2 doesn't
+      # behave very well along with the units package.
+      return(drop_units(.self$dataWithUnits))
+    },
+    dataWithUnits = function(newValue) {
       if(missing(newValue)) {
-        if(nrow(.self$.data)==0) {
-          .self$.data <- .self$.getDataFromRawData()
-            .self$.data <- fillObsmonDataFrameWithUnits(
-              .self$.data, varname=.self$paramsAsInUiInput$variable
-            )
-        }
-        return (.self$.data)
+        if(nrow(.self$.data)==0) .self$.data <- .self$.getDataFromRawData()
+        rtn <- .self$.memoise(
+          FUN=fillObsmonDataFrameWithUnits,
+          df=.self$.data,
+          # varname is used to get the default units
+          varname=.self$paramsAsInUiInput$variable,
+          # These two lines provide info to enable unit conversions
+          varUnits=.self$paramsAsInUiInput$variableUnits,
+          levelsUnits=.self$paramsAsInUiInput$levelsUnits
+        )
+        return (rtn)
       }
       .self$.data <- newValue
     },
