@@ -21,7 +21,7 @@ fillObsmonDataFrameWithUnits <- function(
         )
       }
     } else if (colname %in% c("latitude", "longitude")) {
-      units(df[[colname]]) <- getUnits("coordinate_angles")
+      units(df[[colname]]) <- getUnits("latlon")
     } else {
       tryCatch({
         units(df[[colname]]) <- obsvalueUnits
@@ -96,7 +96,7 @@ getUnits <- function(quantity) {
     bend_angle = "rad",
     pressure = "Pa",
     ps = "Pa",
-    coordinate_angles = "degrees",
+    latlon = "degrees",
     u    = "m/s",
     ff   = "m/s",
     u10m = "m/s",
