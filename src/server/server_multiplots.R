@@ -291,7 +291,7 @@ observeEvent(multiPlot(), {
       saveAsCsvId <- paste0(dataTableId, "DownloadAsCsv")
       output[[queryUsedId]] <- renderText(req(multiPlot()[[pName]]$sqliteQuery))
       output[[dataTableId]] <- renderDataTable(
-        req(multiPlot()[[pName]]$data),
+        req(multiPlot()[[pName]]$dataWithUnits),
         options=list(scrollX=TRUE, scrollY="200px")
       )
       output[[saveAsTxtId]] <- downloadHandler(
