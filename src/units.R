@@ -23,13 +23,22 @@ fillObsmonDataFrameWithUnits <- function(
     } else if (colname %in% c("latitude", "longitude")) {
       units(df[[colname]]) <- .getUnits("coordinate_angles")
     } else {
-      units(df[[colname]]) <- obsvalueUnits
-      if(length(varUnits)>0 && varUnits != "") {
-        tryCatch(
-          units(df[[colname]]) <- varUnits,
-          error=function(e) flog.error(e)
-        )
-      }
+      tryCatch({
+        units(df[[colname]]) <- obsvalueUnits
+        if(length(varUnits)>0 && varUnits != "") {
+          tryCatch(
+            units(df[[colname]]) <- varUnits,
+            error=function(e) flog.error(e)
+          )
+        }
+      },
+        error=function(e) {
+          flog.error(
+            "(fillObsmonDataFrameWithUnits): Can't set units for '%s': %s",
+            colname, e
+          )
+        }
+      )
     }
   }
 
@@ -68,7 +77,8 @@ getUnitsForLevels <- function(obname, varname=character(0)) {
   "rejected",
   "passive",
   "blacklisted",
-  "anflag"
+  "anflag",
+  "status"
 )
 
 .quantity2DefaultUnits <- lapply(
