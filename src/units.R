@@ -1,8 +1,11 @@
 fillObsmonDataFrameWithUnits <- function(
-  df, varname=NULL, varUnits=NULL, levelsUnits=NULL
+  df, varname=NULL, obname=NULL, varUnits=NULL, levelsUnits=NULL
 ) {
   if(is.null(varname)) varname <- df$varname
   varname <- unique(varname)
+
+  if(is.null(obname)) obname <- df$obname
+  obname <- unique(obname)
 
   obsvalueUnits <- NULL
   if(length(varname) == 1) obsvalueUnits <- .getUnits(varname)
@@ -10,7 +13,7 @@ fillObsmonDataFrameWithUnits <- function(
   for (colname in colnames(df)) {
     if(colname %in% .dataColsWithoutUnits) next
     if (colname == "level") {
-      units(df[[colname]]) <- .getUnits("pressure")
+      units(df[[colname]]) <- getUnitsForLevels(obname=obname, varname=varname)
       if(length(levelsUnits)>0 && levelsUnits != "") {
         tryCatch(
           units(df[[colname]]) <- levelsUnits,
@@ -31,6 +34,15 @@ fillObsmonDataFrameWithUnits <- function(
   }
 
   return(tibble(df))
+}
+
+getUnitsForLevels <- function(obname, varname=character(0)) {
+  obstype <- getAttrFromMetadata("category", obname=obname)
+  levelType <- "pressure"
+  if(obstype=="surface" || (isTRUE(obname=="radar") && !isTRUE(varname=="rh"))) {
+    levelType <- "height"
+  }
+  return(.getUnits(levelType))
 }
 
 .getUnits <- function(quantity) {

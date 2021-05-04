@@ -35,9 +35,14 @@ stationVerticalProfilePlottingFunction <- function(plot) {
     )
 
   # Axes' labels
-  varname <- sqliteParams$varname
-  xlab <- levelsLableForPlots(sqliteParams$obnumber, varname)
-  ylab <- sprintf("%s [%s]", varname, getUnits(varname))
+  xlab <- sprintf("Level [%s]", units(plot$dataWithUnits$level))
+  ylab <- sqliteParams$varname
+  for (colname in names(scaleColors)) {
+    if(colname %in% localPlotData$variable) {
+      ylab <- sprintf("%s [%s]", ylab, units(plot$dataWithUnits[[colname]]))
+      break
+    }
+  }
   obplot <- obplot + labs(x=xlab, y=ylab)
 
   # Set x-axis limits and flipping axes
@@ -45,11 +50,14 @@ stationVerticalProfilePlottingFunction <- function(plot) {
   # the line (whichever is added later) from the legend. Not a big
   # deal but worth pointing out, as this but may be solved in later
   # releases of the plotly package
-  if(startsWith(tolower(xlab), "pressure")) {
-    xlim <- c(max(refPressures,localPlotData[["level"]]), 0)
+  xlim <- c()
+  if(ud_are_convertible(units(plot$dataWithUnits$level), "Pa")) {
+    units(refPressures) <- units(plot$dataWithUnits$level)
+    xlim <- c(max(drop_units(refPressures),localPlotData[["level"]]), 0)
     obplot <- obplot + scale_x_reverse()
-  } else {
-    xlim <- c(0, max(refHeights,localPlotData[["level"]]))
+  } else if(ud_are_convertible(units(plot$dataWithUnits$level), "meters")) {
+    units(refHeights) <- units(plot$dataWithUnits$level)
+    xlim <- c(0, max(drop_units(refHeights), localPlotData[["level"]]))
   }
   obplot <- obplot + coord_flip_wrapper(default=TRUE, xlim=xlim)
 

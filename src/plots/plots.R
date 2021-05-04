@@ -253,8 +253,9 @@ obsmonPlotClass <- setRefClass(Class="obsmonPlot",
         rtn <- .self$.memoise(
           FUN=fillObsmonDataFrameWithUnits,
           df=.self$.data,
-          # varname is used to get the default units
+          # varname & obname are used to get the default units
           varname=.self$paramsAsInUiInput$variable,
+          obname=.self$paramsAsInUiInput$obname,
           # These two lines provide info to enable unit conversions
           varUnits=.self$paramsAsInUiInput$variableUnits,
           levelsUnits=.self$paramsAsInUiInput$levelsUnits
@@ -593,17 +594,6 @@ errorPlot <- function(msg) {
       axis.text.y=element_blank(),
       axis.ticks.y=element_blank()
     )
-}
-
-levelsLableForPlots <- function(obnumber, varname=character(0)) {
-  strObnumber <- as.character(obnumber)
-  obstype <- getAttrFromMetadata("category", obnumber=obnumber)
-  quantity <- "Pressure"
-  if(obstype=="surface" || (isTRUE(strObnumber=="13") && !isTRUE(varname=="rh"))) {
-    quantity <- "Height"
-  }
-  label <- sprintf("%s [%s]", quantity, getUnits(tolower(quantity)))
-  return(label)
 }
 
 coord_flip_wrapper <- function(..., default=FALSE) {

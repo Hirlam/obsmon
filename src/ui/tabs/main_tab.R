@@ -105,6 +105,7 @@ mainTab <- function() {fluidPage(
       ),
       conditionalPanel(
         condition = "input.obtype != 'satem'",
+        # TODO: Allow changing units in satem Brightness temperature
         fluidRow(
           column(6,
             pickerInput("variable",
