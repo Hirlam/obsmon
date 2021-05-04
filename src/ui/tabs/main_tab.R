@@ -103,61 +103,58 @@ mainTab <- function() {fluidPage(
           choices=c()
         ) %>% shinyInput_label_embed_caching_icon()
       ),
+      fluidRow(
+        column(6,
+          pickerInput("variable",
+            label=getDefLabel("variable"),
+            choices=c(),
+          ) %>% shinyInput_label_embed_caching_icon()
+        ),
+        column(6,
+          textInput(
+            "variableUnits",
+            label="Units",
+            value=character(0),
+            placeholder="(optional)"
+          )
+        )
+      ),
       conditionalPanel(
-        condition = "input.obtype != 'satem'",
-        # TODO: Allow changing units in satem Brightness temperature
+        condition = "input.odbBase != 'ecma_sfc' &&
+                     input.obtype!='scatt' &&
+                     input.obtype != 'satem' &&
+                     input.obtype!='surface'",
         fluidRow(
           column(6,
-            pickerInput("variable",
-              label=getDefLabel("variable"),
+            pickerInput("levels",
+              label=getDefLabel("levels"),
               choices=c(),
+              multiple=TRUE,
+              options=list(
+                `live-search`=TRUE,
+                `actions-box`=TRUE,
+                `none-selected-text`="Any",
+                `select-all-text`="All Listed",
+                `deselect-all-text`="Don't filter"
+              )
             ) %>% shinyInput_label_embed_caching_icon()
           ),
           column(6,
             textInput(
-              "variableUnits",
+              "levelsUnits",
               label="Units",
               value=character(0),
               placeholder="(optional)"
             )
           )
         ),
-        conditionalPanel(
-          condition = "input.odbBase != 'ecma_sfc' &&
-                       input.obtype!='scatt' &&
-                       input.obtype!='surface'",
-          fluidRow(
-            column(6,
-              pickerInput("levels",
-                label=getDefLabel("levels"),
-                choices=c(),
-                multiple=TRUE,
-                options=list(
-                  `live-search`=TRUE,
-                  `actions-box`=TRUE,
-                  `none-selected-text`="Any",
-                  `select-all-text`="All Listed",
-                  `deselect-all-text`="Don't filter"
-                )
-              ) %>% shinyInput_label_embed_caching_icon()
-            ),
-            column(6,
-              textInput(
-                "levelsUnits",
-                label="Units",
-                value=character(0),
-                placeholder="(optional)"
-              )
-            )
-          ),
-          hidden(materialSwitch(
-            inputId='standardLevelsSwitch',
-            label="List Standard Levels Only",
-            status="warning",
-            inline=TRUE,
-            right=TRUE
-          ))
-        )
+        hidden(materialSwitch(
+          inputId='standardLevelsSwitch',
+          label="List Standard Levels Only",
+          status="warning",
+          inline=TRUE,
+          right=TRUE
+        ))
       ),
       pickerInput("plottype",
         label=getDefLabel("plottype"),

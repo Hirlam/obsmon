@@ -244,7 +244,6 @@ observeEvent(updateScattSatellite(), {
 
 # Update variable
 updateVariables <- reactive({
-  req(input$obtype!="satem")
   req(input$obname)
   reloadInfoFromCache()
   if(input$obtype == 'scatt') {
@@ -257,8 +256,12 @@ updateVariables <- reactive({
 observeEvent(updateVariables(), {
   db <- req(activeDb())
 
-  satname = NULL
-  if(input$obtype=='scatt') satname = req(input$scatt_satellite)
+  satname <- NULL
+  if(input$obtype == "satem") {
+    satname <- input$satellite
+  } else if(input$obtype=='scatt') {
+    satname <- req(input$scatt_satellite)
+  }
 
   variables <- getVariables(
       db, selectedDates(), selectedCycles(), input$obname, satname

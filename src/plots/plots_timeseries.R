@@ -156,8 +156,10 @@ landSeaDeparturesTimeseriesPlottingFunction <- function(plot) {
     colours=c(seaColor, seaColor, seaColor, landColor, landColor, landColor),
     shapes=c(ncShape, fgShape, anShape, ncShape, fgShape, anShape)
   ) +
-    # TODO: Make it possible to select Brightness Temperature units
-    ylab("Brightness Temperature [K]") +
+    ylab(sprintf(
+      "Brightness Temperature [%s]",
+      units(plot$dataWithUnits[["fg_dep_sea"]])
+    )) +
     theme(legend.title=element_blank())
 
 
@@ -175,7 +177,14 @@ landSeaDeparturesTimeseriesPlottingFunction <- function(plot) {
 
   if(plot$parentType$interactive) {
     top <- .getInteractiveGenericTimeseriesPlot(baseGgplotPlotTop) %>%
-      layout(yaxis=list(title="Brightness Temperature [K]"))
+      layout(
+        yaxis=list(
+          title=sprintf(
+            "Brightness Temperature [%s]",
+            units(plot$dataWithUnits[["fg_dep_sea"]])
+          )
+        )
+      )
     bottom <- .getInteractiveGenericTimeseriesPlot(baseGgplotPlotBottom) %>%
       layout(yaxis=list(title="Number of Observations"))
     interactivePlot <- subplot(
