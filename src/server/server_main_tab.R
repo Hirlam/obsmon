@@ -275,7 +275,7 @@ observeEvent(updateVariables(), {
 # Update and validate variable units input
 observeEvent(input$variable, {
   req(length(input$variable)>0 && input$variable != "")
-  defaultUnits <- .getUnits(input$variable)
+  defaultUnits <- getUnits(input$variable)
   if(length(defaultUnits)==0) defaultUnits <- "unitless"
   updateTextInput(
     session, "variableUnits",
@@ -289,7 +289,7 @@ validateVarUnits <- reactive({
 observeEvent(validateVarUnits(), {
   tryCatch({
     testValue <- 1
-    units(testValue) <- .getUnits(input$variable)
+    units(testValue) <- getUnits(input$variable)
     units(testValue)  <- input$variableUnits
   },
     error=function(e) {

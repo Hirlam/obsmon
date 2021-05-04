@@ -8,7 +8,7 @@ fillObsmonDataFrameWithUnits <- function(
   obname <- unique(obname)
 
   obsvalueUnits <- NULL
-  if(length(varname) == 1) obsvalueUnits <- .getUnits(varname)
+  if(length(varname) == 1) obsvalueUnits <- getUnits(varname)
 
   for (colname in colnames(df)) {
     if(colname %in% .dataColsWithoutUnits) next
@@ -21,7 +21,7 @@ fillObsmonDataFrameWithUnits <- function(
         )
       }
     } else if (colname %in% c("latitude", "longitude")) {
-      units(df[[colname]]) <- .getUnits("coordinate_angles")
+      units(df[[colname]]) <- getUnits("coordinate_angles")
     } else {
       tryCatch({
         units(df[[colname]]) <- obsvalueUnits
@@ -51,10 +51,10 @@ getUnitsForLevels <- function(obname, varname=character(0)) {
   if(obstype=="surface" || (isTRUE(obname=="radar") && !isTRUE(varname=="rh"))) {
     levelType <- "height"
   }
-  return(.getUnits(levelType))
+  return(getUnits(levelType))
 }
 
-.getUnits <- function(quantity) {
+getUnits <- function(quantity) {
   rtn <- .quantity2DefaultUnits[[quantity]]
   if(is.null(rtn)) {
     flog.warn("Could not determine units for quantity '%s'", quantity)
