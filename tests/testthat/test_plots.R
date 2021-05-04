@@ -303,11 +303,12 @@ test_that("data can be modified", {
   expect_true("level" %in% colnames(originalData))
 
   newData <- data.frame(originalData, check.names=FALSE)
-  newData$level <- 2 * originalData$level
+  multFactor <- 2
+  newData$level <- multFactor * originalData$level
+
   newPlot$data <- newData
-  expect_true(all(
-     newPlot$data$level == 2 * originalData$level
-  ))
+  expect_true(all(newPlot$data$level == newData$level))
+  expect_true(all(newPlot$data$level == multFactor * originalData$level))
 })
 
 test_that("Hash changes if data modified", {
@@ -420,15 +421,15 @@ test_that("leafletMap is produced if no leafletPlottingFunction but 'map' in cat
   expect_true("leaflet" %in% class(newPlot$leafletMap))
 })
 
-test_that("'data', 'chart' and 'leafletMap' cache results", {
+test_that("'dataWithUnits', 'chart' and 'leafletMap' cache results", {
   newPlot <- obsmonPlotClass$new(
     parentType=mockPlotType,
     db=obsmonDb,
     paramsAsInUiInput=mockUiInput
   )
 
-  referenceData <- newPlot$data
-  expect_equal(tracemem(referenceData), tracemem(newPlot$data))
+  referenceData <- newPlot$dataWithUnits
+  expect_equal(tracemem(referenceData), tracemem(newPlot$dataWithUnits))
   untracemem(referenceData)
 
   referenceGraph <- newPlot$chart

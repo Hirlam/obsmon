@@ -241,28 +241,28 @@ obsmonPlotClass <- setRefClass(Class="obsmonPlot",
     leafletMap = function(...) {
       return (.self$.memoise(FUN=.self$.generateLeafletMap, ...))
     },
-
-    data = function(...) {
-      # Remove units from data used in plot, as ggplot2 doesn't
-      # behave very well along with the units package.
-      return(drop_units(.self$dataWithUnits))
-    },
-    dataWithUnits = function(newValue) {
+    data = function(newValue) {
       if(missing(newValue)) {
         if(nrow(.self$.data)==0) .self$.data <- .self$.getDataFromRawData()
-        rtn <- .self$.memoise(
-          FUN=fillObsmonDataFrameWithUnits,
-          df=.self$.data,
-          # varname & obname are used to get the default units
-          varname=.self$paramsAsInUiInput$variable,
-          obname=.self$paramsAsInUiInput$obname,
-          # These two lines provide info to enable unit conversions
-          varUnits=.self$paramsAsInUiInput$variableUnits,
-          levelsUnits=.self$paramsAsInUiInput$levelsUnits
-        )
-        return (rtn)
+        # Remove units from data used in plot, as ggplot2 doesn't
+        # behave very well along with the units package.
+        return(drop_units(.self$dataWithUnits))
       }
       .self$.data <- newValue
+    },
+    dataWithUnits = function(...) {
+      if(nrow(.self$.data)==0) .self$.data <- .self$.getDataFromRawData()
+      rtn <- .self$.memoise(
+        FUN=fillObsmonDataFrameWithUnits,
+        df=.self$.data,
+        # varname & obname are used to get the default units
+        varname=.self$paramsAsInUiInput$variable,
+        obname=.self$paramsAsInUiInput$obname,
+        # These two lines provide info to enable unit conversions
+        varUnits=.self$paramsAsInUiInput$variableUnits,
+        levelsUnits=.self$paramsAsInUiInput$levelsUnits
+      )
+      return (rtn)
     },
     sqliteQuery = function(...) {.self$.getSqliteQuery()},
     paramsAsInSqliteDbs = function(...) {
