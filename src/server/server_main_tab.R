@@ -469,3 +469,40 @@ observeEvent({
     else choices <- availableLevels()$all
     updatePickerInputWrapper(session, "levels", choices=choices)
 }, ignoreNULL=FALSE)
+
+# Update and validate levelsUnits input
+observeEvent({
+  input$obname
+  input$variable
+}, {
+  req(length(input$variable)>0 && input$variable != "")
+  defaultUnits <- getUnitsForLevels(
+      obname=req(input$obname),
+      varname=input$variable
+  )
+  if(length(defaultUnits)==0) defaultUnits <- "unitless"
+  updateTextInput(
+    session, "levelsUnits",
+    placeholder=sprintf("Default: %s", defaultUnits)
+  )
+})
+validateLevelUnits <- reactive({
+  req(input$obname)
+  req(length(input$variable)>0 && input$variable != "")
+  req(length(input$levelsUnits)>0 && input$levelsUnits != "")
+}) %>% debounce(1000)
+observeEvent(validateLevelUnits(), {
+  tryCatch({
+    testValue <- 1
+    units(testValue) <- getUnitsForLevels(
+      obname=input$obname,
+      varname=input$variable
+    )
+    units(testValue)  <- input$levelsUnits
+  },
+    error=function(e) {
+      flog.error(e)
+      updateTextInput(session, "levelsUnits", value=character(0))
+    }
+  )
+})
