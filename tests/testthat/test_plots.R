@@ -342,8 +342,9 @@ test_that("dataPostProcessingFunction works", {
     paramsAsInUiInput=mockUiInput
   )
   testData <- newPlotWithDataPP$parentType$dataPostProcessingFunction(
-    data.frame(newPlot$data)
+    newPlot$data
   )
+  expect_false(identical(newPlot$data, testData))
   expect_equal(newPlotWithDataPP$data, testData)
 })
 
