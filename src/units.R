@@ -1,9 +1,3 @@
-suppressPackageStartupMessages(library(units))
-suppressPackageStartupMessages(library(DBI))
-suppressPackageStartupMessages(library(tibble))
-suppressPackageStartupMessages(library(futile.logger))
-flog.appender(appender.file(stderr()), 'ROOT')
-
 fillObsmonDataFrameWithUnits <- function(
   df, varname=NULL, varUnits=NULL, levelsUnits=NULL
 ) {
@@ -12,7 +6,6 @@ fillObsmonDataFrameWithUnits <- function(
 
   obsvalueUnits <- NULL
   if(length(varname) == 1) obsvalueUnits <- .getUnits(varname)
-  print(paste(varname, obsvalueUnits)) # TEST
 
   for (colname in colnames(df)) {
     if(colname %in% .dataColsWithoutUnits) next
