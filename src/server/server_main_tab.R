@@ -272,6 +272,33 @@ observeEvent(updateVariables(), {
   updatePickerInputWrapper(session, "variable", choices=newChoices)
 })
 
+# Update and validate variable units input
+observeEvent(input$variable, {
+  req(length(input$variable)>0 && input$variable != "")
+  defaultUnits <- .getUnits(input$variable)
+  if(length(defaultUnits)==0) defaultUnits <- "unitless"
+  updateTextInput(
+    session, "variableUnits",
+    placeholder=sprintf("Default: %s", defaultUnits)
+  )
+})
+validateUnits <- reactive({
+  req(length(input$variable)>0 && input$variable != "")
+  req(length(input$variableUnits)>0 && input$variableUnits != "")
+}) %>% debounce(1000)
+observeEvent(validateUnits(), {
+  tryCatch({
+    testValue <- 1
+    units(testValue) <- .getUnits(input$variable)
+    units(testValue)  <- input$variableUnits
+  },
+    error=function(e) {
+      flog.error(e)
+      updateTextInput(session, "variableUnits", value=character(0))
+    }
+  )
+})
+
 # Update sensornames
 updateSensor <- reactive({
   req(input$obtype=="satem")
