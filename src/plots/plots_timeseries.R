@@ -111,7 +111,7 @@ obsFitTimeseriesPlottingFunction <- function(plot) {
     ylab(sprintf(
       "%s [%s]",
       unique(plot$data$varname),
-      units(plot$dataWithUnits[["fg_rms_total"]])
+      units(plot$dataWithUnits[["fg_bias_total"]])
     ))
 
   if(plot$parentType$interactive) {
@@ -132,7 +132,7 @@ firstGuessTotalTimeseriesPlottingFunction <- function(plot) {
     ylab(sprintf(
       "%s [%s]",
       unique(plot$data$varname),
-      units(plot$dataWithUnits[["fg_rms_total"]])
+      units(plot$dataWithUnits[["fg_bias_total"]])
     ))
 
   if(plot$parentType$interactive) {
