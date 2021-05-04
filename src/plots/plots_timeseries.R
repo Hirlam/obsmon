@@ -107,7 +107,12 @@ obsFitTimeseriesPlottingFunction <- function(plot) {
     maskColumns=c("nobs_total", "varname"),
     colours=c(fgColor, anColor, fgColor, anColor),
     shapes=c(fgRmsShape, anRmsShape, fgBiasShape, anBiasShape)
-  ) + ylab(getUnits(unique(plot$data$varname)))
+  ) +
+    ylab(sprintf(
+      "%s [%s]",
+      unique(plot$data$varname),
+      units(plot$dataWithUnits[["fg_rms_total"]])
+    ))
 
   if(plot$parentType$interactive) {
     return(.getInteractiveGenericTimeseriesPlot(baseGgplotPlot))
@@ -124,7 +129,11 @@ firstGuessTotalTimeseriesPlottingFunction <- function(plot) {
     geom_text(
       data=plot$data, aes(x=DTG, y=fg_uncorr_total, label=nobs_total)
     ) +
-    ylab(getUnits(unique(plot$data$varname)))
+    ylab(sprintf(
+      "%s [%s]",
+      unique(plot$data$varname),
+      units(plot$dataWithUnits[["fg_rms_total"]])
+    ))
 
   if(plot$parentType$interactive) {
     return(.getInteractiveGenericTimeseriesPlot(baseGgplotPlot))
@@ -147,6 +156,7 @@ landSeaDeparturesTimeseriesPlottingFunction <- function(plot) {
     colours=c(seaColor, seaColor, seaColor, landColor, landColor, landColor),
     shapes=c(ncShape, fgShape, anShape, ncShape, fgShape, anShape)
   ) +
+    # TODO: Make it possible to select Brightness Temperature units
     ylab("Brightness Temperature [K]") +
     theme(legend.title=element_blank())
 
@@ -197,7 +207,7 @@ hovmollerTimeseriesPlottingFunction <- function(plot) {
   baseGgplotPlot <- ggplot(plot$data) +
     aes(DTG, level, fill=fg_bias_total) +
     geom_tile() +
-    labs(x="DATE", y="Channels")
+    labs(x="DATE", y="Channel")
 
   if(plot$parentType$interactive) {
     return(.getInteractiveGenericTimeseriesPlot(baseGgplotPlot))
