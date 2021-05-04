@@ -47,6 +47,7 @@ suppressPackageStartupMessages(library(flock))
 suppressPackageStartupMessages(library(futile.logger))
 suppressPackageStartupMessages(library(future))
 suppressPackageStartupMessages(library(future.apply))
+suppressPackageStartupMessages(library(ggforce))
 suppressPackageStartupMessages(library(ggplot2))
 suppressPackageStartupMessages(library(grid))
 suppressPackageStartupMessages(library(gridExtra))
@@ -68,7 +69,9 @@ suppressPackageStartupMessages(library(shinyWidgets))
 suppressPackageStartupMessages(library(stringi))
 suppressPackageStartupMessages(library(stringr))
 suppressPackageStartupMessages(library(testthat)) # For tests
+suppressPackageStartupMessages(library(tibble))
 suppressPackageStartupMessages(library(tidyr))
+suppressPackageStartupMessages(library(units))
 suppressPackageStartupMessages(library(usethis)) # For tests
 suppressPackageStartupMessages(library(V8))
 
@@ -111,6 +114,7 @@ setPackageOptions <- function(config) {
 }
 
 sourceObsmonFiles <- function() {
+  source("src/units.R")
   source("src/observation_definitions.R")
   source("src/utils.R")
   source("src/sqlite/sqlite_wrappers.R")

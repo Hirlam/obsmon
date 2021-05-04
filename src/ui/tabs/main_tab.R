@@ -103,36 +103,58 @@ mainTab <- function() {fluidPage(
           choices=c()
         ) %>% shinyInput_label_embed_caching_icon()
       ),
-      conditionalPanel(
-        condition = "input.obtype != 'satem'",
-        pickerInput("variable",
-          label=getDefLabel("variable"),
-          choices=c(),
-        ) %>% shinyInput_label_embed_caching_icon(),
-        conditionalPanel(
-          condition = "input.odbBase != 'ecma_sfc' &&
-                       input.obtype!='scatt' &&
-                       input.obtype!='surface'",
-          pickerInput("levels",
-            label=getDefLabel("levels"),
+      fluidRow(
+        column(6,
+          pickerInput("variable",
+            label=getDefLabel("variable"),
             choices=c(),
-            multiple=TRUE,
-            options=list(
-              `live-search`=TRUE,
-              `actions-box`=TRUE,
-              `none-selected-text`="Any",
-              `select-all-text`="Select All Listed",
-              `deselect-all-text`='Select "Any" (no level filters)'
-            )
-          ) %>% shinyInput_label_embed_caching_icon(),
-          hidden(materialSwitch(
-            inputId='standardLevelsSwitch',
-            label="List Standard Levels Only",
-            status="warning",
-            inline=TRUE,
-            right=TRUE
-          ))
+          ) %>% shinyInput_label_embed_caching_icon()
+        ),
+        column(6,
+          textInput(
+            "variableUnits",
+            label="Units",
+            value=character(0),
+            placeholder="(optional)"
+          )
         )
+      ),
+      conditionalPanel(
+        condition = "input.odbBase != 'ecma_sfc' &&
+                     input.obtype!='scatt' &&
+                     input.obtype != 'satem' &&
+                     input.obtype!='surface'",
+        fluidRow(
+          column(6,
+            pickerInput("levels",
+              label=getDefLabel("levels"),
+              choices=c(),
+              multiple=TRUE,
+              options=list(
+                `live-search`=TRUE,
+                `actions-box`=TRUE,
+                `none-selected-text`="Any",
+                `select-all-text`="All Listed",
+                `deselect-all-text`="Don't filter"
+              )
+            ) %>% shinyInput_label_embed_caching_icon()
+          ),
+          column(6,
+            textInput(
+              "levelsUnits",
+              label="Units",
+              value=character(0),
+              placeholder="(optional)"
+            )
+          )
+        ),
+        hidden(materialSwitch(
+          inputId='standardLevelsSwitch',
+          label="List Standard Levels Only",
+          status="warning",
+          inline=TRUE,
+          right=TRUE
+        ))
       ),
       pickerInput("plottype",
         label=getDefLabel("plottype"),

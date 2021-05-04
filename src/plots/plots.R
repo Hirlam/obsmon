@@ -236,8 +236,39 @@ obsmonPlotClass <- setRefClass(Class="obsmonPlot",
     db="obsmonDatabase",
     paramsAsInUiInput="list",
     rawData="data.frame",
-    .cache="list",
     ##############################
+    chart = function(...) {return (.self$.memoise(FUN=.self$.generate, ...))},
+    leafletMap = function(...) {
+      return (.self$.memoise(FUN=.self$.generateLeafletMap, ...))
+    },
+    data = function(newValue) {
+      if(missing(newValue)) {
+        if(nrow(.self$.data)==0) .self$.data <- .self$.getDataFromRawData()
+        # Remove units from data used in plot, as ggplot2 doesn't
+        # behave very well along with the units package.
+        return(drop_units(.self$dataWithUnits))
+      }
+      .self$.data <- newValue
+    },
+    dataWithUnits = function(...) {
+      if(nrow(.self$.data)==0) .self$.data <- .self$.getDataFromRawData()
+      rtn <- .self$.memoise(
+        FUN=fillObsmonDataFrameWithUnits,
+        df=.self$.data,
+        # varname & obname are used to get the default units
+        varname=.self$paramsAsInUiInput$variable,
+        obname=.self$paramsAsInUiInput$obname,
+        # These two lines provide info to enable unit conversions
+        varUnits=.self$paramsAsInUiInput$variableUnits,
+        levelsUnits=.self$paramsAsInUiInput$levelsUnits
+      )
+      return (rtn)
+    },
+    sqliteQuery = function(...) {.self$.getSqliteQuery()},
+    paramsAsInSqliteDbs = function(...) {
+      .self$parentType$getSqliteParamsFromUiParams(.self$paramsAsInUiInput)
+    },
+    title = function(...) {.self$.getTitle()},
     hash = function(...) {
       components <- list()
       for (fieldName in names(.self$getRefClass()$fields())) {
@@ -248,18 +279,9 @@ obsmonPlotClass <- setRefClass(Class="obsmonPlot",
       }
       return(digest::digest(components))
     },
-    chart = function(...) {return (.self$.memoise(FUN=.self$.generate, ...))},
-    leafletMap = function(...) {
-      return (.self$.memoise(FUN=.self$.generateLeafletMap, ...))
-    },
-    data = function(...) {
-      return (.self$.memoise(FUN=.self$.getDataFromRawData, ...))
-    },
-    sqliteQuery = function(...) {.self$.getSqliteQuery()},
-    paramsAsInSqliteDbs = function(...) {
-      .self$parentType$getSqliteParamsFromUiParams(.self$paramsAsInUiInput)
-    },
-    title = function(...) {.self$.getTitle()}
+    ##############################
+    .cache="list",
+    .data="data.frame"
   ),
   methods=list(
     fetchRawData = function(...) {
@@ -572,17 +594,6 @@ errorPlot <- function(msg) {
       axis.text.y=element_blank(),
       axis.ticks.y=element_blank()
     )
-}
-
-levelsLableForPlots <- function(obnumber, varname=character(0)) {
-  strObnumber <- as.character(obnumber)
-  obstype <- getAttrFromMetadata("category", obnumber=obnumber)
-  quantity <- "Pressure"
-  if(obstype=="surface" || (isTRUE(strObnumber=="13") && !isTRUE(varname=="rh"))) {
-    quantity <- "Height"
-  }
-  label <- sprintf("%s [%s]", quantity, getUnits(tolower(quantity)))
-  return(label)
 }
 
 coord_flip_wrapper <- function(..., default=FALSE) {

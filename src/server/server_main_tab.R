@@ -244,7 +244,6 @@ observeEvent(updateScattSatellite(), {
 
 # Update variable
 updateVariables <- reactive({
-  req(input$obtype!="satem")
   req(input$obname)
   reloadInfoFromCache()
   if(input$obtype == 'scatt') {
@@ -257,8 +256,12 @@ updateVariables <- reactive({
 observeEvent(updateVariables(), {
   db <- req(activeDb())
 
-  satname = NULL
-  if(input$obtype=='scatt') satname = req(input$scatt_satellite)
+  satname <- NULL
+  if(input$obtype == "satem") {
+    satname <- input$satellite
+  } else if(input$obtype=='scatt') {
+    satname <- req(input$scatt_satellite)
+  }
 
   variables <- getVariables(
       db, selectedDates(), selectedCycles(), input$obname, satname
@@ -270,6 +273,37 @@ observeEvent(updateVariables(), {
     newChoices <- combineCachedAndGeneralChoices(variables)
   }
   updatePickerInputWrapper(session, "variable", choices=newChoices)
+})
+
+# Update and validate variable units input
+observeEvent(input$variable, {
+  req(length(input$variable)>0 && input$variable != "")
+  defaultUnits <- getUnits(input$variable)
+  if(length(defaultUnits)==0) defaultUnits <- "unitless"
+  updateTextInput(
+    session, "variableUnits",
+    placeholder=as.character(defaultUnits)
+  )
+})
+validateVarUnits <- reactive({
+  req(length(input$variable)>0 && input$variable != "")
+  req(length(input$variableUnits)>0 && input$variableUnits != "")
+}) %>% debounce(1500)
+observeEvent(validateVarUnits(), {
+  tryCatch({
+    testValue <- 1
+    units(testValue) <- getUnits(input$variable)
+    units(testValue)  <- input$variableUnits
+  },
+    error=function(e) {
+      showNotification(
+        ui=paste0(gsub("\\..*","", e$message), "!"),
+        type="error",
+        duration=2
+      )
+      updateTextInput(session, "variableUnits", value=character(0))
+    }
+  )
 })
 
 # Update sensornames
@@ -404,6 +438,16 @@ observeEvent(updateStations(), {
 # Update level choices for selected station(s) and variable
 # Defining availableLevels as an eventReactive was causing an issue
 # that could leave a blank Levels field on the UI upon page refresh
+defaultLevelsUnits <- reactiveVal(NULL)
+observe({
+  req(length(input$variable)>0 && input$variable != "")
+  defaultLevelsUnits(getUnitsForLevels(
+    obname=req(input$obname),
+    varname=input$variable
+  ))
+})
+levelsUnitsChanged <- reactive(input$levelsUnits) %>% debounce(1500)
+
 availableLevels <- reactiveVal(NULL)
 updateLevels <- reactive({
   req(input$variable)
@@ -437,8 +481,53 @@ observeEvent({
 observeEvent({
   availableLevels()
   input$standardLevelsSwitch
+  levelsUnitsChanged()
 }, {
     if(isTRUE(input$standardLevelsSwitch)) choices <- availableLevels()$obsmon
     else choices <- availableLevels()$all
+
+    # Present level choices in the units picked by the user, but make sure
+    # to pass it to the query with the expected (default) units
+    if(length(choices)>0 && length(input$levelsUnits)>0 && input$levelsUnits != "") {
+      choicesWithPickedUnits <- as.numeric(choices)
+      units(choicesWithPickedUnits) <- defaultLevelsUnits()
+      tryCatch({
+        units(choicesWithPickedUnits) <- input$levelsUnits
+        names(choices) <- choicesWithPickedUnits
+      },
+        error=function(e) NULL
+      )
+    }
+
     updatePickerInputWrapper(session, "levels", choices=choices)
 }, ignoreNULL=FALSE)
+
+# Update and validate levelsUnits input
+observeEvent(req(defaultLevelsUnits()), {
+  defaultUnits <- defaultLevelsUnits()
+  if(length(defaultUnits)==0) defaultUnits <- "unitless"
+  updateTextInput(
+    session, "levelsUnits",
+    placeholder=as.character(defaultUnits)
+  )
+})
+validateLevelUnits <- reactive({
+  req(defaultLevelsUnits())
+  req(length(input$levelsUnits)>0 && input$levelsUnits != "")
+}) %>% debounce(1500)
+observeEvent(validateLevelUnits(), {
+  tryCatch({
+    testValue <- 1
+    units(testValue) <- defaultLevelsUnits()
+    units(testValue)  <- input$levelsUnits
+  },
+    error=function(e) {
+      showNotification(
+        ui=paste0(gsub("\\..*","", e$message), "!"),
+        type="error",
+        duration=2
+      )
+      updateTextInput(session, "levelsUnits", value=character(0))
+    }
+  )
+})

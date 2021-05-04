@@ -242,9 +242,9 @@ output$dataTable <- renderDataTable({
     "Rendering data table...", duration=NULL, type="message"
   )
   on.exit(removeNotification(notifId))
-  obsmonPlotObj()$data
+  obsmonPlotObj()$dataWithUnits
 },
-  options=list(pageLength=100)
+  options=list(scrollX=TRUE, scrollY="300px")
 )
 output$queryUsed <- renderText(obsmonPlotObj()$sqliteQuery)
 

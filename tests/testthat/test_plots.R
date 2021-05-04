@@ -293,6 +293,43 @@ test_that("Hash changes if rawData modified", {
   expect_equal(initialHash, newPlot$hash)
 })
 
+test_that("data can be modified", {
+  newPlot <- obsmonPlotClass$new(
+    parentType=mockPlotType,
+    db=obsmonDb,
+    paramsAsInUiInput=mockUiInput
+  )
+  originalData <- newPlot$data
+  expect_true("level" %in% colnames(originalData))
+
+  newData <- data.frame(originalData, check.names=FALSE)
+  multFactor <- 2
+  newData$level <- multFactor * originalData$level
+
+  newPlot$data <- newData
+  expect_true(all(newPlot$data$level == newData$level))
+  expect_true(all(newPlot$data$level == multFactor * originalData$level))
+})
+
+test_that("Hash changes if data modified", {
+  newPlot <- obsmonPlotClass$new(
+    parentType=mockPlotType,
+    db=obsmonDb,
+    paramsAsInUiInput=mockUiInput
+  )
+  newPlot$fetchRawData()
+  originalData <- newPlot$data
+  initialHash <- newPlot$hash
+
+  newPlot$data <- rbind(originalData, originalData)
+  hashAfterModifyingData <- newPlot$hash
+
+  expect_false(hashAfterModifyingData == initialHash)
+
+  newPlot$data <- originalData
+  expect_equal(initialHash, newPlot$hash)
+})
+
 test_that("dataPostProcessingFunction works", {
   newPlot <- obsmonPlotClass$new(
     parentType=mockPlotType,
@@ -305,8 +342,9 @@ test_that("dataPostProcessingFunction works", {
     paramsAsInUiInput=mockUiInput
   )
   testData <- newPlotWithDataPP$parentType$dataPostProcessingFunction(
-    data.frame(newPlot$data)
+    newPlot$data
   )
+  expect_false(identical(newPlot$data, testData))
   expect_equal(newPlotWithDataPP$data, testData)
 })
 
@@ -384,15 +422,15 @@ test_that("leafletMap is produced if no leafletPlottingFunction but 'map' in cat
   expect_true("leaflet" %in% class(newPlot$leafletMap))
 })
 
-test_that("'data', 'chart' and 'leafletMap' cache results", {
+test_that("'dataWithUnits', 'chart' and 'leafletMap' cache results", {
   newPlot <- obsmonPlotClass$new(
     parentType=mockPlotType,
     db=obsmonDb,
     paramsAsInUiInput=mockUiInput
   )
 
-  referenceData <- newPlot$data
-  expect_equal(tracemem(referenceData), tracemem(newPlot$data))
+  referenceData <- newPlot$dataWithUnits
+  expect_equal(tracemem(referenceData), tracemem(newPlot$dataWithUnits))
   untracemem(referenceData)
 
   referenceGraph <- newPlot$chart

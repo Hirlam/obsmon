@@ -161,13 +161,18 @@
   return(rtn)
 })}
 
-.comparisonPlotStatic <- function(plotData, hasMinimization) {
+.comparisonPlotStatic <- function(plot) {
   # Comparison plot (upper panel)
+  plotData <- plot$data
   if(!isTRUE(nrow(plotData) > 0)) return(ggplot() + theme_void())
 
   compDf <- data.frame("Date"=plotData[["DTG"]],
                        "obs"=plotData[["obsvalue"]],
                        "fg"=plotData[["obsvalue"]]-plotData[["fg_dep"]])
+
+  hasMinimization <- isTRUE(
+    plot$paramsAsInUiInput$odbBase %in% c("ecma_sfc", "ccma")
+  )
   if (hasMinimization) {
     compDf["an"] <- plotData[["obsvalue"]]-plotData[["an_dep"]]
   }
@@ -190,12 +195,13 @@
     geom_point() +
     facet_grid(panel~., scales="free_y") +
     scale_color_manual(labels=.diagosticPltLabels, values=.diagosticPltColors) +
-    labs(y=sprintf("%s [%s]", varname, getUnits(varname))) +
+    labs(y=sprintf("%s [%s]", varname, units(plot$dataWithUnits[["obsvalue"]]))) +
     theme(legend.title=element_blank())
   return(plot)
 }
 
-.comparisonPlotPlotly <- function(plotData, hasMinimization) {
+.comparisonPlotPlotly <- function(plot) {
+  plotData <- plot$data
   if(nrow(plotData)==0) return(plotly_empty(type="scatter"))
 
   # Comparison plot (upper panel) -- interactive version
@@ -210,7 +216,7 @@
       xaxis=list(title="No Title", color="rgba(0, 0, 0, 0)"),
       yaxis=list(
         yanchor="center", y=0.5,
-        title=sprintf("%s [%s]", varname, getUnits(varname)),
+        title=sprintf("%s [%s]", varname, units(plot$dataWithUnits[["obsvalue"]])),
         titlefont=list(size=14)
       )
     )
@@ -221,7 +227,7 @@
     )
 
   interactivePanel <- ggplotly(
-    .comparisonPlotStatic(plotData, hasMinimization), tooltip=c("Date","value"),
+    .comparisonPlotStatic(plot), tooltip=c("Date","value"),
   ) %>%
     layout(xaxis=list(title="Date")) %>%
     .renamePlotlyTraces(.diagosticPltLabels)
@@ -241,10 +247,13 @@
   return(plot)
 }
 
-.staticStatDiagPlotFromData <- function(plotData, hasMinimization) {
+.getStaticStatDiagPlot <- function(plot) {
   panels <- list(
-    .comparisonPlotStatic(plot, hasMinimization),
-    .statPanelStatic(plotData, fg_dep, .diagosticPltColors[["fg"]])
+    .comparisonPlotStatic(plot),
+    .statPanelStatic(plot$data, fg_dep, .diagosticPltColors[["fg"]])
+  )
+  hasMinimization <- isTRUE(
+    plot$paramsAsInUiInput$odbBase %in% c("ecma_sfc", "ccma")
   )
   if (hasMinimization) {
     lay <- rbind(c(1),
@@ -253,7 +262,7 @@
                  c(3))
     panels <- c(
       panels,
-      list(.statPanelStatic(plotData, an_dep, .diagosticPltColors[["an"]]))
+      list(.statPanelStatic(plot$data, an_dep, .diagosticPltColors[["an"]]))
     )
   } else {
     lay <- rbind(c(1),
@@ -262,10 +271,14 @@
   return(grid.arrange(grobs=panels, layout_matrix=lay))
 }
 
-.interactiveStatDiagPlotFromData <- function(plotData, hasMinimization) {
+.getInteractiveStatDiagPlot <- function(plot) {
+  plotData <- plot$data
+  hasMinimization <- isTRUE(
+    plot$paramsAsInUiInput$odbBase %in% c("ecma_sfc", "ccma")
+  )
   if (hasMinimization) {
     obplot <- plotly::subplot(
-      .comparisonPlotPlotly(plotData, hasMinimization),
+      .comparisonPlotPlotly(plot),
       .statPanelPlotly(plotData, fg_dep, .diagosticPltColors[["fg"]]),
       .statPanelPlotly(plotData, an_dep, .diagosticPltColors[["an"]]),
       heights=c(0.40, 0.30, 0.30),
@@ -275,7 +288,7 @@
     )
   } else {
     obplot <- plotly::subplot(
-      .comparisonPlotPlotly(plotData, hasMinimization),
+      .comparisonPlotPlotly(plot),
       .statPanelPlotly(plotData, fg_dep, .diagosticPltColors[["fg"]]),
       heights=c(0.45, 0.55),
       margin=c(0, 0, 0.1125, 0), # left, right, top and bottom
@@ -292,14 +305,8 @@
 }
 
 statDiagPlottingFunction <- function(plot) {
-  hasMinimization <- isTRUE(
-    plot$paramsAsInUiInput$odbBase %in% c("ecma_sfc", "ccma")
-  )
-  plotData <- plot$data
-  if(plot$parentType$interactive) {
-    return (.interactiveStatDiagPlotFromData(plotData, hasMinimization))
-  }
-  return (.staticStatDiagPlotFromData(plotData, hasMinimization))
+  if(plot$parentType$interactive) return (.getInteractiveStatDiagPlot(plot))
+  return (.getStaticStatDiagPlot(plot))
 }
 
 plotRegistry$registerPlotType(

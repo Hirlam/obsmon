@@ -10,7 +10,7 @@ firstGuessAndAnPlottingFunction <-  function(plot) {
       "9"={
         varname <- sqliteParams$varname
         xlab <- varname
-        ylab <- sprintf("Bias/RMS (%s)", getUnits(varname))
+        ylab <- sprintf("Bias/RMS (%s)", units(plot$dataWithUnits$fg_bias_total))
         df <- data.frame(
             params=factor(c("FGBias", "AnBias", "FGRMS",  "AnRMS"),
                           c("FGBias", "AnBias", "FGRMS",  "AnRMS")),
@@ -29,16 +29,19 @@ firstGuessAndAnPlottingFunction <-  function(plot) {
           theme(legend.position="none")
       },
       {
+        localPlotData <- melt(plotData, id="level")
+
+        yLabUnits <- units(plot$dataWithUnits[[localPlotData[["variable"]][1]]])
         if(strObnumber=="7") {
           # Mind that channels appear as "level" in the databases
-          xlab <- "Channels"
-          ylab <- "Brightness temperature [K]"
+          xlab <- "Channel"
+          ylab <- "Brightness Temperature"
         } else {
           varname <- sqliteParams$varname
-          ylab <- sprintf("%s [%s]", varname, getUnits(varname))
-          xlab <- levelsLableForPlots(strObnumber, varname)
+          xlab <- sprintf("Level [%s]", units(plot$dataWithUnits$level))
+          ylab <- varname
         }
-        localPlotData <- melt(plotData, id="level")
+        ylab <- sprintf("%s [%s]", ylab, yLabUnits)
 
         shape_colours <- c("blue", "blue4", "red4", "red")
         obplot <- ggplot(data=localPlotData) +
@@ -56,16 +59,20 @@ firstGuessAndAnPlottingFunction <-  function(plot) {
           coord_flip_wrapper(default=TRUE) +
           labs(x=xlab, y=ylab)
         if(strObnumber=="7") {
-          obplot <- obplot + scale_x_continuous(breaks=plotData$channel)
+          obplot <- obplot + scale_x_continuous(breaks=plotData$level)
         } else {
-          if(startsWith(tolower(xlab), "pressure")) {
+          if(ud_are_convertible(units(plot$dataWithUnits$level), "Pa")) {
             # Using xlim causes ggplotly to omit either the shape or the line
             # (whichever is added later) from the legend. Not a big deal,
             # but worth pointing out, as this but may be solved in later
             # releases of the plotly package
-            obplot <- obplot + xlim(max(refPressures,localPlotData[["level"]]),0)
-          } else {
-            obplot <- obplot + xlim(0, max(refHeights,localPlotData[["level"]]))
+            units(refPressures) <- units(plot$dataWithUnits$level)
+            obplot <- obplot +
+              xlim(max(drop_units(refPressures), localPlotData[["level"]]), 0)
+          } else if(ud_are_convertible(units(plot$dataWithUnits$level), "meters")) {
+            units(refHeights) <- units(plot$dataWithUnits$level)
+            obplot <- obplot +
+              xlim(0, max(drop_units(refHeights), localPlotData[["level"]]))
           }
         }
       }

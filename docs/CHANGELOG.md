@@ -7,6 +7,7 @@ and this project adheres to [Semantic Versioning](http://semver.org).
 ## [Unreleased]
 ### Added
 - Editable colour scale and data range on applicable plots
+- Possibility to choose units for physical quantities where applicable
 - Button to toggle "show only standard levels" (when applicable)
 - Icons to notify about UI field values being cached or refreshed
 ### Changed
