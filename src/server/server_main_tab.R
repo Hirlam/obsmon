@@ -293,7 +293,11 @@ observeEvent(validateVarUnits(), {
     units(testValue)  <- input$variableUnits
   },
     error=function(e) {
-      flog.error(e)
+      showNotification(
+        ui=paste0(gsub("\\..*","", e$message), "!"),
+        type="error",
+        duration=2
+      )
       updateTextInput(session, "variableUnits", value=character(0))
     }
   )
@@ -515,7 +519,11 @@ observeEvent(validateLevelUnits(), {
     units(testValue)  <- input$levelsUnits
   },
     error=function(e) {
-      flog.error(e)
+      showNotification(
+        ui=paste0(gsub("\\..*","", e$message), "!"),
+        type="error",
+        duration=2
+      )
       updateTextInput(session, "levelsUnits", value=character(0))
     }
   )
