@@ -105,26 +105,40 @@ mainTab <- function() {fluidPage(
       ),
       conditionalPanel(
         condition = "input.obtype != 'satem'",
-        pickerInput("variable",
-          label=getDefLabel("variable"),
-          choices=c(),
-        ) %>% shinyInput_label_embed_caching_icon(),
+        fluidRow(
+          column(6,
+            pickerInput("variable",
+              label=getDefLabel("variable"),
+              choices=c(),
+            ) %>% shinyInput_label_embed_caching_icon()
+          ),
+          column(6,
+            textInput("variableUnits", label="Units", value=character(0), placeholder="Default")
+          )
+        ),
         conditionalPanel(
           condition = "input.odbBase != 'ecma_sfc' &&
                        input.obtype!='scatt' &&
                        input.obtype!='surface'",
-          pickerInput("levels",
-            label=getDefLabel("levels"),
-            choices=c(),
-            multiple=TRUE,
-            options=list(
-              `live-search`=TRUE,
-              `actions-box`=TRUE,
-              `none-selected-text`="Any",
-              `select-all-text`="Select All Listed",
-              `deselect-all-text`='Select "Any" (no level filters)'
+          fluidRow(
+            column(6,
+              pickerInput("levels",
+                label=getDefLabel("levels"),
+                choices=c(),
+                multiple=TRUE,
+                options=list(
+                  `live-search`=TRUE,
+                  `actions-box`=TRUE,
+                  `none-selected-text`="Any",
+                  `select-all-text`="All Listed",
+                  `deselect-all-text`="Don't filter"
+                )
+              ) %>% shinyInput_label_embed_caching_icon()
+            ),
+            column(6,
+              textInput("levelsUnits", label="Units", value=character(0), placeholder="Default")
             )
-          ) %>% shinyInput_label_embed_caching_icon(),
+          ),
           hidden(materialSwitch(
             inputId='standardLevelsSwitch',
             label="List Standard Levels Only",
