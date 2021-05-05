@@ -236,9 +236,9 @@ obsmonPlotClass <- setRefClass(Class="obsmonPlot",
     paramsAsInUiInput="list",
     rawData="data.frame",
     ##############################
-    chart = function(...) {return (.self$.memoise(FUN=.self$.generate, ...))},
+    chart = function(...) {return (.self$.memoise(FUN=.self$.generate))},
     leafletMap = function(...) {
-      return (.self$.memoise(FUN=.self$.generateLeafletMap, ...))
+      return (.self$.memoise(FUN=.self$.generateLeafletMap))
     },
     data = function(newValue) {
       if(missing(newValue)) {

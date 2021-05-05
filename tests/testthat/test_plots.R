@@ -237,6 +237,27 @@ test_that("obsmonPlotClass can be instanciated", {
   expect_s4_class(newPlot, "obsmonPlot")
 })
 
+test_that("obsmonPlotClass can be copied", {
+  newPlot <- obsmonPlotClass$new(
+    parentType=mockPlotType,
+    db=obsmonDb,
+    paramsAsInUiInput=mockUiInput
+  )
+
+  for (shallow in c(TRUE, FALSE)) {
+    plotCopy <- newPlot$copy(shallow=shallow)
+    expect_equal(class(newPlot), class(plotCopy))
+    classFieldNamesToClasses <- newPlot$getRefClass()$fields()
+    for (field in names(classFieldNamesToClasses)) {
+      fieldClass <- classFieldNamesToClasses[[field]]
+      if ("activeBindingFunction" %in% fieldClass) next
+      expect_equal(class(newPlot$field(field)), class(plotCopy$field(field)))
+      if(!shallow && field == "db") next
+      expect_equal(newPlot$field(field), plotCopy$field(field))
+    }
+  }
+})
+
 test_that("obsmonPlotClass 'fetchRawData' works", {
   newPlot <- obsmonPlotClass$new(
     parentType=mockPlotType,
