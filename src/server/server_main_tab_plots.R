@@ -153,6 +153,22 @@ observeEvent(input$doPlot, {
   NULL
 }, priority=2000)
 
+# Modify the plot data, without performing a new query, if
+# units change
+updatePlotAfterUnitsChange <- reactive({
+  variableUnits()
+  levelsUnits()
+}) %>% debounce(1000)
+observeEvent(updatePlotAfterUnitsChange(), {
+  req(obsmonPlotObj())
+  newObsmonPlotObj <- obsmonPlotObj()
+  obsmonPlotObj(NULL)
+
+  newObsmonPlotObj$paramsAsInUiInput$levelsUnits <- levelsUnits()
+  newObsmonPlotObj$paramsAsInUiInput$variableUnits <- variableUnits()
+  obsmonPlotObj(newObsmonPlotObj)
+}, ignoreNULL=FALSE)
+
 # Finally, producing the output
 chart <- reactive({
   if (is.null(obsmonPlotObj())) return(NULL)
