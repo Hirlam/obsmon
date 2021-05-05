@@ -136,8 +136,7 @@ plotTypeClass <- setRefClass(Class="obsmonPlotType",
           layout(
             margin=list(t=100),
             legend=list(orientation="v", yanchor="center", y=0.5)
-          ) %>%
-          configPlotlyWrapper()
+          )
         },
         error=function(e){
           flog.warn(
@@ -348,6 +347,9 @@ obsmonPlotClass <- setRefClass(Class="obsmonPlot",
       )
 
       plot <- plot %>% addTitleToPlot(.self$title)
+      if("plotly" %in% class(plot)) {
+        plot <- plot %>% configPlotlyWrapper()
+      }
       return(plot)
     },
 
