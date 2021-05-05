@@ -286,15 +286,15 @@ output$mapTitle <- renderText(obsmonPlotObj()$title)
 
 # Interactively update colorbar range in charts where this applies
 output$mainAreaPlotEditingOptions <- renderUI({
-  # TODO: Come up with a way to prevent users from selecting a range
-  #       that leaves data out
   chart <- req(obsmonPlotObj()$chart)
+
   cmin <- Inf
   cmax <- -Inf
   for (dataProperty in chart$x$data) {
     cmin <- min(cmin, dataProperty$marker$cmin)
     cmax <- max(cmin, dataProperty$marker$cmax)
   }
+
   req(all(is.finite(c(cmin, cmax))))
 
   colorMapsDf <- RColorBrewer::brewer.pal.info
@@ -323,19 +323,16 @@ output$mainAreaPlotEditingOptions <- renderUI({
   )
 })
 
-observeEvent(input$mainTabPlotColorscaleRange,{
-  cmin <- input$mainTabPlotColorscaleRange[1]
-  cmax <- input$mainTabPlotColorscaleRange[2]
-
+observe(
   plotlyProxy(outputId="plotly", session) %>%
     plotlyProxyInvoke(
       method="update",
       list(
-        marker.cmin=cmin,
-        marker.cmax=cmax
+        marker.cmin=req(input$mainTabPlotColorscaleRange[1]),
+        marker.cmax=req(input$mainTabPlotColorscaleRange[2])
       )
     )
-})
+)
 
 observeEvent(input$mainTabPlotColorscaleColorMap,{
   colorScaleName <- input$mainTabPlotColorscaleColorMap
