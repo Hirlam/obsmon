@@ -48,11 +48,17 @@ createMainPanel <- function(prependToIds=NULL) {
       tabPanel("Map", value=tabPanelValueMapTab,
         uiOutput(uiOutputIdForMapAndTitle)
       ),
-      tabPanel("Data", value=tabPanelValueDataTab,
-        uiOutput(uiOutputIdForPlotDataTable)
-      ),
-      tabPanel("Query & Raw Data", value=tabPanelValueQueryAndRawDataTab,
-        uiOutput(uiOutputIdForQueryAndRawDataTable)
+      navbarMenu(title="Query & Data",
+        tabPanel(
+          title="Data Used in the Plot",
+          value=tabPanelValueDataTab,
+          uiOutput(uiOutputIdForPlotDataTable)
+        ),
+        tabPanel(
+          title="Query & Retrieved Raw Data",
+          value=tabPanelValueQueryAndRawDataTab,
+          uiOutput(uiOutputIdForQueryAndRawDataTable)
+        )
       )
     )
   )
