@@ -87,7 +87,25 @@ mapAndMapTitleOutput <- function(mapOutputId, mapTitleOutputId) {
   )
 }
 
-queryUsedAndDataTableOutput <- function(queryUsedOutputId, dataTableOutputId){
+queryUsedAndRawDataTableOutput <- function(queryUsedOutputId, dataTableOutputId){
+  downloadButtonCsvId <- paste0(dataTableOutputId, "DownloadAsCsv")
+  downloadButtonTxtId <- paste0(dataTableOutputId, "DownloadAsTxt")
+  fluidPage(
+    fluidRow(
+      column(12, align="center",
+        wellPanel(
+          h5("Raw data retrived using the following query:"),
+          tags$div(HTML("<b>"), textOutput(queryUsedOutputId), HTML("</b>")),
+        ),
+        downloadButton(downloadButtonTxtId, "Download as TXT"),
+        downloadButton(downloadButtonCsvId, "Download as CSV"),
+        dataTableOutput(dataTableOutputId) %>% withSpinner(color="#0dc5c1")
+      )
+    )
+  )
+}
+
+plotDataTableOutput <- function(dataTableOutputId){
   downloadButtonCsvId <- paste0(dataTableOutputId, "DownloadAsCsv")
   downloadButtonTxtId <- paste0(dataTableOutputId, "DownloadAsTxt")
   fluidPage(
@@ -98,14 +116,14 @@ queryUsedAndDataTableOutput <- function(queryUsedOutputId, dataTableOutputId){
             shiny::icon("info-circle", class="query_info_icon") %>%
               bs_embed_tooltip(
                 title=paste(
-                  "Rows with incomplete entries are removed",
-                  "from the retrieved data after performing the query."
+                  "Obtained by post-processing the raw queried data. Among",
+                  "other things, (i) rows with incomplete entries are removed,",
+                  "(ii) units are attached, and (iii) data columns may differ."
                 ),
                 trigger="hover"
               ),
-            "Query used:",
-          ),
-          tags$div(HTML("<b>"), textOutput(queryUsedOutputId), HTML("</b>")),
+            "Data used in the plot:",
+          )
         ),
         downloadButton(downloadButtonTxtId, "Download as TXT"),
         downloadButton(downloadButtonCsvId, "Download as CSV"),

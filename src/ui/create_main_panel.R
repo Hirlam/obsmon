@@ -1,4 +1,3 @@
-
 createMainPanel <- function(prependToIds=NULL) {
   if(is.null(prependToIds)) {
     tabsetPanelId <- "mainArea"
@@ -6,9 +5,11 @@ createMainPanel <- function(prependToIds=NULL) {
     tabPanelValuePlotTab <- "plotTab"
     tabPanelValuePlotlyTab <- "plotlyTab"
     tabPanelValueDataTab <- "dataTab"
+    tabPanelValueQueryAndRawDataTab <- "queryAndRawDataTab"
     uiOutputIdForPlot <- "plotContainer"
     uiOutputIdForPlotly <- "plotlyContainer"
-    uiOutputIdForQueryAndTable <- "queryAndTableContainer"
+    uiOutputIdForPlotDataTable <- "plotDataTableContainer"
+    uiOutputIdForQueryAndRawDataTable <- "queryAndRawDataTableContainer"
     uiOutputIdForMapAndTitle <- "mapAndMapTitleContainer"
   } else {
     tabsetPanelId <- paste0(prependToIds, "MainArea")
@@ -16,9 +17,11 @@ createMainPanel <- function(prependToIds=NULL) {
     tabPanelValuePlotTab <- paste0(prependToIds, "PlotTab")
     tabPanelValuePlotlyTab <- paste0(prependToIds, "PlotlyTab")
     tabPanelValueDataTab <- paste0(prependToIds, "DataTab")
+    tabPanelValueQueryAndRawDataTab <- paste0(prependToIds, "QueryAndRawDataTab")
     uiOutputIdForPlot <- paste0(prependToIds, "PlotContainer")
     uiOutputIdForPlotly <- paste0(prependToIds, "PlotlyContainer")
-    uiOutputIdForQueryAndTable <- paste0(prependToIds,"QueryAndTableContainer")
+    uiOutputIdForPlotDataTable <- paste0(prependToIds,"PlotDataTableContainer")
+    uiOutputIdForQueryAndRawDataTable <- paste0(prependToIds,"QueryAndRawDataTableContainer")
     uiOutputIdForMapAndTitle <- paste0(prependToIds, "MapAndMapTitleContainer")
   }
 
@@ -45,8 +48,11 @@ createMainPanel <- function(prependToIds=NULL) {
       tabPanel("Map", value=tabPanelValueMapTab,
         uiOutput(uiOutputIdForMapAndTitle)
       ),
-      tabPanel("Query and Data", value=tabPanelValueDataTab,
-        uiOutput(uiOutputIdForQueryAndTable)
+      tabPanel("Data", value=tabPanelValueDataTab,
+        uiOutput(uiOutputIdForPlotDataTable)
+      ),
+      tabPanel("Query & Raw Data", value=tabPanelValueQueryAndRawDataTab,
+        uiOutput(uiOutputIdForQueryAndRawDataTable)
       )
     )
   )

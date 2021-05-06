@@ -222,8 +222,11 @@ output$plotlyContainer <- renderUI(plotlyOutputInsideFluidRow("plotly"))
 output$mapAndMapTitleContainer <- renderUI(
   mapAndMapTitleOutput("map", "mapTitle")
 )
-output$queryAndTableContainer <- renderUI(
-  queryUsedAndDataTableOutput("queryUsed", "dataTable")
+output$plotDataTableContainer <- renderUI(
+  plotDataTableOutput("plotDataTable")
+)
+output$queryAndRawDataTableContainer <- renderUI(
+  queryUsedAndRawDataTableOutput("queryUsed", "rawDataTable")
 )
 
 # Rendering plot/map/dataTable
@@ -252,7 +255,28 @@ output$plot <- renderPlot({
 )
 
 # (ii) Rendering dataTables
-output$dataTable <- renderDataTable({
+output$rawDataTable <- renderDataTable({
+  if(is.null(obsmonPlotObj())) return(NULL)
+  notifId <- showNotification(
+    "Rendering data table...", duration=NULL, type="message"
+  )
+  on.exit(removeNotification(notifId))
+  obsmonPlotObj()$rawData
+},
+  options=list(scrollX=TRUE, scrollY="300px")
+)
+output$queryUsed <- renderText(obsmonPlotObj()$sqliteQuery)
+
+output$rawDataTableDownloadAsTxt <- downloadHandler(
+  filename = function() "raw_data.txt",
+  content = function(file) req(obsmonPlotObj())$exportData(file, format="txt", raw=TRUE)
+)
+output$rawDataTableDownloadAsCsv <- downloadHandler(
+  filename = function() "raw_data.csv",
+  content = function(file) req(obsmonPlotObj())$exportData(file, format="csv", raw=TRUE)
+)
+
+output$plotDataTable <- renderDataTable({
   if(is.null(obsmonPlotObj())) return(NULL)
   notifId <- showNotification(
     "Rendering data table...", duration=NULL, type="message"
@@ -262,13 +286,11 @@ output$dataTable <- renderDataTable({
 },
   options=list(scrollX=TRUE, scrollY="300px")
 )
-output$queryUsed <- renderText(obsmonPlotObj()$sqliteQuery)
-
-output$dataTableDownloadAsTxt <- downloadHandler(
+output$plotDataTableDownloadAsTxt <- downloadHandler(
   filename = function() "plot_data.txt",
   content = function(file) req(obsmonPlotObj())$exportData(file, format="txt")
 )
-output$dataTableDownloadAsCsv <- downloadHandler(
+output$plotDataTableDownloadAsCsv <- downloadHandler(
   filename = function() "plot_data.csv",
   content = function(file) req(obsmonPlotObj())$exportData(file, format="csv")
 )

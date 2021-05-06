@@ -302,12 +302,18 @@ obsmonPlotClass <- setRefClass(Class="obsmonPlot",
       flog.trace("Done fetching raw data for plot '%s'", .self$title)
     },
 
-    exportData = function(file, format) {
+    exportData = function(file, format, raw=FALSE) {
+      if(raw) {
+        dataToBeExported <- .self$rawData
+      } else {
+        dataToBeExported <- .self$data
+      }
+
       format <- tolower(format)
       if(format=="csv") {
-        write.csv(.self$data, file, row.names=FALSE)
+        write.csv(dataToBeExported, file, row.names=FALSE)
       } else if (format=="txt") {
-        write.table(.self$data, file, sep="\t", row.names=FALSE)
+        write.table(dataToBeExported, file, sep="\t", row.names=FALSE)
       } else {
         flog.error("Format '%s' not supported.", format)
         return(NULL)
@@ -329,7 +335,7 @@ obsmonPlotClass <- setRefClass(Class="obsmonPlot",
     .generate = function() {
       plot <- tryCatch({
         if(nrow(.self$data)==0) {
-          rtn <- errorPlot("Could not produce plot: No data retrieved.")
+          rtn <- errorPlot("Could not produce plot: No data.")
         }else if(class(.self$parentType$plottingFunction) == "uninitializedField") {
           rtn <- .self$.defaultGenerate()
         } else {

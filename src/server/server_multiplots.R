@@ -225,17 +225,29 @@ output$multiPlotsMapAndMapTitleContainer <- renderUI({
   do.call(tagList, mapAndMapTitleOutList)
 })
 # (iii) dataTables
-output$multiPlotsQueryAndTableContainer <- renderUI({
+output$multiPlotsQueryAndRawDataTableContainer <- renderUI({
   notifId <- showNotification(
-    "Rendering multiPlot data tables...", duration=NULL, type="message"
+    "Rendering multiPlot raw data tables...", duration=NULL, type="message"
   )
   on.exit(removeNotification(notifId))
   queryAndDataTableOutList <- lapply(seq_along(multiPlot()), function(iPlot){
     queryUsedId <- multiPlotsGenId(iPlot, type="queryUsed")
-    dataTableId <- multiPlotsGenId(iPlot, type="dataTable")
-    queryUsedAndDataTableOutput(queryUsedId, dataTableId)
+    rawDataTableId <- multiPlotsGenId(iPlot, type="rawDataTable")
+    queryUsedAndRawDataTableOutput(queryUsedId, rawDataTableId)
   })
   do.call(tagList, queryAndDataTableOutList)
+})
+
+output$multiPlotsPlotDataTableContainer <- renderUI({
+  notifId <- showNotification(
+    "Rendering multiPlot data tables...", duration=NULL, type="message"
+  )
+  on.exit(removeNotification(notifId))
+  plotDataTableOutList <- lapply(seq_along(multiPlot()), function(iPlot){
+    plotDataTableId <- multiPlotsGenId(iPlot, type="plotDataTable")
+    plotDataTableOutput(plotDataTableId)
+  })
+  do.call(tagList, plotDataTableOutList)
 })
 
 # Assign each plot/map/title/query/table to the respective outputs
@@ -248,7 +260,7 @@ observeEvent(multiPlot(), {
 
   # Clean up old multiPlot outputs
   for(iPlot in seq(multiPlotsPrevQuantity())) {
-    for(type in c("plot", "map", "mapTitle", "queryUsed", "dataTable")) {
+    for(type in c("plot", "map", "mapTitle", "queryUsed", "plotDataTable", "rawDataTable")) {
       outId <- multiPlotsGenId(iPlot, type=type)
       output[[outId]] <- NULL
     }
@@ -284,13 +296,35 @@ observeEvent(multiPlot(), {
       mapTitleId <- multiPlotsGenId(iPlot, type="mapTitle")
       output[[mapId]] <- renderLeaflet(req(multiPlot()[[pName]]$leafletMap))
       output[[mapTitleId]] <- renderText(req(multiPlot()[[pName]]$title))
-      # Assign queryUsed and dataTable
+
+      # Assign queryUsed and raw data table
       queryUsedId <- multiPlotsGenId(iPlot, type="queryUsed")
-      dataTableId <- multiPlotsGenId(iPlot, type="dataTable")
-      saveAsTxtId <- paste0(dataTableId, "DownloadAsTxt")
-      saveAsCsvId <- paste0(dataTableId, "DownloadAsCsv")
+      rawDataTableId <- multiPlotsGenId(iPlot, type="rawDataTable")
+      saveAsTxtIdRawData <- paste0(rawDataTableId, "DownloadAsTxt")
+      saveAsCsvIdRawData <- paste0(rawDataTableId, "DownloadAsCsv")
       output[[queryUsedId]] <- renderText(req(multiPlot()[[pName]]$sqliteQuery))
-      output[[dataTableId]] <- renderDataTable(
+      output[[rawDataTableId]] <- renderDataTable(
+        req(multiPlot()[[pName]]$rawData),
+        options=list(scrollX=TRUE, scrollY="200px")
+      )
+      output[[saveAsTxtIdRawData]] <- downloadHandler(
+        filename = function() sprintf("multiplot_%d_raw_data.txt", iPlot),
+        content = function(file) {
+          req(multiPlot()[[pName]])$exportData(file, format="txt", raw=TRUE)
+        }
+      )
+      output[[saveAsCsvIdRawData]] <- downloadHandler(
+        filename = function() sprintf("multiplot_%d_raw_data.csv", iPlot),
+        content = function(file) {
+          req(multiPlot()[[pName]])$exportData(file, format="csv", raw=TRUE)
+        }
+      )
+
+      # Assign plot data table
+      plotDataTableId <- multiPlotsGenId(iPlot, type="plotDataTable")
+      saveAsTxtId <- paste0(plotDataTableId, "DownloadAsTxt")
+      saveAsCsvId <- paste0(plotDataTableId, "DownloadAsCsv")
+      output[[plotDataTableId]] <- renderDataTable(
         req(multiPlot()[[pName]]$dataWithUnits),
         options=list(scrollX=TRUE, scrollY="200px")
       )
