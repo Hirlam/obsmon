@@ -133,7 +133,6 @@ plotDataTableOutput <- function(dataTableOutputId){
   )
 }
 
-source("src/ui/create_main_panel.R")
 source("src/ui/tabs/main_tab.R")
 source("src/ui/tabs/multi_plots_tab.R")
 source("src/ui/tabs/doc_tab.R")

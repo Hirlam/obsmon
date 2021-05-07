@@ -1,10 +1,12 @@
 #########
 # Plots #
 #########
-# Start with the plotTab disabled, so users don't see two "Plot" tabs
-shinyjs::hide(selector="#mainArea li a[data-value=plotTab]")
-# Also start with the mapTab disabled. Will be enabled if needed.
-shinyjs::hide(selector="#mainArea li a[data-value=mapTab]")
+appendTab(inputId="mainAreaTabsetPanel", nonInteractivePlotTabPanel("plot"))
+appendTab(inputId="mainAreaTabsetPanel", interactivePlotTabPanel("plotly"))
+hideTab("mainAreaTabsetPanel", "plotlyTab") # Show only 1 plot tab at a time
+appendTab(inputId="mainAreaTabsetPanel", leafletMapTabPanel())
+hideTab("mainAreaTabsetPanel", "mapTab") # Show mapTab only when applicable
+appendTab(inputId="mainAreaTabsetPanel", queryAndDataTabPanel())
 
 currentPlotPid <- reactiveVal(-1)
 plotStartedNotifId <- reactiveVal(-1)
@@ -192,42 +194,30 @@ observe({
   req(obsmonPlotObj())
   # (i) Maps tab
   if(is.null(leafletMap())) {
-    if(input$mainArea=="mapTab") {
-      updateTabsetPanel(session, "mainArea", "plotlyTab")
+    if(isTRUE(input$mainAreaTabsetPanel=="mapTab")) {
+      updateTabsetPanel(session, "mainAreaTabsetPanel", "plotlyTab")
     }
-    shinyjs::hide(selector="#mainArea li a[data-value=mapTab]")
+    hideTab("mainAreaTabsetPanel", "mapTab")
   } else {
-    shinyjs::show(selector="#mainArea li a[data-value=mapTab]")
+    showTab("mainAreaTabsetPanel", "mapTab")
   }
 
   # (ii) Interactive or regular plot tabs
-  interactive <- "plotly" %in% class(chart())
-  shinyjs::toggle(
-    condition=interactive, selector="#mainArea li a[data-value=plotlyTab]"
-  )
-  shinyjs::toggle(
-    condition=!interactive, selector="#mainArea li a[data-value=plotTab]"
-  )
+  interactive <- isTRUE("plotly" %in% class(chart()))
+  if(interactive) {
+    hideTab("mainAreaTabsetPanel", "plotTab")
+    showTab("mainAreaTabsetPanel", "plotlyTab")
+  } else {
+    hideTab("mainAreaTabsetPanel", "plotlyTab")
+    showTab("mainAreaTabsetPanel", "plotTab")
+  }
 
-  if(interactive && input$mainArea=="plotTab") {
-    updateTabsetPanel(session, "mainArea", "plotlyTab")
-  } else if(!interactive && input$mainArea=="plotlyTab") {
-    updateTabsetPanel(session, "mainArea", "plotTab")
+  if(isTRUE(interactive && input$mainAreaTabsetPanel=="plotTab")) {
+    updateTabsetPanel(session, "mainAreaTabsetPanel", "plotlyTab")
+  } else if(!interactive && input$mainAreaTabsetPanel=="plotlyTab") {
+    updateTabsetPanel(session, "mainAreaTabsetPanel", "plotTab")
   }
 })
-
-# Rendering UI slots for the outputs dynamically
-output$plotContainer <- renderUI(plotOutputInsideFluidRow("plot"))
-output$plotlyContainer <- renderUI(plotlyOutputInsideFluidRow("plotly"))
-output$mapAndMapTitleContainer <- renderUI(
-  mapAndMapTitleOutput("map", "mapTitle")
-)
-output$plotDataTableContainer <- renderUI(
-  plotDataTableOutput("plotDataTable")
-)
-output$queryAndRawDataTableContainer <- renderUI(
-  queryUsedAndRawDataTableOutput("queryUsed", "rawDataTable")
-)
 
 # Rendering plot/map/dataTable
 # (i) Rendering plots
@@ -307,7 +297,7 @@ output$map <- renderLeaflet({
 output$mapTitle <- renderText(obsmonPlotObj()$title)
 
 # Interactively update colorbar range in charts where this applies
-output$mainAreaPlotEditingOptions <- renderUI({
+output$plotlyPlotEditingOptions <- renderUI({
   chart <- req(obsmonPlotObj()$chart)
 
   cmin <- Inf

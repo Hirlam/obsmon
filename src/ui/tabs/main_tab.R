@@ -243,6 +243,6 @@ mainTab <- function() {fluidPage(
         style="color: #fff; background-color: #FFA500; border-color: #2e6da4"
       ))
     ),
-    mainPanel=createMainPanel()
+    mainPanel=mainPanel(width=9, tabsetPanel(id="mainAreaTabsetPanel"))
   )
 )}
