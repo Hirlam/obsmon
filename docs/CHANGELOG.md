@@ -12,6 +12,8 @@ and this project adheres to [Semantic Versioning](http://semver.org).
 - Icons to notify about UI field values being cached or refreshed
 ### Changed
 - Searchable fields in main tab
+- Give each plot inside a multiPlot its own independent
+  "Plot", "Map" and "Query & Data" tabs
 - Style of UI fields "Cycles", "Levels", "Channels"
 - Interrupt cache if user changes experiment/database/DTG, and start
   caching the relevant files for the new selection.

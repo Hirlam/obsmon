@@ -7,7 +7,7 @@ multiPlotsGenId <- function(iPlot, type=NULL) {
   # Generate output IDs for the dinamically generated outpus
   qpName <- sprintf("multiPlot_%d", iPlot)
   if(is.null(type)) return(qpName)
-  recogOutTypes <- c("plot", "map", "mapTitle", "queryUsed", "dataTable")
+  recogOutTypes <- c("plot", "map", "mapTitle", "queryUsed", "plotDataTable", "rawDataTable")
   if(!(type %in%  recogOutTypes)) {
     stop(sprintf(
       "multiPlotsGenId: Choose type from: %s",

@@ -87,24 +87,14 @@ mapAndMapTitleOutput <- function(mapOutputId, mapTitleOutputId) {
   )
 }
 
-queryUsedAndDataTableOutput <- function(queryUsedOutputId, dataTableOutputId){
+queryUsedAndRawDataTableOutput <- function(queryUsedOutputId, dataTableOutputId){
   downloadButtonCsvId <- paste0(dataTableOutputId, "DownloadAsCsv")
   downloadButtonTxtId <- paste0(dataTableOutputId, "DownloadAsTxt")
   fluidPage(
     fluidRow(
       column(12, align="center",
         wellPanel(
-          h5(
-            shiny::icon("info-circle", class="query_info_icon") %>%
-              bs_embed_tooltip(
-                title=paste(
-                  "Rows with incomplete entries are removed",
-                  "from the retrieved data after performing the query."
-                ),
-                trigger="hover"
-              ),
-            "Query used:",
-          ),
+          h5("Raw data retrived using the following query:"),
           tags$div(HTML("<b>"), textOutput(queryUsedOutputId), HTML("</b>")),
         ),
         downloadButton(downloadButtonTxtId, "Download as TXT"),
@@ -115,7 +105,34 @@ queryUsedAndDataTableOutput <- function(queryUsedOutputId, dataTableOutputId){
   )
 }
 
-source("src/ui/create_main_panel.R")
+plotDataTableOutput <- function(dataTableOutputId){
+  downloadButtonCsvId <- paste0(dataTableOutputId, "DownloadAsCsv")
+  downloadButtonTxtId <- paste0(dataTableOutputId, "DownloadAsTxt")
+  fluidPage(
+    fluidRow(
+      column(12, align="center",
+        wellPanel(
+          h5(
+            shiny::icon("info-circle", class="query_info_icon") %>%
+              bs_embed_tooltip(
+                title=paste(
+                  "Obtained by post-processing the raw queried data. Among",
+                  "other things, (i) rows with incomplete entries are removed,",
+                  "(ii) units are attached, and (iii) data columns may differ."
+                ),
+                trigger="hover"
+              ),
+            "Data used in the plot:",
+          )
+        ),
+        downloadButton(downloadButtonTxtId, "Download as TXT"),
+        downloadButton(downloadButtonCsvId, "Download as CSV"),
+        dataTableOutput(dataTableOutputId) %>% withSpinner(color="#0dc5c1")
+      )
+    )
+  )
+}
+
 source("src/ui/tabs/main_tab.R")
 source("src/ui/tabs/multi_plots_tab.R")
 source("src/ui/tabs/doc_tab.R")

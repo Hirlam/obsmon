@@ -155,3 +155,47 @@ enableShinyInputs <- function(input, pattern=NULL, except=NULL) {
   shinyjs::runjs("$('.selectpicker').prop('disabled', false);")
   shinyjs::runjs("$('.selectpicker').selectpicker('refresh');")
 }
+
+interactivePlotTabPanel <- function(plotOutputId) {
+  tabPanel("Plot", value="plotlyTab",
+    div(
+      style="display:flex; align-items:center; justify-items: center;",
+      div(
+        style="flex-grow:1; overflow:auto;",
+        plotlyOutputInsideFluidRow(plotOutputId) %>% withSpinner(color="#0dc5c1")
+      ),
+      div(
+        style="float:right;",
+        uiOutput(paste0(plotOutputId, "PlotEditingOptions"))
+      )
+    )
+  )
+}
+
+nonInteractivePlotTabPanel <- function(plotOutputId) {
+  tabPanel("Plot", value="plotTab",
+    plotOutputInsideFluidRow(plotOutputId) %>% withSpinner(color="#0dc5c1")
+  )
+}
+
+leafletMapTabPanel <- function(mapOutputId="map") {
+  tabPanel("Map", value="mapTab",
+    mapAndMapTitleOutput(mapOutputId, sprintf("%sTitle", mapOutputId))
+  )
+}
+
+queryAndDataTabPanel <- function(idPrefix=character(0)) {
+  navbarMenu(title="Query & Data",
+    tabPanel(
+      title="Data Used in the Plot",
+      plotDataTableOutput(paste0(idPrefix, "plotDataTable"))
+    ),
+    tabPanel(
+      title="Query & Retrieved Raw Data",
+      queryUsedAndRawDataTableOutput(
+        paste0(idPrefix, "queryUsed"),
+        paste0(idPrefix, "rawDataTable")
+      )
+    )
+  )
+}

@@ -136,8 +136,7 @@ plotTypeClass <- setRefClass(Class="obsmonPlotType",
           layout(
             margin=list(t=100),
             legend=list(orientation="v", yanchor="center", y=0.5)
-          ) %>%
-          configPlotlyWrapper()
+          )
         },
         error=function(e){
           flog.warn(
@@ -237,9 +236,9 @@ obsmonPlotClass <- setRefClass(Class="obsmonPlot",
     paramsAsInUiInput="list",
     rawData="data.frame",
     ##############################
-    chart = function(...) {return (.self$.memoise(FUN=.self$.generate, ...))},
+    chart = function(...) {return (.self$.memoise(FUN=.self$.generate))},
     leafletMap = function(...) {
-      return (.self$.memoise(FUN=.self$.generateLeafletMap, ...))
+      return (.self$.memoise(FUN=.self$.generateLeafletMap))
     },
     data = function(newValue) {
       if(missing(newValue)) {
@@ -303,12 +302,18 @@ obsmonPlotClass <- setRefClass(Class="obsmonPlot",
       flog.trace("Done fetching raw data for plot '%s'", .self$title)
     },
 
-    exportData = function(file, format) {
+    exportData = function(file, format, raw=FALSE) {
+      if(raw) {
+        dataToBeExported <- .self$rawData
+      } else {
+        dataToBeExported <- .self$data
+      }
+
       format <- tolower(format)
       if(format=="csv") {
-        write.csv(.self$data, file, row.names=FALSE)
+        write.csv(dataToBeExported, file, row.names=FALSE)
       } else if (format=="txt") {
-        write.table(.self$data, file, sep="\t", row.names=FALSE)
+        write.table(dataToBeExported, file, sep="\t", row.names=FALSE)
       } else {
         flog.error("Format '%s' not supported.", format)
         return(NULL)
@@ -330,7 +335,7 @@ obsmonPlotClass <- setRefClass(Class="obsmonPlot",
     .generate = function() {
       plot <- tryCatch({
         if(nrow(.self$data)==0) {
-          rtn <- errorPlot("Could not produce plot: No data retrieved.")
+          rtn <- errorPlot("Could not produce plot: No data.")
         }else if(class(.self$parentType$plottingFunction) == "uninitializedField") {
           rtn <- .self$.defaultGenerate()
         } else {
@@ -348,6 +353,9 @@ obsmonPlotClass <- setRefClass(Class="obsmonPlot",
       )
 
       plot <- plot %>% addTitleToPlot(.self$title)
+      if("plotly" %in% class(plot)) {
+        plot <- plot %>% configPlotlyWrapper()
+      }
       return(plot)
     },
 

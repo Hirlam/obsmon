@@ -282,18 +282,28 @@ observeEvent(input$variable, {
   if(length(defaultUnits)==0) defaultUnits <- "unitless"
   updateTextInput(
     session, "variableUnits",
+    value=character(0),
     placeholder=as.character(defaultUnits)
   )
 })
+
+variableUnits <- reactiveVal(character(0))
+observe({
+  req(length(input$variableUnits)==0 || input$variableUnits=="")
+  variableUnits(character(0))
+})
+
 validateVarUnits <- reactive({
   req(length(input$variable)>0 && input$variable != "")
   req(length(input$variableUnits)>0 && input$variableUnits != "")
-}) %>% debounce(1500)
+}) %>% debounce(1250)
+
 observeEvent(validateVarUnits(), {
   tryCatch({
     testValue <- 1
     units(testValue) <- getUnits(input$variable)
     units(testValue)  <- input$variableUnits
+    variableUnits(input$variableUnits)
   },
     error=function(e) {
       showNotification(
@@ -301,7 +311,7 @@ observeEvent(validateVarUnits(), {
         type="error",
         duration=2
       )
-      updateTextInput(session, "variableUnits", value=character(0))
+      updateTextInput(session, "variableUnits", value=variableUnits())
     }
   )
 })
@@ -446,7 +456,14 @@ observe({
     varname=input$variable
   ))
 })
-levelsUnitsChanged <- reactive(input$levelsUnits) %>% debounce(1500)
+observeEvent(req(defaultLevelsUnits()), {
+  defaultUnits <- defaultLevelsUnits()
+  if(length(defaultUnits)==0) defaultUnits <- "unitless"
+  updateTextInput(
+    session, "levelsUnits",
+    placeholder=as.character(defaultUnits)
+  )
+})
 
 availableLevels <- reactiveVal(NULL)
 updateLevels <- reactive({
@@ -478,6 +495,7 @@ observeEvent({
   availableLevels(levels)
 }, ignoreNULL=FALSE)
 
+levelsUnitsChanged <- reactive(input$levelsUnits) %>% debounce(1250)
 observeEvent({
   availableLevels()
   input$standardLevelsSwitch
@@ -503,23 +521,21 @@ observeEvent({
 }, ignoreNULL=FALSE)
 
 # Update and validate levelsUnits input
-observeEvent(req(defaultLevelsUnits()), {
-  defaultUnits <- defaultLevelsUnits()
-  if(length(defaultUnits)==0) defaultUnits <- "unitless"
-  updateTextInput(
-    session, "levelsUnits",
-    placeholder=as.character(defaultUnits)
-  )
+levelsUnits <- reactiveVal()
+observe({
+  req(length(input$levelsUnits)==0 || input$levelsUnits=="")
+  levelsUnits(character(0))
 })
 validateLevelUnits <- reactive({
   req(defaultLevelsUnits())
   req(length(input$levelsUnits)>0 && input$levelsUnits != "")
-}) %>% debounce(1500)
+}) %>% debounce(1250)
 observeEvent(validateLevelUnits(), {
   tryCatch({
     testValue <- 1
     units(testValue) <- defaultLevelsUnits()
     units(testValue)  <- input$levelsUnits
+    levelsUnits(input$levelsUnits)
   },
     error=function(e) {
       showNotification(
@@ -527,7 +543,7 @@ observeEvent(validateLevelUnits(), {
         type="error",
         duration=2
       )
-      updateTextInput(session, "levelsUnits", value=character(0))
+      updateTextInput(session, "levelsUnits", value=levelsUnits())
     }
   )
 })

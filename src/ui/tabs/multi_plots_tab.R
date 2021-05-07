@@ -19,6 +19,6 @@ multiPlotsTab <- function() {
         style="color: #fff; background-color: #FFA500; border-color: #2e6da4"
       ))
     ),
-    mainPanel=createMainPanel(prependToIds="multiPlots")
+    mainPanel=mainPanel(width=9, uiOutput(outputId="multiPlotTabsetPanelsContainer"))
   )
 }

@@ -1,10 +1,12 @@
 #########
 # Plots #
 #########
-# Start with the plotTab disabled, so users don't see two "Plot" tabs
-shinyjs::hide(selector="#mainArea li a[data-value=plotTab]")
-# Also start with the mapTab disabled. Will be enabled if needed.
-shinyjs::hide(selector="#mainArea li a[data-value=mapTab]")
+appendTab(inputId="mainAreaTabsetPanel", nonInteractivePlotTabPanel("plot"))
+appendTab(inputId="mainAreaTabsetPanel", interactivePlotTabPanel("plotly"))
+hideTab("mainAreaTabsetPanel", "plotlyTab") # Show only 1 plot tab at a time
+appendTab(inputId="mainAreaTabsetPanel", leafletMapTabPanel())
+hideTab("mainAreaTabsetPanel", "mapTab") # Show mapTab only when applicable
+appendTab(inputId="mainAreaTabsetPanel", queryAndDataTabPanel())
 
 currentPlotPid <- reactiveVal(-1)
 plotStartedNotifId <- reactiveVal(-1)
@@ -153,6 +155,22 @@ observeEvent(input$doPlot, {
   NULL
 }, priority=2000)
 
+# Modify the plot data, without performing a new query, if
+# units change
+updatePlotAfterUnitsChange <- reactive({
+  variableUnits()
+  levelsUnits()
+}) %>% debounce(1000)
+observeEvent(updatePlotAfterUnitsChange(), {
+  req(obsmonPlotObj())
+  newObsmonPlotObj <- obsmonPlotObj()
+  obsmonPlotObj(NULL)
+
+  newObsmonPlotObj$paramsAsInUiInput$levelsUnits <- levelsUnits()
+  newObsmonPlotObj$paramsAsInUiInput$variableUnits <- variableUnits()
+  obsmonPlotObj(newObsmonPlotObj)
+}, ignoreNULL=FALSE)
+
 # Finally, producing the output
 chart <- reactive({
   if (is.null(obsmonPlotObj())) return(NULL)
@@ -176,39 +194,30 @@ observe({
   req(obsmonPlotObj())
   # (i) Maps tab
   if(is.null(leafletMap())) {
-    if(input$mainArea=="mapTab") {
-      updateTabsetPanel(session, "mainArea", "plotlyTab")
+    if(isTRUE(input$mainAreaTabsetPanel=="mapTab")) {
+      updateTabsetPanel(session, "mainAreaTabsetPanel", "plotlyTab")
     }
-    shinyjs::hide(selector="#mainArea li a[data-value=mapTab]")
+    hideTab("mainAreaTabsetPanel", "mapTab")
   } else {
-    shinyjs::show(selector="#mainArea li a[data-value=mapTab]")
+    showTab("mainAreaTabsetPanel", "mapTab")
   }
 
   # (ii) Interactive or regular plot tabs
-  interactive <- "plotly" %in% class(chart())
-  shinyjs::toggle(
-    condition=interactive, selector="#mainArea li a[data-value=plotlyTab]"
-  )
-  shinyjs::toggle(
-    condition=!interactive, selector="#mainArea li a[data-value=plotTab]"
-  )
+  interactive <- isTRUE("plotly" %in% class(chart()))
+  if(interactive) {
+    hideTab("mainAreaTabsetPanel", "plotTab")
+    showTab("mainAreaTabsetPanel", "plotlyTab")
+  } else {
+    hideTab("mainAreaTabsetPanel", "plotlyTab")
+    showTab("mainAreaTabsetPanel", "plotTab")
+  }
 
-  if(interactive && input$mainArea=="plotTab") {
-    updateTabsetPanel(session, "mainArea", "plotlyTab")
-  } else if(!interactive && input$mainArea=="plotlyTab") {
-    updateTabsetPanel(session, "mainArea", "plotTab")
+  if(isTRUE(interactive && input$mainAreaTabsetPanel=="plotTab")) {
+    updateTabsetPanel(session, "mainAreaTabsetPanel", "plotlyTab")
+  } else if(!interactive && input$mainAreaTabsetPanel=="plotlyTab") {
+    updateTabsetPanel(session, "mainAreaTabsetPanel", "plotTab")
   }
 })
-
-# Rendering UI slots for the outputs dynamically
-output$plotContainer <- renderUI(plotOutputInsideFluidRow("plot"))
-output$plotlyContainer <- renderUI(plotlyOutputInsideFluidRow("plotly"))
-output$mapAndMapTitleContainer <- renderUI(
-  mapAndMapTitleOutput("map", "mapTitle")
-)
-output$queryAndTableContainer <- renderUI(
-  queryUsedAndDataTableOutput("queryUsed", "dataTable")
-)
 
 # Rendering plot/map/dataTable
 # (i) Rendering plots
@@ -236,7 +245,28 @@ output$plot <- renderPlot({
 )
 
 # (ii) Rendering dataTables
-output$dataTable <- renderDataTable({
+output$rawDataTable <- renderDataTable({
+  if(is.null(obsmonPlotObj())) return(NULL)
+  notifId <- showNotification(
+    "Rendering data table...", duration=NULL, type="message"
+  )
+  on.exit(removeNotification(notifId))
+  obsmonPlotObj()$rawData
+},
+  options=list(scrollX=TRUE, scrollY="300px")
+)
+output$queryUsed <- renderText(obsmonPlotObj()$sqliteQuery)
+
+output$rawDataTableDownloadAsTxt <- downloadHandler(
+  filename = function() "raw_data.txt",
+  content = function(file) req(obsmonPlotObj())$exportData(file, format="txt", raw=TRUE)
+)
+output$rawDataTableDownloadAsCsv <- downloadHandler(
+  filename = function() "raw_data.csv",
+  content = function(file) req(obsmonPlotObj())$exportData(file, format="csv", raw=TRUE)
+)
+
+output$plotDataTable <- renderDataTable({
   if(is.null(obsmonPlotObj())) return(NULL)
   notifId <- showNotification(
     "Rendering data table...", duration=NULL, type="message"
@@ -246,13 +276,11 @@ output$dataTable <- renderDataTable({
 },
   options=list(scrollX=TRUE, scrollY="300px")
 )
-output$queryUsed <- renderText(obsmonPlotObj()$sqliteQuery)
-
-output$dataTableDownloadAsTxt <- downloadHandler(
+output$plotDataTableDownloadAsTxt <- downloadHandler(
   filename = function() "plot_data.txt",
   content = function(file) req(obsmonPlotObj())$exportData(file, format="txt")
 )
-output$dataTableDownloadAsCsv <- downloadHandler(
+output$plotDataTableDownloadAsCsv <- downloadHandler(
   filename = function() "plot_data.csv",
   content = function(file) req(obsmonPlotObj())$exportData(file, format="csv")
 )
@@ -269,16 +297,16 @@ output$map <- renderLeaflet({
 output$mapTitle <- renderText(obsmonPlotObj()$title)
 
 # Interactively update colorbar range in charts where this applies
-output$mainAreaPlotEditingOptions <- renderUI({
-  # TODO: Come up with a way to prevent users from selecting a range
-  #       that leaves data out
+output$plotlyPlotEditingOptions <- renderUI({
   chart <- req(obsmonPlotObj()$chart)
+
   cmin <- Inf
   cmax <- -Inf
   for (dataProperty in chart$x$data) {
     cmin <- min(cmin, dataProperty$marker$cmin)
     cmax <- max(cmin, dataProperty$marker$cmax)
   }
+
   req(all(is.finite(c(cmin, cmax))))
 
   colorMapsDf <- RColorBrewer::brewer.pal.info
@@ -307,19 +335,16 @@ output$mainAreaPlotEditingOptions <- renderUI({
   )
 })
 
-observeEvent(input$mainTabPlotColorscaleRange,{
-  cmin <- input$mainTabPlotColorscaleRange[1]
-  cmax <- input$mainTabPlotColorscaleRange[2]
-
+observe(
   plotlyProxy(outputId="plotly", session) %>%
     plotlyProxyInvoke(
       method="update",
       list(
-        marker.cmin=cmin,
-        marker.cmax=cmax
+        marker.cmin=req(input$mainTabPlotColorscaleRange[1]),
+        marker.cmax=req(input$mainTabPlotColorscaleRange[2])
       )
     )
-})
+)
 
 observeEvent(input$mainTabPlotColorscaleColorMap,{
   colorScaleName <- input$mainTabPlotColorscaleColorMap
