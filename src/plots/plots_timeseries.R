@@ -15,6 +15,14 @@
   return(data)
 }
 
+.numberOfActiveObsDataPostProcessingFunction <- function(data) {
+  data <- fillDataWithQualityControlStatus(data) %>%
+    subset(grepl("active", tolower(status))) %>%
+    group_by(DTG, level) %>%
+    summarize(n_active_obs=n(), .groups="drop")
+  return(data)
+}
+
 landSeaDeparturesTimeseriesPlotPostProcessingFunction <- function(data) {
   data <- .filterOutZeroNobsTotal(data)
   data <- within(data, rm("nobs_total"))
@@ -232,6 +240,19 @@ plotRegistry$registerPlotType(
   dataFieldsInRetrievedPlotData=list("DTG", "level", "nobs_total"),
   dataFieldsInSqliteWhereClause=list("obnumber", "obname"),
   dataPostProcessingFunction=.filterOutZeroNobsTotal,
+  plottingFunction=genericTimeseriesPlottingFunction
+)
+
+plotRegistry$registerPlotType(
+  name="Number of Active Observations",
+  category="Timeseries",
+  dateType="range",
+  dataFieldsInRetrievedPlotData=list(
+    "DTG", "statid", "latitude", "longitude", "level",
+    "anflag", "active", "rejected", "passive", "blacklisted"
+  ),
+  dataFieldsInSqliteWhereClause=list("obnumber", "obname"),
+  dataPostProcessingFunction=.numberOfActiveObsDataPostProcessingFunction,
   plottingFunction=genericTimeseriesPlottingFunction
 )
 

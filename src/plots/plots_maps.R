@@ -350,20 +350,7 @@ plotRegistry$registerPlotType(
   dataFieldsInSqliteWhereClause=list("obnumber", "obname"),
   plottingFunction=.mapUsagePlottingFunction,
   leafletPlottingFunction=.mapUsageLeafletPlottingFunction,
-  dataPostProcessingFunction = function(data) {
-    status <- rep("NA", nrow(data))
-    status <- ifelse(data$anflag == 0, "Rejected", status)
-    status <- ifelse(data$active  > 0, "Active", status)
-    status <- ifelse(data$rejected > 0, "Rejected", status)
-    status <- ifelse(data$passive > 0, "Passive", status)
-    status <- ifelse(data$blacklisted > 0, "Blacklisted", status)
-    status <- ifelse(data$anflag  > 0, "Active(2)", status)
-    status <- ifelse(data$anflag == 4, "Rejected", status)
-    status <- ifelse(data$anflag == 8, "Blacklisted", status)
-    data$status <- status
-    data <- data[rev(order(data$status)),]
-    return(data)
-  }
+  dataPostProcessingFunction=fillDataWithQualityControlStatus
 )
 
 plotRegistry$registerPlotType(

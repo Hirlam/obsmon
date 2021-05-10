@@ -70,6 +70,7 @@ getUnits <- function(quantity) {
   "varname",
   "passive",
   "nobs_total",
+  "n_active_obs",
   "nobs_land",
   "nobs_sea",
   "statid",
