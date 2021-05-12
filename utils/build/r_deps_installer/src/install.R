@@ -121,7 +121,7 @@ getPathToBinary <- function(pkgName, pkgVersion, binDirs) {
 
 installPkgsFromDf <- function(
   df, repos, binDirs, outputDirs, liveViewLog=FALSE,
-  logfile=NULL, keepFullLog=FALSE, ...
+  logfile=NULL, keepFullLog=FALSE, dryRun=FALSE, ...
 ) {
   df$binPath <- getPathToBinary(df$Package, df$Version, binDirs=binDirs)
   unlink(outputDirs$installed, recursive=TRUE)
@@ -167,8 +167,12 @@ installPkgsFromDf <- function(
     )
     tryCatch({
       # Try installing from pre-compiled binary first
-      utils::untar(unlist(df$binPath[irow]), exdir=outputDirs$installed)
-      msg <- 'Package "%s" installed using pre-compiled binary %s\n\n'
+      if(dryRun) {
+        dryRunPath <- normalizePath(unlist(df$binPath[irow]), mustWork=TRUE)
+      } else {
+        utils::untar(unlist(df$binPath[irow]), exdir=outputDirs$installed)
+      }
+      msg <- '\nPackage "%s" installed using pre-compiled binary %s\n\n'
       msg <- sprintf(msg, df$Package[irow], unlist(df$binPath[irow]))
       if(liveViewLog) cat(msg)
       if(keepFullLog) write(msg, file=logfile, append=TRUE)
@@ -177,11 +181,22 @@ installPkgsFromDf <- function(
         # Fall back to building & installing from source if no binary available
         pkgInstallFailed <- TRUE
         tryCatch({
-          .installSinglePkg(
-            df$Package[irow], lib=outputDirs$installed, repos=repos,
-            version=df$Version[irow], binSaveDir=outputDirs$binaries,
-            quiet=!liveViewLog, keep_outputs=!liveViewLog, ...
-          )
+          msg <- '\nNo pre-compiled binary for package "%s (%s)". Building...\n\n'
+          msg <- sprintf(msg, df$Package[irow], df$Version[irow])
+          if(liveViewLog) cat(msg)
+          if(keepFullLog) write(msg, file=logfile, append=TRUE)
+          if(!dryRun) {
+            .installSinglePkg(
+              df$Package[irow],
+              version=df$Version[irow],
+              lib=outputDirs$installed,
+              repos=repos,
+              binSaveDir=outputDirs$binaries,
+              quiet=!liveViewLog,
+              keep_outputs=!liveViewLog,
+              ...
+            )
+          }
           pkgInstallFailed <- FALSE
         },
           # Neither pre-compiled binary, nor successful build from source.

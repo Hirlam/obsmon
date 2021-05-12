@@ -164,6 +164,11 @@ logOptions$add_argument(
   )
 )
 
+parser_install$add_argument(
+  "--dry-run",
+  action="store_true",
+  help="Do everything except actually building and installing packages."
+)
 
 ################################################
 # Options that apply only to the clean command #
