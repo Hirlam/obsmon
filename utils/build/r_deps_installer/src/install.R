@@ -4,11 +4,16 @@
 }
 
 getPathToBinary <- function(pkgName, pkgVersion, binDirs) {
-  allBinPaths <- list.files(
-    file.path(binDirs, .binDirsPathSuffix()),
-    pattern="\\.tar\\.gz$|\\.tgz$",
-    full.names=TRUE
-  )
+  allBinPaths <- unlist(sapply(
+    binDirs,
+    function(singleBinDir) {
+      list.files(
+        file.path(singleBinDir, .binDirsPathSuffix()),
+        pattern="\\.tar\\.gz$|\\.tgz$",
+        full.names=TRUE
+      )
+    }
+  ))
 
   .pathToBinary <- Vectorize(function(pkgName, pkgVer) {
     # Match pkgName
@@ -69,26 +74,52 @@ getPathToBinary <- function(pkgName, pkgVersion, binDirs) {
   file.remove(gzBinFiles)
 }
 
+.get_pkg_version_from_description_file <- function(descriptionFile) {
+  for (line in readLines(descriptionFile)) {
+    if(grepl("version", tolower(line), fixed="TRUE")) {
+      return(trimws(sub("Version[[:space:]]*:[[:space:]]*", "", line)))
+    }
+  }
+  return(NULL)
+}
+
 .install_a_pkg_version <- function(pkgName, version, lib, repos, ...) {
   # Download source with specified version
   fpath <- remotes::download_version(pkgName, version=version, repos=repos)
 
+  # Get actuall version of the downloaded package. Needed if "version" is
+  # not specified as an exact number.
+  descriptionFileRelativePath <- file.path(pkgName, "DESCRIPTION")
+  untar(fpath, files=descriptionFileRelativePath, exdir=tempdir())
+  descriptionFilePath <- file.path(tempdir(), descriptionFileRelativePath)
+  downloadedPkgVersion <- .get_pkg_version_from_description_file(descriptionFilePath)
+  if(is.null(downloadedPkgVersion)) {
+    msg <- "ERROR: Could not determine version of downloaded pkg "
+    msg <- paste(msg, sprintf("'%s'.", pkgName), "Skipping it.\n")
+    cat(msg)
+    return (NULL)
+  }
+
   # install.packages ignores the "keep_outputs" arg if installing from local
-  # files. Let's create a one-pkg tmp CRAN-like repo and make it install from
-  # there instead then. This way we can send output to a logfile.
-  tmpRepo <- file.path(tempdir(), "tmp_repo", pkgName, "src", "contrib")
-  dir.create(tmpRepo, recursive=TRUE)
+  # files. Let's then create a one-pkg tmp CRAN-like repo and make it install
+  # there instead. This way we can send output to a logfile.
+  tmpRepo <- file.path(tempdir(), "tmp_repo", pkgName)
+  tmpRepoSrcContribDir <- file.path(tmpRepo, "src", "contrib")
+  dir.create(tmpRepoSrcContribDir, recursive=TRUE)
   on.exit(unlink(tmpRepo, recursive=TRUE))
   file.rename(
     fpath,
-    file.path(tmpRepo, paste0(pkgName, "_", version, ".tar.gz"))
+    file.path(
+      tmpRepoSrcContribDir,
+      paste0(pkgName, "_", downloadedPkgVersion, ".tar.gz")
+    )
   )
-  tools::write_PACKAGES(tmpRepo)
+  tools::write_PACKAGES(tmpRepoSrcContribDir)
 
   # Install from our temp repo
   install.packages(
-    pkgName, lib=lib, repos=tmpRepo, type="source",
-    INSTALL_opts=c("--build"), dependencies=FALSE,
+    pkg=pkgName, lib=lib, repos=paste0("file:///", tmpRepo),
+    dependencies=FALSE, type="source", INSTALL_opts=c("--build"),
     ...
   )
 }
@@ -116,7 +147,7 @@ getPathToBinary <- function(pkgName, pkgVersion, binDirs) {
 
 installPkgsFromDf <- function(
   df, repos, binDirs, outputDirs, liveViewLog=FALSE,
-  logfile=NULL, keepFullLog=FALSE, ...
+  logfile=NULL, keepFullLog=FALSE, dryRun=FALSE, ...
 ) {
   df$binPath <- getPathToBinary(df$Package, df$Version, binDirs=binDirs)
   unlink(outputDirs$installed, recursive=TRUE)
@@ -162,8 +193,12 @@ installPkgsFromDf <- function(
     )
     tryCatch({
       # Try installing from pre-compiled binary first
-      utils::untar(unlist(df$binPath[irow]), exdir=outputDirs$installed)
-      msg <- 'Package "%s" installed using pre-compiled binary %s\n\n'
+      if(dryRun) {
+        dryRunPath <- normalizePath(unlist(df$binPath[irow]), mustWork=TRUE)
+      } else {
+        utils::untar(unlist(df$binPath[irow]), exdir=outputDirs$installed)
+      }
+      msg <- '\nPackage "%s" installed using pre-compiled binary %s\n\n'
       msg <- sprintf(msg, df$Package[irow], unlist(df$binPath[irow]))
       if(liveViewLog) cat(msg)
       if(keepFullLog) write(msg, file=logfile, append=TRUE)
@@ -172,11 +207,22 @@ installPkgsFromDf <- function(
         # Fall back to building & installing from source if no binary available
         pkgInstallFailed <- TRUE
         tryCatch({
-          .installSinglePkg(
-            df$Package[irow], lib=outputDirs$installed, repos=repos,
-            version=df$Version[irow], binSaveDir=outputDirs$binaries,
-            quiet=!liveViewLog, keep_outputs=!liveViewLog, ...
-          )
+          msg <- '\nNo pre-compiled binary for package "%s (%s)". Building...\n\n'
+          msg <- sprintf(msg, df$Package[irow], df$Version[irow])
+          if(liveViewLog) cat(msg)
+          if(keepFullLog) write(msg, file=logfile, append=TRUE)
+          if(!dryRun) {
+            .installSinglePkg(
+              df$Package[irow],
+              version=df$Version[irow],
+              lib=outputDirs$installed,
+              repos=repos,
+              binSaveDir=outputDirs$binaries,
+              quiet=!liveViewLog,
+              keep_outputs=!liveViewLog,
+              ...
+            )
+          }
           pkgInstallFailed <- FALSE
         },
           # Neither pre-compiled binary, nor successful build from source.

@@ -96,7 +96,7 @@ hms == 1.0.0
 htmlTable == 2.1.0
 htmltools == 0.5.1.1
 htmlwidgets == 1.5.3
-httpuv == 1.5.5
+httpuv == 1.6.1
 httr == 1.4.2
 hunspell == 3.0.1
 igraph == 1.2.6
@@ -112,7 +112,7 @@ knitr == 1.32
 labeling == 0.4.2
 Lahman == 9.0-0
 lambda.r == 1.2.4
-later == 1.1.0.1
+later == 1.2.0
 lattice == 0.20-41
 latticeExtra == 0.6-29
 lazyeval == 0.2.2

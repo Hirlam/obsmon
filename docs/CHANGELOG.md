@@ -23,6 +23,8 @@ and this project adheres to [Semantic Versioning](http://semver.org).
 ### Fixed
 - Missing bias panel in "Station Diagnostics Plot" if variable != "apd"
 - Missing error message when server cannot be created
+- Bug that would cause the installer not to respect package versions
+  and install the latest ones instead
 
 
 ## [4.0.0] 2021-02-25
