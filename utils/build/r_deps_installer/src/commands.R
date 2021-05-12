@@ -36,7 +36,6 @@ install <- function(args) {
     outputDirs=args$output_dirs,
     liveViewLog=args$live_view_install_log,
     keepFullLog=args$keep_full_install_log,
-    available=depsSummaryAndAvPkgs$availablePkgsDb,
     dryRun=args$dry_run,
     configure.args=args$configure_args,
     configure.vars=args$configure_vars

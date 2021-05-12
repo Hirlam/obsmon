@@ -74,26 +74,52 @@ getPathToBinary <- function(pkgName, pkgVersion, binDirs) {
   file.remove(gzBinFiles)
 }
 
+.get_pkg_version_from_description_file <- function(descriptionFile) {
+  for (line in readLines(descriptionFile)) {
+    if(grepl("version", tolower(line), fixed="TRUE")) {
+      return(trimws(sub("Version[[:space:]]*:[[:space:]]*", "", line)))
+    }
+  }
+  return(NULL)
+}
+
 .install_a_pkg_version <- function(pkgName, version, lib, repos, ...) {
   # Download source with specified version
   fpath <- remotes::download_version(pkgName, version=version, repos=repos)
 
+  # Get actuall version of the downloaded package. Needed if "version" is
+  # not specified as an exact number.
+  descriptionFileRelativePath <- file.path(pkgName, "DESCRIPTION")
+  untar(fpath, files=descriptionFileRelativePath, exdir=tempdir())
+  descriptionFilePath <- file.path(tempdir(), descriptionFileRelativePath)
+  downloadedPkgVersion <- .get_pkg_version_from_description_file(descriptionFilePath)
+  if(is.null(downloadedPkgVersion)) {
+    msg <- "ERROR: Could not determine version of downloaded pkg "
+    msg <- paste(msg, sprintf("'%s'.", pkgName), "Skipping it.\n")
+    cat(msg)
+    return (NULL)
+  }
+
   # install.packages ignores the "keep_outputs" arg if installing from local
-  # files. Let's create a one-pkg tmp CRAN-like repo and make it install from
-  # there instead then. This way we can send output to a logfile.
-  tmpRepo <- file.path(tempdir(), "tmp_repo", pkgName, "src", "contrib")
-  dir.create(tmpRepo, recursive=TRUE)
+  # files. Let's then create a one-pkg tmp CRAN-like repo and make it install
+  # there instead. This way we can send output to a logfile.
+  tmpRepo <- file.path(tempdir(), "tmp_repo", pkgName)
+  tmpRepoSrcContribDir <- file.path(tmpRepo, "src", "contrib")
+  dir.create(tmpRepoSrcContribDir, recursive=TRUE)
   on.exit(unlink(tmpRepo, recursive=TRUE))
   file.rename(
     fpath,
-    file.path(tmpRepo, paste0(pkgName, "_", version, ".tar.gz"))
+    file.path(
+      tmpRepoSrcContribDir,
+      paste0(pkgName, "_", downloadedPkgVersion, ".tar.gz")
+    )
   )
-  tools::write_PACKAGES(tmpRepo)
+  tools::write_PACKAGES(tmpRepoSrcContribDir)
 
   # Install from our temp repo
   install.packages(
-    pkgName, lib=lib, repos=tmpRepo, type="source",
-    INSTALL_opts=c("--build"), dependencies=FALSE,
+    pkg=pkgName, lib=lib, repos=paste0("file:///", tmpRepo),
+    dependencies=FALSE, type="source", INSTALL_opts=c("--build"),
     ...
   )
 }
