@@ -24,8 +24,6 @@
 }
 
 install <- function(args) {
-  if(is.null(args$bin_repo_path)) args$bin_repo_path <- args$output_dirs[["binaries"]]
-  args$bin_repo_path <- normalizePath(args$bin_repo_path, mustWork=FALSE)
   depsSummaryAndAvPkgs <- .getDependenciesSummaryDf(args)
   depsSummaryDf <- depsSummaryAndAvPkgs$depsSummaryDf
   invisible(printDepsFromDf(depsSummaryAndAvPkgs$depsSummaryDf))

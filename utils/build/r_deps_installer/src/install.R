@@ -4,11 +4,16 @@
 }
 
 getPathToBinary <- function(pkgName, pkgVersion, binDirs) {
-  allBinPaths <- list.files(
-    file.path(binDirs, .binDirsPathSuffix()),
-    pattern="\\.tar\\.gz$|\\.tgz$",
-    full.names=TRUE
-  )
+  allBinPaths <- unlist(sapply(
+    binDirs,
+    function(singleBinDir) {
+      list.files(
+        file.path(singleBinDir, .binDirsPathSuffix()),
+        pattern="\\.tar\\.gz$|\\.tgz$",
+        full.names=TRUE
+      )
+    }
+  ))
 
   .pathToBinary <- Vectorize(function(pkgName, pkgVer) {
     # Match pkgName

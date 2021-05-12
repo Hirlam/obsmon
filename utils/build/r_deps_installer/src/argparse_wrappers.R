@@ -113,6 +113,7 @@ for(p in c(parser_install, parser_create_local_repo, parser_clean)) {
 parser_install$add_argument(
   "-bin-repo-path",
   default=NULL,
+  nargs="+",
   help="Location of eventual pre-compiled R-pkg binaries.",
   metavar="BIN_REPO_DIR_PATH"
 )
@@ -240,6 +241,26 @@ if("output_rootdir" %in% names(args)) {
     sources=file.path(args$output_rootdir, "src"),
     binaries=file.path(args$output_rootdir, "compiled_binaries")
   )
+}
+
+# Append the installer's default bin saveDir to bin_repo_path, so that
+# eventual binaries compiled during install, but not available in the
+# passed bin_repo_path, can also be used if installation is restarted.
+if ("bin_repo_path" %in% names(args)) {
+  parsedBinRepoPaths <- c()
+  for (binRepoPath in args$bin_repo_path) {
+    parsedBinRepoPaths <- c(
+      parsedBinRepoPaths,
+      unlist(strsplit(binRepoPath, ":"))
+    )
+  }
+  args$bin_repo_path <- parsedBinRepoPaths
+
+  args$bin_repo_path <- unique(c(
+    args$bin_repo_path,
+    args$output_dirs[["binaries"]]
+  ))
+  args$bin_repo_path <- normalizePath(args$bin_repo_path, mustWork=FALSE)
 }
 
 if(("repos" %in% names(args)) || args$command == "create-local-repo") {
