@@ -76,7 +76,7 @@ getPathToBinary <- function(pkgName, pkgVersion, binDirs) {
 
 .get_pkg_version_from_description_file <- function(descriptionFile) {
   for (line in readLines(descriptionFile)) {
-    if(grepl("version", tolower(line), fixed="TRUE")) {
+    if(grepl("^Version[[:space:]]*:[[:space:]]*", line)) {
       return(trimws(sub("Version[[:space:]]*:[[:space:]]*", "", line)))
     }
   }
