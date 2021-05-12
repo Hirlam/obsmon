@@ -105,6 +105,7 @@ getUnits <- function(quantity) {
     v    = "m/s",
     v10m = "m/s",
     radv = "m/s",
+    hlos = "m/s",
     snow = "kg/m2",
     q    = "kg/m3"
   ),
