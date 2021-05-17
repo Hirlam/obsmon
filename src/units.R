@@ -47,6 +47,7 @@ fillObsmonDataFrameWithUnits <- function(
 
 getUnitsForLevels <- function(obname, varname=character(0)) {
   obstype <- getAttrFromMetadata("category", obname=obname)
+  if(isTRUE(tolower(obname) == "satem")) return(NULL)
   levelType <- "pressure"
   if(obstype=="surface" || (isTRUE(obname=="radar") && !isTRUE(varname=="rh"))) {
     levelType <- "height"
