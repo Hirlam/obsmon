@@ -1,15 +1,16 @@
-registerPlotCategory("Statistical")
+firstGuessAndAnPlottingFunction <-  function(plot) {
+  sqliteParams <- plot$paramsAsInSqliteDbs
+  plotData <- plot$data
 
-doPlot.plotStatistical <- function(p, plotRequest, plotData) {
-  strObnumber <- as.character(plotRequest$criteria$obnumber)
+  strObnumber <- as.character(sqliteParams$obnumber)
   switch(
       strObnumber,
       "1"=,
       "4"=,
       "9"={
-        varname <- plotRequest$criteria$varname
+        varname <- sqliteParams$varname
         xlab <- varname
-        ylab <- sprintf("Bias/RMS (%s)", units[[varname]])
+        ylab <- sprintf("Bias/RMS (%s)", units(plot$dataWithUnits$fg_bias_total))
         df <- data.frame(
             params=factor(c("FGBias", "AnBias", "FGRMS",  "AnRMS"),
                           c("FGBias", "AnBias", "FGRMS",  "AnRMS")),
@@ -28,21 +29,23 @@ doPlot.plotStatistical <- function(p, plotRequest, plotData) {
           theme(legend.position="none")
       },
       {
+        localPlotData <- melt(plotData, id="level")
+
+        yLabUnits <- units(plot$dataWithUnits[[localPlotData[["variable"]][1]]])
         if(strObnumber=="7") {
-          xVar <- "channel"
-          xlab <- "Channels"
-          ylab <- "Brightness temperature [K]"
+          # Mind that channels appear as "level" in the databases
+          xlab <- "Channel"
+          ylab <- "Brightness Temperature"
         } else {
-          xVar <- "level"
-          varname <- plotRequest$criteria$varname
-          ylab <- sprintf("%s [%s]", varname, units[[varname]])
-          xlab <- levelsLableForPlots(strObnumber, varname)
+          varname <- sqliteParams$varname
+          xlab <- sprintf("Level [%s]", units(plot$dataWithUnits$level))
+          ylab <- varname
         }
-        localPlotData <- melt(plotData, id=c(xVar))
+        ylab <- sprintf("%s [%s]", ylab, yLabUnits)
 
         shape_colours <- c("blue", "blue4", "red4", "red")
         obplot <- ggplot(data=localPlotData) +
-          aes_string(x=xVar, y="value",
+          aes_string(x="level", y="value",
             group="variable", colour="variable",
             shape="variable", fill="variable"
           ) +
@@ -56,16 +59,20 @@ doPlot.plotStatistical <- function(p, plotRequest, plotData) {
           coord_flip_wrapper(default=TRUE) +
           labs(x=xlab, y=ylab)
         if(strObnumber=="7") {
-          obplot <- obplot + scale_x_continuous(breaks=plotData$channel)
+          obplot <- obplot + scale_x_continuous(breaks=plotData$level)
         } else {
-          if(startsWith(tolower(xlab), "pressure")) {
+          if(ud_are_convertible(units(plot$dataWithUnits$level), "Pa")) {
             # Using xlim causes ggplotly to omit either the shape or the line
             # (whichever is added later) from the legend. Not a big deal,
             # but worth pointing out, as this but may be solved in later
             # releases of the plotly package
-            obplot <- obplot + xlim(max(refPressures,localPlotData[[xVar]]),0)
-          } else {
-            obplot <- obplot + xlim(0, max(refHeights,localPlotData[[xVar]]))
+            units(refPressures) <- units(plot$dataWithUnits$level)
+            obplot <- obplot +
+              xlim(max(drop_units(refPressures), localPlotData[["level"]]), 0)
+          } else if(ud_are_convertible(units(plot$dataWithUnits$level), "meters")) {
+            units(refHeights) <- units(plot$dataWithUnits$level)
+            obplot <- obplot +
+              xlim(0, max(drop_units(refHeights), localPlotData[["level"]]))
           }
         }
       }
@@ -73,14 +80,12 @@ doPlot.plotStatistical <- function(p, plotRequest, plotData) {
   return(obplot)
 }
 
-registerPlotType(
-    "Statistical",
-    plotCreate("plotStatistical",
-               "First Guess and Analysis Departure", "single",
-               paste("SELECT",
-                     "fg_bias_total, an_bias_total,",
-                     "fg_rms_total, an_rms_total, level",
-                     "FROM obsmon WHERE %s",
-                     "ORDER BY level"),
-               list("obnumber", "obname"))
+plotRegistry$registerPlotType(
+  name="First Guess and Analysis Departure",
+  category="Statistical",
+  dataFieldsInRetrievedPlotData=list(
+    "level", "fg_bias_total", "an_bias_total", "fg_rms_total", "an_rms_total"
+  ),
+  dataFieldsInSqliteWhereClause=list("obnumber", "obname"),
+  plottingFunction=firstGuessAndAnPlottingFunction
 )

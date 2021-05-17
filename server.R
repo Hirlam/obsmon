@@ -128,11 +128,19 @@ shinyServer(function(input, output, session) {
     session$close()
   })
 
+  # Attach a new list "userData$UiChoices" to the session, to keep track of the
+  # menus' choices. It seems shiny doesn't have a native method for this.
+  session$userData$UiChoices <- list()
+
   # Separating the logic for these sections, as they are quite distinct
   source("src/server/server_main_tab.R", local=TRUE)
   source("src/server/server_cache.R", local=TRUE)
   source("src/server/server_main_tab_plots.R", local=TRUE)
   source("src/server/server_multiplots.R", local=TRUE)
   source("src/server/server_doc_tab.R", local=TRUE)
+
+  # Hide "Loading Obsmon" screen and show the app
+  shinyjs::hide(id="loading-content", anim=FALSE)
+  shinyjs::show("app-content")
 
 }) # End of shinyServer

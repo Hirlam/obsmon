@@ -1,22 +1,16 @@
-registerPlotCategory("StationVerticalProfiles")
+stationVerticalProfilePlottingFunction <- function(plot) {
+  sqliteParams <- plot$paramsAsInSqliteDbs
+  plotData <- plot$data
 
-plotTitle.plotStationVerticalProfile <- function(p, plotRequest, plotData) {
-  crit <- plotRequest$criteria
-  stationLabel <- getStationsForPlotTitle(plotRequest, plotData)
-  title <- sprintf(
-    "%s: %s\nstation=%s\ndb=%s, DTG=%s, obname=%s, varname=%s",
-    plotRequest$expName, p$name,
-    stationLabel,
-    plotRequest$dbType, formatDtg(crit$dtg), crit$obname, crit$varname
-  )
-}
-
-doPlot.plotStationVerticalProfile <- function(p, plotRequest, plotData) {
   scaleColors <- c(
     "obsvalue"="black", "obsvalue_corrected"="black", "obsvalue_raw"="blue",
     "fg_dep"="blue", "first_guess"="blue",
     "an_dep"="red", "analysis"="red"
   )
+
+  plotData <- plotData[
+    c("level", intersect(colnames(plotData), names(scaleColors)))
+  ]
 
   localPlotData <- plotData %>%
     group_by(level) %>%
@@ -41,9 +35,14 @@ doPlot.plotStationVerticalProfile <- function(p, plotRequest, plotData) {
     )
 
   # Axes' labels
-  varname <- plotRequest$criteria$varname
-  xlab <- levelsLableForPlots(plotRequest$criteria$obnumber, varname)
-  ylab <- sprintf("%s [%s]", varname, units[[varname]])
+  xlab <- sprintf("Level [%s]", units(plot$dataWithUnits$level))
+  ylab <- sqliteParams$varname
+  for (colname in names(scaleColors)) {
+    if(colname %in% localPlotData$variable) {
+      ylab <- sprintf("%s [%s]", ylab, units(plot$dataWithUnits[[colname]]))
+      break
+    }
+  }
   obplot <- obplot + labs(x=xlab, y=ylab)
 
   # Set x-axis limits and flipping axes
@@ -51,11 +50,14 @@ doPlot.plotStationVerticalProfile <- function(p, plotRequest, plotData) {
   # the line (whichever is added later) from the legend. Not a big
   # deal but worth pointing out, as this but may be solved in later
   # releases of the plotly package
-  if(startsWith(tolower(xlab), "pressure")) {
-    xlim <- c(max(refPressures,localPlotData[["level"]]), 0)
+  xlim <- c()
+  if(ud_are_convertible(units(plot$dataWithUnits$level), "Pa")) {
+    units(refPressures) <- units(plot$dataWithUnits$level)
+    xlim <- c(max(drop_units(refPressures),localPlotData[["level"]]), 0)
     obplot <- obplot + scale_x_reverse()
-  } else {
-    xlim <- c(0, max(refHeights,localPlotData[["level"]]))
+  } else if(ud_are_convertible(units(plot$dataWithUnits$level), "meters")) {
+    units(refHeights) <- units(plot$dataWithUnits$level)
+    xlim <- c(0, max(drop_units(refHeights), localPlotData[["level"]]))
   }
   obplot <- obplot + coord_flip_wrapper(default=TRUE, xlim=xlim)
 
@@ -67,71 +69,55 @@ doPlot.plotStationVerticalProfile <- function(p, plotRequest, plotData) {
   return(obplot)
 }
 
-
-registerPlotType("StationVerticalProfiles",
-  plotCreate("plotStationVerticalProfile",
-    name="Station Vertical Profile: Obsvalue",
-    dateType="single",
-    queryStub=paste(
-      "SELECT DISTINCT level, obsvalue FROM usage WHERE %s AND",
-      "(obsvalue IS NOT NULL)",
-      "ORDER BY level"
-    ),
-    requiredFields=list(
-      "station", "obnumber", "obname", "varname"
-    )
-  )
+# Plot 1
+plotRegistry$registerPlotType(
+  name="Station Vertical Profile: Obsvalue",
+  category="StationVerticalProfiles",
+  dataFieldsInRetrievedPlotData=list("level", "obsvalue"),
+  dataFieldsInSqliteWhereClause=list(
+    "statid", "obnumber", "obname", "varname"
+  ),
+  stationChoiceType="single",
+  plottingFunction=stationVerticalProfilePlottingFunction
 )
 
-registerPlotType("StationVerticalProfiles",
-  plotCreate(c("plotStationVerticalProfile"),
-    name="Station Vertical Profile: Obs, FG & Analysis",
-    dateType="single",
-    queryStub=paste(
-      "SELECT DISTINCT level, obsvalue,",
-      "(obsvalue-fg_dep) AS first_guess,",
-      "(obsvalue-an_dep) AS analysis",
-      "FROM usage WHERE %s AND",
-      "(fg_dep IS NOT NULL) AND",
-      "(an_dep IS NOT NULL) AND (obsvalue IS NOT NULL)",
-      "ORDER BY level"
-    ),
-    requiredFields=list(
-      "station", "obnumber", "obname", "varname"
-    )
-  )
+# Plot 2
+plotRegistry$registerPlotType(
+  name="Station Vertical Profile: Obs, FG & Analysis",
+  category="StationVerticalProfiles",
+  dataFieldsInRetrievedPlotData=list("level", "obsvalue", "fg_dep", "an_dep"),
+  dataFieldsInSqliteWhereClause=list("statid", "obnumber", "obname", "varname"),
+  stationChoiceType="single",
+  plottingFunction=stationVerticalProfilePlottingFunction,
+  dataPostProcessingFunction = function(data) {
+    data$first_guess <- data$obsvalue - data$fg_dep
+    data$analysis <- data$obsvalue - data$an_dep
+    data <- subset(data, select=-c(fg_dep, an_dep))
+    return(data)
+  }
 )
 
-registerPlotType("StationVerticalProfiles",
-  plotCreate(c("plotStationVerticalProfile"),
-    name="Station Vertical Profile: FG & Analysis Departure",
-    dateType="single",
-    queryStub=paste(
-      "SELECT DISTINCT level, fg_dep, an_dep",
-      "FROM usage WHERE %s AND",
-      "(fg_dep IS NOT NULL) AND (an_dep IS NOT NULL)",
-      "ORDER BY level"
-    ),
-    requiredFields=list(
-      "station", "obnumber", "obname", "varname"
-    )
-  )
+# Plot 3
+plotRegistry$registerPlotType(
+  name="Station Vertical Profile: FG & Analysis Departure",
+  category="StationVerticalProfiles",
+  dataFieldsInRetrievedPlotData=list("level", "fg_dep", "an_dep"),
+  dataFieldsInSqliteWhereClause=list("statid", "obnumber", "obname", "varname"),
+  stationChoiceType="single",
+  plottingFunction=stationVerticalProfilePlottingFunction
 )
 
-registerPlotType("StationVerticalProfiles",
-  plotCreate(c("plotStationVerticalProfile"),
-    name="Station Vertical Profile: Bias",
-    dateType="single",
-    queryStub=paste(
-      "SELECT DISTINCT level,",
-      "obsvalue AS obsvalue_corrected,",
-      "(obsvalue+biascrl) AS obsvalue_raw",
-      "FROM usage WHERE %s AND",
-      "(biascrl IS NOT NULL) AND (obsvalue IS NOT NULL)",
-      "ORDER BY level"
-    ),
-    requiredFields=list(
-      "station", "obnumber", "obname", "varname"
-    )
-  )
+# Plot 4
+plotRegistry$registerPlotType(
+  name="Station Vertical Profile: Bias",
+  category="StationVerticalProfiles",
+  dataFieldsInRetrievedPlotData=list("level", "obsvalue", "biascrl"),
+  dataFieldsInSqliteWhereClause=list("statid", "obnumber", "obname", "varname"),
+  stationChoiceType="single",
+  plottingFunction=stationVerticalProfilePlottingFunction,
+  dataPostProcessingFunction = function(data) {
+    colnames(data)[colnames(data) == 'obsvalue'] <- 'obsvalue_corrected'
+    data$obsvalue_raw <- data$obsvalue_corrected + data$biascrl
+    return(data)
+  }
 )

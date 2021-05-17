@@ -169,25 +169,30 @@ readSynopStations <- function() {
 }
 synopStations <- readSynopStations()
 
-units <- list(
-    "u"    = "m/s",
-    "ff"   = "m/s",
-    "u10m" = "m/s",
-    "ff10m"= "m/s",
-    "apd"  = "m",
-    "v"    = "m/s",
-    "v10m" = "m/s",
-    "t2m"  = "K",
-    "t"    = "K",
-    "q"    = "kg/m3",
-    "z"    = "m",
-    "rh2m" = "%",
-    "snow" = "kg/m2",
-    "rad"  = "K",
-    "radv" = "m/s",
-    "dbz"  = "db",
-    "rh"   = "%",
-    "bend_angle" = "rad",
-    "pressure" = "Pa",
-    "height" = "m"
-)
+putLabelsInStations <- function(stations=NULL, obname=NULL) {
+  # Used in the server logic
+  if(length(stations)==0) return(stations)
+  if(isTRUE(obname=="synop")) {
+    stationLabels <- c()
+    for(statID in stations) {
+      statName <- tryCatch(synopStations[statID], error=function(e) NA)
+      label <- statID
+      if(!anyNA(statName)) label <- sprintf("%s (%s)", statID, statName)
+      stationLabels <- c(stationLabels, label)
+    }
+    names(stations) <- stationLabels
+  } else {
+    names(stations) <- stations
+  }
+  return(stations)
+}
+
+# Helper function to show progress message when plotting
+readPlotProgressFile <- function(path) {
+  fContents <- tryCatch(unlist(read.table(path), use.names=FALSE),
+    error=function(e) NULL,
+    warning=function(w) NULL
+  )
+  rtn <- list(current=fContents[1], total=fContents[2])
+  return(rtn)
+}

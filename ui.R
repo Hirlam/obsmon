@@ -39,6 +39,10 @@ appCSS <- "
   text-align: center;
   color: #FFFFFF;
 }
+
+.leaflet .legend {
+  text-align: left;
+}
 "
 
 shinyUI(ui=tagList(

@@ -15,7 +15,7 @@ obsmonDatabaseClass <- setRefClass("obsmonDatabase",
     dbType="character",
     dir="character",
     cacheDir="character",
-    exptName="character",
+    exptName="character", # exptName is optional
     # dtgCache, dtgCacheExpiry and dtgCacheLastUpdated are auxiliary
     # attributes for use in the getDtgs method.
     # dtgCache is a (conveniently organised) copy of the last results returned
@@ -23,30 +23,29 @@ obsmonDatabaseClass <- setRefClass("obsmonDatabase",
     # expire and are renewed if they get older than dtgCacheExpiry seconds.
     # N.B.: This internal DTG cache has nothing to do with obsmon's sql cache.
     dtgCache="list",
-    dtgCacheExpiry="numeric",
-    dtgCacheLastUpdated="POSIXt",
+    dtgCacheExpiry="numeric", # In seconds
+    dtgCacheLastUpdated="POSIXct",
     # Attributes that use accessor functions
-    exptDir=function() {dirname(dir)},
-    cachePaths=function() {
+    exptDir=function(...) {dirname(.self$dir)},
+    cachePaths=function(...) {
       list(
-        obsmon=file.path(cacheDir, sprintf('%s_obsmon.db', dbType)),
-        usage=file.path(cacheDir, sprintf('%s_usage.db', dbType))
+        obsmon=file.path(.self$cacheDir, sprintf('%s_obsmon.db', .self$dbType)),
+        usage=file.path(.self$cacheDir, sprintf('%s_usage.db', .self$dbType))
       )
     },
-    dtgs=function() {.self$getDtgs()},
-    dateRange=function() {dtg2date(c(dtgs[1], dtgs[length(dtgs)]))},
-    hasDtgs=function() {length(dtgs)>0}
+    dtgs=function(...) {.self$getDtgs()},
+    dateRange=function(...) {dtg2date(c(.self$dtgs[1], .self$dtgs[length(.self$dtgs)]))},
+    hasDtgs=function(...) {length(.self$dtgs)>0}
   ),
   methods=list(
-    initialize=function(
-      dbType, dir, cacheDir, exptName=character(0), dtgCacheExpiry=Inf
-    ) {
-      .self$dbType <- dbType
-      .self$dir <- dir
-      .self$cacheDir <- cacheDir
-      .self$exptName <- exptName
-      # dtgCacheExpiry is given in seconds
-      .self$dtgCacheExpiry <- abs(1.0 * dtgCacheExpiry)
+    initialize=function(...) {
+      callSuper(...)
+      if(length(.self$dtgCacheLastUpdated)==0) {
+        .self$dtgCacheLastUpdated <- as.POSIXct(0, origin="1970-01-01")
+      }
+      if(length(.self$exptName)==0) .self$exptName <- "Unnamed Experiment"
+      if(length(.self$dtgCacheExpiry)==0) .self$dtgCacheExpiry <- Inf
+      .self$dtgCacheExpiry <- abs(as.double(.self$dtgCacheExpiry))
     },
     getDataFilePaths=function(selectedDtgs=NULL, assertExists=FALSE) {
       if(is.null(selectedDtgs)) selectedDtgs <- .self$dtgs
@@ -65,10 +64,11 @@ obsmonDatabaseClass <- setRefClass("obsmonDatabase",
       if(assertExists) dbPaths <- Filter(file.exists, dbPaths)
       return(dbPaths)
     },
-    getDtgs=function(dates=character(0), cacheExpiry=.self$dtgCacheExpiry) {
+    getDtgs=function(dates=character(0), cacheExpiry=NULL) {
       # Keep a cache of the dtgs to avoid unnecessary successive calls
       # to the "dir" function, but update the cache if it is older than
       # cacheExpiry seconds.
+      if(is.null(cacheExpiry)) cacheExpiry <- .self$dtgCacheExpiry
       tDiffSec <- Sys.time() - .self$dtgCacheLastUpdated
       if(length(.self$dtgCache)==0 || isTRUE(tDiffSec>abs(cacheExpiry))) {
         flog.debug("Getting %s DTGs for %s", .self$dbType, .self$exptName)
@@ -102,20 +102,20 @@ experimentClass <- setRefClass("experiment",
     name="character",
     path="character",
     dbs="list",
-    slugName=function() {slugify(name)},
-    hasValidDbDirs=function() {
+    slugName=function(...) {slugify(.self$name)},
+    hasValidDbDirs=function(...) {
       for(db in .self$dbs) {
         if(dir.exists(db$dir)) return(TRUE)
       }
       return(FALSE)
     },
-    guiName=function() {
+    guiName=function(...) {
       nameCompl <- character(0)
       if(!.self$hasValidDbDirs) nameCompl <- "(could not read data)"
       return(trimws(paste(.self$name, nameCompl)))
     },
-    cacheDir=function() {
-      file.path(obsmonConfig$general[["cacheDir"]], slugName)
+    cacheDir=function(...) {
+      file.path(obsmonConfig$general[["cacheDir"]], .self$slugName)
     }
   ),
   methods=list(

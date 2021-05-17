@@ -32,23 +32,17 @@ idleTimer();",
 
 
 defaultMenuLabels <- list(
-  experiment="Experiment",
   odbBase="Data Assimilation Category/Database",
   obtype="Observation Type",
   obname="Observation Name",
-  sensor="Sensor",
-  satellite="Satellite",
   scatt_satellite="Satellite",
-  channels="Channels",
-  variable="Variable",
-  levels="Levels",
   plottype="Type of Plot",
-  station="Station"
+  stationSingle="Station"
 )
 
 getDefLabel <- function(inputId) {
   rtn <- defaultMenuLabels[[inputId]]
-  if(is.null(rtn)) rtn <- inputId
+  if(is.null(rtn)) rtn <- stringr::str_to_title(inputId)
   return(rtn)
 }
 
@@ -56,9 +50,10 @@ plotOutputInsideFluidRow <- function(plotOutputId) {
   fluidPage(
     fluidRow(
       column(12, align="center",
-        plotOutput(plotOutputId, height="755px", width="auto")
+        plotOutput(plotOutputId, height="755px", width="auto") %>%
+           withSpinner(color="#0dc5c1")
       )
-    ) %>% withSpinner(color="#0dc5c1")
+    )
   )
 }
 
@@ -66,9 +61,10 @@ plotlyOutputInsideFluidRow <- function(plotlyOutputId) {
   fluidPage(
     fluidRow(
       column(12, align="center",
-        plotlyOutput(plotlyOutputId, height="755px", width="auto")
+        plotlyOutput(plotlyOutputId, height="755px", width="auto") %>%
+          withSpinner(color="#0dc5c1")
       )
-    ) %>% withSpinner(color="#0dc5c1")
+    )
   )
 }
 
@@ -83,29 +79,60 @@ mapAndMapTitleOutput <- function(mapOutputId, mapTitleOutputId) {
     fluidRow(
       column(12, align="center",
         tags$head(tags$style("#map{height:80vh !important;}")),
-        leafletOutput(outputId=mapOutputId, width="auto"),
+        leafletOutput(outputId=mapOutputId, width="auto") %>%
+          withSpinner(color="#0dc5c1"),
         tags$style(type="text/css", "body { overflow-y: scroll; }")
       )
     )
   )
 }
 
-queryUsedAndDataTableOutput <- function(queryUsedOutputId, dataTableOutputId){
+queryUsedAndRawDataTableOutput <- function(queryUsedOutputId, dataTableOutputId){
   downloadButtonCsvId <- paste0(dataTableOutputId, "DownloadAsCsv")
   downloadButtonTxtId <- paste0(dataTableOutputId, "DownloadAsTxt")
   fluidPage(
     fluidRow(
       column(12, align="center",
-        wellPanel(h5("Query used:"), textOutput(queryUsedOutputId)),
+        wellPanel(
+          h5("Raw data retrived using the following query:"),
+          tags$div(HTML("<b>"), textOutput(queryUsedOutputId), HTML("</b>")),
+        ),
         downloadButton(downloadButtonTxtId, "Download as TXT"),
         downloadButton(downloadButtonCsvId, "Download as CSV"),
-        dataTableOutput(dataTableOutputId)
+        dataTableOutput(dataTableOutputId) %>% withSpinner(color="#0dc5c1")
       )
     )
   )
 }
 
-source("src/ui/create_main_panel.R")
+plotDataTableOutput <- function(dataTableOutputId){
+  downloadButtonCsvId <- paste0(dataTableOutputId, "DownloadAsCsv")
+  downloadButtonTxtId <- paste0(dataTableOutputId, "DownloadAsTxt")
+  fluidPage(
+    fluidRow(
+      column(12, align="center",
+        wellPanel(
+          h5(
+            shiny::icon("info-circle", class="query_info_icon") %>%
+              bs_embed_tooltip(
+                title=paste(
+                  "Obtained by post-processing the raw queried data. Among",
+                  "other things, (i) rows with incomplete entries are removed,",
+                  "(ii) units are attached, and (iii) data columns may differ."
+                ),
+                trigger="hover"
+              ),
+            "Data used in the plot:",
+          )
+        ),
+        downloadButton(downloadButtonTxtId, "Download as TXT"),
+        downloadButton(downloadButtonCsvId, "Download as CSV"),
+        dataTableOutput(dataTableOutputId) %>% withSpinner(color="#0dc5c1")
+      )
+    )
+  )
+}
+
 source("src/ui/tabs/main_tab.R")
 source("src/ui/tabs/multi_plots_tab.R")
 source("src/ui/tabs/doc_tab.R")

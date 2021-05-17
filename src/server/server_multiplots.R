@@ -5,10 +5,6 @@
 # Show multiPlots tab if multiPlots are available
 if(length(obsmonConfig$multiPlots)>0) {
   shinyjs::show(selector="#appNavbarPage li a[data-value=multiPlotsTab]")
-  # Hide plotly output tab, as the multiplot outputs are generated dinamically
-  # and can thus be included in the regular tab
-  jsSelec <- "#multiPlotsMainArea li a[data-value=multiPlotsPlotlyTab]"
-  for(jsFunc in c(shinyjs::hide, shinyjs::disable)) jsFunc(selector=jsSelec)
 }
 
 # Populate multiPlot choices in the UI.
@@ -120,68 +116,44 @@ observeEvent(input$multiPlotsDoPlot, {
   multiPlotsAsyncAndOutput <- futureCall(
     FUN=prepareMultiPlotsCapturingOutput,
     args=list(
-      plotter=plotTypesFlat[[pConfig$plotType]],
-      inputsForAllPlots=inputsForAllPlots, db=db,
-      interactive=isTRUE(obsmonConfig$general$multiPlotsEnableInteractivity),
+      plotType=pConfig$plotType,
+      inputsForAllPlots=inputsForAllPlots,
+      db=db,
       progressFile=multiPlotsProgressFile()
     )
   )
-  multiPlotPID <- multiPlotsAsyncAndOutput$job$pid
-  multiPlotCurrentPid(multiPlotPID)
-  session$onSessionEnded(function() {
-    flog.debug(
-      "Session finished: Making sure multiPlot task with PID=%s is killed",
-      multiPlotPID
-    )
-    killProcessTree(multiPlotPID)
-  })
+  multiPlotCurrentPid(multiPlotsAsyncAndOutput$job$pid)
 
   then(multiPlotsAsyncAndOutput,
     onFulfilled=function(value) {
-      showNotification(
-        "Preparing to render multiPlot", duration=1, type="message"
-      )
       multiPlot(value$plots)
-      somePlotHasMap <- FALSE
-      for(individualPlot in value$plots) {
-        if(!is.null(individualPlot$obmap)) {
-          somePlotHasMap <- TRUE
-          break
-        }
-      }
-      if(somePlotHasMap) {
-        js$enableTab("multiPlotsMapTab")
-      } else {
-        if(input$multiPlotsMainArea=="multiPlotsMapTab") {
-          updateTabsetPanel(session,"multiPlotsMainArea","multiPlotsPlotTab")
-        }
-        js$disableTab("multiPlotsMapTab")
-      }
     },
     onRejected=function(e) {
       if(!multiPlotInterrupted()) {
-        flog.error(e)
         showNotification("Could not produce plot", duration=1, type="error")
+        flog.error(e)
       }
       multiPlot(NULL)
     }
   )
   plotCleanup <- finally(multiPlotsAsyncAndOutput, function() {
+    # Force-kill eventual zombie forked processes and reset pid
+    killProcessTree(multiPlotCurrentPid())
     multiPlotCurrentPid(-1)
+
     # Reset items related to multiPlot progress bar
     unlink(multiPlotsProgressFile())
-    multiPlotsProgressBar()$close()
     multiPlotsProgressFile(NULL)
+    multiPlotsProgressBar()$close()
     multiPlotsProgressBar(NULL)
-    # Force-kill forked processes
-    killProcessTree(multiPlotPID)
+
     # Hide/show and disable/enable relevant inputs
     shinyjs::hide("multiPlotsCancelPlot")
     shinyjs::show("multiPlotsDoPlot")
     enableShinyInputs(input, pattern="^multiPlots*")
+
     # Printing output produced during async plot, if any
-    resolvedValue <- value(multiPlotsAsyncAndOutput)
-    producedOutput <- resolvedValue$output
+    producedOutput <- value(multiPlotsAsyncAndOutput)$output
     if(length(producedOutput)>0) message(paste0(producedOutput, "\n"))
   })
   catch(plotCleanup, function(e) {
@@ -194,116 +166,162 @@ observeEvent(input$multiPlotsDoPlot, {
   NULL
 }, priority=2000)
 
-# Prepare the correct output slots for plots, maps and dataTables
-# Code adapted from <https://gist.github.com/wch/5436415>
-# (i) Plots
-output$multiPlotsPlotContainer <- renderUI({
-  plotOutList <- lapply(seq_along(multiPlot()), function(iPlot) {
-    if(
-      isTRUE(obsmonConfig$general$multiPlotsEnableInteractivity) &&
-      plotIsPlotly(multiPlot()[[iPlot]]$obplot)
-    ) {
-      plotlyOutputInsideFluidRow(multiPlotsGenId(iPlot, type="plot"))
-    } else {
-      plotOutputInsideFluidRow(multiPlotsGenId(iPlot, type="plot"))
-    }
-  })
-  # Convert the list to a tagList - this is necessary for the list of items
-  # to display properly.
-  do.call(tagList, plotOutList)
-})
-# (ii) Maps
-output$multiPlotsMapAndMapTitleContainer <- renderUI({
-  mapAndMapTitleOutList <- lapply(seq_along(multiPlot()), function(iPlot) {
-    mapId <- multiPlotsGenId(iPlot, type="map")
-    mapTitleId <- multiPlotsGenId(iPlot, type="mapTitle")
-    mapAndMapTitleOutput(mapId, mapTitleId)
-  })
-  do.call(tagList, mapAndMapTitleOutList)
-})
-# (iii) dataTables
-output$multiPlotsQueryAndTableContainer <- renderUI({
-  queryAndDataTableOutList <- lapply(seq_along(multiPlot()), function(iPlot){
-    queryUsedId <- multiPlotsGenId(iPlot, type="queryUsed")
-    dataTableId <- multiPlotsGenId(iPlot, type="dataTable")
-    queryUsedAndDataTableOutput(queryUsedId, dataTableId)
-  })
-  do.call(tagList, queryAndDataTableOutList)
-})
-
-# Assign each plot/map/title/query/table to the respective outputs
-multiPlotsPrevQuantity <- reactiveVal()
-observeEvent(multiPlot(), {
-  # Clean up old multiPlot outputs
-  for(iPlot in seq(multiPlotsPrevQuantity())) {
-    for(type in c("plot", "map", "mapTitle", "queryUsed", "dataTable")) {
-      outId <- multiPlotsGenId(iPlot, type=type)
-      output[[outId]] <- NULL
-    }
+# Dinamically create slots to hold the generated plots
+outputsToResetBeforeNewMultiplot <- reactiveVal()
+newOutputSlotsHaveBeenCreated <- reactiveVal(NULL)
+output$multiPlotTabsetPanelsContainer <- renderUI({
+  for(outID in isolate(outputsToResetBeforeNewMultiplot())) {
+    output[[outID]] <- NULL
   }
-  multiPlotsPrevQuantity(length(multiPlot()))
-  gc()
+  newOutputSlotsHaveBeenCreated(NULL)
+  if(is.null(multiPlot())) return (NULL)
 
-  # Assign the new multiPlots
-  for(iPlot0 in seq_along(multiPlot())) {
+  req(multiPlot())
+  notifId <- showNotification(
+    "Preparing multiPlot output...", duration=NULL, type="message"
+  )
+  on.exit(removeNotification(notifId))
+
+  mainPanelsList <- lapply(seq_along(multiPlot()), function(iPlot) {
+    mPlot <- multiPlot()[[iPlot]]
+    multiplotIdPrefix <- sprintf("multiplot_%d_", iPlot)
+
+    # (i) Tab to hold the chart
+    plotOutputId <- paste0(multiplotIdPrefix, "chart")
+    tabs <- list()
+    if(isTRUE("plotly" %in% class(mPlot$chart))) {
+      tabs[[length(tabs) + 1]] <- interactivePlotTabPanel(plotOutputId)
+    } else {
+      tabs[[length(tabs) + 1]] <- nonInteractivePlotTabPanel(plotOutputId)
+    }
+
+    # (ii) Tab to hold the leaflet map
+    if(!is.null(mPlot$leafletMap)) {
+      leafletMapOutputId <- paste0(multiplotIdPrefix, "map")
+      tabs[[length(tabs) + 1]] <- leafletMapTabPanel(leafletMapOutputId)
+    }
+
+    # (ii) Query and data tab
+    tabs[[length(tabs) + 1]] <- queryAndDataTabPanel(multiplotIdPrefix)
+
+    do.call(
+      tabsetPanel,
+      c(id=sprintf("tabsetPanelForMultiPlot_%d", iPlot), tabs)
+    )
+  })
+  # Converting the list to a tagList is necessary for the list of items
+  # to display properly.
+  do.call(tagList, mainPanelsList)
+  newOutputSlotsHaveBeenCreated(Sys.time())
+  return(mainPanelsList)
+})
+
+# Populate the output slots
+observeEvent(newOutputSlotsHaveBeenCreated(), {
+  req(newOutputSlotsHaveBeenCreated())
+  newOutputSlotsHaveBeenCreated(NULL)
+  req(multiPlot())
+  notifId <- showNotification(
+    "Rendering multiPlots...", duration=NULL, type="message"
+  )
+  on.exit(removeNotification(notifId))
+  for (iPlot0 in seq_along(multiPlot())) {
     local({
       iPlot <- iPlot0
-      pName <- multiPlotsGenId(iPlot)
-      # Assign plots
-      plotOutId <- multiPlotsGenId(iPlot, type="plot")
-      if(
-        isTRUE(obsmonConfig$general$multiPlotsEnableInteractivity) &&
-        plotIsPlotly(multiPlot()[[pName]]$obplot)
-      ) {
-        output[[plotOutId]] <- renderPlotly({
-          req(multiPlot()[[pName]]$obplot) %>%
+      mPlot <- multiPlot()[[iPlot]]
+      multiplotIdPrefix <- sprintf("multiplot_%d_", iPlot)
+
+      plotOutputId <- paste0(multiplotIdPrefix, "chart")
+      outputsToResetBeforeNewMultiplot(
+        c(outputsToResetBeforeNewMultiplot(), plotOutputId)
+      )
+      if(isTRUE("plotly" %in% class(mPlot$chart))) {
+        output[[plotOutputId]] <- renderPlotly({
+          mPlot$chart %>%
             configPlotlyWrapper(
               toImageButtonOptions=list(
                 filename=sprintf("obsmon_multiPlot_%s", iPlot)
               )
-            ) %>%
-            addTitleToPlot(multiPlot()[[pName]]$title)
+            )
         })
       } else {
-        output[[plotOutId]] <- renderPlot({
-          req(multiPlot()[[pName]]$obplot) %>%
-            addTitleToPlot(multiPlot()[[pName]]$title)
-        },
-           res=96, pointsize=18
-        )
+        output[[plotOutputId]] <- renderPlot(mPlot$chart, res=96, pointsize=18)
       }
-      # Assign maps and map titles
-      mapId <- multiPlotsGenId(iPlot, type="map")
-      mapTitleId <- multiPlotsGenId(iPlot, type="mapTitle")
-      output[[mapId]] <- renderLeaflet(req(multiPlot()[[pName]]$obmap))
-      output[[mapTitleId]] <- renderText(req(multiPlot()[[pName]]$title))
-      # Assign queryUsed and dataTable
-      queryUsedId <- multiPlotsGenId(iPlot, type="queryUsed")
-      dataTableId <- multiPlotsGenId(iPlot, type="dataTable")
-      saveAsTxtId <- paste0(dataTableId, "DownloadAsTxt")
-      saveAsCsvId <- paste0(dataTableId, "DownloadAsCsv")
-      output[[queryUsedId]] <- renderText(req(multiPlot()[[pName]]$queryUsed))
-      output[[dataTableId]] <- renderDataTable(
-        req(multiPlot()[[pName]]$plotData), options=list(pageLength=10)
+
+      # (ii) Tab to hold the leaflet map
+      if(!is.null(mPlot$leafletMap)) {
+        leafletMapOutputId <- paste0(multiplotIdPrefix, "map")
+        outputsToResetBeforeNewMultiplot(
+          c(outputsToResetBeforeNewMultiplot(), leafletMapOutputId)
+        )
+        output[[leafletMapOutputId]] <- renderLeaflet(mPlot$leafletMap)
+      }
+
+      # (iii) Query and data tab
+      plotDataTableId <- paste0(multiplotIdPrefix, "plotDataTable")
+      outputsToResetBeforeNewMultiplot(
+        c(outputsToResetBeforeNewMultiplot(), plotDataTableId)
+      )
+      output[[plotDataTableId]] <- renderDataTable(
+        req(mPlot$dataWithUnits),
+        options=list(scrollX=TRUE, scrollY="200px")
+      )
+
+      queryUsedOutputId <- paste0(multiplotIdPrefix, "queryUsed")
+      outputsToResetBeforeNewMultiplot(
+        c(outputsToResetBeforeNewMultiplot(), queryUsedOutputId)
+      )
+      output[[queryUsedOutputId]] <- renderText(req(mPlot$sqliteQuery))
+
+      rawDataTableId <- paste0(multiplotIdPrefix, "rawDataTable")
+      outputsToResetBeforeNewMultiplot(
+        c(outputsToResetBeforeNewMultiplot(), rawDataTableId)
+      )
+      output[[rawDataTableId]] <- renderDataTable(
+        req(mPlot$rawData),
+        options=list(scrollX=TRUE, scrollY="200px")
+      )
+
+      # (iv) Data download handlers
+      saveAsTxtId <- paste0(plotDataTableId, "DownloadAsTxt")
+      saveAsCsvId <- paste0(plotDataTableId, "DownloadAsCsv")
+      outputsToResetBeforeNewMultiplot(
+        c(outputsToResetBeforeNewMultiplot(), c(saveAsTxtId, saveAsCsvId))
       )
       output[[saveAsTxtId]] <- downloadHandler(
-        filename = function() sprintf("multiplot_%d_data.txt", iPlot),
+        filename = function() paste0(multiplotIdPrefix, "data.txt"),
         content = function(file) {
-          multiplotData <- multiPlot()[[pName]]$plotData
-          dataInfo <- plotExportedDataInfo(multiPlot()[[pName]])
-          write.table(multiplotData, file, sep="\t", row.names=FALSE)
-          write(paste0("\n", dataInfo), file, append=TRUE)
+          mPlot$exportData(file, format="txt")
         }
       )
       output[[saveAsCsvId]] <- downloadHandler(
-        filename = function() sprintf("multiplot_%d_data.csv", iPlot),
+        filename = function() paste0(multiplotIdPrefix, "data.csv"),
         content = function(file) {
-          multiplotData <- multiPlot()[[pName]]$plotData
-          dataInfo <- plotExportedDataInfo(multiPlot()[[pName]])
-          write.csv(multiplotData, file, row.names=FALSE)
-          write(paste0("\n", dataInfo), file, append=TRUE)
+          mPlot$exportData(file, format="csv")
         }
       )
+
+      saveRawDataAsTxtId <- paste0(rawDataTableId, "DownloadAsTxt")
+      saveRawDataAsCsvId <- paste0(rawDataTableId, "DownloadAsCsv")
+      outputsToResetBeforeNewMultiplot(
+        c(
+          outputsToResetBeforeNewMultiplot(),
+          c(saveRawDataAsTxtId, saveRawDataAsCsvId)
+        )
+      )
+      output[[saveRawDataAsTxtId]] <- downloadHandler(
+        filename = function() paste0(multiplotIdPrefix, "raw_data.txt"),
+        content = function(file) {
+          mPlot$exportData(file, format="txt", raw=TRUE)
+        }
+      )
+      output[[saveRawDataAsCsvId]] <- downloadHandler(
+        filename = function() paste0(multiplotIdPrefix, "raw_data.csv"),
+        content = function(file) {
+          mPlot$exportData(file, format="csv", raw=TRUE)
+        }
+      )
+
     })
   }
 })

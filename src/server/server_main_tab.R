@@ -19,14 +19,14 @@ outputOptions(output, "showCacheOptions", suspendWhenHidden=FALSE)
 # Populate experiment choices
 exptChoices <- reactiveVal(getNewExptChoices())
 observeEvent(exptChoices(), {
-  updateSelectizeInput(session, "experiment", choices=exptChoices())
+  updatePickerInput(session, "experiment", choices=exptChoices())
 },
   ignoreNULL=FALSE
 )
 
 # Update dB choices for currently selected experiment
 observeEvent(input$experiment, {
-  expt <- expts[[input$experiment]]
+  expt <- req(expts[[input$experiment]])
   choices <- unlist(lapply(expt$dbs, function(db) {
     if(isTRUE(dir.exists(db$dir))) db$dbType
   }))
@@ -36,7 +36,7 @@ observeEvent(input$experiment, {
     choices <- c("ERROR: No usable database!"=" ")
     exptHasData <- FALSE
   }
-  updateSelectInputWrapper(session, "odbBase", choices=choices)
+  updatePickerInputWrapper(session, "odbBase", choices=choices)
 
   # Refresh expt choices to reflect their available/unavailable status
   if(!exptHasData) {
@@ -51,31 +51,32 @@ observeEvent(input$experiment, {
   }
   exptChoices(newExptChoices)
 })
+
 activeDb <- reactive({
+  req(input$odbBase)
+  req(input$experiment)
   showNotification(id="notifIDUpdDbs",
     ui="Retrieving Db info...", type="message", duration=NULL
   )
   # Make sure user cannot request plots before we certify later on that there
   # are available DTGs
   disableShinyInputs(input, except=c("experiment", "odbBase", "^multiPlots*"))
-  expts[[input$experiment]]$dbs[[req(input$odbBase)]]
+  expts[[input$experiment]]$dbs[[input$odbBase]]
 }) %>% throttle(100)
 
-# Hide "Loading Obsmon" screen and show the app
-shinyjs::hide(id="loading-content", anim=FALSE, animType="fade")
-shinyjs::show("app-content")
 
 # DTG-related reactives and observers
 # Update available choices of dates when changing active database
 observeEvent(activeDb(), {
   on.exit(removeNotification("notifIDUpdDbs"))
-
-  dbMinDate <- Sys.Date(); dbMaxDate <- dbMinDate
-  single <- NA; start <- NA; end <- NA
-  errMsg <- ""
+  dbMinDate <- Sys.Date()
+  dbMaxDate <- dbMinDate
+  single <- NULL
+  start <- NULL
+  end <- NULL
+  errMsg <- character(0)
   hasDtgs <- activeDb()$hasDtgs
   if(isTRUE(hasDtgs)) {
-    errMsg <- character(0)
     dbDateRange <- activeDb()$dateRange
     dbMinDate <- dbDateRange[1]
     dbMaxDate <- dbDateRange[2]
@@ -101,21 +102,12 @@ observeEvent(activeDb(), {
 }, ignoreNULL=FALSE)
 
 # Signal when required dateType of plot changes value
-dateTypeReqByPlotType <- reactiveVal("single")
-observeEvent(input$plottype, {
-  dateType <- tryCatch(
-    plotTypesFlat[[req(input$plottype)]]$dateType,
-    error=function(e) {"single"}
-  )
-  dateTypeReqByPlotType(dateType)
-})
+isMultiDtgInput <- reactive(isTRUE(req(activePlotType()$dateType) == "range"))
 # Offer single date or dateRange input according to selected plottype
 # Used to be done via conditionalPanel in ui.R, but that was slow
-observeEvent(dateTypeReqByPlotType(), {
-  shinyjs::toggle("date", condition=dateTypeReqByPlotType()=="single")
-  shinyjs::toggle("dateRange", condition=dateTypeReqByPlotType()=="range")
-  shinyjs::toggle("cycle", condition=dateTypeReqByPlotType()=="single")
-  shinyjs::toggle("cycles", condition=dateTypeReqByPlotType()=="range")
+observeEvent(isMultiDtgInput(), {
+  shinyjs::toggle(selector=".single_dtg_inputs", condition=!isMultiDtgInput())
+  shinyjs::toggle(selector=".multiple_dtg_inputs", condition=isMultiDtgInput())
 })
 
 # Keep track of date(s), cycle(s) and consequently DTG(s) selected in the UI
@@ -124,9 +116,9 @@ selectedDates <- reactiveVal()
 observeEvent({
   input$date
   input$dateRange
-  dateTypeReqByPlotType()
+  isMultiDtgInput()
  }, {
-  if(dateTypeReqByPlotType() %in% c("range")) {
+  if(isMultiDtgInput()) {
     dates <- expandDateRange(input$dateRange[[1]], input$dateRange[[2]])
   } else {
     dates <- strftime(input$date, format="%Y%m%d")
@@ -137,14 +129,13 @@ selectedCycles <- reactiveVal()
 observeEvent({
   input$cycle
   input$cycles
-  dateTypeReqByPlotType()
+  isMultiDtgInput()
  }, {
-  if(dateTypeReqByPlotType() %in% c("range")) {
+  if(isMultiDtgInput()) {
     cycles <- input$cycles
     if(length(cycles)==0) cycles <- sprintf("%02d", 0:24)
   } else {
     cycles <- input$cycle
-    if(trimws(cycles)=="") cycles <- NULL
   }
   selectedCycles(sort(cycles, decreasing=FALSE))
 })
@@ -162,7 +153,6 @@ observeEvent({
   selectedDtgs(dtgs)
 })
 
-
 # Update available cycle choices when relevant fields change
 availableCycles <- reactive({
   tryCatch(
@@ -170,56 +160,45 @@ availableCycles <- reactive({
     error=function(w) character(0)
   )
 })
-observeEvent(availableCycles(), {
-  updateSelectInputWrapper(session, "cycle", choices=availableCycles())
-  updateCheckboxGroup(session, "cycles", availableCycles())
-})
-observeEvent(input$cyclesSelectAll, {
-  cycles <- req(availableCycles())
-  updateCheckboxGroupInput(session, "cycles",
-    choices=cycles, selected=cycles, inline=TRUE
-  )
-})
-observeEvent(input$cyclesSelectAny, {
-  cycles <- req(availableCycles())
-  updateCheckboxGroupInput(session, "cycles",
-    choices=cycles, selected=character(0), inline=TRUE
-  )
+observe({
+  updatePickerInputWrapper(session, "cycle", choices=availableCycles())
+  updatePickerInputWrapper(session, "cycles", choices=availableCycles())
 })
 
 
-# Initialise some cache vars for which proper reactives will be set up later
-# This early init is to avoid triggering caching at startup
-selectedDtgsAreCached <- reactiveVal(FALSE)
-reloadInfoFromCache <- reactiveVal(Sys.time())
-# triggerReadCache and latestTriggerReadCache will be employed to flag the
-# need to retry reading info from cache (eg. if it cannot be found at first)
-latestTriggerReadCache <- reactiveVal(0)
-triggerReadCache <- function() latestTriggerReadCache(Sys.time())
+# Initialise some cache-related vars used here but for which proper reactives
+# will be set up in server_cache.R.
+# Flag that it's time to reload info from cache
+cacheIsOngoing <- reactiveVal(FALSE)
+reloadInfoFromCache <- reactive({
+  activeDb()
+  selectedDtgs()
+  # Use "req" to react only after finished writing to cache files
+  return(req(!cacheIsOngoing()))
+}) %>% throttle(1000)
+
+# Keep track of whether data for the selected DTGs are cached or not
+selectedDtgsAreCached <- reactive({
+  req(reloadInfoFromCache())
+  dtgsAreCached(activeDb(), selectedDtgs())
+})
 
 
 # Update obtype
-observeEvent({
-  req(activeDb())
-  selectedDtgsAreCached()
-  reloadInfoFromCache()
- }, {
+observeEvent(reloadInfoFromCache(), {
   db <- activeDb()
   if(isTRUE(db$dbType=="ecma_sfc")) {
-    updateSelectInputWrapper(session,"obtype",choices=c("Surface"="surface"))
+    choices <- c("Surface"="surface")
   } else {
     obtypes <- getObtypes(db, selectedDates(), selectedCycles())
-
-    isCached <- selectedDtgsAreCached() && !is.null(obtypes$cached)
+    isCached <- selectedDtgsAreCached() && length(obtypes$cached)>0
     if(isCached) {
-      newChoices <- obtypes$cached
+      choices <- obtypes$cached
     } else {
-      newChoices <- combineCachedAndGeneralChoices(obtypes)
+      choices <- combineCachedAndGeneralChoices(obtypes)
     }
-    updateSelectInputWrapper(
-      session, "obtype", choices=newChoices, choicesFoundIncache=isCached
-    )
   }
+  updatePickerInputWrapper(session, "obtype", choices=choices)
 })
 
 # Update obnames
@@ -229,50 +208,44 @@ updateObnames <- reactive({
 }) %>% throttle(500)
 observeEvent(updateObnames(), {
   if(input$obtype=="satem") {
-    updateSelectInputWrapper(session, "obname", choices=c("satem"))
+    updatePickerInputWrapper(session, "obname", choices=c("satem"))
     return()
   }
   obsCategory <- input$obtype
   db <- req(activeDb())
 
   obnames <- getObnames(db, obsCategory, selectedDates(), selectedCycles())
-  isCached <- selectedDtgsAreCached() && !is.null(obnames$cached)
+  isCached <- selectedDtgsAreCached() && length(obnames$cached)>0
   if(isCached) {
     newChoices <- obnames$cached
   } else {
     newChoices <- combineCachedAndGeneralChoices(obnames)
   }
-  updateSelectInputWrapper(
-    session, "obname", choices=newChoices, choicesFoundIncache=isCached
-  )
+  updatePickerInputWrapper(session, "obname", choices=newChoices)
 })
 
 # Update scatt satnames
 updateScattSatellite <- reactive({
   req(input$obtype=='scatt')
   reloadInfoFromCache()
-})  %>% throttle(500)
+}) %>% throttle(500)
 observeEvent(updateScattSatellite(), {
   db <- req(activeDb())
 
   sats <- getAvailableScattSatnames(db, selectedDates(), selectedCycles())
-  isCached <- selectedDtgsAreCached() && !is.null(sats$cached)
+  isCached <- selectedDtgsAreCached() && length(sats$cached)>0
   if(isCached) {
     newChoices <- sats$cached
   } else {
     newChoices <- combineCachedAndGeneralChoices(sats)
   }
-  updateSelectInputWrapper(
-    session, "scatt_satellite",
-    choices=newChoices, choicesFoundIncache=isCached
-  )
+  updatePickerInputWrapper(session, "scatt_satellite", choices=newChoices)
 })
 
 # Update variable
 updateVariables <- reactive({
-  req(input$obtype!="satem")
-  updateObnames()
   req(input$obname)
+  reloadInfoFromCache()
   if(input$obtype == 'scatt') {
     updateScattSatellite()
     req(input$scatt_satellite)
@@ -283,67 +256,106 @@ updateVariables <- reactive({
 observeEvent(updateVariables(), {
   db <- req(activeDb())
 
-  satname = NULL
-  if(input$obtype=='scatt') satname = req(input$scatt_satellite)
+  satname <- NULL
+  if(input$obtype == "satem") {
+    satname <- input$satellite
+  } else if(input$obtype=='scatt') {
+    satname <- req(input$scatt_satellite)
+  }
 
   variables <- getVariables(
       db, selectedDates(), selectedCycles(), input$obname, satname
   )
-  isCached <- selectedDtgsAreCached() && !is.null(variables$cached)
+  isCached <- selectedDtgsAreCached() && length(variables$cached)>0
   if(isCached) {
     newChoices <- variables$cached
   } else {
     newChoices <- combineCachedAndGeneralChoices(variables)
   }
-  updateSelectInputWrapper(
-    session, "variable", choices=newChoices, choicesFoundIncache=isCached
+  updatePickerInputWrapper(session, "variable", choices=newChoices)
+})
+
+# Update and validate variable units input
+observeEvent(input$variable, {
+  req(length(input$variable)>0 && input$variable != "")
+  defaultUnits <- getUnits(input$variable)
+  if(length(defaultUnits)==0) defaultUnits <- "unitless"
+  updateTextInput(
+    session, "variableUnits",
+    value=character(0),
+    placeholder=as.character(defaultUnits)
+  )
+})
+
+variableUnits <- reactiveVal(character(0))
+observe({
+  req(length(input$variableUnits)==0 || input$variableUnits=="")
+  variableUnits(character(0))
+})
+
+validateVarUnits <- reactive({
+  req(length(input$variable)>0 && input$variable != "")
+  req(length(input$variableUnits)>0 && input$variableUnits != "")
+}) %>% debounce(1250)
+
+observeEvent(validateVarUnits(), {
+  tryCatch({
+    testValue <- 1
+    units(testValue) <- getUnits(input$variable)
+    units(testValue)  <- input$variableUnits
+    variableUnits(input$variableUnits)
+  },
+    error=function(e) {
+      showNotification(
+        ui=paste0(gsub("\\..*","", e$message), "!"),
+        type="error",
+        duration=2
+      )
+      updateTextInput(session, "variableUnits", value=variableUnits())
+    }
   )
 })
 
 # Update sensornames
 updateSensor <- reactive({
-  reloadInfoFromCache()
   req(input$obtype=="satem")
+  reloadInfoFromCache()
 })  %>% throttle(500)
 observeEvent(updateSensor(), {
   db <- req(activeDb())
   sens <- getAvailableSensornames(db, selectedDates(), selectedCycles())
-  isCached <- selectedDtgsAreCached() && !is.null(sens$cached)
+  isCached <- selectedDtgsAreCached() && length(sens$cached)>0
   if(isCached) {
     newChoices <- sens$cached
   } else {
     newChoices <- combineCachedAndGeneralChoices(sens)
   }
-  updateSelectInputWrapper(
-    session, "sensor", choices=newChoices, choicesFoundIncache=isCached
-  )
+  updatePickerInputWrapper(session, "sensor", choices=newChoices)
 })
 
 # Update satellite choices for given sensor
 updateSatellite <- reactive({
-  updateSensor()
   req(input$sensor)
+  updateSensor()
 })  %>% throttle(500)
 observeEvent(updateSatellite(), {
   db <- req(activeDb())
   sens <- input$sensor
 
   sats <- getAvailableSatnames(db, selectedDates(), selectedCycles(), sens)
-  isCached <- selectedDtgsAreCached() && !is.null(sats$cached)
+  isCached <- selectedDtgsAreCached() && length(sats$cached)>0
   if(isCached) {
     newChoices <- sats$cached
   } else {
     newChoices <- combineCachedAndGeneralChoices(sats)
   }
-  updateSelectInputWrapper(
-    session, "satellite", choices=newChoices, choicesFoundIncache=isCached
-  )
+  updatePickerInputWrapper(session, "satellite", choices=newChoices)
 })
 
 # Update channel choice for given satellite
 updateChannels <- reactive({
-  updateSatellite()
   req(input$satellite)
+  updateSatellite()
 })  %>% throttle(500)
 channels <- eventReactive(updateChannels(), {
   db <- req(activeDb())
@@ -355,57 +367,47 @@ channels <- eventReactive(updateChannels(), {
   newChannels <- getChannelsFromCache(
     db, dates, cycles, satname=sat, sensorname=sens
   )
-  if(length(newChannels)==0) {
-    newChannels <- c("Any (cache info not available)"="")
-  } else if(!selectedDtgsAreCached()) {
-    newChannels <- c("Any (cache info incomplete)"="", newChannels)
-  }
-
   return(newChannels)
 })
-observeEvent(channels(), {
-  updateSelectInputWrapper(session, "channels", choices=channels())
-})
-observeEvent(input$channelsSelectAny, {
-  updateSelectInput(
-    session, "channels", choices=channels(), selected=character(0)
-  )
-})
+observe(updatePickerInputWrapper(session, "channels", choices=channels()))
 
 # Update plottype choices according to criteria
 updatePlotType <- reactive({
   input$obtype
   input$obname
-  req(!is.null(input$variable) ||
-    (!is.null(input$satellite) && !is.null(input$sensor))
+  req(length(input$variable)>0 ||
+    (length(input$satellite) * length(input$sensor)>0)
   )
 }) %>% throttle(500)
 observeEvent(updatePlotType(), {
-  choices <- applicablePlots(req(plotsBuildCriteria(input)))
-  updateSelectInputWrapper(session, "plottype", choices=choices)
+  choices <- plotRegistry$getCategorisedPlotTypeNames(
+    compatibleWithUiInputParams=input
+  )
+  updatePickerInputWrapper(session, "plottype", choices=choices)
 })
+activePlotType <- reactive(plotRegistry$plotTypes[[req(input$plottype)]])
 
 # Decide whether to allow users to select stations
 allowChoosingStation <- reactive({
    return(
      obSupportsStationChoice(req(input$obname)) &&
-     plotSupportsChoosingStations(req(input$plottype), req(input$obtype))
+     activePlotType()$supportsStationSelection
    )
 })
-requireSingleStation <- reactive({
-   plotRequiresSingleStation(req(input$plottype))
-})
-observeEvent({
-  allowChoosingStation()
-  requireSingleStation()
-  }, {
-  useStationSingle <- allowChoosingStation() && requireSingleStation()
-  useStationMulti <- allowChoosingStation() && !requireSingleStation()
+observe(shinyjs::toggleElement("station", condition=allowChoosingStation()))
 
-  shinyjs::toggleState("station", condition=useStationMulti)
-  shinyjs::toggleElement("station", condition=useStationMulti)
-  shinyjs::toggleState("stationSingle", condition=useStationSingle)
-  shinyjs::toggleElement("stationSingle", condition=useStationSingle)
+requireSingleStation <- reactive(activePlotType()$requiresSingleStation)
+observeEvent(requireSingleStation(), {
+  req(allowChoosingStation())
+  updatePickerInputWrapper(
+    session, "station",
+    selected=character(0),
+    options=list(
+      `max-options`=ifelse(requireSingleStation(), 1, FALSE),
+      `actions-box`=!requireSingleStation(),
+      `none-selected-text`=ifelse(requireSingleStation(), "Select station", "Any")
+    )
+  )
 })
 
 # Update stations
@@ -423,14 +425,13 @@ updateStations <- reactive({
 }) %>% throttle(500)
 observeEvent(updateStations(), {
   if(!allowChoosingStation()) {
-    updateSelectInputWrapper(session, "station", choices=c("Any"=""))
-    updateSelectInputWrapper(session, "stationSingle", choices=c("Any"=""))
+    updatePickerInputWrapper(session, "station", choices=c(""))
   }
   req(allowChoosingStation())
 
   db <- req(activeDb())
   dates <- req(selectedDates())
-  cycles <- req(selectedCycles())
+  cycles <- selectedCycles()
   obname <- req(input$obname)
   variable <- req(input$variable)
 
@@ -441,54 +442,35 @@ observeEvent(updateStations(), {
       db, dates, cycles, obname, variable, satname=satname
   )
   stations <- putLabelsInStations(stations, obname)
-
-  stationsAvailable <- length(stations)>0
-
-  notFullyCachedMsg <- NULL
-  if(!selectedDtgsAreCached()) {
-    notFullyCachedMsg <- "(cache info not available)"
-    if(stationsAvailable) notFullyCachedMsg<-"(cache info incomplete)"
-  }
-
-  if(requireSingleStation()) {
-    inputName <- "stationSingle"
-    label <- gsub(" $", "", paste("Station", notFullyCachedMsg))
-    if(!stationsAvailable) stations <- c("No stations available to choose"="")
-  } else {
-    inputName <- "station"
-    label <- "Station"
-    entryForAnyStation <- c("")
-    names(entryForAnyStation) <- gsub(" $","",paste("Any",notFullyCachedMsg))
-    stations <- c(entryForAnyStation, stations)
-  }
-  updateSelectInputWrapper(session, inputName, choices=stations, label=label)
-},
-  ignoreNULL=TRUE
-)
-# Keep track of selected stations
-selectedStations <- reactiveVal(character(0))
-observeEvent({
-  input$station
-  input$stationSingle
-}, {
-  if(allowChoosingStation()) {
-    if(requireSingleStation()) selectedStations(input$stationSingle)
-    else selectedStations(input$station[trimws(input$station) != ""])
-  } else {
-    selectedStations(character(0))
-  }
-},
-  ignoreNULL=TRUE
-)
+  updatePickerInputWrapper(session, "station", choices=stations)
+})
 
 # Update level choices for selected station(s) and variable
 # Defining availableLevels as an eventReactive was causing an issue
 # that could leave a blank Levels field on the UI upon page refresh
+defaultLevelsUnits <- reactiveVal(NULL)
+observe({
+  req(length(input$variable)>0 && input$variable != "")
+  defaultLevelsUnits(getUnitsForLevels(
+    obname=req(input$obname),
+    varname=input$variable
+  ))
+})
+observeEvent(req(defaultLevelsUnits()), {
+  defaultUnits <- defaultLevelsUnits()
+  if(length(defaultUnits)==0) defaultUnits <- "unitless"
+  updateTextInput(
+    session, "levelsUnits",
+    placeholder=as.character(defaultUnits)
+  )
+})
+
 availableLevels <- reactiveVal(NULL)
 updateLevels <- reactive({
-  selectedStations()
-  updateVariables()
   req(input$variable)
+  input$station
+  updateVariables()
+  reloadInfoFromCache()
   if(length(availableLevels())==0) invalidateLater(500)
 }) %>% throttle(500)
 observeEvent({
@@ -499,25 +481,69 @@ observeEvent({
   var <- input$variable
 
   stations <- NULL
-  if(allowChoosingStation()) stations <- selectedStations()
+  if(allowChoosingStation()) stations <- input$station
   levels <- getLevelsFromCache(
     db, selectedDates(), selectedCycles(), obname, var, stations
   )
-  if(length(levels$all)==0) {
-    levels$all <- c("Any (cache info not available)"="")
-  } else if(!selectedDtgsAreCached()) {
-    levels$all <- c("Any (cache info incomplete)"="", levels$all)
-  }
+
+  # Toggle the choice between all levels or standard-only
+  hasStandardLevels <- length(levels$obsmon) > 0
+  allLevelsAreStandard <- all(levels$all %in% levels$obsmon)
+  showStandardLevelsToggle <- hasStandardLevels && !allLevelsAreStandard
+  shinyjs::toggle("standardLevelsSwitch", condition=showStandardLevelsToggle)
+
   availableLevels(levels)
-}, ignoreNULL=FALSE, ignoreInit=FALSE)
+}, ignoreNULL=FALSE)
+
+levelsUnitsChanged <- reactive(input$levelsUnits) %>% debounce(1250)
+observeEvent({
+  availableLevels()
+  input$standardLevelsSwitch
+  levelsUnitsChanged()
+}, {
+    if(isTRUE(input$standardLevelsSwitch)) choices <- availableLevels()$obsmon
+    else choices <- availableLevels()$all
+
+    # Present level choices in the units picked by the user, but make sure
+    # to pass it to the query with the expected (default) units
+    if(length(choices)>0 && length(input$levelsUnits)>0 && input$levelsUnits != "") {
+      choicesWithPickedUnits <- as.numeric(choices)
+      units(choicesWithPickedUnits) <- defaultLevelsUnits()
+      tryCatch({
+        units(choicesWithPickedUnits) <- input$levelsUnits
+        names(choices) <- choicesWithPickedUnits
+      },
+        error=function(e) NULL
+      )
+    }
+
+    updatePickerInputWrapper(session, "levels", choices=choices)
+}, ignoreNULL=FALSE)
+
+# Update and validate levelsUnits input
+levelsUnits <- reactiveVal()
 observe({
-  updateSelectInputWrapper(session,"levels",choices=availableLevels()$all)
+  req(length(input$levelsUnits)==0 || input$levelsUnits=="")
+  levelsUnits(character(0))
 })
-observeEvent(input$levelsSelectStandard, {
-  updateSelectInput(session, "levels",
-    choices=availableLevels()$all, selected=availableLevels()$obsmon)
-})
-observeEvent(input$levelsSelectAny, {
-  updateSelectInput(session, "levels",
-    choices=availableLevels()$all, selected=character(0))
+validateLevelUnits <- reactive({
+  req(defaultLevelsUnits())
+  req(length(input$levelsUnits)>0 && input$levelsUnits != "")
+}) %>% debounce(1250)
+observeEvent(validateLevelUnits(), {
+  tryCatch({
+    testValue <- 1
+    units(testValue) <- defaultLevelsUnits()
+    units(testValue)  <- input$levelsUnits
+    levelsUnits(input$levelsUnits)
+  },
+    error=function(e) {
+      showNotification(
+        ui=paste0(gsub("\\..*","", e$message), "!"),
+        type="error",
+        duration=2
+      )
+      updateTextInput(session, "levelsUnits", value=levelsUnits())
+    }
+  )
 })

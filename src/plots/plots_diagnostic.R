@@ -1,13 +1,12 @@
-registerPlotCategory("Diagnostic")
-
-diagosticPltColors <- c(
+.diagosticPltColors <- c(
   "obs"="black",
   "fg"="red",
   "an"="green",
   "biascrl"="blue",
   "rawobs"="brown"
 )
-diagosticPltLabels <- c(
+
+.diagosticPltLabels <- c(
   "obs"="Observation",
   "fg"="First Guess",
   "an"="Analysis",
@@ -17,22 +16,27 @@ diagosticPltLabels <- c(
   "rawobs"="Raw observation"
 )
 
-plotTitle.plotDiagnostic <- function(p, plotRequest, plotData) {
-  crit <- plotRequest$criteria
-  stationLabel <- getStationsForPlotTitle(plotRequest, plotData)
-  title <- sprintf(
-    "%s: %s\nstation=%s\ndb=%s, DTG=%s, obname=%s, varname=%s",
-    plotRequest$expName, p$name,
-    stationLabel,
-    plotRequest$dbType, formatDtg(crit$dtg), crit$obname, crit$varname
-  )
-  return(title)
+.renamePlotlyTraces <- function(plot, labels) {
+  # Renames the traces in plotly plot "plot" according to the
+  # namesd list passed as "labels". Leaves trace names intact if
+  # they are not listed in "labels".
+  iTrace <- 0
+  for(pData in plot$x$data) {
+    if(pData$name == "") next
+    iTrace <- iTrace + 1
+    traceLabel <- labels[[pData$name]]
+    if(is.null(traceLabel)) next
+    plot <- plot %>% style(name=traceLabel, traces=iTrace)
+  }
+  return(plot)
 }
 
-statPanelStatic <- function(data, column, fill) {
+.statPanelStatic <- function(data, column, fill) {
   # Statistics panel (lower panel)
+  if(!isTRUE(nrow(data) > 0)) return(ggplot() + theme_void())
+
   columnName <- substitute(column)
-  xLabelPlot <- diagosticPltLabels[[as.character(columnName)]]
+  xLabelPlot <- .diagosticPltLabels[[as.character(columnName)]]
   if(is.null(xLabelPlot)) xLabelPlot <- as.character(columnName)
   rtn <- eval(substitute({
     hist <- ggplot(data) +
@@ -58,12 +62,14 @@ statPanelStatic <- function(data, column, fill) {
   return(rtn)
 }
 
-statPanelPlotly <- function(data, column, fill) {suppressWarnings({
+.statPanelPlotly <- function(data, column, fill) {suppressWarnings({
   # Statistics panel (lower panel) -- Interactive version
   # Suppressing warnings for a reason similar to the one discussed at
   # <https://github.com/ropensci/plotly/issues/1299>
+  if(nrow(data)==0) return(plotly_empty(type="scatter"))
+
   columnName <- as.character(substitute(column))
-  xLabelPlot <- diagosticPltLabels[[columnName]]
+  xLabelPlot <- .diagosticPltLabels[[columnName]]
   if(is.null(xLabelPlot)) xLabelPlot <- columnName
   sortedColumn <- sort(data[[columnName]])
 
@@ -155,17 +161,24 @@ statPanelPlotly <- function(data, column, fill) {suppressWarnings({
   return(rtn)
 })}
 
-comparisonPlotStatic <- function(p, plotRequest, plotData) {
+.comparisonPlotStatic <- function(plot) {
   # Comparison plot (upper panel)
+  plotData <- plot$data
+  if(!isTRUE(nrow(plotData) > 0)) return(ggplot() + theme_void())
+
   compDf <- data.frame("Date"=plotData[["DTG"]],
                        "obs"=plotData[["obsvalue"]],
                        "fg"=plotData[["obsvalue"]]-plotData[["fg_dep"]])
-  hasMinimization <- plotRequest$dbType %in% c("ecma_sfc", "ccma")
+
+  hasMinimization <- isTRUE(
+    plot$paramsAsInUiInput$odbBase %in% c("ecma_sfc", "ccma")
+  )
   if (hasMinimization) {
     compDf["an"] <- plotData[["obsvalue"]]-plotData[["an_dep"]]
   }
   compDf$panel <- "Comparison"
-  if (plotRequest$criteria$varname=="apd") {
+
+  if ("biascrl" %in% names(plotData)) {
     bias <- plotData[["biascrl"]]
     compDf["rawobs"] <- plotData[["obsvalue"]]+bias
     biasDf <- data.frame("Date"=plotData[["DTG"]],
@@ -181,13 +194,16 @@ comparisonPlotStatic <- function(p, plotRequest, plotData) {
   plot <- ggplot(data, aes(Date, value, group=variable, colour=variable)) +
     geom_point() +
     facet_grid(panel~., scales="free_y") +
-    scale_color_manual(labels=diagosticPltLabels, values=diagosticPltColors) +
-    labs(y=sprintf("%s [%s]", varname, units[[varname]])) +
+    scale_color_manual(labels=.diagosticPltLabels, values=.diagosticPltColors) +
+    labs(y=sprintf("%s [%s]", varname, units(plot$dataWithUnits[["obsvalue"]]))) +
     theme(legend.title=element_blank())
   return(plot)
 }
 
-comparisonPlotPlotly <- function(p, plotRequest, plotData) {
+.comparisonPlotPlotly <- function(plot) {
+  plotData <- plot$data
+  if(nrow(plotData)==0) return(plotly_empty(type="scatter"))
+
   # Comparison plot (upper panel) -- interactive version
   varname <- unique(plotData$varname)
 
@@ -200,7 +216,7 @@ comparisonPlotPlotly <- function(p, plotRequest, plotData) {
       xaxis=list(title="No Title", color="rgba(0, 0, 0, 0)"),
       yaxis=list(
         yanchor="center", y=0.5,
-        title=sprintf("%s [%s]", varname, units[[varname]]),
+        title=sprintf("%s [%s]", varname, units(plot$dataWithUnits[["obsvalue"]])),
         titlefont=list(size=14)
       )
     )
@@ -211,10 +227,10 @@ comparisonPlotPlotly <- function(p, plotRequest, plotData) {
     )
 
   interactivePanel <- ggplotly(
-    comparisonPlotStatic(p, plotRequest, plotData), tooltip=c("Date","value"),
+    .comparisonPlotStatic(plot), tooltip=c("Date","value"),
   ) %>%
     layout(xaxis=list(title="Date")) %>%
-    renamePlotlyTraces(diagosticPltLabels)
+    .renamePlotlyTraces(.diagosticPltLabels)
 
   plotWidth <- 0.9 # Visible plot's relative width. It'll be left-adjusted.
   plot <- plotly::subplot(emptyPlot, interactivePanel, emptyPlot2,
@@ -231,12 +247,14 @@ comparisonPlotPlotly <- function(p, plotRequest, plotData) {
   return(plot)
 }
 
-doPlot.plotDiagnostic <- function(p, plotRequest, plotData) {
+.getStaticStatDiagPlot <- function(plot) {
   panels <- list(
-    comparisonPlotStatic(p, plotRequest, plotData),
-    statPanelStatic(plotData, fg_dep, diagosticPltColors[["fg"]])
+    .comparisonPlotStatic(plot),
+    .statPanelStatic(plot$data, fg_dep, .diagosticPltColors[["fg"]])
   )
-  hasMinimization <- plotRequest$dbType %in% c("ecma_sfc", "ccma")
+  hasMinimization <- isTRUE(
+    plot$paramsAsInUiInput$odbBase %in% c("ecma_sfc", "ccma")
+  )
   if (hasMinimization) {
     lay <- rbind(c(1),
                  c(1),
@@ -244,7 +262,7 @@ doPlot.plotDiagnostic <- function(p, plotRequest, plotData) {
                  c(3))
     panels <- c(
       panels,
-      list(statPanelStatic(plotData, an_dep, diagosticPltColors[["an"]]))
+      list(.statPanelStatic(plot$data, an_dep, .diagosticPltColors[["an"]]))
     )
   } else {
     lay <- rbind(c(1),
@@ -253,13 +271,16 @@ doPlot.plotDiagnostic <- function(p, plotRequest, plotData) {
   return(grid.arrange(grobs=panels, layout_matrix=lay))
 }
 
-doPlotly.plotDiagnostic <- function(p, plotRequest, plotData) {
-  hasMinimization <- plotRequest$dbType %in% c("ecma_sfc", "ccma")
+.getInteractiveStatDiagPlot <- function(plot) {
+  plotData <- plot$data
+  hasMinimization <- isTRUE(
+    plot$paramsAsInUiInput$odbBase %in% c("ecma_sfc", "ccma")
+  )
   if (hasMinimization) {
     obplot <- plotly::subplot(
-      comparisonPlotPlotly(p, plotRequest, plotData),
-      statPanelPlotly(plotData, fg_dep, diagosticPltColors[["fg"]]),
-      statPanelPlotly(plotData, an_dep, diagosticPltColors[["an"]]),
+      .comparisonPlotPlotly(plot),
+      .statPanelPlotly(plotData, fg_dep, .diagosticPltColors[["fg"]]),
+      .statPanelPlotly(plotData, an_dep, .diagosticPltColors[["an"]]),
       heights=c(0.40, 0.30, 0.30),
       margin=c(0, 0, 0.1125, 0), # left, right, top and bottom
       titleX=TRUE, titleY=TRUE,
@@ -267,8 +288,8 @@ doPlotly.plotDiagnostic <- function(p, plotRequest, plotData) {
     )
   } else {
     obplot <- plotly::subplot(
-      comparisonPlotPlotly(p, plotRequest, plotData),
-      statPanelPlotly(plotData, fg_dep, diagosticPltColors[["fg"]]),
+      .comparisonPlotPlotly(plot),
+      .statPanelPlotly(plotData, fg_dep, .diagosticPltColors[["fg"]]),
       heights=c(0.45, 0.55),
       margin=c(0, 0, 0.1125, 0), # left, right, top and bottom
       titleX=TRUE, titleY=TRUE,
@@ -283,14 +304,19 @@ doPlotly.plotDiagnostic <- function(p, plotRequest, plotData) {
   return(obplot)
 }
 
-registerPlotType("Diagnostic",
-  plotCreate("plotDiagnostic",
-    name="Station Diagnostics",
-    dateType="range",
-    queryStub=paste(
-      "SELECT DTG, varname, obsvalue, fg_dep, an_dep, biascrl, statid",
-      "FROM usage WHERE %s"
-    ),
-    requiredFields=list("station")
-  )
+statDiagPlottingFunction <- function(plot) {
+  if(plot$parentType$interactive) return (.getInteractiveStatDiagPlot(plot))
+  return (.getStaticStatDiagPlot(plot))
+}
+
+plotRegistry$registerPlotType(
+  name="Station Diagnostics",
+  category="Diagnostics",
+  dateType="range",
+  stationChoiceType="single",
+  dataFieldsInRetrievedPlotData=list(
+    "DTG", "varname", "obsvalue", "fg_dep", "an_dep", "biascrl", "statid"
+  ),
+  dataFieldsInSqliteWhereClause=list("statid", "obname", "varname"),
+  plottingFunction=statDiagPlottingFunction
 )

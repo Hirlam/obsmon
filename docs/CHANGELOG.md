@@ -4,6 +4,28 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com)
 and this project adheres to [Semantic Versioning](http://semver.org).
 
+## [4.1.0] 2021-05-17
+### Added
+- New "Number of Active Observations" plot type
+- Editable colour scale and data range on applicable plots
+- Possibility to choose units for physical quantities where applicable
+- Button to toggle "show only standard levels" (when applicable)
+- Icons to notify about UI field values being cached or refreshed
+### Changed
+- Searchable fields in main tab
+- Give each plot inside a multiPlot its own independent
+  "Plot", "Map" and "Query & Data" tabs
+- Style of UI fields "Cycles", "Levels", "Channels"
+- Interrupt cache if user changes experiment/database/DTG, and start
+  caching the relevant files for the new selection.
+- Land-sea departure plot can now be made interactive
+- Some plots now have slightly different data columns in "Quey and Data"
+### Fixed
+- Missing bias panel in "Station Diagnostics Plot" if variable != "apd"
+- Missing error message when server cannot be created
+- Bug that would cause the installer not to respect package versions
+  and install the latest ones instead
+
 
 ## [4.0.0] 2021-02-25
 ### Added

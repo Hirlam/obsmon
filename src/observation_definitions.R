@@ -22,11 +22,11 @@ joinWithDotAsSep <- function(myList) {
 refPressures <- c(
   1500, 2500, 4000, 6500, 8500, 12500, 17500, 22500, 27500, 35000, 45000,
   60000,80000,92500,100000
-)
+) %>% set_units("Pa")
 refHeights <- c(
   250, 500, 1000, 1500, 2000, 3000, 4000, 5000, 6000, 7000, 8000, 9000,
   10000,20000
-)
+) %>% set_units("m")
 
 sensorToSats=list(
   amsua=c(

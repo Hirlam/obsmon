@@ -47,10 +47,13 @@ suppressPackageStartupMessages(library(flock))
 suppressPackageStartupMessages(library(futile.logger))
 suppressPackageStartupMessages(library(future))
 suppressPackageStartupMessages(library(future.apply))
+suppressPackageStartupMessages(library(ggforce))
 suppressPackageStartupMessages(library(ggplot2))
 suppressPackageStartupMessages(library(grid))
 suppressPackageStartupMessages(library(gridExtra))
 suppressPackageStartupMessages(library(leaflet))
+suppressPackageStartupMessages(library(mapproj))
+suppressPackageStartupMessages(library(maps))
 suppressPackageStartupMessages(library(methods))
 suppressPackageStartupMessages(library(plotly))
 suppressPackageStartupMessages(library(png))
@@ -62,9 +65,14 @@ suppressPackageStartupMessages(library(reshape2))
 suppressPackageStartupMessages(library(shiny))
 suppressPackageStartupMessages(library(shinycssloaders))
 suppressPackageStartupMessages(library(shinyjs))
+suppressPackageStartupMessages(library(shinyWidgets))
 suppressPackageStartupMessages(library(stringi))
 suppressPackageStartupMessages(library(stringr))
+suppressPackageStartupMessages(library(testthat)) # For tests
+suppressPackageStartupMessages(library(tibble))
 suppressPackageStartupMessages(library(tidyr))
+suppressPackageStartupMessages(library(units))
+suppressPackageStartupMessages(library(usethis)) # For tests
 suppressPackageStartupMessages(library(V8))
 
 flog.info(sprintf("Main process PID: %d", Sys.getpid()))
@@ -106,19 +114,18 @@ setPackageOptions <- function(config) {
 }
 
 sourceObsmonFiles <- function() {
+  source("src/units.R")
   source("src/observation_definitions.R")
   source("src/utils.R")
   source("src/sqlite/sqlite_wrappers.R")
   source("src/sqlite/cache_routines.R")
   source("src/experiments.R")
-  source("src/plots/colors.R")
   source("src/plots/plots.R")
   source("src/plots/plots_statistical.R")
   source("src/plots/plots_diagnostic.R")
   source("src/plots/plots_timeseries.R")
   source("src/plots/plots_maps.R")
   source("src/plots/plots_vertical_profiles.R")
-  source("src/plots/windspeed.R")
   source("src/plots/plots_multi.R")
   source("src/plots/plots_batch.R")
   source("src/shiny_wrappers.R")
@@ -340,7 +347,7 @@ runObsmonStandAlone <- function(cmdLineArgs) {
     displayMode <- NULL
     if(cmdLineArgs$debug) {
       Rprof()
-      options(shiny.reactlog=TRUE, error=traceback)
+      options(shiny.reactlog=TRUE, error=traceback, shiny.error=browser)
       displayMode <- "showcase"
     }
     runAppHandlingBusyPort(
