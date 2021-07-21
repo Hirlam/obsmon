@@ -81,7 +81,7 @@ firstGuessAndAnPlottingFunction <-  function(plot) {
 }
 
 plotRegistry$registerPlotType(
-  name="First Guess and Analysis Departure",
+  name="First Guess and Analysis",
   category="Statistical",
   dataFieldsInRetrievedPlotData=list(
     "level", "fg_bias_total", "an_bias_total", "fg_rms_total", "an_rms_total"
