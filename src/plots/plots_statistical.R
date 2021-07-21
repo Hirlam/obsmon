@@ -10,20 +10,47 @@ firstGuessAndAnPlottingFunction <-  function(plot) {
       "9"={
         varname <- sqliteParams$varname
         xlab <- varname
-        ylab <- sprintf("Bias/RMS (%s)", units(plot$dataWithUnits$fg_bias_total))
-        df <- data.frame(
-            params=factor(c("FGBias", "AnBias", "FGRMS",  "AnRMS"),
-                          c("FGBias", "AnBias", "FGRMS",  "AnRMS")),
-            biasRMSvalues=c(plotData$fg_bias_total, plotData$an_bias_total,
-                            plotData$fg_rms_total, plotData$an_rms_total)
+
+        if("fg_dep_total" %in% colnames(plotData)) {
+          ylab <- sprintf("Departure (%s)", units(plot$dataWithUnits$fg_dep_total))
+        } else {
+          ylab <- sprintf("Bias/RMS (%s)", units(plot$dataWithUnits$fg_bias_total))
+        }
+
+        dataCol2FillColor <- list(
+          fg_bias_total="blue", an_bias_total="darkblue",
+          fg_rms_total="red", an_rms_total="darkred",
+          fg_dep_total="blue", an_dep_total="red"
         )
+        dataCol2ScaleFillColor <- list(
+          fg_bias_total="turquoise2", an_bias_total="coral",
+          fg_rms_total="coral2", an_rms_total="turquoise3",
+          fg_dep_total="turquoise2", an_dep_total="coral2"
+        )
+        dataCol2LineLabels <- list(
+          fg_bias_total="FGBias", an_bias_total= "AnBias",
+          fg_rms_total="FGRMS", an_rms_total="AnRMS",
+          fg_dep_total="FgDep", an_dep_total="AnDep"
+        )
+
+        lineLabels <- c()
+        plotValues <- c()
+        fillColors <- c()
+        scale_fill_colors <- c()
+        for(colname in colnames(plotData)) {
+          if (!(colname %in% names(dataCol2FillColor))) next
+          lineLabels <- c(lineLabels, dataCol2LineLabels[[colname]])
+          plotValues <- c(plotValues, plotData[[colname]])
+          fillColors <- c(fillColors, dataCol2ScaleFillColor[[colname]])
+          scale_fill_colors <- c(scale_fill_colors, dataCol2ScaleFillColor[[colname]])
+        }
+        params <- factor(lineLabels, lineLabels)
+
+        df <- data.frame(params=params,plotValues=plotValues)
         obplot <- ggplot(data=df) +
-          aes(x=params, y=biasRMSvalues,
-              fill=c("blue", "darkblue", "red", "darkred")) +
+          aes(x=params, y=plotValues, fill=fillColors) +
           geom_bar(stat="identity") +
-          scale_fill_manual(
-            name=NULL, values=c("turquoise2", "coral", "coral2", "turquoise3")
-          ) +
+          scale_fill_manual(name=NULL, values=scale_fill_colors) +
           guides(fill=FALSE) +
           labs(x=xlab, y=ylab) +
           theme(legend.position="none")
@@ -81,10 +108,20 @@ firstGuessAndAnPlottingFunction <-  function(plot) {
 }
 
 plotRegistry$registerPlotType(
-  name="First Guess and Analysis",
+  name="First Guess and Analysis Bias/RMS",
   category="Statistical",
   dataFieldsInRetrievedPlotData=list(
     "level", "fg_bias_total", "an_bias_total", "fg_rms_total", "an_rms_total"
+  ),
+  dataFieldsInSqliteWhereClause=list("obnumber", "obname"),
+  plottingFunction=firstGuessAndAnPlottingFunction
+)
+
+plotRegistry$registerPlotType(
+  name="First Guess and Analysis Departure",
+  category="Statistical",
+  dataFieldsInRetrievedPlotData=list(
+    "level", "fg_dep_total", "an_dep_total"
   ),
   dataFieldsInSqliteWhereClause=list("obnumber", "obname"),
   plottingFunction=firstGuessAndAnPlottingFunction

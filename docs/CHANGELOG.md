@@ -5,8 +5,13 @@ The format is based on [Keep a Changelog](http://keepachangelog.com)
 and this project adheres to [Semantic Versioning](http://semver.org).
 
 ## [Unreleased]
+### Added
+- New plots:
+    - "First Guess and Analysis Departure"
+    - "Average First Guess and Analysis"
 ### Fixed
-- Name of "First Guess and Analysis" plot (removed wrong "Departure" text)
+- Fix name of "First Guess and Analysis Bias/RMS" plot
+    - Which was wrongly named "First Guess and Analysis Departure" before
 
 
 ## [4.1.0] 2021-05-17
