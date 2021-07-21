@@ -89,3 +89,30 @@ plotRegistry$registerPlotType(
   dataFieldsInSqliteWhereClause=list("obnumber", "obname"),
   plottingFunction=firstGuessAndAnPlottingFunction
 )
+
+plotRegistry$registerPlotType(
+  name="Average First Guess and Analysis",
+  category="Statistical",
+  dataFieldsInRetrievedPlotData=list(
+    "DTG", "level", "fg_bias_total", "an_bias_total",
+    "fg_rms_total", "an_rms_total"
+  ),
+  dateType="range",
+  dataFieldsInSqliteWhereClause=list("obnumber", "obname"),
+  plottingFunction=firstGuessAndAnPlottingFunction,
+  dataPostProcessingFunction=function(data) {
+    # Post-process the retrieved data to perform the averages
+    originalDataComments <- comment(data)
+
+    nonNumericCols <- names(which(sapply(data, is.numeric)==FALSE))
+    groupByCols = c("level")
+    colsToDrop <- c("DTG", setdiff(nonNumericCols, groupByCols))
+    data <- data[!(colnames(data) %in% colsToDrop)]
+
+    data <- data %>%
+      group_by(!!!syms(groupByCols)) %>%
+      summarize_all(mean)
+    comment(data) <- originalDataComments
+    return(data)
+  }
+)
