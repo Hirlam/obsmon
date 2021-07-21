@@ -8,7 +8,8 @@ and this project adheres to [Semantic Versioning](http://semver.org).
 ### Added
 - New plots:
     - "First Guess and Analysis Departure"
-    - "Average First Guess and Analysis"
+    - "Average First Guess and Analysis Bias/RMS"
+    - "Average First Guess and Analysis Departure"
 ### Fixed
 - Fix name of "First Guess and Analysis Bias/RMS" plot
     - Which was wrongly named "First Guess and Analysis Departure" before

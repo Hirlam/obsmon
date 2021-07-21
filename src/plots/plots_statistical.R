@@ -107,6 +107,23 @@ firstGuessAndAnPlottingFunction <-  function(plot) {
   return(obplot)
 }
 
+.postProcessingFuncAverageOverDTGs <- function(data) {
+# Post-process the retrieved data to perform the averages
+  originalDataComments <- comment(data)
+
+  nonNumericCols <- names(which(sapply(data, is.numeric)==FALSE))
+  groupByCols = c("level")
+  colsToDrop <- c("DTG", setdiff(nonNumericCols, groupByCols))
+  data <- data[!(colnames(data) %in% colsToDrop)]
+
+  data <- data %>%
+    group_by(!!!syms(groupByCols)) %>%
+    summarize_all(mean)
+  comment(data) <- originalDataComments
+  return(data)
+}
+
+#######################################################################
 plotRegistry$registerPlotType(
   name="First Guess and Analysis Bias/RMS",
   category="Statistical",
@@ -128,7 +145,7 @@ plotRegistry$registerPlotType(
 )
 
 plotRegistry$registerPlotType(
-  name="Average First Guess and Analysis",
+  name="Average First Guess and Analysis Bias/RMS",
   category="Statistical",
   dataFieldsInRetrievedPlotData=list(
     "DTG", "level", "fg_bias_total", "an_bias_total",
@@ -137,19 +154,17 @@ plotRegistry$registerPlotType(
   dateType="range",
   dataFieldsInSqliteWhereClause=list("obnumber", "obname"),
   plottingFunction=firstGuessAndAnPlottingFunction,
-  dataPostProcessingFunction=function(data) {
-    # Post-process the retrieved data to perform the averages
-    originalDataComments <- comment(data)
+  dataPostProcessingFunction=.postProcessingFuncAverageOverDTGs
+)
 
-    nonNumericCols <- names(which(sapply(data, is.numeric)==FALSE))
-    groupByCols = c("level")
-    colsToDrop <- c("DTG", setdiff(nonNumericCols, groupByCols))
-    data <- data[!(colnames(data) %in% colsToDrop)]
-
-    data <- data %>%
-      group_by(!!!syms(groupByCols)) %>%
-      summarize_all(mean)
-    comment(data) <- originalDataComments
-    return(data)
-  }
+plotRegistry$registerPlotType(
+  name="Average First Guess and Analysis Departure",
+  category="Statistical",
+  dataFieldsInRetrievedPlotData=list(
+    "level", "fg_dep_total", "an_dep_total"
+  ),
+  dateType="range",
+  dataFieldsInSqliteWhereClause=list("obnumber", "obname"),
+  plottingFunction=firstGuessAndAnPlottingFunction,
+  dataPostProcessingFunction=.postProcessingFuncAverageOverDTGs
 )
