@@ -11,7 +11,7 @@ firstGuessAndAnPlottingFunction <-  function(plot) {
         varname <- sqliteParams$varname
         xlab <- varname
 
-        if("fg_dep_total" %in% colnames(plotData)) {
+        if(any(c("fg_dep", "fg_dep_total") %in% colnames(plotData))) {
           ylab <- sprintf("Departure (%s)", units(plot$dataWithUnits$fg_dep_total))
         } else {
           ylab <- sprintf("Bias/RMS (%s)", units(plot$dataWithUnits$fg_bias_total))
@@ -20,17 +20,20 @@ firstGuessAndAnPlottingFunction <-  function(plot) {
         dataCol2FillColor <- list(
           fg_bias_total="blue", an_bias_total="darkblue",
           fg_rms_total="red", an_rms_total="darkred",
-          fg_dep_total="blue", an_dep_total="red"
+          fg_dep_total="blue", an_dep_total="red",
+          fg_dep="blue", an_dep="red"
         )
         dataCol2ScaleFillColor <- list(
           fg_bias_total="turquoise2", an_bias_total="coral",
           fg_rms_total="coral2", an_rms_total="turquoise3",
-          fg_dep_total="turquoise2", an_dep_total="coral2"
+          fg_dep_total="turquoise2", an_dep_total="coral2",
+          fg_dep="turquoise2", an_dep="coral2"
         )
         dataCol2LineLabels <- list(
           fg_bias_total="FGBias", an_bias_total= "AnBias",
           fg_rms_total="FGRMS", an_rms_total="AnRMS",
-          fg_dep_total="FgDep", an_dep_total="AnDep"
+          fg_dep_total="FgDep", an_dep_total="AnDep",
+          fg_dep="FgDep", an_dep="AnDep"
         )
 
         lineLabels <- c()
@@ -107,7 +110,7 @@ firstGuessAndAnPlottingFunction <-  function(plot) {
   return(obplot)
 }
 
-.postProcessingFuncAverageOverDTGs <- function(data) {
+.postProcessingFuncAvgDtgsLevels <- function(data) {
 # Post-process the retrieved data to perform the averages
   originalDataComments <- comment(data)
 
@@ -125,7 +128,17 @@ firstGuessAndAnPlottingFunction <-  function(plot) {
 
 #######################################################################
 plotRegistry$registerPlotType(
-  name="First Guess and Analysis Bias/RMS",
+  name="Total First Guess and Analysis Departure",
+  category="Statistical",
+  dataFieldsInRetrievedPlotData=list(
+    "level", "fg_dep_total", "an_dep_total"
+  ),
+  dataFieldsInSqliteWhereClause=list("obnumber", "obname"),
+  plottingFunction=firstGuessAndAnPlottingFunction
+)
+
+plotRegistry$registerPlotType(
+  name="Total First Guess and Analysis Bias/RMS",
   category="Statistical",
   dataFieldsInRetrievedPlotData=list(
     "level", "fg_bias_total", "an_bias_total", "fg_rms_total", "an_rms_total"
@@ -135,17 +148,19 @@ plotRegistry$registerPlotType(
 )
 
 plotRegistry$registerPlotType(
-  name="First Guess and Analysis Departure",
+  name="Average Total First Guess and Analysis Departure",
   category="Statistical",
   dataFieldsInRetrievedPlotData=list(
     "level", "fg_dep_total", "an_dep_total"
   ),
+  dateType="range",
   dataFieldsInSqliteWhereClause=list("obnumber", "obname"),
-  plottingFunction=firstGuessAndAnPlottingFunction
+  plottingFunction=firstGuessAndAnPlottingFunction,
+  dataPostProcessingFunction=.postProcessingFuncAvgDtgsLevels
 )
 
 plotRegistry$registerPlotType(
-  name="Average First Guess and Analysis Bias/RMS",
+  name="Average Total First Guess and Analysis Bias/RMS",
   category="Statistical",
   dataFieldsInRetrievedPlotData=list(
     "DTG", "level", "fg_bias_total", "an_bias_total",
@@ -154,17 +169,17 @@ plotRegistry$registerPlotType(
   dateType="range",
   dataFieldsInSqliteWhereClause=list("obnumber", "obname"),
   plottingFunction=firstGuessAndAnPlottingFunction,
-  dataPostProcessingFunction=.postProcessingFuncAverageOverDTGs
+  dataPostProcessingFunction=.postProcessingFuncAvgDtgsLevels
 )
 
 plotRegistry$registerPlotType(
-  name="Average First Guess and Analysis Departure",
+  name="Station Average First Guess and Analysis Departure",
   category="Statistical",
   dataFieldsInRetrievedPlotData=list(
-    "level", "fg_dep_total", "an_dep_total"
+    "level", "fg_dep", "an_dep"
   ),
   dateType="range",
-  dataFieldsInSqliteWhereClause=list("obnumber", "obname"),
+  dataFieldsInSqliteWhereClause=list("statid", "obnumber", "obname"),
   plottingFunction=firstGuessAndAnPlottingFunction,
-  dataPostProcessingFunction=.postProcessingFuncAverageOverDTGs
+  dataPostProcessingFunction=.postProcessingFuncAvgDtgsLevels
 )
