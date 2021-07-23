@@ -128,7 +128,7 @@ firstGuessAndAnPlottingFunction <-  function(plot) {
 
 #######################################################################
 plotRegistry$registerPlotType(
-  name="Total First Guess and Analysis Departure",
+  name="First Guess and Analysis Departure",
   category="Statistical",
   dataFieldsInRetrievedPlotData=list(
     "level", "fg_dep_total", "an_dep_total"
@@ -138,7 +138,7 @@ plotRegistry$registerPlotType(
 )
 
 plotRegistry$registerPlotType(
-  name="Total First Guess and Analysis Bias/RMS",
+  name="First Guess and Analysis Bias/RMS",
   category="Statistical",
   dataFieldsInRetrievedPlotData=list(
     "level", "fg_bias_total", "an_bias_total", "fg_rms_total", "an_rms_total"
@@ -148,7 +148,7 @@ plotRegistry$registerPlotType(
 )
 
 plotRegistry$registerPlotType(
-  name="Average Total First Guess and Analysis Departure",
+  name="Average First Guess and Analysis Departure",
   category="Statistical",
   dataFieldsInRetrievedPlotData=list(
     "level", "fg_dep_total", "an_dep_total"
@@ -160,7 +160,7 @@ plotRegistry$registerPlotType(
 )
 
 plotRegistry$registerPlotType(
-  name="Average Total First Guess and Analysis Bias/RMS",
+  name="Average First Guess and Analysis Bias/RMS",
   category="Statistical",
   dataFieldsInRetrievedPlotData=list(
     "DTG", "level", "fg_bias_total", "an_bias_total",
