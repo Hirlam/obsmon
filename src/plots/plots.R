@@ -241,12 +241,8 @@ obsmonPlotClass <- setRefClass(Class="obsmonPlot",
       return (.self$.memoise(FUN=.self$.generateLeafletMap))
     },
     data = function(newValue) {
-      if(missing(newValue)) {
-        if(nrow(.self$.data)==0) .self$.data <- .self$.getDataFromRawData()
-        # Remove units from data used in plot, as ggplot2 doesn't
-        # behave very well along with the units package.
-        return(drop_units(.self$dataWithUnits))
-      }
+      # ggplot2 doesn't like units: Remove them from data used in plots
+      if(missing(newValue)) return(drop_units(.self$dataWithUnits))
       .self$.data <- newValue
     },
     dataWithUnits = function(...) {
