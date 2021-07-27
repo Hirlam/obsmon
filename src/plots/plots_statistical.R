@@ -123,6 +123,7 @@ firstGuessAndAnPlottingFunction <-  function(plot) {
     group_by(!!!syms(groupByCols)) %>%
     summarize_all(mean)
   comment(data) <- originalDataComments
+
   return(data)
 }
 

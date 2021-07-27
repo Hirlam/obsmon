@@ -247,6 +247,7 @@ obsmonPlotClass <- setRefClass(Class="obsmonPlot",
     },
     dataWithUnits = function(...) {
       if(nrow(.self$.data)==0) .self$.data <- .self$.getDataFromRawData()
+
       rtn <- .self$.memoise(
         FUN=fillObsmonDataFrameWithUnits,
         df=.self$.data,
@@ -257,6 +258,27 @@ obsmonPlotClass <- setRefClass(Class="obsmonPlot",
         varUnits=.self$paramsAsInUiInput$variableUnits,
         levelsUnits=.self$paramsAsInUiInput$levelsUnits
       )
+
+      # TEST
+      # Group levels into reference/standard levels
+      if("level" %in% colnames(rtn)) {
+        reportedLevels <- rtn$level
+        refLevels <- refHeights
+        if(ud_are_convertible(units(rtn$level), "Pa")) refLevels <- refPressures
+        refLevels <- drop_units(refLevels)
+        reportedLevel2Level <- Vectorize(function(reportedLevel) {
+          refLevelIndex <- which.min(abs(refLevels - drop_units(reportedLevel)))
+          return(refLevels[refLevelIndex])
+        })
+        rtn$level <- reportedLevel2Level(reportedLevels)
+        units(rtn$level) <- units(reportedLevels)
+      }
+
+      if(class(.self$parentType$dataPostProcessingFunction) != "uninitializedField") {
+        rtn <- .self$parentType$dataPostProcessingFunction(rtn)
+      }
+      # END TEST
+
       return (rtn)
     },
     sqliteQuery = function(...) {.self$.getSqliteQuery()},
@@ -440,9 +462,9 @@ obsmonPlotClass <- setRefClass(Class="obsmonPlot",
         rtn <- rtn[unlist(.self$parentType$dataFieldsInRetrievedPlotData)]
       }
 
-      if(class(.self$parentType$dataPostProcessingFunction) != "uninitializedField") {
-        rtn <- .self$parentType$dataPostProcessingFunction(rtn)
-      }
+     # if(class(.self$parentType$dataPostProcessingFunction) != "uninitializedField") {
+     #   rtn <- .self$parentType$dataPostProcessingFunction(rtn)
+     # }
 
       return(rtn[complete.cases(rtn),])
     },
