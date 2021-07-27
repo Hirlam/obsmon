@@ -240,46 +240,10 @@ obsmonPlotClass <- setRefClass(Class="obsmonPlot",
     leafletMap = function(...) {
       return (.self$.memoise(FUN=.self$.generateLeafletMap))
     },
-    data = function(newValue) {
-      # ggplot2 doesn't like units: Remove them from data used in plots
-      if(missing(newValue)) return(drop_units(.self$dataWithUnits))
-      .self$.data <- newValue
-    },
+    # ggplot2 doesn't like units: Remove them from data used in plots
+    data = function(...) return(drop_units(.self$dataWithUnits)),
     dataWithUnits = function(...) {
-      if(nrow(.self$.data)==0) .self$.data <- .self$.getDataFromRawData()
-
-      rtn <- .self$.memoise(
-        FUN=fillObsmonDataFrameWithUnits,
-        df=.self$.data,
-        # varname & obname are used to get the default units
-        varname=.self$paramsAsInUiInput$variable,
-        obname=.self$paramsAsInUiInput$obname,
-        # These two lines provide info to enable unit conversions
-        varUnits=.self$paramsAsInUiInput$variableUnits,
-        levelsUnits=.self$paramsAsInUiInput$levelsUnits
-      )
-
-      # TEST
-      # Group levels into reference/standard levels
-      if("level" %in% colnames(rtn)) {
-        reportedLevels <- rtn$level
-        refLevels <- refHeights
-        if(ud_are_convertible(units(rtn$level), "Pa")) refLevels <- refPressures
-        refLevels <- drop_units(refLevels)
-        reportedLevel2Level <- Vectorize(function(reportedLevel) {
-          refLevelIndex <- which.min(abs(refLevels - drop_units(reportedLevel)))
-          return(refLevels[refLevelIndex])
-        })
-        rtn$level <- reportedLevel2Level(reportedLevels)
-        units(rtn$level) <- units(reportedLevels)
-      }
-
-      if(class(.self$parentType$dataPostProcessingFunction) != "uninitializedField") {
-        rtn <- .self$parentType$dataPostProcessingFunction(rtn)
-      }
-      # END TEST
-
-      return (rtn)
+      return(.self$.memoise(FUN=.self$.getDataFromRawData))
     },
     sqliteQuery = function(...) {.self$.getSqliteQuery()},
     paramsAsInSqliteDbs = function(...) {
@@ -297,8 +261,7 @@ obsmonPlotClass <- setRefClass(Class="obsmonPlot",
       return(digest::digest(components))
     },
     ##############################
-    .cache="list",
-    .data="data.frame"
+    .cache="list"
   ),
   methods=list(
     fetchRawData = function(...) {
@@ -462,9 +425,46 @@ obsmonPlotClass <- setRefClass(Class="obsmonPlot",
         rtn <- rtn[unlist(.self$parentType$dataFieldsInRetrievedPlotData)]
       }
 
-     # if(class(.self$parentType$dataPostProcessingFunction) != "uninitializedField") {
-     #   rtn <- .self$parentType$dataPostProcessingFunction(rtn)
-     # }
+      # Add units
+      rtn <- .self$.memoise(
+        FUN=fillObsmonDataFrameWithUnits,
+        df=rtn,
+        # varname & obname are used to get the default units
+        varname=.self$paramsAsInUiInput$variable,
+        obname=.self$paramsAsInUiInput$obname,
+        # These two lines provide info to enable unit conversions
+        varUnits=.self$paramsAsInUiInput$variableUnits,
+        levelsUnits=.self$paramsAsInUiInput$levelsUnits
+      )
+
+      # TEST
+      if("level" %in% colnames(rtn)) {
+        # Group levels into reference/standard levels
+        refLevels <- NULL
+        if(ud_are_convertible(units(rtn$level), "Pa")) {
+          refLevels <- refPressures
+        } else if(ud_are_convertible(units(rtn$level), "m")) {
+          refLevels <- refHeights
+        }
+
+        if(!is.null(refLevels)) {
+          refLevels <- drop_units(refLevels)
+
+          reportedLevels <- rtn$level
+          reportedLevel2Level <- Vectorize(function(reportedLevel) {
+            refLevelIndex <- which.min(abs(refLevels - reportedLevel))
+            return(refLevels[refLevelIndex])
+          })
+          rtn$level <- reportedLevel2Level(drop_units(reportedLevels))
+          units(rtn$level) <- units(reportedLevels)
+        }
+      }
+      # END TEST
+
+      # Apply eventual user-defined data post-processing
+      if(class(.self$parentType$dataPostProcessingFunction) != "uninitializedField") {
+        rtn <- .self$parentType$dataPostProcessingFunction(rtn)
+      }
 
       return(rtn[complete.cases(rtn),])
     },
