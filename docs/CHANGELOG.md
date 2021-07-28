@@ -17,6 +17,8 @@ and this project adheres to [Semantic Versioning](http://semver.org).
     - Which was wrongly named "First Guess and Analysis Departure" before
 - Issue, due to a bug in the R-lib tibble v3.1.1, that could cause some
   plots to crash.
+### Changed
+- Show level values based on database table (obsmon/usage) queried by plot
 
 
 ## [4.1.0] 2021-05-17
