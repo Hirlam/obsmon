@@ -421,8 +421,13 @@ obsmonPlotClass <- setRefClass(Class="obsmonPlot",
       if(length(.self$rawData)==0) .self$fetchRawData()
       rtn <- data.frame(.self$rawData, check.names=FALSE)
 
+      # Filter out unwanted cols from the rawData
       if(length(.self$parentType$dataFieldsInRetrievedPlotData)>0) {
-        rtn <- rtn[unlist(.self$parentType$dataFieldsInRetrievedPlotData)]
+        selectedCols <- intersect(
+          unlist(.self$parentType$dataFieldsInRetrievedPlotData),
+          colnames(rtn)
+        )
+        rtn <- rtn[selectedCols]
       }
 
       # Add units
