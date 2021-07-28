@@ -159,7 +159,7 @@ mainTab <- function() {fluidPage(
           shinyInput_label_embed(
             materialSwitch(
               inputId='groupLevelsIntoStandardSwitch',
-              label="Group Plot Levels into Standard",
+              label="Standardise Levels in the Final Plot",
               status="warning",
               inline=TRUE,
               right=TRUE

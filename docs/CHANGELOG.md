@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](http://semver.org).
     - "Average First Guess and Analysis Departure"
     - "Average First Guess and Analysis Bias/RMS"
     - "Station Average First Guess and Analysis Departure"
+- "Standardise Levels in the Final Plot" UI switch
 ### Fixed
 - Fix name of "First Guess and Analysis Bias/RMS" plot
     - Which was wrongly named "First Guess and Analysis Departure" before
