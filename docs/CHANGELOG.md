@@ -15,6 +15,8 @@ and this project adheres to [Semantic Versioning](http://semver.org).
 ### Fixed
 - Fix name of "First Guess and Analysis Bias/RMS" plot
     - Which was wrongly named "First Guess and Analysis Departure" before
+- Issue, due to a bug in the R-lib tibble v3.1.1, that could cause some
+  plots to crash.
 
 
 ## [4.1.0] 2021-05-17
