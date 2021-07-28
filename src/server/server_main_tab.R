@@ -491,6 +491,9 @@ observeEvent({
   allLevelsAreStandard <- all(levels$all %in% levels$obsmon)
   showStandardLevelsToggle <- hasStandardLevels && !allLevelsAreStandard
   shinyjs::toggle("standardLevelsSwitch", condition=showStandardLevelsToggle)
+  shinyjs::toggle(
+    "groupLevelsIntoStandardSwitch", condition=!allLevelsAreStandard
+  )
 
   availableLevels(levels)
 }, ignoreNULL=FALSE)

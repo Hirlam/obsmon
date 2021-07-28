@@ -154,6 +154,13 @@ mainTab <- function() {fluidPage(
           status="warning",
           inline=TRUE,
           right=TRUE
+        )),
+        hidden(materialSwitch(
+          inputId='groupLevelsIntoStandardSwitch',
+          label="Group Plot Levels into Standard",
+          status="warning",
+          inline=TRUE,
+          right=TRUE
         ))
       ),
       pickerInput("plottype",

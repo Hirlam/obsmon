@@ -29,6 +29,9 @@ plotTypeClass <- setRefClass(Class="obsmonPlotType",
     },
     requiresSingleStation = function(...) {
       return(isTRUE(.self$stationChoiceType == "single"))
+    },
+    queriedDbTable = function(...) {
+      return(ifelse(.self$supportsStationSelection, "usage", "obsmon"))
     }
   ),
   methods=list(
@@ -112,10 +115,9 @@ plotTypeClass <- setRefClass(Class="obsmonPlotType",
     ############################
     getQueryStub = function() {
       # stationIDs are not stored in the "obsmon" table, only in "usage"
-      dbTable <- ifelse(.self$supportsStationSelection, "usage", "obsmon")
       whereStub <- "WHERE %s"
       if (
-        (dbTable == "obsmon") &&
+        (.self$queriedDbTable == "obsmon") &&
         !("nobs_total" %in% .self$getRetrievedSqliteFields())
       ) {
         whereStub <- paste(whereStub, "AND (nobs_total > 0)")
@@ -123,7 +125,7 @@ plotTypeClass <- setRefClass(Class="obsmonPlotType",
       stub <- paste(
         "SELECT DISTINCT",
         paste(.self$getRetrievedSqliteFields(), collapse=", "),
-        "FROM", dbTable, whereStub
+        "FROM", .self$queriedDbTable, whereStub
       )
       return (stub)
     },
@@ -442,8 +444,11 @@ obsmonPlotClass <- setRefClass(Class="obsmonPlot",
         levelsUnits=.self$paramsAsInUiInput$levelsUnits
       )
 
-      # TEST
-      if("level" %in% colnames(rtn)) {
+      if(
+        isTRUE(.self$parentType$queriedDbTable == "usage") &&
+        isTRUE(.self$paramsAsInUiInput$groupLevelsIntoStandardSwitch) &&
+        ("level" %in% colnames(rtn))
+      ) {
         # Group levels into reference/standard levels
         refLevels <- NULL
         if(ud_are_convertible(units(rtn$level), "Pa")) {
@@ -464,7 +469,6 @@ obsmonPlotClass <- setRefClass(Class="obsmonPlot",
           units(rtn$level) <- units(reportedLevels)
         }
       }
-      # END TEST
 
       # Apply eventual user-defined data post-processing
       if(class(.self$parentType$dataPostProcessingFunction) != "uninitializedField") {
