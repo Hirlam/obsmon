@@ -458,6 +458,7 @@ obsmonPlotClass <- setRefClass(Class="obsmonPlot",
         }
 
         if(!is.null(refLevels)) {
+          units(refLevels) <- units(rtn$level)
           refLevels <- drop_units(refLevels)
 
           reportedLevels <- rtn$level
