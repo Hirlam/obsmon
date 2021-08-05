@@ -11,29 +11,41 @@ firstGuessAndAnPlottingFunction <-  function(plot) {
         varname <- sqliteParams$varname
         xlab <- varname
 
-        if(any(c("fg_dep", "fg_dep_total") %in% colnames(plotData))) {
-          ylab <- sprintf("Departure (%s)", units(plot$dataWithUnits$fg_dep_total))
+        if(any(startsWith(colnames(plotData), "fg_dep"))) {
+          ylab <- "Departure"
+          colnameStartToGetUnits <- "fg_dep"
         } else {
-          ylab <- sprintf("Bias/RMS (%s)", units(plot$dataWithUnits$fg_bias_total))
+          ylab <- "Bias/RMS"
+          colnameStartToGetUnits <- "fg_bias"
+        }
+        for(colname in colnames(plot$dataWithUnits)) {
+          if(startsWith(colname, colnameStartToGetUnits)) {
+            ylabUnits <- units(plot$dataWithUnits[[colname]])
+            ylab <- sprintf("%s (%s)", ylab, ylabUnits)
+            break
+          }
         }
 
         dataCol2FillColor <- list(
           fg_bias_total="blue", an_bias_total="darkblue",
           fg_rms_total="red", an_rms_total="darkred",
           fg_dep_total="blue", an_dep_total="red",
-          fg_dep="blue", an_dep="red"
+          fg_dep="blue", an_dep="red",
+          fg_dep_mean="blue", an_dep_mean="red"
         )
         dataCol2ScaleFillColor <- list(
           fg_bias_total="turquoise2", an_bias_total="coral",
           fg_rms_total="coral2", an_rms_total="turquoise3",
           fg_dep_total="turquoise2", an_dep_total="coral2",
-          fg_dep="turquoise2", an_dep="coral2"
+          fg_dep="turquoise2", an_dep="coral2",
+          fg_dep_mean="turquoise2", an_dep_mean="coral2"
         )
         dataCol2LineLabels <- list(
           fg_bias_total="FGBias", an_bias_total= "AnBias",
           fg_rms_total="FGRMS", an_rms_total="AnRMS",
           fg_dep_total="FgDep", an_dep_total="AnDep",
-          fg_dep="FgDep", an_dep="AnDep"
+          fg_dep="FgDep", an_dep="AnDep",
+          fg_dep_mean="FgDepMean", an_dep_mean="AnDepMean"
         )
 
         lineLabels <- c()
@@ -111,7 +123,7 @@ firstGuessAndAnPlottingFunction <-  function(plot) {
 }
 
 .postProcessingFuncAvgDtgsLevels <- function(data) {
-# Post-process the retrieved data to perform the averages
+  # Post-process the retrieved data to perform the averages
   originalDataComments <- comment(data)
 
   nonNumericCols <- names(which(sapply(data, is.numeric)==FALSE))
