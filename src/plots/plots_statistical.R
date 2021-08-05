@@ -31,14 +31,16 @@ firstGuessAndAnPlottingFunction <-  function(plot) {
           fg_rms_total="red", an_rms_total="darkred",
           fg_dep_total="blue", an_dep_total="red",
           fg_dep="blue", an_dep="red",
-          fg_dep_mean="blue", an_dep_mean="red"
+          fg_dep_mean="blue", an_dep_mean="red",
+          fg_dep_sd="blue", an_dep_sd="red"
         )
         dataCol2ScaleFillColor <- list(
           fg_bias_total="turquoise2", an_bias_total="coral",
           fg_rms_total="coral2", an_rms_total="turquoise3",
           fg_dep_total="turquoise2", an_dep_total="coral2",
           fg_dep="turquoise2", an_dep="coral2",
-          fg_dep_mean="turquoise2", an_dep_mean="coral2"
+          fg_dep_mean="turquoise2", an_dep_mean="coral2",
+          fg_dep_sd="turquoise2", an_dep_sd="coral2"
         )
         dataCol2LineLabels <- list(
           fg_bias_total="FGBias", an_bias_total= "AnBias",
@@ -71,6 +73,40 @@ firstGuessAndAnPlottingFunction <-  function(plot) {
           theme(legend.position="none")
       },
       {
+        # TEST
+        propertiesWithMeanAndSd <- c()
+        for(colname in colnames(plotData)) {
+          if(!endsWith(colname, "_mean")) next
+          propertyName <- str_remove(colname, "_mean$")
+          stdevColname <- paste0(propertyName, "_sd")
+          if(!(stdevColname %in% colnames(plotData))) next
+          propertiesWithMeanAndSd <- c(propertiesWithMeanAndSd, propertyName)
+        }
+
+
+#        sdBarData <- data.frame(plotData)
+#        for(colname in colnames(sdBarData)) {
+#          if(!endsWith(colname, "_mean")) next
+#          propertyName <- str_remove(colname, "_mean$")
+#          stdevColname <- paste0(propertyName, "_sd")
+#          if(!(stdevColname %in% colnames(sdBarData))) next
+#          newColname <- paste0(propertyName, ".mean")
+#          newStdevColname <- paste0(propertyName, ".sd")
+#
+#          sdBarData <- sdBarData[!(colnames(sdBarData) %in% c(stdevColname))]
+#          names(sdBarData)[names(sdBarData) == colname] <- newColname
+#        }
+#        sdBarData <- reshape(sdBarData,
+#          varying=2:length(colnames(sdBarData)),
+#          direction = "long", # towards long
+#          timevar="function", # the grouping variable
+#          idvar="level", #identifying variable
+#          sep = "." #separated by dots
+#        )
+#        rownames(sdBarData) <- NULL
+#        print(sdBarData) # TEST
+        # END TEST
+
         localPlotData <- melt(plotData, id="level")
 
         yLabUnits <- units(plot$dataWithUnits[[localPlotData[["variable"]][1]]])
@@ -86,6 +122,12 @@ firstGuessAndAnPlottingFunction <-  function(plot) {
         ylab <- sprintf("%s [%s]", ylab, yLabUnits)
 
         shape_colours <- c("blue", "blue4", "red4", "red")
+        # TEST
+        dataIsStdMask <- endsWith(as.character(localPlotData$variable), "_sd")
+        stdData <- localPlotData[dataIsStdMask, ]
+
+        localPlotData <- localPlotData[!dataIsStdMask, ]
+        # END TEST
         obplot <- ggplot(data=localPlotData) +
           aes_string(x="level", y="value",
             group="variable", colour="variable",
@@ -100,6 +142,31 @@ firstGuessAndAnPlottingFunction <-  function(plot) {
           scale_fill_manual(name=NULL, values=shape_colours) +
           coord_flip_wrapper(default=TRUE) +
           labs(x=xlab, y=ylab)
+        # TEST
+        colors <- scales::hue_pal()(length(propertiesWithMeanAndSd))
+        colors <- c("blue", "red")
+        names(colors) <- paste0(propertiesWithMeanAndSd, "_sd")
+        iColor <- 0
+        for(property in propertiesWithMeanAndSd) {
+          print(property) # TEST
+          iColor <- iColor + 1
+          obplot <- obplot +
+            geom_errorbar(
+              data=plotData,
+              mapping=aes_string(
+                x="level",
+                ymin=sprintf("%1$s_mean - %1$s_sd", property),
+                ymax=sprintf("%1$s_mean + %1$s_sd", property),
+                group=paste0(property, "_sd"),
+                color=sprintf("colors[%d]", iColor)
+              ),
+              inherit.aes=FALSE,
+              show.legend=TRUE,
+              width=.2,
+              position=position_dodge(.9)
+            )
+        }
+        # END TEST
         if(strObnumber=="7") {
           obplot <- obplot + scale_x_continuous(breaks=plotData$level)
         } else {
@@ -131,9 +198,11 @@ firstGuessAndAnPlottingFunction <-  function(plot) {
   colsToDrop <- c("DTG", setdiff(nonNumericCols, groupByCols))
   data <- data[!(colnames(data) %in% colsToDrop)]
 
+  population_sd <- function(x) sqrt(sum((x - mean(x))^2)/(length(x)))
+
   data <- data %>%
     group_by(!!!syms(groupByCols)) %>%
-    summarize_all(mean)
+    summarize_all(list(mean=mean, sd=population_sd))
   comment(data) <- originalDataComments
 
   return(data)
