@@ -99,17 +99,6 @@ firstGuessAndAnPlottingFunction <-  function(plot) {
           theme(legend.position="none")
       },
       {
-        # TEST
-        propertiesWithMeanAndSd <- c()
-        for(colname in colnames(plotData)) {
-          if(!endsWith(colname, "_mean")) next
-          propertyName <- str_remove(colname, "_mean$")
-          stdevColname <- paste0(propertyName, "_sd")
-          if(!(stdevColname %in% colnames(plotData))) next
-          propertiesWithMeanAndSd <- c(propertiesWithMeanAndSd, propertyName)
-        }
-        # END TEST
-
         localPlotData <- melt(plotData, id="level")
 
         yLabUnits <- units(plot$dataWithUnits[[localPlotData[["variable"]][1]]])
@@ -124,49 +113,30 @@ firstGuessAndAnPlottingFunction <-  function(plot) {
         }
         ylab <- sprintf("%s [%s]", ylab, yLabUnits)
 
-        shape_numbers <- c(22,23,22,23)
-        shape_colours <- c("blue", "blue4", "red4", "red")
 
-        # TEST
-        # Remove std dev data from plotData because these will be added later
-        # as errorbars
-        dataIsStdMask <- endsWith(as.character(localPlotData$variable), "_sd")
-        traceLabels <- unique(localPlotData$variable)
-        localPlotData <- localPlotData[!dataIsStdMask, ]
-        nVariables <- length(unique(localPlotData$variable))
-        shape_numbers <- shape_numbers[1:nVariables]
-        shape_colours <- shape_colours[1:nVariables]
-        iColor <- 0
-        for(property in propertiesWithMeanAndSd) {
-          iColor <- iColor + 1
-          shape_colours <- c(shape_colours, shape_colours[iColor])
-          shape_numbers <- c(shape_numbers, shape_numbers[iColor])
+        # Identify columns in the data for properties with mean & sd info
+        propertiesWithMeanAndSd <- c()
+        for(colname in colnames(plotData)) {
+          if(!endsWith(colname, "_mean")) next
+          propertyName <- str_remove(colname, "_mean$")
+          stdevColname <- paste0(propertyName, "_sd")
+          if(!(stdevColname %in% colnames(plotData))) next
+          propertiesWithMeanAndSd <- c(propertiesWithMeanAndSd, propertyName)
         }
-        # END TEST
 
-        obplot <- ggplot(data=localPlotData) +
-          aes_string(x="level", y="value",
-            group="variable", colour="variable",
-            shape="variable", fill="variable"
-          ) +
-          # Add geom_point before geom_line so that plotly includes the shapes
-          # in the legend. See comment on xlim below.
-          geom_point(size=4) +
-          geom_line() +
-          scale_shape_manual(name=NULL, values=shape_numbers) +
-          scale_colour_manual(name=NULL, values=shape_colours) +
-          scale_fill_manual(name=NULL, values=shape_colours) +
-          coord_flip_wrapper(default=TRUE) +
-          labs(x=xlab, y=ylab)
-
-        # TEST
+        # Put errorbar data in a separate dataframe formatted conveniently
+        sdBarData <- NULL
         if(length(propertiesWithMeanAndSd) > 0) {
           sdBarData <- data.frame(plotData)
           colnames(sdBarData) <- gsub("_sd$", "\\.sd", colnames(sdBarData))
           colnames(sdBarData) <- gsub("_mean$", "\\.mean", colnames(sdBarData))
 
           # This "sub" call replaces colnames such as "A.B" with "B.A"
-          colnames(sdBarData) <-  sub("^(.*)\\.([^\\.]*)$", "\\2.\\1", colnames(sdBarData))
+          colnames(sdBarData) <-  sub(
+            "^(.*)\\.([^\\.]*)$",
+            "\\2.\\1",
+            colnames(sdBarData)
+          )
 
           sdBarData <- reshape(sdBarData,
             varying=2:length(colnames(sdBarData)),
@@ -176,15 +146,43 @@ firstGuessAndAnPlottingFunction <-  function(plot) {
             sep="." #separated by dots
           )
           rownames(sdBarData) <- NULL
-          sdBarData$property <- paste0(sdBarData$property, "_std")
+          sdBarData$property <- paste0(sdBarData$property, "_sd")
 
+          # Error bars with zero width are just clutter. Removing these.
+          sdBarData <- sdBarData[sdBarData$sd > 0, ]
+        }
+
+        # Remove std data from plotData: These will be plotted as errorbars
+        dataIsStdMask <- endsWith(as.character(localPlotData$variable), "_sd")
+        traceLabels <- unique(localPlotData$variable)
+        localPlotData <- localPlotData[!dataIsStdMask, ]
+
+        # Main data in plot
+        obplot <- ggplot(data=localPlotData) +
+          aes_string(x="level", y="value",
+            group="variable", colour="variable",
+            shape="variable", fill="variable"
+          ) +
+          # Add geom_point before geom_line so that plotly includes the shapes
+          # in the legend. See comment on xlim below.
+          geom_point(size=4) +
+          geom_line() +
+          scale_shape_manual(name=NULL, values=unlist(dataCol2Shape)) +
+          scale_colour_manual(name=NULL, values=unlist(dataCol2FillColor)) +
+          scale_fill_manual(name=NULL, values=unlist(dataCol2FillColor)) +
+          coord_flip_wrapper(default=TRUE) +
+          labs(x=xlab, y=ylab)
+
+        # Add errorbars to the plot, if applicable
+        if(!is.null(sdBarData)) {
           obplot <- obplot +
-          #geom_errorbar(
-          geom_pointrange(
+          #geom_linerange(
+          #geom_pointrange(
+          geom_errorbar(
             data=sdBarData,
             inherit.aes=FALSE,
             show.legend=TRUE,
-            #width=.2,
+            width=0.5,
             mapping=aes(
               x=level,
               y=mean,
@@ -197,7 +195,6 @@ firstGuessAndAnPlottingFunction <-  function(plot) {
             )
           )
         }
-        # END TEST
 
         if(strObnumber=="7") {
           obplot <- obplot + scale_x_continuous(breaks=plotData$level)
