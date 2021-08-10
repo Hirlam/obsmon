@@ -2,6 +2,56 @@ firstGuessAndAnPlottingFunction <-  function(plot) {
   sqliteParams <- plot$paramsAsInSqliteDbs
   plotData <- plot$data
 
+  dataCol2FillColor <- list(
+    fg_bias_total="blue", an_bias_total="darkblue",
+    fg_bias_total_mean="blue", an_bias_total_mean="darkblue",
+    fg_bias_total_sd="blue", an_bias_total_sd="red",
+    fg_rms_total="red", an_rms_total="darkred",
+    fg_rms_total_mean="red", an_rms_total_mean="darkred",
+    fg_rms_total_sd="blue", an_rms_total_sd="red",
+    fg_dep_total="blue", an_dep_total="red",
+    fg_dep_total_mean="blue", an_dep_total_mean="red",
+    fg_dep_total_sd="blue", an_dep_total_sd="red",
+    fg_dep="blue", an_dep="red",
+    fg_dep_mean="blue", an_dep_mean="red",
+    fg_dep_sd="blue", an_dep_sd="red"
+  )
+  dataCol2Shape <- list(
+    fg_bias_total=22, an_bias_total=23,
+    fg_bias_total_mean=22, an_bias_total_mean=23,
+    fg_bias_total_sd=22, an_bias_total_sd=23,
+    fg_rms_total=22, an_rms_total=23,
+    fg_rms_total_mean=22, an_rms_total_mean=23,
+    fg_rms_total_sd=22, an_rms_total_sd=23,
+    fg_dep_total=22, an_dep_total=23,
+    fg_dep_total_mean=22, an_dep_total_mean=23,
+    fg_dep_total_sd=22, an_dep_total_sd=23,
+    fg_dep=22, an_dep=23,
+    fg_dep_mean=22, an_dep_mean=23,
+    fg_dep_sd=22, an_dep_sd=23
+  )
+  dataCol2ScaleFillColor <- list(
+    fg_bias_total="turquoise2", an_bias_total="coral",
+    fg_bias_total_mean="turquoise2", an_bias_total_mean="coral",
+    fg_bias_total_sd="turquoise2", an_bias_total_sd="coral",
+    fg_rms_total="coral2", an_rms_total="turquoise3",
+    fg_rms_total_mean="coral2", an_rms_total_mean="turquoise3",
+    fg_rms_total_sd="coral2", an_rms_total_sd="turquoise3",
+    fg_dep_total="turquoise2", an_dep_total="coral2",
+    fg_dep_total_mean="turquoise2", an_dep_total_mean="coral2",
+    fg_dep_total_sd="turquoise2", an_dep_total_sd="coral2",
+    fg_dep="turquoise2", an_dep="coral2",
+    fg_dep_mean="turquoise2", an_dep_mean="coral2",
+    fg_dep_sd="turquoise2", an_dep_sd="coral2"
+  )
+  dataCol2LineLabels <- list(
+    fg_bias_total="FGBias", an_bias_total= "AnBias",
+    fg_rms_total="FGRMS", an_rms_total="AnRMS",
+    fg_dep_total="FgDep", an_dep_total="AnDep",
+    fg_dep="FgDep", an_dep="AnDep",
+    fg_dep_mean="FgDepMean", an_dep_mean="AnDepMean"
+  )
+
   strObnumber <- as.character(sqliteParams$obnumber)
   switch(
       strObnumber,
@@ -25,30 +75,6 @@ firstGuessAndAnPlottingFunction <-  function(plot) {
             break
           }
         }
-
-        dataCol2FillColor <- list(
-          fg_bias_total="blue", an_bias_total="darkblue",
-          fg_rms_total="red", an_rms_total="darkred",
-          fg_dep_total="blue", an_dep_total="red",
-          fg_dep="blue", an_dep="red",
-          fg_dep_mean="blue", an_dep_mean="red",
-          fg_dep_sd="blue", an_dep_sd="red"
-        )
-        dataCol2ScaleFillColor <- list(
-          fg_bias_total="turquoise2", an_bias_total="coral",
-          fg_rms_total="coral2", an_rms_total="turquoise3",
-          fg_dep_total="turquoise2", an_dep_total="coral2",
-          fg_dep="turquoise2", an_dep="coral2",
-          fg_dep_mean="turquoise2", an_dep_mean="coral2",
-          fg_dep_sd="turquoise2", an_dep_sd="coral2"
-        )
-        dataCol2LineLabels <- list(
-          fg_bias_total="FGBias", an_bias_total= "AnBias",
-          fg_rms_total="FGRMS", an_rms_total="AnRMS",
-          fg_dep_total="FgDep", an_dep_total="AnDep",
-          fg_dep="FgDep", an_dep="AnDep",
-          fg_dep_mean="FgDepMean", an_dep_mean="AnDepMean"
-        )
 
         lineLabels <- c()
         plotValues <- c()
