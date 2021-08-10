@@ -45,9 +45,12 @@ firstGuessAndAnPlottingFunction <-  function(plot) {
     fg_dep_sd="turquoise2", an_dep_sd="coral2"
   )
   dataCol2LineLabels <- list(
-    fg_bias_total="FGBias", an_bias_total= "AnBias",
-    fg_rms_total="FGRMS", an_rms_total="AnRMS",
-    fg_dep_total="FgDep", an_dep_total="AnDep",
+    fg_bias_total="FGBiasTotal", an_bias_total= "AnBiasTotal",
+    fg_bias_total_mean="FGBiasTotalMean", an_bias_total_mean="AnBiasTotalMean",
+    fg_rms_total="FGRmsTotal", an_rms_total="AnRmsTotal",
+    fg_rms_total_mean="FgRmsTotalMean", an_rms_total_mean="AnRmsTotalMean",
+    fg_dep_total="FgDepTotal", an_dep_total="AnDepTotal",
+    fg_dep_total_mean="FgDepTotalMean", an_dep_total_mean="AnDepTotalMean",
     fg_dep="FgDep", an_dep="AnDep",
     fg_dep_mean="FgDepMean", an_dep_mean="AnDepMean"
   )
@@ -89,7 +92,7 @@ firstGuessAndAnPlottingFunction <-  function(plot) {
         }
         params <- factor(lineLabels, lineLabels)
 
-        df <- data.frame(params=params,plotValues=plotValues)
+        df <- data.frame(params=params, plotValues=plotValues)
         obplot <- ggplot(data=df) +
           aes(x=params, y=plotValues, fill=fillColors) +
           geom_bar(stat="identity") +
