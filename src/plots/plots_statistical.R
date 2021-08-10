@@ -82,29 +82,6 @@ firstGuessAndAnPlottingFunction <-  function(plot) {
           if(!(stdevColname %in% colnames(plotData))) next
           propertiesWithMeanAndSd <- c(propertiesWithMeanAndSd, propertyName)
         }
-
-
-#        sdBarData <- data.frame(plotData)
-#        for(colname in colnames(sdBarData)) {
-#          if(!endsWith(colname, "_mean")) next
-#          propertyName <- str_remove(colname, "_mean$")
-#          stdevColname <- paste0(propertyName, "_sd")
-#          if(!(stdevColname %in% colnames(sdBarData))) next
-#          newColname <- paste0(propertyName, ".mean")
-#          newStdevColname <- paste0(propertyName, ".sd")
-#
-#          sdBarData <- sdBarData[!(colnames(sdBarData) %in% c(stdevColname))]
-#          names(sdBarData)[names(sdBarData) == colname] <- newColname
-#        }
-#        sdBarData <- reshape(sdBarData,
-#          varying=2:length(colnames(sdBarData)),
-#          direction = "long", # towards long
-#          timevar="function", # the grouping variable
-#          idvar="level", #identifying variable
-#          sep = "." #separated by dots
-#        )
-#        rownames(sdBarData) <- NULL
-#        print(sdBarData) # TEST
         # END TEST
 
         localPlotData <- melt(plotData, id="level")
@@ -121,13 +98,26 @@ firstGuessAndAnPlottingFunction <-  function(plot) {
         }
         ylab <- sprintf("%s [%s]", ylab, yLabUnits)
 
+        shape_numbers <- c(22,23,22,23)
         shape_colours <- c("blue", "blue4", "red4", "red")
-        # TEST
-        dataIsStdMask <- endsWith(as.character(localPlotData$variable), "_sd")
-        stdData <- localPlotData[dataIsStdMask, ]
 
+        # TEST
+        # Remove std dev data from plotData because these will be added later
+        # as errorbars
+        dataIsStdMask <- endsWith(as.character(localPlotData$variable), "_sd")
+        traceLabels <- unique(localPlotData$variable)
         localPlotData <- localPlotData[!dataIsStdMask, ]
+        nVariables <- length(unique(localPlotData$variable))
+        shape_numbers <- shape_numbers[1:nVariables]
+        shape_colours <- shape_colours[1:nVariables]
+        iColor <- 0
+        for(property in propertiesWithMeanAndSd) {
+          iColor <- iColor + 1
+          shape_colours <- c(shape_colours, shape_colours[iColor])
+          shape_numbers <- c(shape_numbers, shape_numbers[iColor])
+        }
         # END TEST
+
         obplot <- ggplot(data=localPlotData) +
           aes_string(x="level", y="value",
             group="variable", colour="variable",
@@ -137,36 +127,52 @@ firstGuessAndAnPlottingFunction <-  function(plot) {
           # in the legend. See comment on xlim below.
           geom_point(size=4) +
           geom_line() +
-          scale_shape_manual(name=NULL, values=c(22,23,22,23)) +
+          scale_shape_manual(name=NULL, values=shape_numbers) +
           scale_colour_manual(name=NULL, values=shape_colours) +
           scale_fill_manual(name=NULL, values=shape_colours) +
           coord_flip_wrapper(default=TRUE) +
           labs(x=xlab, y=ylab)
+
         # TEST
-        colors <- scales::hue_pal()(length(propertiesWithMeanAndSd))
-        colors <- c("blue", "red")
-        names(colors) <- paste0(propertiesWithMeanAndSd, "_sd")
-        iColor <- 0
-        for(property in propertiesWithMeanAndSd) {
-          print(property) # TEST
-          iColor <- iColor + 1
+        if(length(propertiesWithMeanAndSd) > 0) {
+          sdBarData <- data.frame(plotData)
+          colnames(sdBarData) <- gsub("_sd$", "\\.sd", colnames(sdBarData))
+          colnames(sdBarData) <- gsub("_mean$", "\\.mean", colnames(sdBarData))
+
+          # This "sub" call replaces colnames such as "A.B" with "B.A"
+          colnames(sdBarData) <-  sub("^(.*)\\.([^\\.]*)$", "\\2.\\1", colnames(sdBarData))
+
+          sdBarData <- reshape(sdBarData,
+            varying=2:length(colnames(sdBarData)),
+            direction = "long", # towards long
+            timevar="property", # the grouping variable
+            idvar="level", #identifying variable
+            sep="." #separated by dots
+          )
+          rownames(sdBarData) <- NULL
+          sdBarData$property <- paste0(sdBarData$property, "_std")
+
           obplot <- obplot +
-            geom_errorbar(
-              data=plotData,
-              mapping=aes_string(
-                x="level",
-                ymin=sprintf("%1$s_mean - %1$s_sd", property),
-                ymax=sprintf("%1$s_mean + %1$s_sd", property),
-                group=paste0(property, "_sd"),
-                color=sprintf("colors[%d]", iColor)
-              ),
-              inherit.aes=FALSE,
-              show.legend=TRUE,
-              width=.2,
-              position=position_dodge(.9)
+          #geom_errorbar(
+          geom_pointrange(
+            data=sdBarData,
+            inherit.aes=FALSE,
+            show.legend=TRUE,
+            #width=.2,
+            mapping=aes(
+              x=level,
+              y=mean,
+              ymin=mean - sd,
+              ymax=mean + sd,
+              group=property,
+              colour=property,
+              shape=property,
+              fill=property
             )
+          )
         }
         # END TEST
+
         if(strObnumber=="7") {
           obplot <- obplot + scale_x_continuous(breaks=plotData$level)
         } else {
