@@ -85,16 +85,6 @@ firstGuessAndAnPlottingFunction <-  function(plot) {
     fg_dep_mean="turquoise2", an_dep_mean="coral2",
     fg_dep_sd="turquoise2", an_dep_sd="coral2"
   )
-  dataCol2LineLabels <- list(
-    fg_bias_total="FGBiasTotal", an_bias_total= "AnBiasTotal",
-    fg_bias_total_mean="FGBiasTotalMean", an_bias_total_mean="AnBiasTotalMean",
-    fg_rms_total="FGRmsTotal", an_rms_total="AnRmsTotal",
-    fg_rms_total_mean="FgRmsTotalMean", an_rms_total_mean="AnRmsTotalMean",
-    fg_dep_total="FgDepTotal", an_dep_total="AnDepTotal",
-    fg_dep_total_mean="FgDepTotalMean", an_dep_total_mean="AnDepTotalMean",
-    fg_dep="FgDep", an_dep="AnDep",
-    fg_dep_mean="FgDepMean", an_dep_mean="AnDepMean"
-  )
 
   strObnumber <- as.character(sqliteParams$obnumber)
   switch(
@@ -120,27 +110,46 @@ firstGuessAndAnPlottingFunction <-  function(plot) {
           }
         }
 
-        lineLabels <- c()
-        plotValues <- c()
-        fillColors <- c()
-        scale_fill_colors <- c()
-        for(colname in colnames(plotData)) {
-          if (!(colname %in% names(dataCol2FillColor))) next
-          lineLabels <- c(lineLabels, dataCol2LineLabels[[colname]])
-          plotValues <- c(plotValues, plotData[[colname]])
-          fillColors <- c(fillColors, dataCol2ScaleFillColor[[colname]])
-          scale_fill_colors <- c(scale_fill_colors, dataCol2ScaleFillColor[[colname]])
-        }
-        params <- factor(lineLabels, lineLabels)
-
-        df <- data.frame(params=params, plotValues=plotValues)
-        obplot <- ggplot(data=df) +
-          aes(x=params, y=plotValues, fill=fillColors) +
+        localPlotData <- melt(plotData, id="level")
+        dataIsStdMask <- endsWith(as.character(localPlotData$variable), "_sd")
+        obplot <- ggplot(data=localPlotData[!dataIsStdMask, ]) +
+          aes(
+            x=variable,
+            y=value,
+            group=variable,
+            color=variable,
+            fill=variable,
+            # shape is not used in geom_bar, but if we don't add this here
+            # then the legend becomes strange after using ggplotly
+            shape=variable
+          ) +
           geom_bar(stat="identity") +
-          scale_fill_manual(name=NULL, values=scale_fill_colors) +
-          guides(fill=FALSE) +
-          labs(x=xlab, y=ylab) +
-          theme(legend.position="none")
+          scale_colour_manual(name=NULL, values=unlist(dataCol2ScaleFillColor)) +
+          scale_fill_manual(name=NULL, values=unlist(dataCol2ScaleFillColor)) +
+          labs(x=xlab, y=ylab)
+
+        # Add errorbars to the plot, if applicable
+        sdBarData <- getSdBarData(plotData)
+        if(!is.null(sdBarData)) {
+          sdBarData$variable <- sub("_sd$", "_mean", sdBarData$property)
+          obplot <- obplot +
+          geom_errorbar(
+            data=sdBarData,
+            inherit.aes=FALSE,
+            show.legend=TRUE,
+            width=0.5,
+            mapping=aes(
+              x=variable,
+              y=mean,
+              ymin=mean - sd,
+              ymax=mean + sd,
+              group=property,
+              colour=property,
+              shape=property,
+              fill=property
+            )
+          )
+        }
       },
       {
         localPlotData <- melt(plotData, id="level")
