@@ -43,7 +43,7 @@ firstGuessAndAnPlottingFunction <-  function(plot) {
   sqliteParams <- plot$paramsAsInSqliteDbs
   plotData <- plot$data
 
-  dataCol2FillColor <- list(
+  dataCol2FillColor <- c(
     fg_bias_total="blue", an_bias_total="darkblue",
     fg_bias_total_mean="blue", an_bias_total_mean="darkblue",
     fg_bias_total_sd="blue", an_bias_total_sd="red",
@@ -57,7 +57,7 @@ firstGuessAndAnPlottingFunction <-  function(plot) {
     fg_dep_mean="blue", an_dep_mean="red",
     fg_dep_sd="blue", an_dep_sd="red"
   )
-  dataCol2Shape <- list(
+  dataCol2Shape <- c(
     fg_bias_total=22, an_bias_total=23,
     fg_bias_total_mean=22, an_bias_total_mean=23,
     fg_bias_total_sd=22, an_bias_total_sd=23,
@@ -71,7 +71,7 @@ firstGuessAndAnPlottingFunction <-  function(plot) {
     fg_dep_mean=22, an_dep_mean=23,
     fg_dep_sd=22, an_dep_sd=23
   )
-  dataCol2ScaleFillColor <- list(
+  dataCol2ScaleFillColor <- c(
     fg_bias_total="turquoise2", an_bias_total="coral",
     fg_bias_total_mean="turquoise2", an_bias_total_mean="coral",
     fg_bias_total_sd="turquoise2", an_bias_total_sd="coral",
@@ -124,8 +124,8 @@ firstGuessAndAnPlottingFunction <-  function(plot) {
             shape=variable
           ) +
           geom_bar(stat="identity") +
-          scale_colour_manual(name=NULL, values=unlist(dataCol2ScaleFillColor)) +
-          scale_fill_manual(name=NULL, values=unlist(dataCol2ScaleFillColor)) +
+          scale_colour_manual(name=NULL, values=dataCol2ScaleFillColor) +
+          scale_fill_manual(name=NULL, values=dataCol2ScaleFillColor) +
           labs(x=xlab, y=ylab)
 
         # Add errorbars to the plot, if applicable
@@ -178,9 +178,9 @@ firstGuessAndAnPlottingFunction <-  function(plot) {
           # in the legend. See comment on xlim below.
           geom_point(size=4) +
           geom_line() +
-          scale_shape_manual(name=NULL, values=unlist(dataCol2Shape)) +
-          scale_colour_manual(name=NULL, values=unlist(dataCol2FillColor)) +
-          scale_fill_manual(name=NULL, values=unlist(dataCol2FillColor)) +
+          scale_shape_manual(name=NULL, values=dataCol2Shape) +
+          scale_colour_manual(name=NULL, values=dataCol2FillColor) +
+          scale_fill_manual(name=NULL, values=dataCol2FillColor) +
           coord_flip_wrapper(default=TRUE) +
           labs(x=xlab, y=ylab)
 
