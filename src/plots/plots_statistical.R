@@ -1,3 +1,44 @@
+getSdBarData <- function(plotData) {
+    # Identify columns in the data for properties with mean & sd info
+    propertiesWithMeanAndSd <- c()
+    for(colname in colnames(plotData)) {
+      if(!endsWith(colname, "_mean")) next
+      propertyName <- str_remove(colname, "_mean$")
+      stdevColname <- paste0(propertyName, "_sd")
+      if(!(stdevColname %in% colnames(plotData))) next
+      propertiesWithMeanAndSd <- c(propertiesWithMeanAndSd, propertyName)
+    }
+
+    # Put errorbar data in a separate dataframe formatted conveniently
+    sdBarData <- NULL
+    if(length(propertiesWithMeanAndSd) > 0) {
+      sdBarData <- data.frame(plotData)
+      colnames(sdBarData) <- gsub("_sd$", "\\.sd", colnames(sdBarData))
+      colnames(sdBarData) <- gsub("_mean$", "\\.mean", colnames(sdBarData))
+
+      # This "sub" call replaces colnames such as "A.B" with "B.A"
+      colnames(sdBarData) <-  sub(
+        "^(.*)\\.([^\\.]*)$",
+        "\\2.\\1",
+        colnames(sdBarData)
+      )
+
+      sdBarData <- reshape(sdBarData,
+        varying=2:length(colnames(sdBarData)),
+        direction = "long", # towards long
+        timevar="property", # the grouping variable
+        idvar="level", #identifying variable
+        sep="." #separated by dots
+      )
+      rownames(sdBarData) <- NULL
+      sdBarData$property <- paste0(sdBarData$property, "_sd")
+
+      # Error bars with zero width are just clutter. Removing these.
+      sdBarData <- sdBarData[sdBarData$sd > 0, ]
+    }
+    return(sdBarData)
+}
+
 firstGuessAndAnPlottingFunction <-  function(plot) {
   sqliteParams <- plot$paramsAsInSqliteDbs
   plotData <- plot$data
@@ -116,52 +157,10 @@ firstGuessAndAnPlottingFunction <-  function(plot) {
         }
         ylab <- sprintf("%s [%s]", ylab, yLabUnits)
 
-
-        # Identify columns in the data for properties with mean & sd info
-        propertiesWithMeanAndSd <- c()
-        for(colname in colnames(plotData)) {
-          if(!endsWith(colname, "_mean")) next
-          propertyName <- str_remove(colname, "_mean$")
-          stdevColname <- paste0(propertyName, "_sd")
-          if(!(stdevColname %in% colnames(plotData))) next
-          propertiesWithMeanAndSd <- c(propertiesWithMeanAndSd, propertyName)
-        }
-
-        # Put errorbar data in a separate dataframe formatted conveniently
-        sdBarData <- NULL
-        if(length(propertiesWithMeanAndSd) > 0) {
-          sdBarData <- data.frame(plotData)
-          colnames(sdBarData) <- gsub("_sd$", "\\.sd", colnames(sdBarData))
-          colnames(sdBarData) <- gsub("_mean$", "\\.mean", colnames(sdBarData))
-
-          # This "sub" call replaces colnames such as "A.B" with "B.A"
-          colnames(sdBarData) <-  sub(
-            "^(.*)\\.([^\\.]*)$",
-            "\\2.\\1",
-            colnames(sdBarData)
-          )
-
-          sdBarData <- reshape(sdBarData,
-            varying=2:length(colnames(sdBarData)),
-            direction = "long", # towards long
-            timevar="property", # the grouping variable
-            idvar="level", #identifying variable
-            sep="." #separated by dots
-          )
-          rownames(sdBarData) <- NULL
-          sdBarData$property <- paste0(sdBarData$property, "_sd")
-
-          # Error bars with zero width are just clutter. Removing these.
-          sdBarData <- sdBarData[sdBarData$sd > 0, ]
-        }
-
-        # Remove std data from plotData: These will be plotted as errorbars
-        dataIsStdMask <- endsWith(as.character(localPlotData$variable), "_sd")
-        traceLabels <- unique(localPlotData$variable)
-        localPlotData <- localPlotData[!dataIsStdMask, ]
-
         # Main data in plot
-        obplot <- ggplot(data=localPlotData) +
+        # Not plotting stdev data now: These will be plotted as errorbars
+        dataIsStdMask <- endsWith(as.character(localPlotData$variable), "_sd")
+        obplot <- ggplot(data=localPlotData[!dataIsStdMask, ]) +
           aes_string(x="level", y="value",
             group="variable", colour="variable",
             shape="variable", fill="variable"
@@ -177,10 +176,9 @@ firstGuessAndAnPlottingFunction <-  function(plot) {
           labs(x=xlab, y=ylab)
 
         # Add errorbars to the plot, if applicable
+        sdBarData <- getSdBarData(plotData)
         if(!is.null(sdBarData)) {
           obplot <- obplot +
-          #geom_linerange(
-          #geom_pointrange(
           geom_errorbar(
             data=sdBarData,
             inherit.aes=FALSE,

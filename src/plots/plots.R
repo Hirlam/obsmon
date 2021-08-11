@@ -131,8 +131,8 @@ plotTypeClass <- setRefClass(Class="obsmonPlotType",
     },
     ############################
     ggplotlyWrapper = function(ggplotPlot) {
-      # Generate a regular ggplot2 plot and then use plotly's
-      # ggplotly function to convert it to a plotly object
+      # Convert ggplot2 object ggplotPlot into a plotly object using
+      # plotly's ggplotly function, and then apply some customisations
       plotlyPlot <- tryCatch({
         ggplotly(ggplotPlot, tooltip=c("x","y")) %>%
           layout(
