@@ -43,6 +43,13 @@ firstGuessAndAnPlottingFunction <-  function(plot) {
   sqliteParams <- plot$paramsAsInSqliteDbs
   plotData <- plot$data
 
+  # Separate main plot data from data used to draw error bars, as these
+  # are formatted differently and handled separately.
+  sdBarData <- getSdBarData(plotData)
+  mainPlotData <- melt(plotData, id="level")
+  dataIsStdMask <- endsWith(as.character(mainPlotData$variable), "_sd")
+  mainPlotData <- mainPlotData[!dataIsStdMask, ]
+
   dataCol2FillColor <- c(
     fg_bias_total="blue", an_bias_total="darkblue",
     fg_bias_total_mean="blue", an_bias_total_mean="darkblue",
@@ -110,9 +117,8 @@ firstGuessAndAnPlottingFunction <-  function(plot) {
           }
         }
 
-        localPlotData <- melt(plotData, id="level")
-        dataIsStdMask <- endsWith(as.character(localPlotData$variable), "_sd")
-        obplot <- ggplot(data=localPlotData[!dataIsStdMask, ]) +
+        # Main plot, without stdev data. These will be plotted as errorbars
+        obplot <- ggplot(data=mainPlotData) +
           aes(
             x=variable,
             y=value,
@@ -130,7 +136,6 @@ firstGuessAndAnPlottingFunction <-  function(plot) {
           labs(x=xlab, y=ylab)
 
         # Add errorbars to the plot, if applicable
-        sdBarData <- getSdBarData(plotData)
         if(!is.null(sdBarData)) {
           sdBarData$variable <- sub("_sd$", "_mean", sdBarData$property)
           obplot <- obplot +
@@ -155,9 +160,7 @@ firstGuessAndAnPlottingFunction <-  function(plot) {
         }
       },
       {
-        localPlotData <- melt(plotData, id="level")
-
-        yLabUnits <- units(plot$dataWithUnits[[localPlotData[["variable"]][1]]])
+        yLabUnits <- units(plot$dataWithUnits[[mainPlotData[["variable"]][1]]])
         if(strObnumber=="7") {
           # Mind that channels appear as "level" in the databases
           xlab <- "Channel"
@@ -170,9 +173,7 @@ firstGuessAndAnPlottingFunction <-  function(plot) {
         ylab <- sprintf("%s [%s]", ylab, yLabUnits)
 
         # Main data in plot
-        # Not plotting stdev data now: These will be plotted as errorbars
-        dataIsStdMask <- endsWith(as.character(localPlotData$variable), "_sd")
-        obplot <- ggplot(data=localPlotData[!dataIsStdMask, ]) +
+        obplot <- ggplot(data=mainPlotData) +
           aes_string(x="level", y="value",
             group="variable", colour="variable",
             shape="variable", fill="variable"
@@ -188,7 +189,6 @@ firstGuessAndAnPlottingFunction <-  function(plot) {
           labs(x=xlab, y=ylab)
 
         # Add errorbars to the plot, if applicable
-        sdBarData <- getSdBarData(plotData)
         if(!is.null(sdBarData)) {
           obplot <- obplot +
           geom_errorbar(
@@ -219,11 +219,11 @@ firstGuessAndAnPlottingFunction <-  function(plot) {
             # releases of the plotly package
             units(refPressures) <- units(plot$dataWithUnits$level)
             obplot <- obplot +
-              xlim(max(drop_units(refPressures), localPlotData[["level"]]), 0)
+              xlim(max(drop_units(refPressures), mainPlotData[["level"]]), 0)
           } else if(ud_are_convertible(units(plot$dataWithUnits$level), "meters")) {
             units(refHeights) <- units(plot$dataWithUnits$level)
             obplot <- obplot +
-              xlim(0, max(drop_units(refHeights), localPlotData[["level"]]))
+              xlim(0, max(drop_units(refHeights), mainPlotData[["level"]]))
           }
         }
       }
