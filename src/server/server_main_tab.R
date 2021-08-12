@@ -489,6 +489,7 @@ observeEvent({
 
   # Toggle the choice between all levels or standard-only
   queryFromUsageDbTable <- activePlotType()$queriedDbTable == "usage"
+  retrievedDataHasLevels <- "level" %in% activePlotType()$getRetrievedSqliteFields()
   usageHasStandardLevels <- length(intersect(levels$obsmon, levels$usage)) > 0
   allUsageLevelsAreStandard <- all(levels$usage %in% levels$obsmon)
   shinyjs::toggle(
@@ -497,7 +498,7 @@ observeEvent({
   )
   shinyjs::toggle(
     "groupLevelsIntoStandardSwitch",
-    condition=queryFromUsageDbTable && !allUsageLevelsAreStandard
+    condition=retrievedDataHasLevels && queryFromUsageDbTable && !allUsageLevelsAreStandard
   )
 
   availableLevels(levels)
