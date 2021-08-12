@@ -126,6 +126,7 @@ firstGuessAndAnPlottingFunction <-  function(plot) {
           geom_bar(stat="identity") +
           scale_colour_manual(name=NULL, values=dataCol2ScaleFillColor) +
           scale_fill_manual(name=NULL, values=dataCol2ScaleFillColor) +
+          theme(legend.title=element_blank()) +
           labs(x=xlab, y=ylab)
 
         # Add errorbars to the plot, if applicable
