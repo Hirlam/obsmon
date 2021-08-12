@@ -35,6 +35,7 @@ getSdBarData <- function(plotData) {
 
       # Error bars with zero width are just clutter. Removing these.
       sdBarData <- sdBarData[sdBarData$sd > 0, ]
+      if(nrow(sdBarData) == 0) sdBarData <- NULL
     }
     return(sdBarData)
 }
