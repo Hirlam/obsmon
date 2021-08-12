@@ -133,6 +133,8 @@ firstGuessAndAnPlottingFunction <-  function(plot) {
         if(!is.null(sdBarData)) {
           sdBarData$variable <- sub("_sd$", "_mean", sdBarData$property)
           obplot <- obplot +
+          # Reduce opacity of geom_bar to facilitate visualisation of errorbar
+          aes(alpha=0.9) +
           geom_errorbar(
             data=sdBarData,
             inherit.aes=FALSE,
