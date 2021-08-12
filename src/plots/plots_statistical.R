@@ -39,6 +39,38 @@ getSdBarData <- function(plotData) {
     return(sdBarData)
 }
 
+addErrorbar <- function(obplot, sdBarData, strObnumber) {
+  # Return obplot with added error bars
+  xvar <- "level"
+  if(strObnumber %in% c("1", "4", "9")) {
+    xvar <- "variable"
+    sdBarData$variable <- sub("_sd$", "_mean", sdBarData$property)
+    # Reduce opacity of geom_bar to facilitate visualisation of errorbar
+    obplot <- obplot + aes(alpha=0.9)
+  }
+  obplot <- obplot +
+    geom_errorbar(
+      data=sdBarData,
+      inherit.aes=FALSE,
+      show.legend=TRUE,
+      width=0.5,
+      mapping=aes_string(
+        x=xvar,
+        y="mean",
+        ymin="mean - sd",
+        ymax="mean + sd",
+        group="property",
+        colour="property",
+        # Shape and fill are not used by geom_errorbar, but if we don't
+        # add these here then the legend is formatted strangely after
+        # making the plot interactive with ggplotly
+        shape="property",
+        fill="property"
+      )
+    )
+  return(obplot)
+}
+
 firstGuessAndAnPlottingFunction <-  function(plot) {
   sqliteParams <- plot$paramsAsInSqliteDbs
   plotData <- plot$data
@@ -134,30 +166,6 @@ firstGuessAndAnPlottingFunction <-  function(plot) {
           scale_fill_manual(name=NULL, values=dataCol2ScaleFillColor) +
           theme(legend.title=element_blank()) +
           labs(x=xlab, y=ylab)
-
-        # Add errorbars to the plot, if applicable
-        if(!is.null(sdBarData)) {
-          sdBarData$variable <- sub("_sd$", "_mean", sdBarData$property)
-          obplot <- obplot +
-          # Reduce opacity of geom_bar to facilitate visualisation of errorbar
-          aes(alpha=0.9) +
-          geom_errorbar(
-            data=sdBarData,
-            inherit.aes=FALSE,
-            show.legend=TRUE,
-            width=0.5,
-            mapping=aes(
-              x=variable,
-              y=mean,
-              ymin=mean - sd,
-              ymax=mean + sd,
-              group=property,
-              colour=property,
-              shape=property,
-              fill=property
-            )
-          )
-        }
       },
       {
         yLabUnits <- units(plot$dataWithUnits[[mainPlotData[["variable"]][1]]])
@@ -188,27 +196,6 @@ firstGuessAndAnPlottingFunction <-  function(plot) {
           coord_flip_wrapper(default=TRUE) +
           labs(x=xlab, y=ylab)
 
-        # Add errorbars to the plot, if applicable
-        if(!is.null(sdBarData)) {
-          obplot <- obplot +
-          geom_errorbar(
-            data=sdBarData,
-            inherit.aes=FALSE,
-            show.legend=TRUE,
-            width=0.5,
-            mapping=aes(
-              x=level,
-              y=mean,
-              ymin=mean - sd,
-              ymax=mean + sd,
-              group=property,
-              colour=property,
-              shape=property,
-              fill=property
-            )
-          )
-        }
-
         if(strObnumber=="7") {
           obplot <- obplot + scale_x_continuous(breaks=plotData$level)
         } else {
@@ -228,6 +215,10 @@ firstGuessAndAnPlottingFunction <-  function(plot) {
         }
       }
   )
+
+  # Add errorbars to the plot, if applicable
+  if(!is.null(sdBarData)) obplot <- addErrorbar(obplot, sdBarData, strObnumber)
+
   return(obplot)
 }
 
