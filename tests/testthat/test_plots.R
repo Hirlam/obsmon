@@ -661,6 +661,12 @@ test_that("plotTypes in actual obsmon plotRegistry can produce interactive plots
       db=obsmonDb,
       paramsAsInUiInput=mockUiInput
     )
-    expect_s3_class(newPlot$chart, "plotly")
+    testResult <- tryCatch(
+      expect_s3_class(newPlot$chart, "plotly"),
+      error=function(e) {
+        sprintf("Failure in plot '%s'", pType$name)
+        stop(e)
+      }
+    )
   }
 })
