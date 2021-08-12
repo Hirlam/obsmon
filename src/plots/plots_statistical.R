@@ -217,8 +217,18 @@ firstGuessAndAnPlottingFunction <-  function(plot) {
   )
 
   # Add errorbars to the plot, if applicable
-  if(!is.null(sdBarData)) obplot <- addErrorbar(obplot, sdBarData, strObnumber)
-
+  if(!is.null(sdBarData)) {
+    withCallingHandlers(
+      # Suppress warnings about the use of shape and fill aesthetics.
+      # See comment in the addErrorbar routine.
+      obplot <- addErrorbar(obplot, sdBarData, strObnumber),
+      warning = function(w) {
+        if (startsWith(conditionMessage(w), "Ignoring unknown aesthetics:")) {
+          invokeRestart("muffleWarning")
+        }
+      }
+    )
+  }
   return(obplot)
 }
 
