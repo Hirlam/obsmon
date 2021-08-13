@@ -20,6 +20,7 @@ and this project adheres to [Semantic Versioning](http://semver.org).
   plots to crash.
 ### Changed
 - Show level values based on database table (obsmon/usage) queried by plot
+- Menu to change colormap and scale in map plots is now collapsible
 
 
 ## [4.1.0] 2021-05-17

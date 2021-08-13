@@ -327,24 +327,26 @@ output$plotlyPlotEditingOptions <- renderUI({
     colorMapChoices[[categ]] <- rownames(subset(colorMapsDf, category==categ))
   }
 
-  tags$div(
+  shinyBS::bsCollapse(shinyBS::bsCollapsePanel(
+    title=shiny::icon("cog"),
+    value="Colour Options",
     pickerInput(
       "mainTabPlotColorscaleColorMap",
-      label="Color Map",
+      label="Colour Map",
       choices=colorMapChoices,
       multiple=TRUE,
       options=list(
         `max-options`=1,
-        `none-selected-text`="Select color map",
+        `none-selected-text`="Select colour map",
         `live-search`=TRUE
       )
     ),
     numericRangeInput(
       "mainTabPlotColorscaleRange",
-      label="Color Scale Range",
+      label="Colour Scale Range",
       value=as.numeric(format(c(cmin, cmax), digits=3))
     )
-  )
+  ))
 })
 
 observe(
