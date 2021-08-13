@@ -4,6 +4,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com)
 and this project adheres to [Semantic Versioning](http://semver.org).
 
+## [Unreleased]
+### Added
+- New plots:
+    - "First Guess and Analysis Departure"
+        - See note under the "Fixed" section below
+    - "Average First Guess and Analysis Departure"
+    - "Average First Guess and Analysis Bias/RMS"
+    - "Station Average First Guess and Analysis Departure"
+- "Standardise Levels in the Final Plot" UI switch
+### Fixed
+- Fix name of "First Guess and Analysis Bias/RMS" plot
+    - Which was wrongly named "First Guess and Analysis Departure" before
+- Issue, due to a bug in the R-lib tibble v3.1.1, that could cause some
+  plots to crash.
+### Changed
+- Show level values based on database table (obsmon/usage) queried by plot
+
+
 ## [4.1.0] 2021-05-17
 ### Added
 - New "Number of Active Observations" plot type

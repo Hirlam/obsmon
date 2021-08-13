@@ -263,7 +263,6 @@ plotRegistry$registerPlotType(
   dataFieldsInRetrievedPlotData=list("DTG", "level", "obsvalue"),
   dataFieldsInSqliteWhereClause=list("statid", "obnumber", "obname", "varname"),
   stationChoiceType="single",
-  dataPostProcessingFunction=.filterOutZeroNobsTotal,
   plottingFunction=genericTimeseriesPlottingFunction
 )
 
@@ -274,7 +273,6 @@ plotRegistry$registerPlotType(
   dataFieldsInRetrievedPlotData=list("DTG", "level", "fg_dep"),
   dataFieldsInSqliteWhereClause=list("statid", "obnumber", "obname", "varname"),
   stationChoiceType="single",
-  dataPostProcessingFunction=.filterOutZeroNobsTotal,
   plottingFunction=genericTimeseriesPlottingFunction
 )
 
@@ -285,7 +283,6 @@ plotRegistry$registerPlotType(
   dataFieldsInRetrievedPlotData=list("DTG", "level", "an_dep"),
   dataFieldsInSqliteWhereClause=list("statid", "obnumber", "obname", "varname"),
   stationChoiceType="single",
-  dataPostProcessingFunction=.filterOutZeroNobsTotal,
   plottingFunction=genericTimeseriesPlottingFunction
 )
 

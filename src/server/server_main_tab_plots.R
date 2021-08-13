@@ -171,6 +171,18 @@ observeEvent(updatePlotAfterUnitsChange(), {
   obsmonPlotObj(newObsmonPlotObj)
 }, ignoreNULL=FALSE)
 
+# Modify the plot, without performing a new query, if
+# user asks for levels to be grouped into standard ones
+observeEvent(input$groupLevelsIntoStandardSwitch, {
+  req(obsmonPlotObj())
+  newObsmonPlotObj <- obsmonPlotObj()
+  obsmonPlotObj(NULL)
+
+  newObsmonPlotObj$paramsAsInUiInput$groupLevelsIntoStandardSwitch <-
+    input$groupLevelsIntoStandardSwitch
+  obsmonPlotObj(newObsmonPlotObj)
+})
+
 # Finally, producing the output
 chart <- reactive({
   if (is.null(obsmonPlotObj())) return(NULL)

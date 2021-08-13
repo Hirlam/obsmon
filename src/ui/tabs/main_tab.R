@@ -154,7 +154,29 @@ mainTab <- function() {fluidPage(
           status="warning",
           inline=TRUE,
           right=TRUE
-        ))
+        )),
+        hidden(
+          shinyInput_label_embed(
+            materialSwitch(
+              inputId='groupLevelsIntoStandardSwitch',
+              label="Standardise Levels in the Final Plot",
+              status="warning",
+              inline=TRUE,
+              right=TRUE
+            ),
+            tags$span(
+              HTML('&emsp;'),
+              shiny::icon("info") %>%
+                bs_embed_tooltip(
+                  title=paste(
+                    "Change the values of the plotted levels to the",
+                    "nearest corresponding standard/reference levels."
+                  ),
+                  placement="right"
+                )
+            )
+          )
+        )
       ),
       pickerInput("plottype",
         label=getDefLabel("plottype"),

@@ -29,6 +29,9 @@ plotTypeClass <- setRefClass(Class="obsmonPlotType",
     },
     requiresSingleStation = function(...) {
       return(isTRUE(.self$stationChoiceType == "single"))
+    },
+    queriedDbTable = function(...) {
+      return(ifelse(.self$supportsStationSelection, "usage", "obsmon"))
     }
   ),
   methods=list(
@@ -112,10 +115,9 @@ plotTypeClass <- setRefClass(Class="obsmonPlotType",
     ############################
     getQueryStub = function() {
       # stationIDs are not stored in the "obsmon" table, only in "usage"
-      dbTable <- ifelse(.self$supportsStationSelection, "usage", "obsmon")
       whereStub <- "WHERE %s"
       if (
-        (dbTable == "obsmon") &&
+        (.self$queriedDbTable == "obsmon") &&
         !("nobs_total" %in% .self$getRetrievedSqliteFields())
       ) {
         whereStub <- paste(whereStub, "AND (nobs_total > 0)")
@@ -123,14 +125,14 @@ plotTypeClass <- setRefClass(Class="obsmonPlotType",
       stub <- paste(
         "SELECT DISTINCT",
         paste(.self$getRetrievedSqliteFields(), collapse=", "),
-        "FROM", dbTable, whereStub
+        "FROM", .self$queriedDbTable, whereStub
       )
       return (stub)
     },
     ############################
     ggplotlyWrapper = function(ggplotPlot) {
-      # Generate a regular ggplot2 plot and then use plotly's
-      # ggplotly function to convert it to a plotly object
+      # Convert ggplot2 object ggplotPlot into a plotly object using
+      # plotly's ggplotly function, and then apply some customisations
       plotlyPlot <- tryCatch({
         ggplotly(ggplotPlot, tooltip=c("x","y")) %>%
           layout(
@@ -240,28 +242,10 @@ obsmonPlotClass <- setRefClass(Class="obsmonPlot",
     leafletMap = function(...) {
       return (.self$.memoise(FUN=.self$.generateLeafletMap))
     },
-    data = function(newValue) {
-      if(missing(newValue)) {
-        if(nrow(.self$.data)==0) .self$.data <- .self$.getDataFromRawData()
-        # Remove units from data used in plot, as ggplot2 doesn't
-        # behave very well along with the units package.
-        return(drop_units(.self$dataWithUnits))
-      }
-      .self$.data <- newValue
-    },
+    # ggplot2 doesn't like units: Remove them from data used in plots
+    data = function(...) return(drop_units(.self$dataWithUnits)),
     dataWithUnits = function(...) {
-      if(nrow(.self$.data)==0) .self$.data <- .self$.getDataFromRawData()
-      rtn <- .self$.memoise(
-        FUN=fillObsmonDataFrameWithUnits,
-        df=.self$.data,
-        # varname & obname are used to get the default units
-        varname=.self$paramsAsInUiInput$variable,
-        obname=.self$paramsAsInUiInput$obname,
-        # These two lines provide info to enable unit conversions
-        varUnits=.self$paramsAsInUiInput$variableUnits,
-        levelsUnits=.self$paramsAsInUiInput$levelsUnits
-      )
-      return (rtn)
+      return(.self$.memoise(FUN=.self$.getDataFromRawData))
     },
     sqliteQuery = function(...) {.self$.getSqliteQuery()},
     paramsAsInSqliteDbs = function(...) {
@@ -279,8 +263,7 @@ obsmonPlotClass <- setRefClass(Class="obsmonPlot",
       return(digest::digest(components))
     },
     ##############################
-    .cache="list",
-    .data="data.frame"
+    .cache="list"
   ),
   methods=list(
     fetchRawData = function(...) {
@@ -440,10 +423,55 @@ obsmonPlotClass <- setRefClass(Class="obsmonPlot",
       if(length(.self$rawData)==0) .self$fetchRawData()
       rtn <- data.frame(.self$rawData, check.names=FALSE)
 
+      # Filter out unwanted cols from the rawData
       if(length(.self$parentType$dataFieldsInRetrievedPlotData)>0) {
-        rtn <- rtn[unlist(.self$parentType$dataFieldsInRetrievedPlotData)]
+        selectedCols <- intersect(
+          unlist(.self$parentType$dataFieldsInRetrievedPlotData),
+          colnames(rtn)
+        )
+        rtn <- rtn[selectedCols]
       }
 
+      # Add units
+      rtn <- .self$.memoise(
+        FUN=fillObsmonDataFrameWithUnits,
+        df=rtn,
+        # varname & obname are used to get the default units
+        varname=.self$paramsAsInUiInput$variable,
+        obname=.self$paramsAsInUiInput$obname,
+        # These two lines provide info to enable unit conversions
+        varUnits=.self$paramsAsInUiInput$variableUnits,
+        levelsUnits=.self$paramsAsInUiInput$levelsUnits
+      )
+
+      if(
+        isTRUE(.self$parentType$queriedDbTable == "usage") &&
+        isTRUE(.self$paramsAsInUiInput$groupLevelsIntoStandardSwitch) &&
+        ("level" %in% colnames(rtn))
+      ) {
+        # Group levels into reference/standard levels
+        refLevels <- NULL
+        if(ud_are_convertible(units(rtn$level), "Pa")) {
+          refLevels <- refPressures
+        } else if(ud_are_convertible(units(rtn$level), "m")) {
+          refLevels <- refHeights
+        }
+
+        if(!is.null(refLevels)) {
+          units(refLevels) <- units(rtn$level)
+          refLevels <- drop_units(refLevels)
+
+          reportedLevels <- rtn$level
+          reportedLevel2Level <- Vectorize(function(reportedLevel) {
+            refLevelIndex <- which.min(abs(refLevels - reportedLevel))
+            return(refLevels[refLevelIndex])
+          })
+          rtn$level <- reportedLevel2Level(drop_units(reportedLevels))
+          units(rtn$level) <- units(reportedLevels)
+        }
+      }
+
+      # Apply eventual user-defined data post-processing
       if(class(.self$parentType$dataPostProcessingFunction) != "uninitializedField") {
         rtn <- .self$parentType$dataPostProcessingFunction(rtn)
       }
