@@ -42,19 +42,33 @@ getSdBarData <- function(plotData) {
 
 addErrorbar <- function(obplot, sdBarData, strObnumber) {
   # Return obplot with added error bars
-  xvar <- "level"
   if(strObnumber %in% c("1", "4", "9")) {
     xvar <- "variable"
     sdBarData$variable <- sub("_sd$", "_mean", sdBarData$property)
     # Reduce opacity of geom_bar to facilitate visualisation of errorbar
     obplot <- obplot + aes(alpha=0.9)
+    errorbarWidth <- 0.2
+  } else {
+    xvar <- "level"
+    # Adjust errorbar width. It seems ggplot's width is calculated w.r.t.
+    # the value of yvar here. If we don't do this, ranges that are too
+    # small will lead to huge-width errorbar endings.
+    maxRange <- 0
+    for (property in unique(sdBarData[["property"]])) {
+      sdBarDataSubset <- sdBarData[sdBarData$property == property, ]
+      range <- max(sdBarDataSubset$mean) - min(sdBarDataSubset$mean)
+      if(range > maxRange) maxRange <- range
+    }
+    errorbarWidth <- min(0.25 * maxRange, 0.2)
   }
+
+
   obplot <- obplot +
     geom_errorbar(
       data=sdBarData,
       inherit.aes=FALSE,
       show.legend=TRUE,
-      width=0.5,
+      width=errorbarWidth,
       mapping=aes_string(
         x=xvar,
         y="mean",
