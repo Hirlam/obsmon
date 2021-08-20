@@ -1,0 +1,123 @@
+gridAxisConfigClass <- setRefClass(Class="gridAxisConfig",
+  # Configs for a grid axis.
+  fields=list(
+    start="numeric",
+    end="numeric",
+    npts="numeric",
+    npts_ezone="numeric"
+  ),
+  ############################
+  methods=list(
+    initialize = function(...) {
+      callSuper(...)
+      if(length(.self$npts_ezone)==0) .self$npts_ezone <- 0
+      if(.self$npts_ezone < 0) stop("npts_ezone must be larger than or equal to zero")
+      if(length(.self$npts)>0 && .self$npts<1) stop("npts must be larger than zero")
+      if(length(.self$start)>0 && length(.self$end)>0 && .self$end<.self$start) {
+        tmp <- .self$end
+        .self$end <- .self$start
+        .self$start <- tmp
+      }
+    }
+  )
+)
+
+grid2DClass <- setRefClass(Class="grid2D",
+  # A general grid in two dimensions, named x and y by convention.
+  fields=list(
+    xaxis="gridAxisConfig",
+    yaxis="gridAxisConfig",
+    nx=function(...) {return(.self$xaxis$npts)},
+    ny=function(...) {return(.self$yaxis$npts)},
+    nx_ezone=function(...) {return(.self$xaxis$npts_ezone)},
+    ny_ezone=function(...) {return(.self$yaxis$npts_ezone)},
+    xmin=function(...) {return(.self$xaxis$start)},
+    xmax=function(...) {return(.self$xaxis$end)},
+    xlims=function(...) {return(c(.self$xmin, .self$xmax))},
+    ymin=function(...) {return(.self$yaxis$start)},
+    ymax=function(...) {return(.self$yaxis$end)},
+    ylims=function(...) {return(c(.self$ymin, .self$ymax))},
+    ezone_xmax=function(...) {
+      # Return the max value of x within the projected extension zone."""
+      return (.self$xmax + .self$nx_ezone * .self$x_spacing)
+    },
+    ezone_ymax=function(...) {
+      # Return the max value of x within the projected extension zone."""
+      return (.self$ymax + .self$ny_ezone * .self$y_spacing)
+    },
+    x_spacing=function(...) {
+      # Return the spacing, in meters, between nearest grid x-coords."""
+      return ((.self$xmax - .self$xmin) / .self$nx)
+    },
+    y_spacing=function(...) {
+      # Return the spacing, in meters, between nearest grid y-coords."""
+      return ((.self$ymax - .self$ymin) / .self$ny)
+    },
+    ncells=function(...) {
+      # Return the total number of grid cells."""
+      return (.self$nx * .self$ny)
+    },
+    corners=function(...) {
+      # Return list of projected (x, y) coords of the grid corners.
+      return (list(
+        c(.self$xmin, .self$ymin),
+        c(.self$xmax, .self$ymin),
+        c(.self$xmax, .self$ymax),
+        c(.self$xmin, .self$ymax),
+      ))
+    },
+    ezone_corners=function(...) {
+      # Return tuple of projected (x, y) coords of the ezone corners.
+      return (list(
+          c(.self$xmax, .self$ymin),
+          c(.self$ezone_xmax, .self$ymin),
+          c(.self$ezone_xmax, .self$ezone_ymax),
+          c(.self$xmin, .self$ezone_ymax),
+          c(.self$xmin, .self$ymax),
+          c(.self$xmax, .self$ymax),
+      ))
+    }
+  ),
+  #####################
+  methods=list(
+    cart2grid=function(x, y) {
+      # Return grid (i, j) cell containing projected (x, y) coords.
+      if(length(x) != length(y)) stop("x and y must have same length")
+      cart2grid_non_vec <- function(x, y) {
+	i <- 1 + as.integer((x - .self$xmin) / .self$x_spacing)
+	j <- 1 + as.integer((y - .self$ymin) / .self$y_spacing)
+	if (i < 0 || i > .self$ncells - 1) i <- NA
+	if (j < 0 || j > .self$ncells - 1) j <- NA
+	return (c(i, j))
+      }
+      cart2grid_vectorised <- Vectorize(cart2grid_non_vec)
+      return(t(cart2grid_vectorised(x, y)))
+    },
+    ij2xy_map=function(...) {
+      # Return grid2x, grid2y such that x=grid2x[i, j], y=grid2y[i, j].
+      # We can then work with x=grid2x[i, j], y=grid2y[i, j]
+      xvals <- seq(.self$xmin, .self$xmax, length.out=.self$nx+1)
+      yvals <- seq(.self$ymin, .self$ymax, length.out=.self$ny+1)
+      xvals <- xvals[1:length(xvals)-1]
+      yvals <- yvals[1:length(yvals)-1]
+      grid2x <- t(matrix(rep(xvals, length(yvals)), ncol=length(xvals), byrow=TRUE))
+      grid2y <- matrix(rep(yvals, length(xvals)), ncol=length(yvals), byrow=TRUE)
+      return(list(grid2x=grid2x, grid2y=grid2y))
+    }
+  )
+)
+
+# TEST
+#xaxis <- gridAxisConfigClass(start=-10, end=10, npts=10)
+#yaxis <- gridAxisConfigClass(start=-5, end=5, npts=5)
+#
+#grid <- grid2DClass(xaxis=xaxis, yaxis=yaxis)
+#print(grid$cart2grid(-10, -5))
+#print(grid$cart2grid(c(-10, 10, 0), c(-5, 5, 0)))
+#print(grid$ij2xy_map())
+# END TEST
+
+########################################
+domainProjectionClass <- setRefClass(Class="domainProjection",
+  # Cartographic projection to be used in a domain.
+)
