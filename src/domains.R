@@ -1,3 +1,7 @@
+# We'll approximate the Earth as a sphere
+.EARTH_RADIUS <- 6.3710088E6  # Mean earth radius in meters
+.EQUATOR_PERIM = 2.0 * pi * .EARTH_RADIUS
+
 gridAxisConfigClass <- setRefClass(Class="gridAxisConfig",
   # Configs for a grid axis.
   fields=list(
@@ -107,17 +111,69 @@ grid2DClass <- setRefClass(Class="grid2D",
   )
 )
 
-# TEST
-#xaxis <- gridAxisConfigClass(start=-10, end=10, npts=10)
-#yaxis <- gridAxisConfigClass(start=-5, end=5, npts=5)
-#
-#grid <- grid2DClass(xaxis=xaxis, yaxis=yaxis)
-#print(grid$cart2grid(-10, -5))
-#print(grid$cart2grid(c(-10, 10, 0), c(-5, 5, 0)))
-#print(grid$ij2xy_map())
-# END TEST
-
 ########################################
 domainProjectionClass <- setRefClass(Class="domainProjection",
   # Cartographic projection to be used in a domain.
+  fields=list(
+    name="character",
+    lon0="numeric",
+    lat0="numeric",
+    projparams=function(...) {
+      # Return the domain's projparams. See <https://proj.org>.
+      params <- list(
+        proj=.self$name,
+        R=.EARTH_RADIUS,
+        lat_0=.self$lat0,
+        lon_0=.self$lon0,
+        lat_1=.self$lat0,
+        lon_1=.self$lon0,
+        a=.EARTH_RADIUS,
+        b=.EARTH_RADIUS
+      )
+      proj4string <- paste(paste0("+", names(params)), params, sep="=", collapse=" ")
+      return(proj4string)
+    }
+  ),
+  methods=list(
+    lonlat2xy=function(lon, lat) {
+      # Convert (lon, lat), in degrees, into projected (x, y) in meters.
+      xyData <- st_as_sf(
+        data.frame(lon=lon, lat=lat),
+        coords=c("lon", "lat"),
+        crs="WGS84"
+      ) %>%
+        st_transform(.self$projparams) %>%
+        dplyr::mutate(
+          x=sf::st_coordinates(.)[,1],
+          y=sf::st_coordinates(.)[,2]
+        ) %>%
+        sf::st_set_geometry(NULL)
+
+      rownames(xyData) <- NULL
+      rownames(xyData$x) <- NULL
+      rownames(xyData$y) <- NULL
+
+      return(xyData)
+    },
+    xy2lonlat=function(x, y) {
+      # Convert projected (x, y), in meters, into (lon, lat) in degrees.
+      lonlatData <- st_as_sf(
+        data.frame(x=x, y=y),
+        coords=c("x", "y"),
+        crs=.self$projparams
+      ) %>%
+        st_transform("WGS84") %>%
+        dplyr::mutate(
+          lon=sf::st_coordinates(.)[,1],
+          lat=sf::st_coordinates(.)[,2]
+        ) %>%
+        sf::st_set_geometry(NULL)
+
+      rownames(lonlatData) <- NULL
+      rownames(lonlatData$lon) <- NULL
+      rownames(lonlatData$lat) <- NULL
+
+      return(lonlatData)
+    }
+  )
 )
