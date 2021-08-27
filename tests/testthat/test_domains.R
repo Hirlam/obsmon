@@ -135,7 +135,7 @@ test_that("lonlat2grid works", {
 })
 
 test_that("ij2lonlat_map works", {
-  domainGrid <- randomDomainGrid(50)
+  domainGrid <- randomDomainGrid(10)
 
   ij2xy_map <- domainGrid$ij2xy_map()
   grid2x <- ij2xy_map$grid2x
