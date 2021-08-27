@@ -67,7 +67,7 @@ grid2DClass <- setRefClass(Class="grid2D",
         c(.self$xmin, .self$ymin),
         c(.self$xmax, .self$ymin),
         c(.self$xmax, .self$ymax),
-        c(.self$xmin, .self$ymax),
+        c(.self$xmin, .self$ymax)
       ))
     },
     ezone_corners=function(...) {
@@ -78,7 +78,7 @@ grid2DClass <- setRefClass(Class="grid2D",
           c(.self$ezone_xmax, .self$ezone_ymax),
           c(.self$xmin, .self$ezone_ymax),
           c(.self$xmin, .self$ymax),
-          c(.self$xmax, .self$ymax),
+          c(.self$xmax, .self$ymax)
       ))
     }
   ),
