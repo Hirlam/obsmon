@@ -194,6 +194,25 @@ domainGridClass <- setRefClass(Class="domainGrid",
       # Convert (lon, lat) into grid cell coord (i, j).
       xyDataframe <- .self$proj$lonlat2xy(lon, lat)
       return(.self$cart2grid(xyDataframe$x, xyDataframe$y))
+    },
+    ij2lonlat_map=function() {
+      # Return g2lon, g2lat such that lon=g2lon[i, j], lat=g2lat[i, j].
+      # TODO: Optimise this
+      ij2xy_map <- .self$ij2xy_map()
+      grid2x <- ij2xy_map$grid2x
+      grid2y <- ij2xy_map$grid2y
+      grid2lon <- matrix(ncol=ncol(grid2x), nrow=nrow(grid2x))
+      grid2lat <- matrix(ncol=ncol(grid2y), nrow=nrow(grid2y))
+      for(i in seq(1, nrow(grid2x))) {
+        for(j in seq(1, ncol(grid2x))) {
+          x <- ij2xy_map$grid2x[i, j]
+          y <- ij2xy_map$grid2y[i, j]
+          lonlat <- .self$proj$xy2lonlat(x=x, y=y)
+          grid2lon[i, j] <- lonlat$lon
+          grid2lat[i, j] <- lonlat$lat
+        }
+      }
+      return(list(grid2lon=grid2lon, grid2lat=grid2lat))
     }
   )
 )

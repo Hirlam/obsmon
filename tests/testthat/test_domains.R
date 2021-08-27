@@ -133,3 +133,27 @@ test_that("lonlat2grid works", {
   ijGrid <- domainGrid$lonlat2grid(lon=lonlatMax$lon, lat=lonlatMax$lat)
   expect_equal(ijGrid[1,], c(nx, ny))
 })
+
+test_that("ij2lonlat_map works", {
+  domainGrid <- randomDomainGrid(50)
+
+  ij2xy_map <- domainGrid$ij2xy_map()
+  grid2x <- ij2xy_map$grid2x
+  grid2y <- ij2xy_map$grid2y
+
+  ij2lonlat_map <- domainGrid$ij2lonlat_map()
+  grid2lon <- ij2lonlat_map$grid2lon
+  grid2lat <- ij2lonlat_map$grid2lat
+
+  diff <- 0
+  for(i in seq(1, nrow(grid2x))) {
+    for(j in seq(1, ncol(grid2x))) {
+      lonlat <- domainGrid$proj$xy2lonlat(x=grid2x[i, j], y=grid2y[i, j])
+      diff <- diff + (lonlat$lon - grid2lon[i, j])**2
+      diff <- diff + (lonlat$lat - grid2lat[i, j])**2
+    }
+  }
+
+  # The testthat package has a builtin tolerance for comparing floats
+  expect_equal(diff, 0.0)
+})
