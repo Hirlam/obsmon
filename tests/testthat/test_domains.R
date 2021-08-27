@@ -157,3 +157,37 @@ test_that("ij2lonlat_map works", {
   # The testthat package has a builtin tolerance for comparing floats
   expect_equal(diff, 0.0)
 })
+
+test_that("corners_lonlat works", {
+  domainGrid <- randomDomainGrid()
+  cornersXY <- domainGrid$corners
+  cornersLonLat <- domainGrid$corners_lonlat
+
+  diff <- 0.0
+  for(i in seq_along(cornersXY)) {
+    cornerXY <- cornersXY[[i]]
+    cornerLonLat <- cornersLonLat[[i]]
+    lonlat <- domainGrid$proj$xy2lonlat(x=cornerXY[1], y=cornerXY[2])
+    diff <- diff + (lonlat$lon - cornerLonLat[1])**2
+    diff <- diff + (lonlat$lat - cornerLonLat[2])**2
+  }
+
+  expect_equal(diff, 0.0)
+})
+
+test_that("ezone_corners_lonlat works", {
+  domainGrid <- randomDomainGrid()
+  ezoneCornersXY <- domainGrid$ezone_corners
+  ezoneCornersLonLat <- domainGrid$ezone_corners_lonlat
+
+  diff <- 0.0
+  for(i in seq_along(ezoneCornersXY)) {
+    cornerXY <- ezoneCornersXY[[i]]
+    cornerLonLat <- ezoneCornersLonLat[[i]]
+    lonlat <- domainGrid$proj$xy2lonlat(x=cornerXY[1], y=cornerXY[2])
+    diff <- diff + (lonlat$lon - cornerLonLat[1])**2
+    diff <- diff + (lonlat$lat - cornerLonLat[2])**2
+  }
+
+  expect_equal(diff, 0.0)
+})

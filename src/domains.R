@@ -187,7 +187,23 @@ domainGridClass <- setRefClass(Class="domainGrid",
     # Number of grid points along the longitude axis.
     nlon=function(...) .self$nx,
     # Number of grid points along the latitude axis.
-    nlat=function(...) .self$ny
+    nlat=function(...) .self$ny,
+    corners_lonlat=function(...) {
+      # Return tuple of (lon, lat) coords of the grid corners.
+      .xy2lonlat <- function(vec) {
+        lonlat <- .self$proj$xy2lonlat(vec[1], vec[2])
+        return(c(lonlat$lon, lonlat$lat))
+      }
+      return(lapply(.self$corners, .xy2lonlat))
+    },
+    ezone_corners_lonlat=function(...) {
+      # Return tuple of (lon, lat) coords of the grid corners.
+      .xy2lonlat <- function(vec) {
+        lonlat <- .self$proj$xy2lonlat(vec[1], vec[2])
+        return(c(lonlat$lon, lonlat$lat))
+      }
+      return(lapply(.self$ezone_corners, .xy2lonlat))
+    }
   ),
   methods=list(
     lonlat2grid=function(lon, lat) {
