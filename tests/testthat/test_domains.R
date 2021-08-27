@@ -83,3 +83,42 @@ test_that("lonlat2xy and xy2lonlat work", {
   )
   expect_equal(lonlatDataframeStart, lonlatDataframeEnd)
 })
+
+
+##################
+context("domainGrid")
+##################
+
+test_that("domainGrid can be instanciated", {
+  expect_s4_class(domainGridClass(), "domainGrid")
+})
+
+test_that("lonlat2grid works", {
+  lon0 <- runif(1, -180, 180)
+  lat0 <- runif(1, -90, 90)
+  proj <- domainProjectionClass(name="lcc", lon0=lon0, lat0=lat0)
+
+  # Generate grid with odd divisions so that center (lon0, lat0) is included
+  # Remember:
+  #   (i)  The grid point is at the beginning os the mesh
+  #   (ii) xmax is located gridResolutionKm after the last grid point
+  nMax <- 1000
+  gridResolutionKm <- 2.5
+  nx <- sample(seq.int(1, nMax, 2), 1)
+  ny <- sample(seq.int(1, nMax, 2), 1)
+  xmax <- (nx + 1) * gridResolutionKm
+  ymax <- (ny + 1) * gridResolutionKm
+
+  xaxis <- gridAxisConfigClass(start=-xmax, end=xmax, npts=nx)
+  yaxis <- gridAxisConfigClass(start=-ymax, end=ymax, npts=ny)
+  domainGrid <- domainGridClass(xaxis=xaxis, yaxis=yaxis, proj=proj)
+
+  # Assert that (lon0, lat0) is located at the middle of the grid
+  ijGrid <- domainGrid$lonlat2grid(lon=lon0, lat=lat0)
+  expect_equal(ijGrid[1,], c((nx+1)/2, (ny+1)/2))
+
+  # Assert that (max_lon, max_lat) correspond to (xmax, ymax)
+  lonlatMax <- proj$xy2lonlat(xmax-1E-8, ymax-1E-8)
+  ijGrid <- domainGrid$lonlat2grid(lon=lonlatMax$lon, lat=lonlatMax$lat)
+  expect_equal(ijGrid[1,], c(nx, ny))
+})

@@ -177,3 +177,23 @@ domainProjectionClass <- setRefClass(Class="domainProjection",
     }
   )
 )
+
+########################################
+domainGridClass <- setRefClass(Class="domainGrid",
+  # A 2D grid with (lon, lat) <--> (x, y) projection awareness.
+  contains=c("grid2D"),
+  fields=list(
+    proj="domainProjection",
+    # Number of grid points along the longitude axis.
+    nlon=function(...) .self$nx,
+    # Number of grid points along the latitude axis.
+    nlat=function(...) .self$ny
+  ),
+  methods=list(
+    lonlat2grid=function(lon, lat) {
+      # Convert (lon, lat) into grid cell coord (i, j).
+      xyDataframe <- .self$proj$lonlat2xy(lon, lat)
+      return(.self$cart2grid(xyDataframe$x, xyDataframe$y))
+    }
+  )
+)
