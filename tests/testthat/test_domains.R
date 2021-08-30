@@ -191,3 +191,11 @@ test_that("ezone_corners_lonlat works", {
 
   expect_equal(diff, 0.0)
 })
+
+##################
+context("domain")
+##################
+
+test_that("domain can be instanciated", {
+  expect_s4_class(domainClass(), "domain")
+})

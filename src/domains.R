@@ -232,3 +232,107 @@ domainGridClass <- setRefClass(Class="domainGrid",
     }
   )
 )
+
+
+domainClass <- setRefClass(Class="domain",
+  # Model domain geometry and grid.
+  #
+  # See <https://hirlam.org/trac/wiki/HarmonieSystemDocumentation/ModelDomain>.
+
+  fields=list(
+    name="character",
+    center_lonlat="numeric", # Def: (0.0, 0.0)
+    proj_lon0_lat0="numeric", # Def: (0.0, 0.0)
+    lmrt="logical", # Def: FALSE
+    ngrid_lonlat="numeric",
+    grid_spacing="numeric", # Def: _EQUATOR_PERIM
+    ezone_ngrid="numeric", # Def: 0
+    subdomain_split="numeric", # Def: (1, 1)
+    #coarse_grid_factor="numeric", # Def: 0
+    tstep="numeric", # Def: 0.0
+    # Fields that will be changed at init
+    grid="domainGrid"
+  ),
+  methods=list(
+    initialize=function(...) {
+      # Initialise name, geometry, projection & grid/thinning grid attrs.
+      callSuper(...)
+
+      #########################
+      # Initialise projection #
+      #########################
+      print(.self$name)
+      print(.self$proj_lon0_lat0[2])
+      if(isTRUE(.self$lmrt) && abs(.self$proj_lon0_lat0[2]) > 0) {
+        flog.warn("lat0 should be 0 if lmrt=True. Resetting lat0 to 0.")
+        .self$proj_lon0_lat0[2] <- 0.0
+      }
+
+      auto_choose_projname <- function() {
+        # Define domain projection.
+        # Do this in a way close to what is explained at
+        # <https://hirlam.org/trac/wiki/HarmonieSystemDocumentation/ModelDomain>
+
+        y_range <- .self$ngrid_lonlat[2] * .self$grid_spacing
+        latrange <- 180 * y_range / .EQUATOR_PERIM
+        if(isTRUE(.self$lmrt) || latrange > 35 || all.equal(latrange, 0)) {
+          # <https://proj.org/operations/projections/merc.html>
+          # <https://desktop.arcgis.com/en/arcmap/10.3/guide-books/
+          #  map-projections/mercator.htm>
+          return("merc")
+        } else if (all.equal(.self$proj_lon0_lat0[2], 90.0)) {
+          # <https://proj.org/operations/projections/stere.html>
+          # <https://desktop.arcgis.com/en/arcmap/10.3/guide-books/
+          #  map-projections/polar-stereographic.htm>
+          return("stere")
+        } else {
+          # <https://proj.org/operations/projections/lcc.html>
+          # <https://desktop.arcgis.com/en/arcmap/10.3/guide-books/
+          #  map-projections/lambert-conformal-conic.htm>
+          return("lcc")
+        }
+      }
+
+      proj <- domainProjectionClass(
+        name=auto_choose_projname(),
+        lon0=.self$proj_lon0_lat0[1],
+        lat0=.self$proj_lon0_lat0[2],
+      )
+
+      ###################
+      # Initialise grid #
+      ###################
+      # (a) Get projected coords of grid center
+      center_xy <- proj$lonlat2xy(
+        lon=.self$center_lonlat[1],
+        lat=.self$center_lonlat[2]
+      )
+
+      # (b) Grid x-axis
+      x_range <- .self$ngrid_lonlat[1] * grid_spacing
+      grid_xaxis <- GridAxisConfig(
+        start=center_xy[1] - 0.5 * x_range,
+        end=center_xy[1] + 0.5 * x_range,
+        npts=.self$ngrid_lonlat[1],
+        npts_ezone=.self$ezone_ngrid,
+      )
+
+      # (c) Grid y-axis
+      y_range <- ngrid_lonlat[2] * grid_spacing
+      grid_yaxis <- GridAxisConfig(
+        start=center_xy[2] - 0.5 * y_range,
+        end=center_xy[2] + 0.5 * y_range,
+        npts=ngrid_lonlat[2],
+        npts_ezone=.self$ezone_ngrid,
+      )
+
+      # (d) Set _grid attr
+      .self$grid <- DomainGrid(
+          xaxis=grid_xaxis,
+          yaxis=grid_yaxis,
+          proj=proj,
+          tstep=.self$tstep,
+      )
+    }
+  )
+)
