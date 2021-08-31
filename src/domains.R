@@ -288,13 +288,13 @@ domainClass <- setRefClass(Class="domain",
         # <https://hirlam.org/trac/wiki/HarmonieSystemDocumentation/ModelDomain>
 
         y_range <- .self$ngrid_lonlat[2] * .self$grid_spacing
-        latrange <- 180 * y_range / .EQUATOR_PERIM
-        if(isTRUE(.self$lmrt) || latrange > 35 || all.equal(latrange, 0)) {
+        latrange <- 180.0 * y_range / .EQUATOR_PERIM
+        if(isTRUE(.self$lmrt) || latrange > 35 || isTRUE(all.equal(latrange, 0))) {
           # <https://proj.org/operations/projections/merc.html>
           # <https://desktop.arcgis.com/en/arcmap/10.3/guide-books/
           #  map-projections/mercator.htm>
           return("merc")
-        } else if (all.equal(.self$proj_lon0_lat0[2], 90.0)) {
+        } else if (isTRUE(all.equal(.self$proj_lon0_lat0[2], 90.0))) {
           # <https://proj.org/operations/projections/stere.html>
           # <https://desktop.arcgis.com/en/arcmap/10.3/guide-books/
           #  map-projections/polar-stereographic.htm>
@@ -310,7 +310,7 @@ domainClass <- setRefClass(Class="domain",
       proj <- domainProjectionClass(
         name=auto_choose_projname(),
         lon0=.self$proj_lon0_lat0[1],
-        lat0=.self$proj_lon0_lat0[2],
+        lat0=.self$proj_lon0_lat0[2]
       )
 
       ###################
@@ -324,24 +324,24 @@ domainClass <- setRefClass(Class="domain",
 
       # (b) Grid x-axis
       x_range <- .self$ngrid_lonlat[1] * grid_spacing
-      grid_xaxis <- GridAxisConfig(
-        start=center_xy[1] - 0.5 * x_range,
-        end=center_xy[1] + 0.5 * x_range,
+      grid_xaxis <- gridAxisConfigClass(
+        start=center_xy$x - 0.5 * x_range,
+        end=center_xy$x + 0.5 * x_range,
         npts=.self$ngrid_lonlat[1],
-        npts_ezone=.self$ezone_ngrid,
+        npts_ezone=.self$ezone_ngrid
       )
 
       # (c) Grid y-axis
       y_range <- ngrid_lonlat[2] * grid_spacing
-      grid_yaxis <- GridAxisConfig(
-        start=center_xy[2] - 0.5 * y_range,
-        end=center_xy[2] + 0.5 * y_range,
+      grid_yaxis <- gridAxisConfigClass(
+        start=center_xy$y - 0.5 * y_range,
+        end=center_xy$y + 0.5 * y_range,
         npts=ngrid_lonlat[2],
-        npts_ezone=.self$ezone_ngrid,
+        npts_ezone=.self$ezone_ngrid
       )
 
       # (d) Set _grid attr
-      .self$grid <- DomainGrid(
+      .self$grid <- domainGridClass(
           xaxis=grid_xaxis,
           yaxis=grid_yaxis,
           proj=proj

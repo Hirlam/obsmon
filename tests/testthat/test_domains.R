@@ -199,3 +199,32 @@ context("domain")
 test_that("domain can be instanciated", {
   expect_s4_class(domainClass(), "domain")
 })
+
+test_that("Real-case domain can be instanciated", {
+  config <- list(
+    name = "MetCoOp",
+    tstep = 75,
+    nlon = 900,
+    nlat = 960,
+    lonc = 16.763011639,
+    latc = 63.489212956,
+    lon0 = 15.0,
+    lat0 = 63.0,
+    gsize = 2500.0,
+    ezone = 11,
+    lmrt = FALSE
+  )
+
+  metcoopDomain <- domainClass(
+    name="MetCoOp Domain",
+    center_lonlat=c(config$lonc, config$latc),
+    proj_lon0_lat0=c(config$lon0, config$lat0),
+    lmrt=config$lmrt,
+    ngrid_lonlat=c(config$nlon, config$nlat),
+    grid_spacing=config$gsize,
+    ezone_ngrid=config$ezone,
+    tstep=config$tstep
+  )
+
+  expect_s4_class(metcoopDomain, "domain")
+})
