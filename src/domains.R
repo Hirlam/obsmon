@@ -247,8 +247,6 @@ domainClass <- setRefClass(Class="domain",
     ngrid_lonlat="numeric",
     grid_spacing="numeric", # Def: _EQUATOR_PERIM
     ezone_ngrid="numeric", # Def: 0
-    subdomain_split="numeric", # Def: (1, 1)
-    #coarse_grid_factor="numeric", # Def: 0
     tstep="numeric", # Def: 0.0
     # Fields that will be changed at init
     grid="domainGrid"
@@ -258,11 +256,27 @@ domainClass <- setRefClass(Class="domain",
       # Initialise name, geometry, projection & grid/thinning grid attrs.
       callSuper(...)
 
+      ####################
+      # Setting defaults #
+      ####################
+      defaults <- list(
+        name="Unamed Domain",
+        center_lonlat=c(0.0, 0.0),
+        proj_lon0_lat0=c(0.0, 0.0),
+        lmrt=FALSE,
+        ngrid_lonlat=c(1, 1),
+        grid_spacing=.EQUATOR_PERIM,
+        ezone_ngrid=0,
+        tstep=0.0
+      )
+      for(attr in names(defaults)) {
+        if(length(.self[[attr]]) == 0) .self[[attr]] <- defaults[[attr]]
+      }
+
+
       #########################
       # Initialise projection #
       #########################
-      print(.self$name)
-      print(.self$proj_lon0_lat0[2])
       if(isTRUE(.self$lmrt) && abs(.self$proj_lon0_lat0[2]) > 0) {
         flog.warn("lat0 should be 0 if lmrt=True. Resetting lat0 to 0.")
         .self$proj_lon0_lat0[2] <- 0.0
@@ -330,8 +344,7 @@ domainClass <- setRefClass(Class="domain",
       .self$grid <- DomainGrid(
           xaxis=grid_xaxis,
           yaxis=grid_yaxis,
-          proj=proj,
-          tstep=.self$tstep,
+          proj=proj
       )
     }
   )
