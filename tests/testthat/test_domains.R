@@ -200,7 +200,7 @@ test_that("domain can be instanciated", {
   expect_s4_class(domainClass(), "domain")
 })
 
-test_that("Real-case domain can be instanciated", {
+getMetcoopDomain <- function() {
   config <- list(
     name = "MetCoOp",
     tstep = 75,
@@ -215,7 +215,7 @@ test_that("Real-case domain can be instanciated", {
     lmrt = FALSE
   )
 
-  metcoopDomain <- domainClass(
+  return(domainClass(
     name="MetCoOp Domain",
     center_lonlat=c(config$lonc, config$latc),
     proj_lon0_lat0=c(config$lon0, config$lat0),
@@ -224,7 +224,14 @@ test_that("Real-case domain can be instanciated", {
     grid_spacing=config$gsize,
     ezone_ngrid=config$ezone,
     tstep=config$tstep
-  )
+  ))
+}
 
-  expect_s4_class(metcoopDomain, "domain")
+test_that("Real-case domain can be instanciated", {
+  expect_s4_class(getMetcoopDomain(), "domain")
+})
+
+test_that("Domain and grid projections are identical", {
+  domain <- getMetcoopDomain()
+  expect_identical(domain$proj, domain$grid$proj)
 })

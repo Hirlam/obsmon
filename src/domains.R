@@ -233,12 +233,11 @@ domainGridClass <- setRefClass(Class="domainGrid",
   )
 )
 
-
+########################################
 domainClass <- setRefClass(Class="domain",
   # Model domain geometry and grid.
   #
   # See <https://hirlam.org/trac/wiki/HarmonieSystemDocumentation/ModelDomain>.
-
   fields=list(
     name="character",
     center_lonlat="numeric", # Def: (0.0, 0.0)
@@ -249,7 +248,45 @@ domainClass <- setRefClass(Class="domain",
     ezone_ngrid="numeric", # Def: 0
     tstep="numeric", # Def: 0.0
     # Fields that will be changed at init
-    grid="domainGrid"
+    grid="domainGrid",
+    # Properties
+    proj=function(...) {
+      # Return the domain's associated DomainProjection object.
+      # Make sure the domain and the domain's grid use the same projection
+      return(.self$grid$proj)
+    },
+    minlon=function(...) {
+      # Return the min longitude of the domain's corners.
+      return(min(sapply(.self$grid$corners_lonlat, function(item) item[1])))
+    },
+    minlat=function(...) {
+      # Return the min latitude of the domain's corners.
+      return(min(sapply(.self$grid$corners_lonlat, function(item) item[2])))
+    },
+    maxlon=function(...) {
+      # Return the max longitude of the domain's corners.
+      return(max(sapply(.self$grid$corners_lonlat, function(item) item[1])))
+    },
+    maxlat=function(...) {
+      # Return the min latitude of the domain's corners.
+      return(max(sapply(.self$grid$corners_lonlat, function(item) item[2])))
+    },
+    ezone_minlon=function(...) {
+      # Return the min longitude of the domain's ezone corners.
+      return(min(sapply(.self$grid$ezone_corners_lonlat, function(item) item[1])))
+    },
+    ezone_minlat=function(...) {
+      # Return the min latitude of the domain's ezone corners.
+      return(min(sapply(.self$grid$ezone_corners_lonlat, function(item) item[2])))
+    },
+    ezone_maxlon=function(...) {
+      # Return the max longitude of the domain's ezone corners.
+      return(max(sapply(.self$grid$ezone_corners_lonlat, function(item) item[1])))
+    },
+    ezone_maxlat=function(...) {
+      # Return the min latitude of the domain's ezone corners.
+      return(max(sapply(.self$grid$ezone_corners_lonlat, function(item) item[2])))
+    }
   ),
   methods=list(
     initialize=function(...) {
@@ -307,7 +344,7 @@ domainClass <- setRefClass(Class="domain",
         }
       }
 
-      proj <- domainProjectionClass(
+      projection <- domainProjectionClass(
         name=auto_choose_projname(),
         lon0=.self$proj_lon0_lat0[1],
         lat0=.self$proj_lon0_lat0[2]
@@ -317,7 +354,7 @@ domainClass <- setRefClass(Class="domain",
       # Initialise grid #
       ###################
       # (a) Get projected coords of grid center
-      center_xy <- proj$lonlat2xy(
+      center_xy <- projection$lonlat2xy(
         lon=.self$center_lonlat[1],
         lat=.self$center_lonlat[2]
       )
@@ -344,7 +381,7 @@ domainClass <- setRefClass(Class="domain",
       .self$grid <- domainGridClass(
           xaxis=grid_xaxis,
           yaxis=grid_yaxis,
-          proj=proj
+          proj=projection
       )
     }
   )
