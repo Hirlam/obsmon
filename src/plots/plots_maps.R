@@ -3,10 +3,18 @@
 ##################################
 .getStaticGenericMapPlot <- function(plot) {
   # Former doPlot.plotMap
-  x1 <- min(plot$data$longitude)-2
-  x2 <- max(plot$data$longitude)+2
-  y1 <- min(plot$data$latitude)-2
-  y2 <- max(plot$data$latitude)+2
+  if(is.null(domain)) {
+    x1 <- min(plot$data$longitude) - 2
+    x2 <- max(plot$data$longitude) + 2
+    y1 <- min(plot$data$latitude) - 2
+    y2 <- max(plot$data$latitude) + 2
+  } else {
+    x1 <- domain$ezone_minlon - 2
+    x2 <- domain$ezone_maxlon + 2
+    y1 <- domain$ezone_minlat - 2
+    y2 <- domain$ezone_maxlat + 2
+  }
+
   ggplotMap <- ggplot() +
     geom_path(
       data=map_data(map="world"),
@@ -81,6 +89,16 @@
 ##################################
 .getInteractiveGenericMapPlot <- function(plot) {
   # Former doPlotly.plotMap
+  if(is.null(domain)) {
+    rangeLat <- range(plot$data$latitude)
+    rangeLon <- range(plot$data$longitude)
+  } else {
+    rangeLat <- c(domain$ezone_minlat, domain$ezone_maxlat)
+    rangeLon <- c(domain$ezone_minlon, domain$ezone_maxlon)
+  }
+  rangeLat <- rangeLat + c(-1, 1)
+  rangeLon <- rangeLon + c(-2, 2)
+
   myPlotly <- plot_geo(
     data=plot$data, lat=~jitter(latitude, 1), lon =~jitter(longitude, 1)
   ) %>%
@@ -107,12 +125,12 @@
         coastlinewidth = 0.5,
         countrywidth = 0.5,
         lataxis = list(
-          range = range(plot$data$latitude) + c(-1, 1),
+          range = rangeLat,
           showgrid = TRUE,
           dtick = 10
         ),
         lonaxis = list(
-          range = range(plot$data$longitude) + c(-2, 2),
+          range = rangeLon,
           showgrid = TRUE,
           dtick = 15
         )
