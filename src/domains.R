@@ -384,3 +384,21 @@ domainClass <- setRefClass(Class="domain",
     }
   )
 )
+
+initDomain <- function() {
+  if(is.null(obsmonConfig$domain)) return(NULL)
+  config <- obsmonConfig$domain
+  setVal <- function(val, def) ifelse(is.null(val), def, val)
+  domainParams <- list(
+    name=setVal(config$name, ""),
+    center_lonlat=c(config$lonc, config$latc),
+    proj_lon0_lat0=c(config$lon0, config$lat0),
+    lmrt=config$lmrt,
+    ngrid_lonlat=c(config$nlon, config$nlat),
+    grid_spacing=config$gsize,
+    ezone_ngrid=config$ezone
+  )
+  do.call(domainClass, domainParams)
+}
+
+domain <- initDomain()
