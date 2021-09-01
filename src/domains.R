@@ -246,7 +246,6 @@ domainClass <- setRefClass(Class="domain",
     ngrid_lonlat="numeric",
     grid_spacing="numeric", # Def: _EQUATOR_PERIM
     ezone_ngrid="numeric", # Def: 0
-    tstep="numeric", # Def: 0.0
     # Fields that will be changed at init
     grid="domainGrid",
     # Properties
@@ -303,8 +302,7 @@ domainClass <- setRefClass(Class="domain",
         lmrt=FALSE,
         ngrid_lonlat=c(1, 1),
         grid_spacing=.EQUATOR_PERIM,
-        ezone_ngrid=0,
-        tstep=0.0
+        ezone_ngrid=0
       )
       for(attr in names(defaults)) {
         if(length(.self[[attr]]) == 0) .self[[attr]] <- defaults[[attr]]
