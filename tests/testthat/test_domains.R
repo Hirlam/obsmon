@@ -203,7 +203,6 @@ test_that("domain can be instanciated", {
 getMetcoopDomain <- function() {
   config <- list(
     name = "MetCoOp",
-    tstep = 75,
     nlon = 900,
     nlat = 960,
     lonc = 16.763011639,
@@ -222,8 +221,7 @@ getMetcoopDomain <- function() {
     lmrt=config$lmrt,
     ngrid_lonlat=c(config$nlon, config$nlat),
     grid_spacing=config$gsize,
-    ezone_ngrid=config$ezone,
-    tstep=config$tstep
+    ezone_ngrid=config$ezone
   ))
 }
 
