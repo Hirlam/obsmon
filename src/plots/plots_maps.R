@@ -1,6 +1,28 @@
 ##################################
 # helpers for making ggplot maps #
 ##################################
+domainProj2ggplotProj <- function() {
+  rtn <- list(
+    name="stereographic",
+    params=NULL
+  )
+  if(is.null(domain)) return(rtn)
+
+  rtn$name <- switch(domain$proj$name,
+    merc="mercator",
+    stere="stereographic",
+    lcc="lambert",
+    projname
+  )
+
+  rtn$params <- switch(domain$proj$name,
+    lcc=list(lat0=domain$proj$lat0, lat1=domain$proj$lat0),
+    NULL
+  )
+
+  return(rtn)
+}
+
 .getStaticGenericMapPlot <- function(plot) {
   # Former doPlot.plotMap
   if(is.null(domain)) {
@@ -15,13 +37,19 @@
     y2 <- domain$ezone_maxlat + 2
   }
 
+  projParams <- domainProj2ggplotProj()
   ggplotMap <- ggplot() +
     geom_path(
       data=map_data(map="world"),
       aes(long, lat, group=group),
       colour="gray50"
     ) +
-    coord_map("stereographic", xlim=c(x1, x2), ylim=c(y1, y2)) +
+    coord_map(
+      projection=projParams$name,
+      parameters=projParams$params,
+      xlim=c(x1, x2),
+      ylim=c(y1, y2)
+    ) +
     labs(x="Longitude", y="Latitude")
   return(ggplotMap)
 }
@@ -87,6 +115,28 @@
 ##################################
 # helpers for making plotly maps #
 ##################################
+domainProj2plotlyProj <- function() {
+  rtn <- list(
+    name="stereographic",
+    params=NULL
+  )
+  if(is.null(domain)) return(rtn)
+
+  rtn$name <- switch(domain$proj$name,
+    merc="mercator",
+    stere="stereographic",
+    lcc="conic conformal",
+    projname
+  )
+
+  rtn$params <- switch(domain$proj$name,
+    lcc=list(lat0=domain$proj$lat0, lat1=domain$proj$lat0),
+    NULL
+  )
+
+  return(rtn)
+}
+
 drawBoundaries <- function(
     fig,
     domain,
@@ -198,6 +248,7 @@ drawDomain <- function(plot) {
   rangeLat <- rangeLat + c(-1, 1)
   rangeLon <- rangeLon + c(-2, 2)
 
+  projParams <- domainProj2plotlyProj()
   myPlotly <- plot_geo(
     data=plot$data, lat=~jitter(latitude, 1), lon =~jitter(longitude, 1)
   ) %>%
@@ -220,7 +271,10 @@ drawDomain <- function(plot) {
         landcolor = toRGB("grey98"),
         countrycolor = toRGB("grey50"),
         lakecolor = toRGB("white"),
-        projection = list(type="stereographic"),
+        projection = list(
+          type=projParams$name,
+          parallels=projParams$params
+        ),
         coastlinewidth = 0.5,
         countrywidth = 0.5,
         lataxis = list(
