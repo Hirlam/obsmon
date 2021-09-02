@@ -233,3 +233,9 @@ test_that("Domain and grid projections are identical", {
   domain <- getMetcoopDomain()
   expect_identical(domain$proj, domain$grid$proj)
 })
+
+test_that("drawBoundaries runs", {
+  domain <- getMetcoopDomain()
+  fig <- drawBoundaries(fig=plotly_empty(), domain=domain)
+  expect_s3_class(fig, "plotly")
+})

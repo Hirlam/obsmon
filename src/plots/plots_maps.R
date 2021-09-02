@@ -87,6 +87,86 @@
 ##################################
 # helpers for making plotly maps #
 ##################################
+drawBoundaries <- function(
+    fig,
+    domain,
+    name="Boundaries",
+    corners=NULL,
+    showlegend=TRUE,
+    legendgroup=NULL,
+    ...
+) {
+    # Add to fig line segments connecting the given corners within the domain.
+    # Args:
+    #     fig (go.Scattergeo): Figure where the boundaries are to be drawn.
+    #     domain (netatmoqc.domains.Domain): Model domain.
+    #     name (str): Name of the boundaries (shown in legend).
+    #         (Default value = "boundaries").
+    #     corners: (x, y) coords of he start and end of the corners of the closed
+    #         boundary to be drawn. If corners is not passed, then the domain
+    #         corners will be used. (Default value = None)
+    #     showlegend (bool): (Default value = True)
+    #     legendgroup (str): Passed to go.Scattergeo. (Default value = None).
+    #     ...: Passed to the "lines" opt of go.Scattergeo.
+    #
+    # Returns:
+    #     go.Scattergeo: Input figure with the passed boundaries drawn.
+
+    if(is.null(corners)) corners <- domain$grid$corners
+
+    # Construct line segments
+    # We interpolate using (x, y) instead of (lon, lat) to prevent distorted
+    # line segments (segments that do not conform to the used projection).
+    segments <- list()
+    npts_per_segment <- max(max(domain$grid$nlon, domain$grid$nlat) %/% 100, 5)
+    for(istart in seq_along(corners)) {
+      start <- corners[[istart]]
+      end <- corners[[istart %% length(corners) + 1]]
+      segments[[length(segments) + 1]] <- list(
+        x=seq(start[1], end[1], length.out=npts_per_segment),
+        y=seq(start[2], end[2], length.out=npts_per_segment)
+      )
+    }
+
+    xvals <- double(3 * length(segments) * npts_per_segment)
+    yvals <- double(3 * length(segments) * npts_per_segment)
+
+    ######################################
+    # Add all segments as a single trace #
+    ######################################
+
+    # Put start points in go.Scattergeo's "single-trace" style
+    every3rdIndex <- seq.int(1, length(xvals), 3)
+    xvals[every3rdIndex] <- unlist(sapply(segments, function(item) item[1]))
+    yvals[every3rdIndex] <- unlist(sapply(segments, function(item) item[2]))
+    lonlatData <- domain$proj$xy2lonlat(xvals, yvals)
+    lats <- as.vector(lonlatData$lat)
+    lons <- as.vector(lonlatData$lon)
+
+    # Same for end points
+    # Rolling every third lat/lon
+    roll <- function(vec) return(c(vec[2:length(vec)], vec[1]))
+    every3rdIndexFromTwo <- seq.int(2, length(xvals), 3)
+    lats[every3rdIndexFromTwo] <- roll(lats[every3rdIndex])
+    lons[every3rdIndexFromTwo] <- roll(lons[every3rdIndex])
+
+    # Indicate separation between traces
+    every3rdIndexFromThree <- seq.int(3, length(xvals), 3)
+    lats[every3rdIndexFromThree] <- NA
+    lons[every3rdIndexFromThree] <- NA
+
+    fig <- fig %>% add_trace(type="scattergeo", inherit=FALSE,
+      name=name,
+      lat=lats,
+      lon=lons,
+      mode="lines",
+      line=...,
+      legendgroup=legendgroup,
+      showlegend=showlegend
+    )
+    return(fig)
+}
+
 .getInteractiveGenericMapPlot <- function(plot) {
   # Former doPlotly.plotMap
   if(is.null(domain)) {
@@ -266,7 +346,10 @@
 .mapUsagePlottingFunction <- function(plot) {
   if(nrow(plot$data)==0) return(errorPlot("No data to plot."))
   if(plot$parentType$interactive) {
-    return(.mapUsageInteractivePlottingFunction(plot))
+    return(
+      .mapUsageInteractivePlottingFunction(plot) %>%
+        drawBoundaries(domain=domain, color=I("blue"))
+    )
   } else {
     return(.mapUsageStaticPlottingFunction(plot))
   }
@@ -275,7 +358,10 @@
 .mapThresholdPlottingFunction <- function(plot) {
   if(nrow(plot$data)==0) return(errorPlot("No data to plot."))
   if(plot$parentType$interactive) {
-    return(.mapThresholdInteractivePlottingFunction(plot))
+    return(
+      .mapThresholdInteractivePlottingFunction(plot) %>%
+        drawBoundaries(domain=domain, color=I("blue"))
+    )
   } else {
     return(.mapThresholdStaticPlottingFunction(plot))
   }
