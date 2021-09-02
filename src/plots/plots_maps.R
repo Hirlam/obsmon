@@ -167,6 +167,25 @@ drawBoundaries <- function(
     return(fig)
 }
 
+drawDomain <- function(plot) {
+  if(is.null(domain)) return(plot)
+
+  if(domain$ezone_ngrid > 0) {
+    plot <- plot %>%
+      drawBoundaries(
+        domain=domain,
+        name="Extension Zone",
+        corners=domain$grid$ezone_corners,
+        color=I("blue")
+      )
+  }
+
+  plot <- plot %>%
+    drawBoundaries(domain=domain, name="Domain", color=I("red"))
+
+  return(plot)
+}
+
 .getInteractiveGenericMapPlot <- function(plot) {
   # Former doPlotly.plotMap
   if(is.null(domain)) {
@@ -346,10 +365,7 @@ drawBoundaries <- function(
 .mapUsagePlottingFunction <- function(plot) {
   if(nrow(plot$data)==0) return(errorPlot("No data to plot."))
   if(plot$parentType$interactive) {
-    return(
-      .mapUsageInteractivePlottingFunction(plot) %>%
-        drawBoundaries(domain=domain, color=I("blue"))
-    )
+    return(.mapUsageInteractivePlottingFunction(plot) %>% drawDomain())
   } else {
     return(.mapUsageStaticPlottingFunction(plot))
   }
@@ -358,10 +374,7 @@ drawBoundaries <- function(
 .mapThresholdPlottingFunction <- function(plot) {
   if(nrow(plot$data)==0) return(errorPlot("No data to plot."))
   if(plot$parentType$interactive) {
-    return(
-      .mapThresholdInteractivePlottingFunction(plot) %>%
-        drawBoundaries(domain=domain, color=I("blue"))
-    )
+    return(.mapThresholdInteractivePlottingFunction(plot) %>% drawDomain())
   } else {
     return(.mapThresholdStaticPlottingFunction(plot))
   }
