@@ -245,7 +245,7 @@ drawDomain <- function(plot) {
     rangeLat <- c(domain$ezone_minlat, domain$ezone_maxlat)
     rangeLon <- c(domain$ezone_minlon, domain$ezone_maxlon)
   }
-  rangeLat <- rangeLat + c(-1, 1)
+  rangeLat <- rangeLat + c(-2, 2)
   rangeLon <- rangeLon + c(-2, 2)
 
   projParams <- domainProj2plotlyProj()
