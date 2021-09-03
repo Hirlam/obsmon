@@ -128,8 +128,11 @@ test_that("lonlat2grid works", {
   ijGrid <- domainGrid$lonlat2grid(lon=proj$lon0, lat=proj$lat0)
   expect_equal(c(ijGrid$i, ijGrid$j), c((nx+1)/2, (ny+1)/2))
 
-  # Assert that (max_lon, max_lat) correspond to (xmax, ymax)
-  lonlatMax <- proj$xy2lonlat(xmax-1E-8, ymax-1E-8)
+  # Assert that (max_lon, max_lat) correspond to (xmax-dx, ymax-dy)
+  lonlatMax <- proj$xy2lonlat(
+    xmax - domainGrid$x_spacing*1E-3,
+    ymax - domainGrid$y_spacing*1E-3
+  )
   ijGrid <- domainGrid$lonlat2grid(lon=lonlatMax$lon, lat=lonlatMax$lat)
   expect_equal(c(ijGrid$i, ijGrid$j), c(nx, ny))
 })

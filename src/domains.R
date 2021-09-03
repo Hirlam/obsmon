@@ -86,12 +86,9 @@ grid2DClass <- setRefClass(Class="grid2D",
   methods=list(
     xy2grid=function(x, y) {
       # Return grid (i, j) cell containing projected (x, y) coords.
-      if(length(x) != length(y)) stop("x and y must have same length")
-
       data <- data.frame(x=x, y=y)
-      data$i <- as.integer(1 + (data$x - .self$xmin) / .self$x_spacing)
-      data$j <- as.integer(1 + (data$y - .self$ymin) / .self$y_spacing)
-
+      data$i <- 1 + as.integer(signif((data$x - .self$xmin) / .self$x_spacing, 8))
+      data$j <- 1 + as.integer(signif((data$y - .self$ymin) / .self$y_spacing, 8))
       return(subset(data, select=c(i, j)))
     },
     grid2xy=function(i, j) {
