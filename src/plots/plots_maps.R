@@ -1,7 +1,7 @@
 ##################################
 # helpers for making ggplot maps #
 ##################################
-domainProj2ggplotProj <- function() {
+domainProj2ggplotProj <- function(domain=DOMAIN) {
   rtn <- list(
     name="stereographic",
     params=NULL
@@ -23,7 +23,7 @@ domainProj2ggplotProj <- function() {
   return(rtn)
 }
 
-.getStaticGenericMapPlot <- function(plot) {
+.getStaticGenericMapPlot <- function(plot, domain=DOMAIN) {
   # Former doPlot.plotMap
   if(is.null(domain)) {
     x1 <- min(plot$data$longitude) - 2
@@ -37,7 +37,7 @@ domainProj2ggplotProj <- function() {
     y2 <- domain$ezone_maxlat + 2
   }
 
-  projParams <- domainProj2ggplotProj()
+  projParams <- domainProj2ggplotProj(domain)
   ggplotMap <- ggplot() +
     geom_path(
       data=map_data(map="world"),
@@ -85,7 +85,7 @@ domainProj2ggplotProj <- function() {
   return(ggplotMap)
 }
 
-.mapThresholdStaticPlottingFunction <- function(plot) {
+.mapThresholdStaticPlottingFunction <- function(plot, domain=DOMAIN) {
   cm <- .getSuitableColorScale(plot$data)
   dataColumnName <- unname(attributes(plot$data)$comment["dataColumn"])
   if(length(dataColumnName) == 0) {
@@ -115,7 +115,7 @@ domainProj2ggplotProj <- function() {
 ##################################
 # helpers for making plotly maps #
 ##################################
-domainProj2plotlyProj <- function() {
+domainProj2plotlyProj <- function(domain=DOMAIN) {
   rtn <- list(
     name="stereographic",
     params=NULL
@@ -139,7 +139,7 @@ domainProj2plotlyProj <- function() {
 
 drawBoundaries <- function(
     fig,
-    domain,
+    domain=DOMAIN,
     name="Boundaries",
     corners=NULL,
     showlegend=TRUE,
@@ -217,7 +217,7 @@ drawBoundaries <- function(
     return(fig)
 }
 
-drawDomain <- function(plot) {
+drawDomain <- function(plot, domain=DOMAIN) {
   if(is.null(domain)) return(plot)
 
   if(domain$ezone_ngrid > 0) {
@@ -236,7 +236,7 @@ drawDomain <- function(plot) {
   return(plot)
 }
 
-.getInteractiveGenericMapPlot <- function(plot) {
+.getInteractiveGenericMapPlot <- function(plot, domain=DOMAIN) {
   # Former doPlotly.plotMap
   if(is.null(domain)) {
     rangeLat <- range(plot$data$latitude)
@@ -658,7 +658,7 @@ for(templatePlotType in plotRegistry$plotTypes) {
   # This is important because of lazy-evaluation: otherwise, the last
   # templatePlotType in the loop will be used in all data post-processing
   # functions defined in the loop.
-  gendataPostProcessingFunction <- function(templatePT=templatePlotType) {
+  gendataPostProcessingFunction <- function(templatePT=templatePlotType, domain=DOMAIN) {
     force(templatePT) # Important: Force the evaluation of the func arg.
     function(data) {
       # Calculate averages as a post-process step upon the queried data

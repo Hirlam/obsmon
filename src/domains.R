@@ -376,4 +376,5 @@ initDomain <- function() {
   do.call(domainClass, domainParams)
 }
 
-domain <- initDomain()
+DOMAIN <- initDomain()
+lockBinding("DOMAIN", globalenv())
