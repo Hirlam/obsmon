@@ -126,36 +126,23 @@ test_that("lonlat2grid works", {
 
   # Assert that (lon0, lat0) is located at the middle of the grid
   ijGrid <- domainGrid$lonlat2grid(lon=proj$lon0, lat=proj$lat0)
-  expect_equal(ijGrid[1,], c((nx+1)/2, (ny+1)/2))
+  expect_equal(c(ijGrid$i, ijGrid$j), c((nx+1)/2, (ny+1)/2))
 
   # Assert that (max_lon, max_lat) correspond to (xmax, ymax)
   lonlatMax <- proj$xy2lonlat(xmax-1E-8, ymax-1E-8)
   ijGrid <- domainGrid$lonlat2grid(lon=lonlatMax$lon, lat=lonlatMax$lat)
-  expect_equal(ijGrid[1,], c(nx, ny))
+  expect_equal(c(ijGrid$i, ijGrid$j), c(nx, ny))
 })
 
-test_that("ij2lonlat_map works", {
-  domainGrid <- randomDomainGrid(10)
-
-  ij2xy_map <- domainGrid$ij2xy_map()
-  grid2x <- ij2xy_map$grid2x
-  grid2y <- ij2xy_map$grid2y
-
-  ij2lonlat_map <- domainGrid$ij2lonlat_map()
-  grid2lon <- ij2lonlat_map$grid2lon
-  grid2lat <- ij2lonlat_map$grid2lat
-
-  diff <- 0
-  for(i in seq(1, nrow(grid2x))) {
-    for(j in seq(1, ncol(grid2x))) {
-      lonlat <- domainGrid$proj$xy2lonlat(x=grid2x[i, j], y=grid2y[i, j])
-      diff <- diff + (lonlat$lon - grid2lon[i, j])**2
-      diff <- diff + (lonlat$lat - grid2lat[i, j])**2
-    }
-  }
-
-  # The testthat package has a builtin tolerance for comparing floats
-  expect_equal(diff, 0.0)
+test_that("grid2lonlat works", {
+  domainGrid <- randomDomainGrid()
+  ijData <- data.frame(
+    i=sample.int(domainGrid$nx, 200, replace=TRUE),
+    j=sample.int(domainGrid$ny, 200, replace=TRUE)
+  )
+  lonlatData <- domainGrid$grid2lonlat(i=ijData$i, j=ijData$j)
+  ijNewData <- domainGrid$lonlat2grid(lon=lonlatData$lon, lat=lonlatData$lat)
+  expect_equal(ijData, ijNewData)
 })
 
 test_that("corners_lonlat works", {

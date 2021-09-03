@@ -84,29 +84,21 @@ grid2DClass <- setRefClass(Class="grid2D",
   ),
   #####################
   methods=list(
-    cart2grid=function(x, y) {
+    xy2grid=function(x, y) {
       # Return grid (i, j) cell containing projected (x, y) coords.
       if(length(x) != length(y)) stop("x and y must have same length")
-      cart2grid_non_vec <- function(x, y) {
-	i <- 1 + as.integer((x - .self$xmin) / .self$x_spacing)
-	j <- 1 + as.integer((y - .self$ymin) / .self$y_spacing)
-	if (i < 0 || i > .self$ncells - 1) i <- NA
-	if (j < 0 || j > .self$ncells - 1) j <- NA
-	return (c(i, j))
-      }
-      cart2grid_vectorised <- Vectorize(cart2grid_non_vec)
-      return(t(cart2grid_vectorised(x, y)))
+
+      data <- data.frame(x=x, y=y)
+      data$i <- as.integer(1 + (data$x - .self$xmin) / .self$x_spacing)
+      data$j <- as.integer(1 + (data$y - .self$ymin) / .self$y_spacing)
+
+      return(subset(data, select=c(i, j)))
     },
-    ij2xy_map=function(...) {
-      # Return grid2x, grid2y such that x=grid2x[i, j], y=grid2y[i, j].
-      # We can then work with x=grid2x[i, j], y=grid2y[i, j]
-      xvals <- seq(.self$xmin, .self$xmax, length.out=.self$nx+1)
-      yvals <- seq(.self$ymin, .self$ymax, length.out=.self$ny+1)
-      xvals <- xvals[1:length(xvals)-1]
-      yvals <- yvals[1:length(yvals)-1]
-      grid2x <- t(matrix(rep(xvals, length(yvals)), ncol=length(xvals), byrow=TRUE))
-      grid2y <- matrix(rep(yvals, length(xvals)), ncol=length(yvals), byrow=TRUE)
-      return(list(grid2x=grid2x, grid2y=grid2y))
+    grid2xy=function(i, j) {
+      data <- data.frame(i=i, j=j)
+      data$x <- .self$xmin + (data$i - 1)*.self$x_spacing
+      data$y <- .self$ymin + (data$j - 1)*.self$y_spacing
+      return(subset(data, select = -c(i, j)))
     }
   )
 )
@@ -209,26 +201,12 @@ domainGridClass <- setRefClass(Class="domainGrid",
     lonlat2grid=function(lon, lat) {
       # Convert (lon, lat) into grid cell coord (i, j).
       xyDataframe <- .self$proj$lonlat2xy(lon, lat)
-      return(.self$cart2grid(xyDataframe$x, xyDataframe$y))
+      return(.self$xy2grid(x=xyDataframe$x, y=xyDataframe$y))
     },
-    ij2lonlat_map=function() {
-      # Return g2lon, g2lat such that lon=g2lon[i, j], lat=g2lat[i, j].
-      # TODO: Optimise this
-      ij2xy_map <- .self$ij2xy_map()
-      grid2x <- ij2xy_map$grid2x
-      grid2y <- ij2xy_map$grid2y
-      grid2lon <- matrix(ncol=ncol(grid2x), nrow=nrow(grid2x))
-      grid2lat <- matrix(ncol=ncol(grid2y), nrow=nrow(grid2y))
-      for(i in seq(1, nrow(grid2x))) {
-        for(j in seq(1, ncol(grid2x))) {
-          x <- ij2xy_map$grid2x[i, j]
-          y <- ij2xy_map$grid2y[i, j]
-          lonlat <- .self$proj$xy2lonlat(x=x, y=y)
-          grid2lon[i, j] <- lonlat$lon
-          grid2lat[i, j] <- lonlat$lat
-        }
-      }
-      return(list(grid2lon=grid2lon, grid2lat=grid2lat))
+    grid2lonlat=function(i, j) {
+      # Convert grid (i, j) into (lon, lat).
+      xyDataframe <- .self$grid2xy(i=i, j=j)
+      return(.self$proj$xy2lonlat(x=xyDataframe$x, y=xyDataframe$y))
     }
   )
 )
