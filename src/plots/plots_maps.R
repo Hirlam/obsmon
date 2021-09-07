@@ -236,6 +236,107 @@ drawDomain <- function(plot, domain=DOMAIN) {
   return(plot)
 }
 
+# TEST
+drawGriddedScattergeoTrace <- function(fig, data, domain=DOMAIN) {
+
+  gridPtsCorners <- expand.grid(i=1:domain$grid$nlon, j=1:domain$grid$nlat)
+
+  gridPtsCorners$corner.2.i <- gridPtsCorners$i + 1
+  gridPtsCorners$corner.2.j <- gridPtsCorners$j
+
+  gridPtsCorners$corner.3.i <- gridPtsCorners$corner.2.i
+  gridPtsCorners$corner.3.j <- gridPtsCorners$corner.2.j + 1
+
+  gridPtsCorners$corner.4.i <- gridPtsCorners$i
+  gridPtsCorners$corner.4.j <- gridPtsCorners$corner.3.j
+
+  grid2lonlat <- domain$grid$grid2lonlat
+  gridPtsCorners$corner.1 <- grid2lonlat(gridPtsCorners$i, gridPtsCorners$j)
+  gridPtsCorners$corner.2 <- grid2lonlat(gridPtsCorners$corner.2.i, gridPtsCorners$corner.2.j)
+  gridPtsCorners$corner.3 <- grid2lonlat(gridPtsCorners$corner.3.i, gridPtsCorners$corner.3.j)
+  gridPtsCorners$corner.4 <- grid2lonlat(gridPtsCorners$corner.4.i, gridPtsCorners$corner.4.j)
+
+  gridPtsCorners <- subset(
+    gridPtsCorners,
+    select=-c(corner.2.i, corner.2.j, corner.3.i, corner.3.j, corner.4.i, corner.4.j)
+  )
+
+
+  dataColumnName <- unname(attributes(data)$comment["dataColumn"])
+  gridPtsCorners$value <- NA
+  for (irow in 1:nrow(data)) {
+    row <- data[irow, ]
+    i <- row[["grid_i"]]
+    j <- row[["grid_j"]]
+    rowValue <- row[[dataColumnName]]
+    gridPtsCorners$value[gridPtsCorners$i==i & gridPtsCorners$j==j] <- rowValue
+  }
+  #gridPtsCorners$value <- runif(n=nrow(gridPtsCorners), min=0, max=1)
+
+  lons <- c()
+  lats <- c()
+  values <- c()
+  for (irow in 1:nrow(gridPtsCorners)) {
+    row <- gridPtsCorners[irow, ]
+
+    newLons <- c(
+      row$corner.1$lon,
+      row$corner.2$lon,
+      row$corner.3$lon,
+      row$corner.4$lon,
+      row$corner.1$lon
+    )
+
+    newLats <- c(
+      row$corner.1$lat,
+      row$corner.2$lat,
+      row$corner.3$lat,
+      row$corner.4$lat,
+      row$corner.1$lat
+    )
+
+    newValues <- rep(unlist(row$value), length(newLons))
+
+    if(irow==1) {
+      lons <- newLons
+      lats <- newLats
+      values <- newValues
+    } else { 
+      lons <- c(lons, NA, newLons)
+      lats <- c(lats, NA, newLats)
+      values <- c(values, NA, newValues)
+    }
+
+  }
+
+  gridPlotData <- data.frame(lon=rev(lons), lat=rev(lats), value=rev(values))
+  cm <- .getSuitableColorScale(gridPlotData)
+  fig <- fig %>%
+    add_trace(type="scattergeo", inherit=FALSE,
+      name="Grid elements",
+      mode="none",
+      fill="toself",
+      # Reversing these is absolutely necessary. Otherwise, the whole plot
+      # *but* the plygon areas get filled...
+      #lat=rev(lats),
+      #lon=rev(lons),
+      #color=values,
+      #fillcolor=values,
+      data=gridPlotData,
+      lon=~lon,
+      lat=~lat,
+      color=~value,
+      colors=cm$palette,
+      #line=...,
+      #legendgroup="All Grid Elements",
+      showlegend=TRUE
+    )
+
+  return(fig)
+
+}
+# END TEST
+
 .getInteractiveGenericMapPlot <- function(plot, domain=DOMAIN) {
   # Former doPlotly.plotMap
   if(is.null(domain)) {
@@ -372,6 +473,10 @@ drawDomain <- function(plot, domain=DOMAIN) {
       yanchor="center", y=0.5,
       xanchor="left", x=1.0
     )
+
+  # TEST
+  plotlyMap <- plotlyMap %>% drawGriddedScattergeoTrace(plot$data)
+  # END TEST
 
   return(plotlyMap)
 }
@@ -668,6 +773,22 @@ for(templatePlotType in plotRegistry$plotTypes) {
       groupByCols = intersect(
         c("statid", "latitude", "longitude", "level"), colnames(data)
       )
+
+      ## TEST
+      if(!is.null(domain)) {
+        ijGridData <- domain$grid$lonlat2grid(
+          lon=data$longitude,
+          lat=data$latitude
+        )
+        data$grid_i <- ijGridData$i
+        data$grid_j <- ijGridData$j
+      }
+      data <- subset(data, select = -c(statid, level, latitude, longitude))
+      groupByCols = intersect(
+        c("statid", "grid_i", "grid_j", "level"), colnames(data)
+      )
+      ## END TEST
+
       nonNumericCols <- names(which(sapply(data, is.numeric)==FALSE))
       colsToDrop <- c("DTG", setdiff(nonNumericCols, groupByCols))
       data <- data[!(colnames(data) %in% colsToDrop)]
@@ -675,6 +796,15 @@ for(templatePlotType in plotRegistry$plotTypes) {
       data <- data %>%
         group_by(!!!syms(groupByCols)) %>%
         summarize_all(mean)
+
+      # TEST
+      if("grid_i" %in% colnames(data)) {
+        lonlatData <- domain$grid$grid2lonlat(i=data$grid_i, j=data$grid_j)
+        data$longitude <- lonlatData$lon
+        data$latitude <- lonlatData$lat
+      }
+      # END TEST
+
       comment(data) <- originalDataComments
       return(data)
     }
