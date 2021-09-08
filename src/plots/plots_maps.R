@@ -304,16 +304,17 @@ drawGriddedScattergeoTrace <- function(fig, data, domain=DOMAIN) {
     iend <- istart + 4
     fig <- fig %>%
       add_trace(type="scattergeo", inherit=FALSE,
-        name="Grid elements",
         #mode="none",
         mode="lines",
         fill="toself",
         lon=lons[istart:iend],
         lat=lats[istart:iend],
         fillcolor=dataPal(values[istart:iend]),
-        #legendgroup="All Grid Elements",
         opacity=0.5,
-        showlegend=TRUE
+        # Configure traces so that a single legend item toggles all polygons
+        name="Grid elements",
+        legendgroup="Grid Elements",
+        showlegend=(istart==1)
       )
   }
 
