@@ -214,6 +214,7 @@ drawBoundaries <- function(
       legendgroup=legendgroup,
       showlegend=showlegend
     )
+
     return(fig)
 }
 
@@ -458,6 +459,12 @@ drawGriddedScattergeoTrace <- function(fig, data, domain=DOMAIN) {
       title=dataColumnName,
       yanchor="center", y=0.5,
       xanchor="left", x=1.0
+    ) %>%
+    # Prevent overlap between colorbar and eventual extra legend
+    layout(
+      legend = list(
+        orientation="h", xanchor="center", x=0.5, yanchor="bottom", y=-0.01
+      )
     )
 
   # TEST
