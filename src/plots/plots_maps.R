@@ -305,12 +305,13 @@ drawGriddedScattergeoTrace <- function(fig, data, domain=DOMAIN) {
     fig <- fig %>%
       add_trace(type="scattergeo", inherit=FALSE,
         #mode="none",
-        mode="lines",
-        fill="toself",
         lon=lons[istart:iend],
         lat=lats[istart:iend],
+        fill="toself",
         fillcolor=dataPal(values[istart:iend]),
         opacity=0.5,
+        mode="lines",
+        line=list(color=dataPal(values[istart:iend]), width=1),
         # Configure traces so that a single legend item toggles all polygons
         name="Grid elements",
         legendgroup="Grid Elements",
