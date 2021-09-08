@@ -304,7 +304,6 @@ drawGriddedScattergeoTrace <- function(fig, data, domain=DOMAIN) {
     iend <- istart + 4
     fig <- fig %>%
       add_trace(type="scattergeo", inherit=FALSE,
-        #mode="none",
         lon=lons[istart:iend],
         lat=lats[istart:iend],
         fill="toself",
