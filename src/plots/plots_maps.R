@@ -296,20 +296,29 @@ drawGriddedScattergeoTrace <- function(fig, data, domain=DOMAIN) {
   cm <- .getSuitableColorScale(gridPlotData)
   dataPal <- colorNumeric(palette=cm$palette, domain=cm$domain)
 
-  fig <- fig %>%
-    add_trace(type="scattergeo", inherit=FALSE,
-      name="Grid elements",
-      #mode="none",
-      mode="lines",
-      fill="toself",
-      data=gridPlotData,
-      lon=~lon,
-      lat=~lat,
-      fillcolor=~dataPal(value),
-      #legendgroup="All Grid Elements",
-      opacity=0.5,
-      showlegend=TRUE
-    )
+  # We have put NA between the coords & values for the various rectangles
+  # and this should have made it possible to add everything in just one call to
+  # add_trace. However, there seems to be a bug in plotly that causes the ends
+  # of some of the generated polygons to be connected in the wrong way when
+  # using 'fill="toself"'. Adding every polygon separately in a loop solves
+  # this. Probably related to <https://github.com/plotly/plotly.js/issues/2845>.
+  for(istart in seq(1, length(lats), 6)) {
+    iend <- istart + 4
+    fig <- fig %>%
+      add_trace(type="scattergeo", inherit=FALSE,
+        name="Grid elements",
+        #mode="none",
+        mode="lines",
+        fill="toself",
+        data=gridPlotData,
+        lon=lons[istart:iend],
+        lat=lats[istart:iend],
+        fillcolor=dataPal(values[istart:iend]),
+        #legendgroup="All Grid Elements",
+        opacity=0.5,
+        showlegend=TRUE
+      )
+  }
 
   return(fig)
 
