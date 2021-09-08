@@ -726,12 +726,17 @@ addTitleToPlot <- function(myPlot, title) {
   # in the data, but use a sequential colormap otherwise.
   # Red/blue colors will represent +/- values.
   cm <- list(name=NULL, palette=NULL, direction=NULL, domain=NULL)
-  dataColumnName <- unname(attributes(plotData)$comment["dataColumn"])
-  if(is.null(dataColumnName)) {
-    dataColumnName <- colnames(plotData)[ncol(plotData)]
+
+  if(is.data.frame(plotData)) {
+    dataColumnName <- unname(attributes(plotData)$comment["dataColumn"])
+    if(is.null(dataColumnName)) {
+      dataColumnName <- colnames(plotData)[ncol(plotData)]
+    }
+    dataRange <- range(plotData[[dataColumnName]], na.rm=TRUE)
+  } else {
+    dataRange <- range(plotData, na.rm=TRUE)
   }
 
-  dataRange <- range(plotData[[dataColumnName]], na.rm=TRUE)
   if (prod(dataRange) >= 0) {
     spread <- diff(dataRange)
     if (sign(sum(dataRange)) < 0) {
