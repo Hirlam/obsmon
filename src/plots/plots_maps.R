@@ -238,7 +238,9 @@ drawDomain <- function(plot, domain=DOMAIN) {
 }
 
 # TEST
-drawGriddedScattergeoTrace <- function(fig, data, domain=DOMAIN) {
+drawGriddedScattergeoTrace <- function(
+  fig, data, dataColumnName, cm, domain=DOMAIN
+) {
 
   grid2lonlat <- domain$grid$grid2lonlat
   gridPtsCorners <- expand.grid(i=1:domain$grid$nlon, j=1:domain$grid$nlat)
@@ -247,7 +249,6 @@ drawGriddedScattergeoTrace <- function(fig, data, domain=DOMAIN) {
   gridPtsCorners$corner.3 <- grid2lonlat(gridPtsCorners$i + 1, gridPtsCorners$j + 1)
   gridPtsCorners$corner.4 <- grid2lonlat(gridPtsCorners$i, gridPtsCorners$j + 1)
 
-  dataColumnName <- unname(attributes(data)$comment["dataColumn"])
   gridPtsCorners$value <- NA
   for (irow in 1:nrow(data)) {
     row <- data[irow, ]
@@ -292,7 +293,6 @@ drawGriddedScattergeoTrace <- function(fig, data, domain=DOMAIN) {
   lats <- lats[1:length(lats) - 1]
   values <- values[1:length(values) - 1]
 
-  cm <- .getSuitableColorScale(values)
   dataPal <- colorNumeric(palette=cm$palette, domain=cm$domain)
 
   # We have put NA between the coords & values for the various rectangles
@@ -423,9 +423,9 @@ drawGriddedScattergeoTrace <- function(fig, data, domain=DOMAIN) {
 }
 
 
-.mapThresholdInteractivePlotAddMarkers <- function(plotlyMap, plot, visible=TRUE) {
-  dataColumnName <- unname(attributes(plot$data)$comment["dataColumn"])
-  cm <- .getSuitableColorScale(plot$data)
+.mapThresholdInteractivePlotAddMarkers <- function(
+  plotlyMap, plot, dataColumnName, cm, visible=TRUE
+) {
   plotlyMap <- plotlyMap %>%
     add_markers(
       name="Data Markers",
@@ -464,15 +464,16 @@ drawGriddedScattergeoTrace <- function(fig, data, domain=DOMAIN) {
 .mapThresholdInteractivePlottingFunction <- function(plot) {
   plotlyMap <- .getInteractiveGenericMapPlot(plot)
 
+  dataColumnName <- unname(attributes(plot$data)$comment["dataColumn"])
+  cm <- .getSuitableColorScale(plot$data)
+
   isGridAveraged <- "grid_i" %in% colnames(plot$data)
   plotlyMap <- plotlyMap %>%
     # Draw markers even if using gridded data. This adds the colorscale.
-    .mapThresholdInteractivePlotAddMarkers(plot, visible=!isGridAveraged) %>%
-    {if(isGridAveraged) drawGriddedScattergeoTrace(., plot$data) else .}
-
-  cm <- .getSuitableColorScale(plot$data)
-  dataColumnName <- unname(attributes(plot$data)$comment["dataColumn"])
-  plotlyMap <- plotlyMap %>%
+    .mapThresholdInteractivePlotAddMarkers(
+      plot, dataColumnName, cm,  visible=!isGridAveraged
+    ) %>% {
+    if(isGridAveraged) drawGriddedScattergeoTrace(., plot$data, dataColumnName, cm) else .} %>%
     colorbar(
       limits=cm$domain,
       title=dataColumnName,
@@ -485,7 +486,6 @@ drawGriddedScattergeoTrace <- function(fig, data, domain=DOMAIN) {
         orientation="h", xanchor="center", x=0.5, yanchor="bottom", y=-0.01
       )
     )
-
 
   return(plotlyMap)
 }
