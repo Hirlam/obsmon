@@ -291,9 +291,7 @@ drawGriddedScattergeoTrace <- function(fig, data, domain=DOMAIN) {
   lats <- lats[1:length(lats) - 1]
   values <- values[1:length(values) - 1]
 
-  gridPlotData <- data.frame(lon=lons, lat=lats, value=values)
-
-  cm <- .getSuitableColorScale(gridPlotData)
+  cm <- .getSuitableColorScale(values)
   dataPal <- colorNumeric(palette=cm$palette, domain=cm$domain)
 
   # We have put NA between the coords & values for the various rectangles
@@ -310,7 +308,6 @@ drawGriddedScattergeoTrace <- function(fig, data, domain=DOMAIN) {
         #mode="none",
         mode="lines",
         fill="toself",
-        data=gridPlotData,
         lon=lons[istart:iend],
         lat=lats[istart:iend],
         fillcolor=dataPal(values[istart:iend]),
