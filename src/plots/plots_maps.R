@@ -239,28 +239,12 @@ drawDomain <- function(plot, domain=DOMAIN) {
 # TEST
 drawGriddedScattergeoTrace <- function(fig, data, domain=DOMAIN) {
 
-  gridPtsCorners <- expand.grid(i=1:domain$grid$nlon, j=1:domain$grid$nlat)
-
-  gridPtsCorners$corner.2.i <- gridPtsCorners$i + 1
-  gridPtsCorners$corner.2.j <- gridPtsCorners$j
-
-  gridPtsCorners$corner.3.i <- gridPtsCorners$corner.2.i
-  gridPtsCorners$corner.3.j <- gridPtsCorners$corner.2.j + 1
-
-  gridPtsCorners$corner.4.i <- gridPtsCorners$i
-  gridPtsCorners$corner.4.j <- gridPtsCorners$corner.3.j
-
   grid2lonlat <- domain$grid$grid2lonlat
+  gridPtsCorners <- expand.grid(i=1:domain$grid$nlon, j=1:domain$grid$nlat)
   gridPtsCorners$corner.1 <- grid2lonlat(gridPtsCorners$i, gridPtsCorners$j)
-  gridPtsCorners$corner.2 <- grid2lonlat(gridPtsCorners$corner.2.i, gridPtsCorners$corner.2.j)
-  gridPtsCorners$corner.3 <- grid2lonlat(gridPtsCorners$corner.3.i, gridPtsCorners$corner.3.j)
-  gridPtsCorners$corner.4 <- grid2lonlat(gridPtsCorners$corner.4.i, gridPtsCorners$corner.4.j)
-
-  gridPtsCorners <- subset(
-    gridPtsCorners,
-    select=-c(corner.2.i, corner.2.j, corner.3.i, corner.3.j, corner.4.i, corner.4.j)
-  )
-
+  gridPtsCorners$corner.2 <- grid2lonlat(gridPtsCorners$i + 1, gridPtsCorners$j)
+  gridPtsCorners$corner.3 <- grid2lonlat(gridPtsCorners$i + 1, gridPtsCorners$j + 1)
+  gridPtsCorners$corner.4 <- grid2lonlat(gridPtsCorners$i, gridPtsCorners$j + 1)
 
   dataColumnName <- unname(attributes(data)$comment["dataColumn"])
   gridPtsCorners$value <- NA
@@ -271,7 +255,7 @@ drawGriddedScattergeoTrace <- function(fig, data, domain=DOMAIN) {
     rowValue <- row[[dataColumnName]]
     gridPtsCorners$value[gridPtsCorners$i==i & gridPtsCorners$j==j] <- rowValue
   }
-  #gridPtsCorners$value <- runif(n=nrow(gridPtsCorners), min=0, max=1)
+  gridPtsCorners <- na.omit(gridPtsCorners)
 
   lons <- c()
   lats <- c()
@@ -279,56 +263,51 @@ drawGriddedScattergeoTrace <- function(fig, data, domain=DOMAIN) {
   for (irow in 1:nrow(gridPtsCorners)) {
     row <- gridPtsCorners[irow, ]
 
-    newLons <- c(
+    # Reversing these is absolutely necessary. Otherwise, the whole plot
+    # *except* the polygon areas get filled...
+    newLons <- rev(c(
       row$corner.1$lon,
       row$corner.2$lon,
       row$corner.3$lon,
       row$corner.4$lon,
       row$corner.1$lon
-    )
+    ))
 
-    newLats <- c(
+    newLats <- rev(c(
       row$corner.1$lat,
       row$corner.2$lat,
       row$corner.3$lat,
       row$corner.4$lat,
       row$corner.1$lat
-    )
+    ))
 
     newValues <- rep(unlist(row$value), length(newLons))
 
-    if(irow==1) {
-      lons <- newLons
-      lats <- newLats
-      values <- newValues
-    } else { 
-      lons <- c(lons, NA, newLons)
-      lats <- c(lats, NA, newLats)
-      values <- c(values, NA, newValues)
-    }
-
+    lons <-c(lons, newLons, NA)
+    lats <- c(lats, newLats, NA)
+    values <- c(values, newValues, NA)
   }
+  lons <- lons[1:length(lons) - 1]
+  lats <- lats[1:length(lats) - 1]
+  values <- values[1:length(values) - 1]
 
-  gridPlotData <- data.frame(lon=rev(lons), lat=rev(lats), value=rev(values))
+  gridPlotData <- data.frame(lon=lons, lat=lats, value=values)
+
   cm <- .getSuitableColorScale(gridPlotData)
+  dataPal <- colorNumeric(palette=cm$palette, domain=cm$domain)
+
   fig <- fig %>%
     add_trace(type="scattergeo", inherit=FALSE,
       name="Grid elements",
-      mode="none",
+      #mode="none",
+      mode="lines",
       fill="toself",
-      # Reversing these is absolutely necessary. Otherwise, the whole plot
-      # *but* the plygon areas get filled...
-      #lat=rev(lats),
-      #lon=rev(lons),
-      #color=values,
-      #fillcolor=values,
       data=gridPlotData,
       lon=~lon,
       lat=~lat,
-      color=~value,
-      colors=cm$palette,
-      #line=...,
+      fillcolor=~dataPal(value),
       #legendgroup="All Grid Elements",
+      opacity=0.5,
       showlegend=TRUE
     )
 
