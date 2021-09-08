@@ -315,7 +315,7 @@ drawGriddedScattergeoTrace <- function(fig, data, domain=DOMAIN) {
         # Configure traces so that a single legend item toggles all polygons
         name="Grid elements",
         legendgroup="Grid Elements",
-        showlegend=(istart==1)
+        showlegend=FALSE
       )
   }
 
@@ -428,6 +428,7 @@ drawGriddedScattergeoTrace <- function(fig, data, domain=DOMAIN) {
 
   plotlyMap <- .getInteractiveGenericMapPlot(plot) %>%
     add_markers(
+      name="Data Markers",
       text=~gsub(
         "\\w*:[[:space:]]*<br />", "",
         gsub(
@@ -452,6 +453,7 @@ drawGriddedScattergeoTrace <- function(fig, data, domain=DOMAIN) {
           opacity=0.1
         )
       ),
+      showlegend=FALSE,
       hoverinfo="text"
     ) %>%
     colorbar(
