@@ -731,7 +731,7 @@ addTitleToPlot <- function(myPlot, title) {
     dataColumnName <- colnames(plotData)[ncol(plotData)]
   }
 
-  dataRange <- range(plotData[[dataColumnName]])
+  dataRange <- range(plotData[[dataColumnName]], na.rm=TRUE)
   if (prod(dataRange) >= 0) {
     spread <- diff(dataRange)
     if (sign(sum(dataRange)) < 0) {
