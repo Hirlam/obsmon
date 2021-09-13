@@ -465,7 +465,9 @@ drawGriddedScattergeoTrace <- function(
   plotlyMap <- .getInteractiveGenericMapPlot(plot)
 
   dataColumnName <- unname(attributes(plot$data)$comment["dataColumn"])
-  cm <- .getSuitableColorScale(plot$data)
+
+  cm <- plot$userDataColormap
+  if(length(cm)==0) cm <- .getSuitableColorScale(plot$data)
 
   isGridAveraged <- "grid_i" %in% colnames(plot$data)
   plotlyMap <- plotlyMap %>%
