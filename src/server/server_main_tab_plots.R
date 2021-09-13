@@ -309,17 +309,23 @@ output$map <- renderLeaflet({
 output$mapTitle <- renderText(obsmonPlotObj()$title)
 
 # Interactively update colorbar range in charts where this applies
-output$plotlyPlotEditingOptions <- renderUI({
-  chart <- req(obsmonPlotObj()$chart)
+initialColorbarRange <- reactive({
+  if(length(obsmonPlotObj()$userDataColormap)>0) {
+    return(obsmonPlotObj()$userDataColormap$domain)
+  }
 
   cmin <- Inf
   cmax <- -Inf
-  for (dataProperty in chart$x$data) {
+  for (dataProperty in obsmonPlotObj()$chart$x$data) {
     cmin <- min(cmin, dataProperty$marker$cmin)
     cmax <- max(cmin, dataProperty$marker$cmax)
   }
+  return(as.numeric(format(c(cmin, cmax), digits=3)))
+})
 
-  req(all(is.finite(c(cmin, cmax))))
+
+output$plotlyPlotEditingOptions <- renderUI({
+  req(all(is.finite(initialColorbarRange())))
 
   colorMapsDf <- RColorBrewer::brewer.pal.info
   colorMapChoices <- list()
@@ -344,12 +350,13 @@ output$plotlyPlotEditingOptions <- renderUI({
     numericRangeInput(
       "mainTabPlotColorscaleRange",
       label="Colour Scale Range",
-      value=as.numeric(format(c(cmin, cmax), digits=3))
+      value=initialColorbarRange()
     )
   ))
 })
 
-observe(
+observe({
+  isolate(req(!("grid_i" %in% colnames(obsmonPlotObj()$data))))
   plotlyProxy(outputId="plotly", session) %>%
     plotlyProxyInvoke(
       method="update",
@@ -358,9 +365,10 @@ observe(
         marker.cmax=req(input$mainTabPlotColorscaleRange[2])
       )
     )
-)
+})
 
-observeEvent(input$mainTabPlotColorscaleColorMap,{
+observeEvent(input$mainTabPlotColorscaleColorMap, {
+  req(!("grid_i" %in% colnames(obsmonPlotObj()$data)))
   colorScaleName <- input$mainTabPlotColorscaleColorMap
 
   pallete <- brewer.pal(brewer.pal.info[colorScaleName,]$maxcolors, colorScaleName)
@@ -377,4 +385,53 @@ observeEvent(input$mainTabPlotColorscaleColorMap,{
       method="restyle",
       list(marker.colorscale=list(colorMap))
     )
+})
+
+observeEvent(input$mainTabPlotColorscaleColorMap, {
+  req("grid_i" %in% colnames(obsmonPlotObj()$data))
+  colorScaleName <- input$mainTabPlotColorscaleColorMap
+
+  pallete <- brewer.pal(brewer.pal.info[colorScaleName,]$maxcolors, colorScaleName)
+  pallete <- colorRampPalette(pallete)(25)
+  palleteRgba <- sapply(pallete, plotly::toRGB, USE.NAMES=FALSE)
+
+  newColormap <- list(
+    name=colorScaleName,
+    palette=pallete,
+    domain=input$mainTabPlotColorscaleRange
+  )
+
+  newObsmonPlotObj <- obsmonPlotObj()
+  newObsmonPlotObj$userDataColormap <- newColormap
+  obsmonPlotObj(NULL)
+  obsmonPlotObj(newObsmonPlotObj)
+})
+
+
+updateGriddedMapColormapRange <- reactive({
+  req("grid_i" %in% colnames(obsmonPlotObj()$data))
+  req(!isTRUE(all.equal(input$mainTabPlotColorscaleRange, obsmonPlotObj()$userDataColormap$domain)))
+  req(!isTRUE(all.equal(input$mainTabPlotColorscaleRange, initialColorbarRange())))
+  return(input$mainTabPlotColorscaleRange)
+}) %>% debounce(500)
+observeEvent(updateGriddedMapColormapRange(), {
+  colorScaleName <- input$mainTabPlotColorscaleColorMap
+  if(length(colorScaleName)==0) {
+    newColormap <- obsmonPlotObj()$userDataColormap
+    if(length(newColormap)==0) {
+      newColormap <- .getSuitableColorScale(obsmonPlotObj()$data)
+    }
+  } else {
+    pallete <- brewer.pal(brewer.pal.info[colorScaleName,]$maxcolors, colorScaleName)
+    pallete <- colorRampPalette(pallete)(25)
+    palleteRgba <- sapply(pallete, plotly::toRGB, USE.NAMES=FALSE)
+
+    newColormap <- list(name=colorScaleName, palette=pallete)
+  }
+  newColormap$domain <- input$mainTabPlotColorscaleRange
+
+  newObsmonPlotObj <- obsmonPlotObj()
+  newObsmonPlotObj$userDataColormap <- newColormap
+  obsmonPlotObj(NULL)
+  obsmonPlotObj(newObsmonPlotObj)
 })
