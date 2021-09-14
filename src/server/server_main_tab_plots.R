@@ -323,7 +323,6 @@ initialColorbarRange <- reactive({
   return(as.numeric(format(c(cmin, cmax), digits=3)))
 })
 
-
 output$plotlyPlotEditingOptions <- renderUI({
   req(all(is.finite(initialColorbarRange())))
 
@@ -408,13 +407,14 @@ observeEvent(input$mainTabPlotColorscaleColorMap, {
 })
 
 
-updateGriddedMapColormapRange <- reactive({
+griddedMapColorbarRange <- eventReactive(input$mainTabPlotColorscaleRange, {
   req("grid_i" %in% colnames(obsmonPlotObj()$data))
+  req(all(is.finite(initialColorbarRange())))
   req(!isTRUE(all.equal(input$mainTabPlotColorscaleRange, obsmonPlotObj()$userDataColormap$domain)))
   req(!isTRUE(all.equal(input$mainTabPlotColorscaleRange, initialColorbarRange())))
   return(input$mainTabPlotColorscaleRange)
 }) %>% debounce(500)
-observeEvent(updateGriddedMapColormapRange(), {
+observeEvent(griddedMapColorbarRange(), {
   colorScaleName <- input$mainTabPlotColorscaleColorMap
   if(length(colorScaleName)==0) {
     newColormap <- obsmonPlotObj()$userDataColormap
@@ -428,7 +428,7 @@ observeEvent(updateGriddedMapColormapRange(), {
 
     newColormap <- list(name=colorScaleName, palette=pallete)
   }
-  newColormap$domain <- input$mainTabPlotColorscaleRange
+  newColormap$domain <- griddedMapColorbarRange()
 
   newObsmonPlotObj <- obsmonPlotObj()
   newObsmonPlotObj$userDataColormap <- newColormap
