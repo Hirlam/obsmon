@@ -237,7 +237,6 @@ drawDomain <- function(plot, domain=DOMAIN) {
   return(plot)
 }
 
-# TEST
 drawGriddedScattergeoTrace <- function(
   fig, data, dataColumnName, cm, domain=DOMAIN
 ) {
@@ -259,6 +258,8 @@ drawGriddedScattergeoTrace <- function(
   }
   gridPtsCorners <- na.omit(gridPtsCorners)
 
+  grid_i <- c()
+  grid_j <- c()
   lons <- c()
   lats <- c()
   values <- c()
@@ -283,14 +284,20 @@ drawGriddedScattergeoTrace <- function(
       row$corner.1$lat
     ))
 
+    newGrid_i <- rep(unlist(row$i), length(newLons))
+    newGrid_j <- rep(unlist(row$j), length(newLons))
     newValues <- rep(unlist(row$value), length(newLons))
 
     lons <-c(lons, newLons, NA)
     lats <- c(lats, newLats, NA)
+    grid_i <- c(grid_i, newGrid_i, NA)
+    grid_j <- c(grid_j, newGrid_j, NA)
     values <- c(values, newValues, NA)
   }
   lons <- lons[1:length(lons) - 1]
   lats <- lats[1:length(lats) - 1]
+  grid_i <- grid_i[1:length(grid_i) - 1]
+  grid_j <- grid_j[1:length(grid_j) - 1]
   values <- values[1:length(values) - 1]
 
   dataPal <- colorNumeric(palette=cm$palette, domain=cm$domain)
@@ -312,6 +319,19 @@ drawGriddedScattergeoTrace <- function(
         opacity=0.5,
         mode="lines",
         line=list(color=dataPal(values[istart:iend]), width=1),
+        text=gsub(
+          "\\w*:[[:space:]]*<br />", "",
+          gsub(
+            "(<br />){2,}", "<br />",
+            paste(
+              sprintf("Grid: (%d, %d)", grid_i[istart], grid_j[istart]),
+              sprintf("Coords: (%.3f\u00B0, %.3f\u00B0)", lons[istart], lats[istart]),
+              paste("Value:", values[istart]),
+              sep="<br />"
+            )
+          )
+        ),
+        hoverinfo="text",
         # Configure traces so that a single legend item toggles all polygons
         name="Grid elements",
         legendgroup="Grid Elements",
@@ -322,7 +342,6 @@ drawGriddedScattergeoTrace <- function(
   return(fig)
 
 }
-# END TEST
 
 .getInteractiveGenericMapPlot <- function(plot, domain=DOMAIN) {
   # Former doPlotly.plotMap
