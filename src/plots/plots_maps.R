@@ -245,6 +245,8 @@ drawGriddedScattergeoTrace <- function(
     j=data$grid_j,
     value=data[[dataColumnName]]
   ))
+
+  # Corners of the polygon representing the grid elements
   data$corner.1 <- domain$grid$grid2lonlat(data$i, data$j)
   data$corner.2 <- domain$grid$grid2lonlat(data$i + 1, data$j)
   data$corner.3 <- domain$grid$grid2lonlat(data$i + 1, data$j + 1)
@@ -264,20 +266,20 @@ drawGriddedScattergeoTrace <- function(
     row <- data[irow, ]
     fig <- fig %>%
       add_trace(type="scattergeo", inherit=FALSE,
-        lon=rev(c(
+        lon=c(
           row$corner.1$lon,
-          row$corner.2$lon,
-          row$corner.3$lon,
           row$corner.4$lon,
+          row$corner.3$lon,
+          row$corner.2$lon,
           row$corner.1$lon
-        )),
-        lat=rev(c(
+        ),
+        lat=c(
           row$corner.1$lat,
-          row$corner.2$lat,
-          row$corner.3$lat,
           row$corner.4$lat,
+          row$corner.3$lat,
+          row$corner.2$lat,
           row$corner.1$lat
-        )),
+        ),
         fill="toself",
         fillcolor=row$color,
         opacity=0.5,
