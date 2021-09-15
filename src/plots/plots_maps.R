@@ -240,93 +240,57 @@ drawDomain <- function(plot, domain=DOMAIN) {
 drawGriddedScattergeoTrace <- function(
   fig, data, dataColumnName, cm, domain=DOMAIN
 ) {
-
-  grid2lonlat <- domain$grid$grid2lonlat
-  gridPtsCorners <- expand.grid(i=1:domain$grid$nlon, j=1:domain$grid$nlat)
-  gridPtsCorners$corner.1 <- grid2lonlat(gridPtsCorners$i, gridPtsCorners$j)
-  gridPtsCorners$corner.2 <- grid2lonlat(gridPtsCorners$i + 1, gridPtsCorners$j)
-  gridPtsCorners$corner.3 <- grid2lonlat(gridPtsCorners$i + 1, gridPtsCorners$j + 1)
-  gridPtsCorners$corner.4 <- grid2lonlat(gridPtsCorners$i, gridPtsCorners$j + 1)
-
-  gridPtsCorners$value <- NA
-  for (irow in 1:nrow(data)) {
-    row <- data[irow, ]
-    i <- row[["grid_i"]]
-    j <- row[["grid_j"]]
-    rowValue <- row[[dataColumnName]]
-    gridPtsCorners$value[gridPtsCorners$i==i & gridPtsCorners$j==j] <- rowValue
-  }
-  gridPtsCorners <- na.omit(gridPtsCorners)
-
-  grid_i <- c()
-  grid_j <- c()
-  lons <- c()
-  lats <- c()
-  values <- c()
-  for (irow in 1:nrow(gridPtsCorners)) {
-    row <- gridPtsCorners[irow, ]
-
-    # Reversing these is absolutely necessary. Otherwise, the whole plot
-    # *except* the polygon areas get filled...
-    newLons <- rev(c(
-      row$corner.1$lon,
-      row$corner.2$lon,
-      row$corner.3$lon,
-      row$corner.4$lon,
-      row$corner.1$lon
-    ))
-
-    newLats <- rev(c(
-      row$corner.1$lat,
-      row$corner.2$lat,
-      row$corner.3$lat,
-      row$corner.4$lat,
-      row$corner.1$lat
-    ))
-
-    newGrid_i <- rep(unlist(row$i), length(newLons))
-    newGrid_j <- rep(unlist(row$j), length(newLons))
-    newValues <- rep(unlist(row$value), length(newLons))
-
-    lons <-c(lons, newLons, NA)
-    lats <- c(lats, newLats, NA)
-    grid_i <- c(grid_i, newGrid_i, NA)
-    grid_j <- c(grid_j, newGrid_j, NA)
-    values <- c(values, newValues, NA)
-  }
-  lons <- lons[1:length(lons) - 1]
-  lats <- lats[1:length(lats) - 1]
-  grid_i <- grid_i[1:length(grid_i) - 1]
-  grid_j <- grid_j[1:length(grid_j) - 1]
-  values <- values[1:length(values) - 1]
+  data <- na.omit(data.frame(
+    i=data$grid_i,
+    j=data$grid_j,
+    value=data[[dataColumnName]]
+  ))
+  data$corner.1 <- domain$grid$grid2lonlat(data$i, data$j)
+  data$corner.2 <- domain$grid$grid2lonlat(data$i + 1, data$j)
+  data$corner.3 <- domain$grid$grid2lonlat(data$i + 1, data$j + 1)
+  data$corner.4 <- domain$grid$grid2lonlat(data$i, data$j + 1)
 
   dataPal <- colorNumeric(palette=cm$palette, domain=cm$domain)
+  data$color <- dataPal(data$value)
 
-  # We have put NA between the coords & values for the various rectangles
-  # and this should have made it possible to add everything in just one call to
-  # add_trace. However, there seems to be a bug in plotly that causes the ends
-  # of some of the generated polygons to be connected in the wrong way when
-  # using 'fill="toself"'. Adding every polygon separately in a loop solves
-  # this. Probably related to <https://github.com/plotly/plotly.js/issues/2845>.
-  for(istart in seq(1, length(lats), 6)) {
-    iend <- istart + 4
+  # It is in principle possible to define all polygons with a single call to
+  # add_trace, by adding all lon, lats & values to vectors with NA vals placed
+  # between the data for each polygon. However, there seems to be a bug in
+  # plotly that causes the ends of some of the polygons generated with that
+  # method to be connected in the wrong way when using 'fill="toself"'. Adding
+  # every polygon separately in a loop, like we're doing below, solves this.
+  # Probably related to <https://github.com/plotly/plotly.js/issues/2845>.
+  for(irow in 1:nrow(data)) {
+    row <- data[irow, ]
     fig <- fig %>%
       add_trace(type="scattergeo", inherit=FALSE,
-        lon=lons[istart:iend],
-        lat=lats[istart:iend],
+        lon=rev(c(
+          row$corner.1$lon,
+          row$corner.2$lon,
+          row$corner.3$lon,
+          row$corner.4$lon,
+          row$corner.1$lon
+        )),
+        lat=rev(c(
+          row$corner.1$lat,
+          row$corner.2$lat,
+          row$corner.3$lat,
+          row$corner.4$lat,
+          row$corner.1$lat
+        )),
         fill="toself",
-        fillcolor=dataPal(values[istart:iend]),
+        fillcolor=row$color,
         opacity=0.5,
         mode="lines",
-        line=list(color=dataPal(values[istart:iend]), width=1),
+        line=list(color=row$color, width=1),
         text=gsub(
           "\\w*:[[:space:]]*<br />", "",
           gsub(
             "(<br />){2,}", "<br />",
             paste(
-              sprintf("Grid: (%d, %d)", grid_i[istart], grid_j[istart]),
-              sprintf("Coords: (%.3f\u00B0, %.3f\u00B0)", lons[istart], lats[istart]),
-              paste("Value:", values[istart]),
+              sprintf("Grid: (%d, %d)", row$i, row$j),
+              sprintf("Coords: (%.3f\u00B0, %.3f\u00B0)", row$corner.1$lon, row$corner.1$lat),
+              paste("Value:", row$value),
               sep="<br />"
             )
           )
@@ -340,7 +304,6 @@ drawGriddedScattergeoTrace <- function(
   }
 
   return(fig)
-
 }
 
 .getInteractiveGenericMapPlot <- function(plot, domain=DOMAIN) {
