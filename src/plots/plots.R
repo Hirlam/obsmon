@@ -350,10 +350,19 @@ obsmonPlotClass <- setRefClass(Class="obsmonPlot",
     },
 
     .generateLeafletMap = function() {
-      if(class(.self$parentType$leafletPlottingFunction) != "uninitializedField") {
-        return(.self$parentType$leafletPlottingFunction(.self))
-      }
-      return(.self$.defaultGenerateLeafletMap())
+      rtn <- tryCatch({
+        if(class(.self$parentType$leafletPlottingFunction) != "uninitializedField") {
+          .self$parentType$leafletPlottingFunction(.self)
+        } else {
+          .self$.defaultGenerateLeafletMap()
+        }
+      },
+        error=function(e) {
+          flog.error("Problems creating leaflet plot: %s", e)
+          return(NULL)
+        }
+      )
+      return(rtn)
     },
 
     .defaultGenerate = function() {
