@@ -373,7 +373,7 @@ initialColorbarRange <- reactive({
     cmin <- min(cmin, dataProperty$marker$cmin)
     cmax <- max(cmin, dataProperty$marker$cmax)
   }
-  return(as.numeric(format(c(cmin, cmax), digits=3)))
+  return(c(floor(cmin), ceiling(cmax)))
 })
 
 output$plotlyPlotEditingOptions <- renderUI({

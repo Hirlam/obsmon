@@ -753,6 +753,8 @@ addTitleToPlot <- function(myPlot, title) {
   } else {
     dataRange <- range(plotData, na.rm=TRUE)
   }
+  # Use integers as default upper/lower limits
+  dataRange <- c(floor(dataRange[1]), ceiling(dataRange[2]))
 
   if (prod(dataRange) >= 0) {
     spread <- diff(dataRange)
