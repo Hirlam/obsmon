@@ -95,7 +95,7 @@ grid2DClass <- setRefClass(Class="grid2D",
       data <- data.frame(i=i, j=j)
       data$x <- .self$xmin + (data$i - 1)*.self$x_spacing
       data$y <- .self$ymin + (data$j - 1)*.self$y_spacing
-      return(subset(data, select = -c(i, j)))
+      return(subset(data, select=c(x, y)))
     }
   )
 )
@@ -197,7 +197,7 @@ domainGridClass <- setRefClass(Class="domainGrid",
   methods=list(
     lonlat2grid=function(lon, lat) {
       # Convert (lon, lat) into grid cell coord (i, j).
-      xyDataframe <- .self$proj$lonlat2xy(lon, lat)
+      xyDataframe <- .self$proj$lonlat2xy(lon=lon, lat=lat)
       return(.self$xy2grid(x=xyDataframe$x, y=xyDataframe$y))
     },
     grid2lonlat=function(i, j) {
