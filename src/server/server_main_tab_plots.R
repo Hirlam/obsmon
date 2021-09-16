@@ -98,7 +98,12 @@ observeEvent(input$doPlot, {
           db=db,
           paramsAsInUiInput=paramsAsInUiInput
         )
+        # Trigger data fetching & eventual post-processing
+        # Calling fetchRawData is needed in order to pass the
+        # progressFile arg. Then newPlot$data just triggers the
+        # post-processing of the fetched data.
         newPlot$fetchRawData(...)
+        invisible(newPlot$data)
       })
       return(list(newPlot=newPlot, output=output))
     },
