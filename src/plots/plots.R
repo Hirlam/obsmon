@@ -246,7 +246,13 @@ obsmonPlotClass <- setRefClass(Class="obsmonPlot",
     # ggplot2 doesn't like units: Remove them from data used in plots
     data = function(...) return(drop_units(.self$dataWithUnits)),
     dataWithUnits = function(...) {
-      return(.self$.memoise(FUN=.self$.getDataFromRawData))
+      if(length(.self$rawData)==0) .self$fetchRawData()
+      return(
+        .self$.memoise(FUN=.self$.getDataFromRawData,
+        # This only depends on .self$rawData, so we shouldn't need
+        # to modify the cached value if the raw data doesn't change
+        usedHash=digest::digest(.self$rawData))
+      )
     },
     sqliteQuery = function(...) {.self$.getSqliteQuery()},
     paramsAsInSqliteDbs = function(...) {
@@ -547,16 +553,17 @@ obsmonPlotClass <- setRefClass(Class="obsmonPlot",
       return (rtn)
     },
 
-    .memoise = function(FUN, ...) {
+    .memoise = function(FUN, ..., usedHash=NULL) {
+      if(is.null(usedHash)) usedHash <- .self$hash
       functionName <- substitute(FUN)
       functionHash <- digest::digest(functionName)
-      cachedValue <- .self$.cache[[.self$hash]][[functionHash]]
+      cachedValue <- .self$.cache[[usedHash]][[functionHash]]
       if(!is.null(cachedValue)) return(cachedValue)
 
       value <- FUN(...)
       newCacheEntry <- list(value)
       names(newCacheEntry) <- functionHash
-      .self$.cache[[.self$hash]] <- c(.self$.cache[[.self$hash]], newCacheEntry)
+      .self$.cache[[usedHash]] <- c(.self$.cache[[usedHash]], newCacheEntry)
 
       return(value)
     }
