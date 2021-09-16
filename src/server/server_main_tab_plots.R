@@ -47,6 +47,8 @@ observeEvent(plotProgressStatus()(), {
 })
 
 obsmonPlotObj <- reactiveVal()
+chart <- reactiveVal()
+leafletMap <- reactiveVal()
 observeEvent(input$doPlot, {
   # Make sure a plot cannot be requested if another is being produced.
   # Although the plot button is hidden when the plot is being prepared,
@@ -62,6 +64,8 @@ observeEvent(input$doPlot, {
 
   # Erase any plot currently on display
   obsmonPlotObj(NULL)
+  chart(NULL)
+  leafletMap(NULL)
 
   if(activePlotType()$requiresSingleStation && length(input$station) !=1) {
     showNotification(
@@ -189,21 +193,67 @@ observeEvent(input$groupLevelsIntoStandardSwitch, {
 })
 
 # Finally, producing the output
-chart <- reactive({
-  if (is.null(obsmonPlotObj())) return(NULL)
+# Long computations may be required when producing the charts/leaflet plots.
+# We'll produce these in an async manner before rendering, to keep the UI
+# responsive.
+observeEvent(obsmonPlotObj(), {
+  req(obsmonPlotObj())
+
+  chart(NULL)
   notifId <- showNotification(
     "Producing plot...", duration=NULL, type="message"
   )
-  on.exit(removeNotification(notifId))
-  obsmonPlotObj()$chart
+
+  futureChart <- future(obsmonPlotObj()$chart, seed=TRUE)
+  then(futureChart,
+    onFulfilled=function(value) {
+      chart(value)
+    },
+    onRejected=function(e) {
+      showNotification("Could not create plot chart", duration=1, type="error")
+      flog.error(e)
+      chart(NULL)
+    }
+  )
+  futureChartCleanup <- finally(futureChart, function() {
+    removeNotification(notifId)
+  })
+
+  # This NULL is necessary in order to prevent the future from blocking
+  NULL
 })
-leafletMap <- reactive({
-  if (is.null(obsmonPlotObj())) return(NULL)
+
+observeEvent(obsmonPlotObj(), {
+  req(obsmonPlotObj())
+
+  leafletMap(NULL)
+  shouldProduceLeafletMap <- (
+    "maps" %in% tolower(obsmonPlotObj()$parentType$category) ||
+    class(obsmonPlotObj()$parentType$leafletPlottingFunction) != "uninitializedField"
+  )
+  req(shouldProduceLeafletMap)
+
   notifId <- showNotification(
     "Producing leaflet map...", duration=NULL, type="message"
   )
-  on.exit(removeNotification(notifId))
-  obsmonPlotObj()$leafletMap
+
+  futureLeafletMap <- future(obsmonPlotObj()$leafletMap, seed=TRUE)
+  then(futureLeafletMap,
+    onFulfilled=function(value) {
+      leafletMap(value)
+    },
+    onRejected=function(e) {
+      showNotification("Could not create leaflet map", duration=1, type="error")
+      flog.error(e)
+      leafletMap(NULL)
+    }
+  )
+  futureLeafletMapCleanup <- finally(futureLeafletMap, function() {
+    removeNotification(notifId)
+  })
+
+  # This NULL is necessary in order to prevent the future from blocking
+  NULL
 })
 
 # Enable/disable, show/hide appropriate inputs
@@ -240,8 +290,7 @@ observe({
 # (i) Rendering plots
 # (i.i) Interactive plot, if plot is a plotly object
 output$plotly <- renderPlotly({
-  if(is.null(obsmonPlotObj())) return(NULL)
-  req("plotly" %in% class(chart()))
+  req("plotly" %in% class(req(chart())))
   notifId <- showNotification(
     "Rendering plot...", duration=NULL, type="message"
   )
@@ -250,8 +299,7 @@ output$plotly <- renderPlotly({
 })
 # (i.ii) Non-interactive plot, if plot is not a plotly object
 output$plot <- renderPlot({
-  if(is.null(obsmonPlotObj())) return(NULL)
-  req(!("plotly" %in% class(chart())))
+  req(!("plotly" %in% class(req(chart()))))
   notifId <- showNotification(
     "Rendering plot...", duration=NULL, type="message"
   )
@@ -263,7 +311,7 @@ output$plot <- renderPlot({
 
 # (ii) Rendering dataTables
 output$rawDataTable <- renderDataTable({
-  if(is.null(obsmonPlotObj())) return(NULL)
+  req(obsmonPlotObj())
   notifId <- showNotification(
     "Rendering data table...", duration=NULL, type="message"
   )
@@ -284,7 +332,7 @@ output$rawDataTableDownloadAsCsv <- downloadHandler(
 )
 
 output$plotDataTable <- renderDataTable({
-  if(is.null(obsmonPlotObj())) return(NULL)
+  req(obsmonPlotObj())
   notifId <- showNotification(
     "Rendering data table...", duration=NULL, type="message"
   )
@@ -304,7 +352,7 @@ output$plotDataTableDownloadAsCsv <- downloadHandler(
 
 # (iii) Rendering leaflet maps
 output$map <- renderLeaflet({
-  if(is.null(leafletMap())) return(NULL)
+  req(leafletMap())
   notifId <- showNotification(
     "Rendering map...", duration=NULL, type="message"
   )
@@ -321,7 +369,7 @@ initialColorbarRange <- reactive({
 
   cmin <- Inf
   cmax <- -Inf
-  for (dataProperty in obsmonPlotObj()$chart$x$data) {
+  for (dataProperty in chart()$x$data) {
     cmin <- min(cmin, dataProperty$marker$cmin)
     cmax <- max(cmin, dataProperty$marker$cmax)
   }
