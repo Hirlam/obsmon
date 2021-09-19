@@ -280,6 +280,7 @@ drawGriddedScattergeoTrace <- function(
           row$corner.2$lat,
           row$corner.1$lat
         ),
+        customdata=list(value=row$value),
         fill="toself",
         fillcolor=row$color,
         opacity=0.5,
