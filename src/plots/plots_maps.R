@@ -283,7 +283,7 @@ drawGriddedScattergeoTrace <- function(
         customdata=list(value=row$value),
         fill="toself",
         fillcolor=row$color,
-        opacity=0.5,
+        opacity=0.75,
         mode="none",
         text=gsub(
           "\\w*:[[:space:]]*<br />", "",
