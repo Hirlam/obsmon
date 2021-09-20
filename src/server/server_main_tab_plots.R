@@ -420,20 +420,25 @@ triggerColorscaleUpdate <- eventReactive({
   return(TRUE)
 })
 
-observeEvent(triggerColorscaleUpdate(), {
+newColorscale <- eventReactive(triggerColorscaleUpdate(), {
   colorScaleName <- req(input$mainTabPlotColorscaleColorMap)
-  colorScaleRange <- req(req(input$mainTabPlotColorscaleRange))
+  palette <- brewer.pal(brewer.pal.info[colorScaleName,]$maxcolors, colorScaleName)
+  return(list(
+    name=colorScaleName,
+    palette=colorRampPalette(palette)(25),
+    domain=req(input$mainTabPlotColorscaleRange)
+  ))
+})
 
-  pallete <- brewer.pal(brewer.pal.info[colorScaleName,]$maxcolors, colorScaleName)
-  pallete <- colorRampPalette(pallete)(25)
-  colorMap <- t(mapply(c, seq(0, 1, length.out=length(pallete)), pallete))
-
+observeEvent(newColorscale(), {
+  palette <- newColorscale()$palette
+  colorMap <- t(mapply(c, seq(0, 1, length.out=length(palette)), palette))
   plotlyProxy(outputId="plotly", session) %>%
     plotlyProxyInvoke(
       method="update",
       list(
-        marker.cmin=req(colorScaleRange[1]),
-        marker.cmax=req(colorScaleRange[2])
+        marker.cmin=req(newColorscale()$domain[1]),
+        marker.cmax=req(newColorscale()$domain[2])
       )
     ) %>%
     plotlyProxyInvoke(
@@ -442,14 +447,10 @@ observeEvent(triggerColorscaleUpdate(), {
     )
 })
 
-observeEvent(triggerColorscaleUpdate(), {
+observeEvent(newColorscale(), {
   req("grid_i" %in% colnames(obsmonPlotObj()$data))
 
-  colorScaleName <- req(input$mainTabPlotColorscaleColorMap)
-  pallete <- brewer.pal(brewer.pal.info[colorScaleName,]$maxcolors, colorScaleName)
-  pallete <- colorRampPalette(pallete)(25)
-  dataPal <- colorNumeric(palette=pallete, domain=req(input$mainTabPlotColorscaleRange))
-
+  dataPal <- colorNumeric(palette=newColorscale()$palette, domain=newColorscale()$domain)
   indices <- list()
   values <- list()
   for(iData in seq_along(chart()$x$data)) {
