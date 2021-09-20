@@ -243,6 +243,7 @@ drawGriddedScattergeoTrace <- function(
   data <- na.omit(data.frame(
     i=data$grid_i,
     j=data$grid_j,
+    n_obs=data$n_obs,
     value=data[[dataColumnName]]
   ))
 
@@ -292,6 +293,7 @@ drawGriddedScattergeoTrace <- function(
             paste(
               sprintf("Grid: (%d, %d)", row$i, row$j),
               sprintf("Coords: (%.3f\u00B0, %.3f\u00B0)", row$corner.1$lon, row$corner.1$lat),
+              sprintf("n_obs: %d", row$n_obs),
               paste("Value:", row$value),
               sep="<br />"
             )
@@ -422,6 +424,7 @@ drawGriddedScattergeoTrace <- function(
 	    if("level" %in% names(plot$data)) paste("Level:", level),
 	    if("channel" %in% names(plot$data)) paste("Channel:", channel),
             sprintf("Coords: (%.3f\u00B0, %.3f\u00B0)", longitude, latitude),
+            if("n_obs" %in% names(plot$data)) paste("n_obs:", n_obs),
             paste0(dataColumnName, ": ", signif(plot$data[[dataColumnName]], digits=5)),
             sep="<br />"
           )
@@ -789,6 +792,7 @@ for(templatePlotType in plotRegistry$plotTypes) {
 
       data <- data %>%
         group_by(!!!syms(groupByCols)) %>%
+        add_count(name="n_obs") %>%
         summarize_all(mean)
 
       # TEST
