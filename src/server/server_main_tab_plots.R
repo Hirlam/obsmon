@@ -399,7 +399,16 @@ output$plotlyPlotEditingOptions <- renderUI({
         `max-options`=1,
         `none-selected-text`="Select colour map",
         `live-search`=TRUE
-      )
+      ),
+      inline=TRUE
+    ),
+    materialSwitch(
+      inputId='reverseColorscaleSwitch',
+      label="Reverse",
+      status="info",
+      inline=TRUE,
+      right=TRUE,
+      value=TRUE
     ),
     numericRangeInput(
       "mainTabPlotColorscaleRange",
@@ -412,6 +421,7 @@ output$plotlyPlotEditingOptions <- renderUI({
 triggerColorscaleUpdate <- eventReactive({
   input$mainTabPlotColorscaleColorMap
   input$mainTabPlotColorscaleRange
+  input$reverseColorscaleSwitch
 }, {
   if(isTRUE(colorscaleInputsJustInitialised())) {
     colorscaleInputsJustInitialised(FALSE)
@@ -423,9 +433,12 @@ triggerColorscaleUpdate <- eventReactive({
 newColorscale <- eventReactive(triggerColorscaleUpdate(), {
   colorScaleName <- req(input$mainTabPlotColorscaleColorMap)
   palette <- brewer.pal(brewer.pal.info[colorScaleName,]$maxcolors, colorScaleName)
+  palette <- colorRampPalette(palette)(25)
+  if(isTRUE(input$reverseColorscaleSwitch)) palette <- rev(palette)
+
   return(list(
     name=colorScaleName,
-    palette=colorRampPalette(palette)(25),
+    palette=palette,
     domain=req(input$mainTabPlotColorscaleRange)
   ))
 })
