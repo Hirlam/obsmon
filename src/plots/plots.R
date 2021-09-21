@@ -237,6 +237,7 @@ obsmonPlotClass <- setRefClass(Class="obsmonPlot",
     db="obsmonDatabase",
     paramsAsInUiInput="list",
     rawData="data.frame",
+    modelDomain="domain",
     ##############################
     chart = function(...) {return (.self$.memoise(FUN=.self$.generate))},
     leafletMap = function(...) {
