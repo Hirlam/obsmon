@@ -1,7 +1,7 @@
 ##################################
 # helpers for making ggplot maps #
 ##################################
-domainProj2ggplotProj <- function(domain=DOMAIN) {
+domainProj2ggplotProj <- function(domain) {
   rtn <- list(
     name="stereographic",
     params=NULL
@@ -23,8 +23,8 @@ domainProj2ggplotProj <- function(domain=DOMAIN) {
   return(rtn)
 }
 
-.getStaticGenericMapPlot <- function(plot, domain=DOMAIN) {
-  # Former doPlot.plotMap
+.getStaticGenericMapPlot <- function(plot) {
+  domain <- plot$modelDomain
   if(is.null(domain)) {
     x1 <- min(plot$data$longitude) - 2
     x2 <- max(plot$data$longitude) + 2
@@ -85,7 +85,8 @@ domainProj2ggplotProj <- function(domain=DOMAIN) {
   return(ggplotMap)
 }
 
-.mapThresholdStaticPlottingFunction <- function(plot, domain=DOMAIN) {
+.mapThresholdStaticPlottingFunction <- function(plot) {
+  domain <- plot$modelDomain
   cm <- .getSuitableColorScale(plot$data)
   dataColumnName <- unname(attributes(plot$data)$comment["dataColumn"])
   if(length(dataColumnName) == 0) {
@@ -115,7 +116,7 @@ domainProj2ggplotProj <- function(domain=DOMAIN) {
 ##################################
 # helpers for making plotly maps #
 ##################################
-domainProj2plotlyProj <- function(domain=DOMAIN) {
+domainProj2plotlyProj <- function(domain) {
   rtn <- list(
     name="stereographic",
     params=NULL
@@ -139,7 +140,7 @@ domainProj2plotlyProj <- function(domain=DOMAIN) {
 
 drawBoundaries <- function(
     fig,
-    domain=DOMAIN,
+    domain,
     name="Boundaries",
     corners=NULL,
     showlegend=TRUE,
@@ -218,7 +219,7 @@ drawBoundaries <- function(
     return(fig)
 }
 
-drawDomain <- function(plot, domain=DOMAIN) {
+drawDomain <- function(plot, domain) {
   if(is.null(domain)) return(plot)
 
   if(domain$ezone_ngrid > 0) {
@@ -238,7 +239,7 @@ drawDomain <- function(plot, domain=DOMAIN) {
 }
 
 drawGriddedScattergeoTrace <- function(
-  fig, data, dataColumnName, cm, domain=DOMAIN
+  fig, data, dataColumnName, cm, domain
 ) {
   data <- na.omit(data.frame(
     i=data$grid_i,
@@ -310,8 +311,8 @@ drawGriddedScattergeoTrace <- function(
   return(fig)
 }
 
-.getInteractiveGenericMapPlot <- function(plot, domain=DOMAIN) {
-  # Former doPlotly.plotMap
+.getInteractiveGenericMapPlot <- function(plot) {
+  domain <- plot$modelDomain
   if(is.null(domain)) {
     rangeLat <- range(plot$data$latitude)
     rangeLon <- range(plot$data$longitude)
@@ -322,7 +323,7 @@ drawGriddedScattergeoTrace <- function(
   rangeLat <- rangeLat + c(-2, 2)
   rangeLon <- rangeLon + c(-2, 2)
 
-  projParams <- domainProj2plotlyProj()
+  projParams <- domainProj2plotlyProj(domain=domain)
   myPlotly <- plot_geo(
     data=plot$data, lat=~jitter(latitude, 1), lon =~jitter(longitude, 1)
   ) %>%
@@ -461,7 +462,12 @@ drawGriddedScattergeoTrace <- function(
     .mapThresholdInteractivePlotAddMarkers(
       plot, dataColumnName, cm,  visible=!isGridAveraged
     ) %>% {
-    if(isGridAveraged) drawGriddedScattergeoTrace(., plot$data, dataColumnName, cm) else .} %>%
+      if(isGridAveraged) {
+        drawGriddedScattergeoTrace(., plot$data, dataColumnName, cm, domain=plot$modelDomain)
+      } else {
+        .
+      }
+    } %>%
     colorbar(
       limits=cm$domain,
       title=dataColumnName,
@@ -521,7 +527,7 @@ drawGriddedScattergeoTrace <- function(
 .mapUsagePlottingFunction <- function(plot) {
   if(nrow(plot$data)==0) return(errorPlot("No data to plot."))
   if(plot$parentType$interactive) {
-    return(.mapUsageInteractivePlottingFunction(plot) %>% drawDomain())
+    return(.mapUsageInteractivePlottingFunction(plot) %>% drawDomain(plot$modelDomain))
   } else {
     return(.mapUsageStaticPlottingFunction(plot))
   }
@@ -530,7 +536,7 @@ drawGriddedScattergeoTrace <- function(
 .mapThresholdPlottingFunction <- function(plot) {
   if(nrow(plot$data)==0) return(errorPlot("No data to plot."))
   if(plot$parentType$interactive) {
-    return(.mapThresholdInteractivePlottingFunction(plot) %>% drawDomain())
+    return(.mapThresholdInteractivePlottingFunction(plot) %>% drawDomain(plot$modelDomain))
   } else {
     return(.mapThresholdStaticPlottingFunction(plot))
   }
@@ -636,7 +642,7 @@ plotRegistry$registerPlotType(
   dataFieldsInSqliteWhereClause=list("obnumber", "obname"),
   plottingFunction=.mapThresholdPlottingFunction,
   leafletPlottingFunction=.mapThresholdLeafletPlottingFunction,
-  dataPostProcessingFunction = function(data) {
+  dataPostProcessingFunction = function(data, ...) {
     comment(data) <- c(dataColumn="fg_dep")
     return(data)
   }
@@ -652,7 +658,7 @@ plotRegistry$registerPlotType(
   dataFieldsInSqliteWhereClause=list("obnumber", "obname"),
   plottingFunction=.mapThresholdPlottingFunction,
   leafletPlottingFunction=.mapThresholdLeafletPlottingFunction,
-  dataPostProcessingFunction = function(data) {
+  dataPostProcessingFunction = function(data, ...) {
     data[["fg_dep+biascrl"]] <- data$fg_dep + data$biascrl
     comment(data) <- c(dataColumn="fg_dep+biascrl")
     return(data)
@@ -669,7 +675,7 @@ plotRegistry$registerPlotType(
   dataFieldsInSqliteWhereClause=list("obnumber", "obname"),
   plottingFunction=.mapThresholdPlottingFunction,
   leafletPlottingFunction=.mapThresholdLeafletPlottingFunction,
-  dataPostProcessingFunction = function(data) {
+  dataPostProcessingFunction = function(data, ...) {
     comment(data) <- c(dataColumn="an_dep")
     return(data)
   }
@@ -685,7 +691,7 @@ plotRegistry$registerPlotType(
   dataFieldsInSqliteWhereClause=list("obnumber", "obname"),
   plottingFunction=.mapThresholdPlottingFunction,
   leafletPlottingFunction=.mapThresholdLeafletPlottingFunction,
-  dataPostProcessingFunction = function(data) {
+  dataPostProcessingFunction = function(data, ...) {
     data[["fg_dep-an_dep"]] <- data$fg_dep - data$an_dep
     comment(data) <- c(dataColumn="fg_dep-an_dep")
     return(data)
@@ -702,7 +708,7 @@ plotRegistry$registerPlotType(
   dataFieldsInSqliteWhereClause=list("obnumber", "obname"),
   plottingFunction=.mapThresholdPlottingFunction,
   leafletPlottingFunction=.mapThresholdLeafletPlottingFunction,
-  dataPostProcessingFunction = function(data) {
+  dataPostProcessingFunction = function(data, ...) {
     comment(data) <- c(dataColumn="biascrl")
     return(data)
   }
@@ -718,7 +724,7 @@ plotRegistry$registerPlotType(
   dataFieldsInSqliteWhereClause=list("obnumber", "obname"),
   plottingFunction=.mapThresholdPlottingFunction,
   leafletPlottingFunction=.mapThresholdLeafletPlottingFunction,
-  dataPostProcessingFunction = function(data) {
+  dataPostProcessingFunction = function(data, ...) {
     comment(data) <- c(dataColumn="obsvalue")
     return(data)
   }
@@ -734,7 +740,7 @@ plotRegistry$registerPlotType(
   dataFieldsInSqliteWhereClause=list("obnumber", "obname"),
   plottingFunction=.mapThresholdPlottingFunction,
   leafletPlottingFunction=.mapThresholdLeafletPlottingFunction,
-  dataPostProcessingFunction = function(data) {
+  dataPostProcessingFunction = function(data, ...) {
     data[["obsvalue-fg_dep"]] <- data$obsvalue - data$fg_dep
     comment(data) <- c(dataColumn="obsvalue-fg_dep")
     return(data)
@@ -760,11 +766,12 @@ for(templatePlotType in plotRegistry$plotTypes) {
   # This is important because of lazy-evaluation: otherwise, the last
   # templatePlotType in the loop will be used in all data post-processing
   # functions defined in the loop.
-  gendataPostProcessingFunction <- function(templatePT=templatePlotType, domain=DOMAIN) {
+  gendataPostProcessingFunction <- function(templatePT=templatePlotType) {
     force(templatePT) # Important: Force the evaluation of the func arg.
-    function(data) {
+    function(data, obsmonPlotObj) {
       # Calculate averages as a post-process step upon the queried data
       data <- templatePT$dataPostProcessingFunction(data)
+      domain <- obsmonPlotObj$modelDomain
       originalDataComments <- comment(data)
 
       performGridAverage <- !is.null(domain)

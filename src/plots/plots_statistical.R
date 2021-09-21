@@ -247,7 +247,7 @@ firstGuessAndAnPlottingFunction <-  function(plot) {
   return(obplot)
 }
 
-.postProcessingFuncAvgDtgsLevels <- function(data) {
+.postProcessingFuncAvgDtgsLevels <- function(data, ...) {
   # Post-process the retrieved data to perform the averages
   originalDataComments <- comment(data)
 

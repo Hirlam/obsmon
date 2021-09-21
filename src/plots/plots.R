@@ -8,7 +8,9 @@ plotTypeClass <- setRefClass(Class="obsmonPlotType",
     extraDataFields="list",
     stationChoiceType="character",
     interactive="logical",
-    dataPostProcessingFunction="ANY", # A function of 1 arg: data (data.frame)
+    # dataPostProcessingFunction: A function where the 1st arg is
+    # data (data.frame) and the 2nd, if used, is obsmonPlotObj (obsmonPlot)
+    dataPostProcessingFunction="ANY",
     plottingFunction="ANY", # A function of 1 arg: plot (an obsmonPlot object)
     leafletPlottingFunction="ANY", # A function of 1 arg: plot (an obsmonPlot object)
     plotTitleFunction="ANY", # A function of 1 arg: plot (an obsmonPlot object)
@@ -489,7 +491,7 @@ obsmonPlotClass <- setRefClass(Class="obsmonPlot",
 
       # Apply eventual user-defined data post-processing
       if(class(.self$parentType$dataPostProcessingFunction) != "uninitializedField") {
-        rtn <- .self$parentType$dataPostProcessingFunction(rtn)
+        rtn <- .self$parentType$dataPostProcessingFunction(rtn, obsmonPlotObj=.self)
       }
 
       return(rtn[complete.cases(rtn),])
@@ -794,7 +796,7 @@ addTitleToPlot <- function(myPlot, title) {
   return(plotData[["popupContents"]])
 }
 
-fillDataWithQualityControlStatus <- function(data) {
+fillDataWithQualityControlStatus <- function(data, ...) {
   status <- rep("NA", nrow(data))
   status <- ifelse(data$anflag == 0, "Rejected", status)
   status <- ifelse(data$active  > 0, "Active", status)
