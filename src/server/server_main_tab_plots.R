@@ -95,11 +95,12 @@ observeEvent(input$doPlot, {
 
   # Fetch raw data asyncronously so app doesn't freeze
   asyncNewPlotAndOutput <- futureCall(
-    FUN=function(parentType, db, paramsAsInUiInput, ...) {
+    FUN=function(parentType, db, paramsAsInUiInput, modelDomain, ...) {
       output <- capture.output({
         newPlot <- obsmonPlotClass$new(
           parentType=parentType,
           db=db,
+          modelDomain=modelDomain,
           paramsAsInUiInput=paramsAsInUiInput
         )
         # Trigger data fetching & eventual post-processing
@@ -115,7 +116,8 @@ observeEvent(input$doPlot, {
       parentType=activePlotType(),
       db=req(activeDb()),
       paramsAsInUiInput=reactiveValuesToList(input),
-      progressFile=plotProgressFile()
+      progressFile=plotProgressFile(),
+      modelDomain=sessionDomain()
     )
   )
   currentPlotPid(asyncNewPlotAndOutput$job$pid)
