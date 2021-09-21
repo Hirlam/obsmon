@@ -767,24 +767,24 @@ for(templatePlotType in plotRegistry$plotTypes) {
       data <- templatePT$dataPostProcessingFunction(data)
       originalDataComments <- comment(data)
 
-      groupByCols = intersect(
-        c("statid", "latitude", "longitude", "level"), colnames(data)
-      )
-
-      ## TEST
-      if(!is.null(domain)) {
+      performGridAverage <- !is.null(domain)
+      if(performGridAverage) {
         ijGridData <- domain$grid$lonlat2grid(
           lon=data$longitude,
           lat=data$latitude
         )
         data$grid_i <- ijGridData$i
         data$grid_j <- ijGridData$j
+
+        data <- subset(data, select = -c(statid, level, latitude, longitude))
+        groupByCols = intersect(
+          c("grid_i", "grid_j", "level"), colnames(data)
+        )
+      } else {
+        groupByCols = intersect(
+          c("statid", "latitude", "longitude", "level"), colnames(data)
+        )
       }
-      data <- subset(data, select = -c(statid, level, latitude, longitude))
-      groupByCols = intersect(
-        c("statid", "grid_i", "grid_j", "level"), colnames(data)
-      )
-      ## END TEST
 
       nonNumericCols <- names(which(sapply(data, is.numeric)==FALSE))
       colsToDrop <- c("DTG", setdiff(nonNumericCols, groupByCols))
@@ -795,15 +795,19 @@ for(templatePlotType in plotRegistry$plotTypes) {
         add_count(name="n_obs") %>%
         summarize_all(mean)
 
-      # TEST
-      if("grid_i" %in% colnames(data)) {
+      if(performGridAverage) {
         lonlatData <- domain$grid$grid2lonlat(i=data$grid_i, j=data$grid_j)
         data$longitude <- lonlatData$lon
         data$latitude <- lonlatData$lat
       }
-      # END TEST
 
+      columnOrder <- intersect(
+        c("grid_i", "grid_j", "longitude", "latitude", "n_obs", colnames(data)),
+        colnames(data)
+      )
+      data <- data[, columnOrder]
       comment(data) <- originalDataComments
+
       return(data)
     }
   }
