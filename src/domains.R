@@ -360,21 +360,40 @@ domainClass <- setRefClass(Class="domain",
   )
 )
 
-initDomain <- function() {
-  if(is.null(obsmonConfig$domain)) return(NULL)
-  config <- obsmonConfig$domain
+initDomain <- function(config, stopOnError=TRUE) {
+  if(is.null(config)) return(NULL)
+
+  missingAttrs <- c()
+  for(attr in c("nlon", "nlat", "lon0", "lat0", "gsize")) {
+    if(is.null(config[[attr]])) missingAttrs <- c(missingAttrs, attr)
+  }
+  if(length(missingAttrs) != 0) {
+    msg <- "Missing domain attributes without defaults:"
+    msg <- paste(msg, paste(missingAttrs, collapse=", "))
+    if(stopOnError) {
+      stop(msg)
+    }
+    else {
+      flog.error(msg)
+      return(domainClass())
+    }
+  }
+
   setVal <- function(val, def) ifelse(is.null(val), def, val)
+  lonc <- setVal(config$lonc, def=config$lon0)
+  latc <- setVal(config$latc, def=config$lat0)
+
   domainParams <- list(
-    name=setVal(config$name, ""),
-    center_lonlat=c(config$lonc, config$latc),
+    name=setVal(config$name, def=""),
+    center_lonlat=c(lonc, latc),
     proj_lon0_lat0=c(config$lon0, config$lat0),
-    lmrt=config$lmrt,
+    lmrt=setVal(config$lmrt, def=FALSE),
     ngrid_lonlat=c(config$nlon, config$nlat),
     grid_spacing=config$gsize,
-    ezone_ngrid=config$ezone
+    ezone_ngrid=setVal(config$ezone, def=0)
   )
-  do.call(domainClass, domainParams)
+  return(do.call(domainClass, domainParams))
 }
 
-DOMAIN <- initDomain()
+DOMAIN <- initDomain(obsmonConfig$domain)
 lockBinding("DOMAIN", globalenv())
