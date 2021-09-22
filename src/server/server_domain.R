@@ -11,20 +11,27 @@ updateNumericInput(session, "domainNlat", value=DOMAIN$ngrid_lonlat[2])
 updateNumericInput(session, "domainGridSpacing", value=DOMAIN$grid_spacing)
 updateMaterialSwitch(session, "domainLmrt", value=DOMAIN$lmrt)
 
-sessionDomain <- reactiveVal(initDomain(list(), stopOnError=FALSE))
-observe({
-  domainParams <- list(
+sessionDomainParams <- reactive(
+  list(
     lonc=input$domainLonc,
     latc=input$domainLatc,
-    lon0=req(input$domainLon0),
-    lat0=req(input$domainLat0),
+    lon0=input$domainLon0,
+    lat0=input$domainLat0,
     lmrt=input$domainLmrt,
-    nlon=req(input$domainNlon),
-    nlat=req(input$domainNlat),
-    gsize=req(input$domainGridSpacing)
+    nlon=input$domainNlon,
+    nlat=input$domainNlat,
+    gsize=input$domainGridSpacing
   )
-  sessionDomain(initDomain(domainParams, stopOnError=FALSE))
-})
+) %>% debounce(500)
+
+sessionDomain <- reactiveVal(initDomain(list(), stopOnError=FALSE))
+observeEvent(sessionDomainParams(), {
+  newDomain <- initDomain(sessionDomainParams(), stopOnError=FALSE)
+  if(!newDomain$grid$hasPoints) {
+    showNotification("Invalid domain configs", duration=1, type="error")
+  }
+  sessionDomain(newDomain)
+}, ignoreInit=TRUE)
 
 drawGridPts <- function(fig, grid, maxDisplayNLon=10, maxDisplayNLat=10) {
     # Add to fig a trace containing a selection of grid points.
@@ -86,7 +93,10 @@ output$modelDomainDemoChart <- renderPlotly({
 
   plot_geo() %>%
     layout(
-      title="Adopted Domain's Geometry and Grid",
+      title=ifelse(domain$grid$hasPoints,
+        "Adopted Domain's Geometry and Grid",
+        "Domain Geometry and Grid: None in Use"
+      ),
       margin = list(
         t=100, # To leave space for the title
         b=10, # Looks better when figure is exported
