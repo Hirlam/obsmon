@@ -283,7 +283,7 @@ observe({
 
   if(isTRUE(interactive && input$mainAreaTabsetPanel=="plotTab")) {
     updateTabsetPanel(session, "mainAreaTabsetPanel", "plotlyTab")
-  } else if(!interactive && input$mainAreaTabsetPanel=="plotlyTab") {
+  } else if(isTRUE(!interactive && input$mainAreaTabsetPanel=="plotlyTab")) {
     updateTabsetPanel(session, "mainAreaTabsetPanel", "plotTab")
   }
 })
