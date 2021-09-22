@@ -400,7 +400,20 @@ initDomain <- function(config, stopOnError=TRUE) {
     grid_spacing=config$gsize,
     ezone_ngrid=setVal(config$ezone, def=0)
   )
-  return(do.call(domainClass, domainParams))
+
+  rtn <- tryCatch(
+    do.call(domainClass, domainParams),
+    error=function(e) {
+      if(stopOnError) {
+        stop(e)
+      }
+      else {
+        flog.error(e)
+        return(domainClass())
+      }
+    }
+  )
+  return(rtn)
 }
 
 DOMAIN <- initDomain(obsmonConfig$domain)

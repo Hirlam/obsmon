@@ -48,7 +48,7 @@ modelDomainTab <- function() {
             "domainNlon",
             "nLon",
             value=numeric(0),
-            min=0,
+            min=1,
             step=1
           )
         ),
@@ -57,7 +57,7 @@ modelDomainTab <- function() {
             "domainNlat",
             "nLat",
             value=numeric(0),
-            min=0,
+            min=1,
             step=1
           )
         ),
