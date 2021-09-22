@@ -2,12 +2,6 @@ modelDomainTab <- function() {
   sidebarLayout(
     sidebarPanel(
       width=3,
-      textInput(
-        "domainName",
-        label="Name",
-        value=character(0),
-        placeholder="(optional)"
-      ),
       fluidRow(
         column(6,
           numericInput(

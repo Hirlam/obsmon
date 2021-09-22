@@ -2,7 +2,6 @@
 #       Observers/reactives related to domain grid & geometry            #
 ##########################################################################
 
-updateTextInput(session, "domainName", value=DOMAIN$name)
 updateNumericInput(session, "domainLonc", value=DOMAIN$center_lonlat[1])
 updateNumericInput(session, "domainLatc", value=DOMAIN$center_lonlat[2])
 updateNumericInput(session, "domainLon0", value=DOMAIN$proj_lon0_lat0[1])
@@ -15,7 +14,6 @@ updateMaterialSwitch(session, "domainLmrt", value=DOMAIN$lmrt)
 sessionDomain <- reactiveVal(initDomain(list(), stopOnError=FALSE))
 observe({
   domainParams <- list(
-    name=input$domainName,
     lonc=input$domainLonc,
     latc=input$domainLatc,
     lon0=req(input$domainLon0),
