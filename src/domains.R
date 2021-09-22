@@ -41,6 +41,13 @@ grid2DClass <- setRefClass(Class="grid2D",
     ymin=function(...) {return(.self$yaxis$start)},
     ymax=function(...) {return(.self$yaxis$end)},
     ylims=function(...) {return(c(.self$ymin, .self$ymax))},
+    hasPoints=function(...) {
+      return(isTRUE(
+        length(.self$nx) > 0 &&
+        length(.self$ny) > 0 &&
+        all(c(.self$nx, .self$ny) > 0)
+      ))
+    },
     ezone_xmax=function(...) {
       # Return the max value of x within the projected extension zone."""
       return (.self$xmax + .self$nx_ezone * .self$x_spacing)
@@ -266,6 +273,7 @@ domainClass <- setRefClass(Class="domain",
     initialize=function(...) {
       # Initialise name, geometry, projection & grid/thinning grid attrs.
       callSuper(...)
+      if(length(list(...)) == 0) return(NULL)
 
       ####################
       # Setting defaults #
@@ -299,7 +307,7 @@ domainClass <- setRefClass(Class="domain",
 
         y_range <- .self$ngrid_lonlat[2] * .self$grid_spacing
         latrange <- 180.0 * y_range / .EQUATOR_PERIM
-        if(isTRUE(.self$lmrt) || latrange > 35 || isTRUE(all.equal(latrange, 0))) {
+        if(isTRUE(.self$lmrt) || isTRUE(latrange > 35) || isTRUE(all.equal(latrange, 0))) {
           # <https://proj.org/operations/projections/merc.html>
           # <https://desktop.arcgis.com/en/arcmap/10.3/guide-books/
           #  map-projections/mercator.htm>
@@ -361,7 +369,7 @@ domainClass <- setRefClass(Class="domain",
 )
 
 initDomain <- function(config, stopOnError=TRUE) {
-  if(is.null(config)) return(NULL)
+  if(length(config)==0) return(domainClass())
 
   missingAttrs <- c()
   for(attr in c("nlon", "nlat", "lon0", "lat0", "gsize")) {

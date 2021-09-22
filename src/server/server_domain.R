@@ -2,19 +2,18 @@
 #       Observers/reactives related to domain grid & geometry            #
 ##########################################################################
 
-if(!is.null(DOMAIN)) {
-  updateTextInput(session, "domainName", value=DOMAIN$name)
-  updateNumericInput(session, "domainLonc", value=DOMAIN$center_lonlat[1])
-  updateNumericInput(session, "domainLatc", value=DOMAIN$center_lonlat[2])
-  updateNumericInput(session, "domainLon0", value=DOMAIN$proj_lon0_lat0[1])
-  updateNumericInput(session, "domainLat0", value=DOMAIN$proj_lon0_lat0[2])
-  updateNumericInput(session, "domainNlon", value=DOMAIN$ngrid_lonlat[1])
-  updateNumericInput(session, "domainNlat", value=DOMAIN$ngrid_lonlat[2])
-  updateNumericInput(session, "domainGridSpacing", value=DOMAIN$grid_spacing)
-  updateMaterialSwitch(session, "domainLmrt", value=DOMAIN$lmrt)
-}
+updateTextInput(session, "domainName", value=DOMAIN$name)
+updateNumericInput(session, "domainLonc", value=DOMAIN$center_lonlat[1])
+updateNumericInput(session, "domainLatc", value=DOMAIN$center_lonlat[2])
+updateNumericInput(session, "domainLon0", value=DOMAIN$proj_lon0_lat0[1])
+updateNumericInput(session, "domainLat0", value=DOMAIN$proj_lon0_lat0[2])
+updateNumericInput(session, "domainNlon", value=DOMAIN$ngrid_lonlat[1])
+updateNumericInput(session, "domainNlat", value=DOMAIN$ngrid_lonlat[2])
+updateNumericInput(session, "domainGridSpacing", value=DOMAIN$grid_spacing)
+updateMaterialSwitch(session, "domainLmrt", value=DOMAIN$lmrt)
 
-sessionDomain <- reactive({
+sessionDomain <- reactiveVal(initDomain(list(), stopOnError=FALSE))
+observe({
   domainParams <- list(
     name=input$domainName,
     lonc=input$domainLonc,
@@ -26,13 +25,12 @@ sessionDomain <- reactive({
     nlat=req(input$domainNlat),
     gsize=req(input$domainGridSpacing)
   )
-  return(initDomain(domainParams, stopOnError=FALSE))
-}) %>% debounce(500)
-
-
+  sessionDomain(initDomain(domainParams, stopOnError=FALSE))
+})
 
 drawGridPts <- function(fig, grid, maxDisplayNLon=10, maxDisplayNLat=10) {
     # Add to fig a trace containing a selection of grid points.
+    if(!grid$hasPoints) return(fig)
     if(any(c(maxDisplayNLon, maxDisplayNLat) <= 0)) return (fig)
 
     lonDrawEvery <- as.integer(max(1, round(grid$nx / maxDisplayNLon)))
@@ -76,9 +74,14 @@ drawGridPts <- function(fig, grid, maxDisplayNLon=10, maxDisplayNLat=10) {
 output$modelDomainDemoChart <- renderPlotly({
   domain <- sessionDomain()
 
+  rangeLon <- NULL
+  rangeLat <- NULL
+  if(domain$grid$hasPoints) {
+     rangeLon <- c(domain$ezone_minlon - 2, domain$ezone_maxlon + 2)
+     rangeLat <- c(domain$ezone_minlat - 2, domain$ezone_maxlat + 2)
+  }
+
   projParams <- domainProj2plotlyProj(domain=domain)
-  rangeLat <- c(domain$ezone_minlat - 2, domain$ezone_maxlat + 2)
-  rangeLon <- c(domain$ezone_minlon - 2, domain$ezone_maxlon + 2)
 
   plot_geo() %>%
     layout(

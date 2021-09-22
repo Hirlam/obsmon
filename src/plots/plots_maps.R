@@ -6,7 +6,7 @@ domainProj2ggplotProj <- function(domain) {
     name="stereographic",
     params=NULL
   )
-  if(is.null(domain)) return(rtn)
+  if(!domain$grid$hasPoints) return(rtn)
 
   rtn$name <- switch(domain$proj$name,
     merc="mercator",
@@ -25,7 +25,7 @@ domainProj2ggplotProj <- function(domain) {
 
 .getStaticGenericMapPlot <- function(plot) {
   domain <- plot$modelDomain
-  if(is.null(domain)) {
+  if(!domain$grid$hasPoints) {
     x1 <- min(plot$data$longitude) - 2
     x2 <- max(plot$data$longitude) + 2
     y1 <- min(plot$data$latitude) - 2
@@ -121,7 +121,7 @@ domainProj2plotlyProj <- function(domain) {
     name="stereographic",
     params=NULL
   )
-  if(is.null(domain)) return(rtn)
+  if(!domain$grid$hasPoints) return(rtn)
 
   rtn$name <- switch(domain$proj$name,
     merc="mercator",
@@ -220,7 +220,7 @@ drawBoundaries <- function(
 }
 
 drawDomain <- function(plot, domain) {
-  if(is.null(domain)) return(plot)
+  if(!domain$grid$hasPoints) return(plot)
 
   if(domain$ezone_ngrid > 0) {
     plot <- plot %>%
@@ -313,7 +313,7 @@ drawGriddedScattergeoTrace <- function(
 
 .getInteractiveGenericMapPlot <- function(plot) {
   domain <- plot$modelDomain
-  if(is.null(domain)) {
+  if(!domain$grid$hasPoints) {
     rangeLat <- range(plot$data$latitude)
     rangeLon <- range(plot$data$longitude)
   } else {
@@ -774,7 +774,7 @@ for(templatePlotType in plotRegistry$plotTypes) {
       domain <- obsmonPlotObj$modelDomain
       originalDataComments <- comment(data)
 
-      performGridAverage <- !is.null(domain)
+      performGridAverage <- domain$grid$hasPoints
       if(performGridAverage) {
         ijGridData <- domain$grid$lonlat2grid(
           lon=data$longitude,
