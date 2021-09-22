@@ -124,5 +124,8 @@ output$modelDomainDemoChart <- renderPlotly({
       )
     ) %>%
     drawDomain(domain) %>%
-    drawGridPts(domain$grid)
+    drawGridPts(domain$grid) %>%
+    configPlotlyWrapper(
+      edits=list(titleText=TRUE)
+    )
 })
