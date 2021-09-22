@@ -2,7 +2,7 @@
 #       Observers/reactives related to domain grid & geometry            #
 ##########################################################################
 
-if(DOMAIN$grid$hasPoints) {
+fillInDomainDefaults <- function() {
   updateNumericInput(session, "domainLonc", value=DOMAIN$center_lonlat[1])
   updateNumericInput(session, "domainLatc", value=DOMAIN$center_lonlat[2])
   updateNumericInput(session, "domainLon0", value=DOMAIN$proj_lon0_lat0[1])
@@ -10,8 +10,11 @@ if(DOMAIN$grid$hasPoints) {
   updateNumericInput(session, "domainNlon", value=DOMAIN$ngrid_lonlat[1])
   updateNumericInput(session, "domainNlat", value=DOMAIN$ngrid_lonlat[2])
   updateNumericInput(session, "domainGridSpacing", value=DOMAIN$grid_spacing)
-  updateMaterialSwitch(session, "domainLmrt", value=DOMAIN$lmrt)
+  updateMaterialSwitch(session, "domainLmrt", value=isTRUE(DOMAIN$lmrt))
 }
+
+if(DOMAIN$grid$hasPoints) fillInDomainDefaults()
+observeEvent(input$domainResetDefaults, fillInDomainDefaults())
 
 sessionDomainParams <- reactive(
   list(
@@ -27,11 +30,22 @@ sessionDomainParams <- reactive(
 ) %>% debounce(500)
 
 sessionDomain <- reactiveVal(initDomain(list(), stopOnError=FALSE))
-observeEvent(sessionDomainParams(), {
-  newDomain <- initDomain(sessionDomainParams(), stopOnError=FALSE)
-  if(!newDomain$grid$hasPoints) {
-    showNotification("Invalid domain configs", duration=1, type="error")
+observeEvent({
+  sessionDomainParams()
+  input$enableDomainUse
+}, {
+
+  if(input$enableDomainUse) {
+    newDomain <- initDomain(sessionDomainParams(), stopOnError=FALSE)
+  } else {
+    newDomain <- EMPTY_DOMAIN
   }
+
+  if(input$enableDomainUse && !newDomain$grid$hasPoints) {
+    showNotification("Invalid domain configs", duration=1, type="error")
+    updateSwitchInput(session, "enableDomainUse", value=FALSE)
+  }
+
   sessionDomain(newDomain)
 }, ignoreInit=TRUE)
 

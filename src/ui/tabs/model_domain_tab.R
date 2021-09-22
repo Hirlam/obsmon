@@ -2,6 +2,13 @@ modelDomainTab <- function() {
   sidebarLayout(
     sidebarPanel(
       width=3,
+      switchInput(
+        inputId="enableDomainUse",
+        label="<i class=\"fa fa-power-off\"></i>",
+        onLabel="Enabled",
+        offLabel="Disabled",
+        value=TRUE
+      ),
       fluidRow(
         column(6,
           numericInput(
@@ -75,7 +82,10 @@ modelDomainTab <- function() {
         label="LMRT",
         status="warning",
         right=TRUE
-      )
+      ),
+      actionButton("domainResetDefaults", "Reset to Defaults", width="100%",
+        icon("ok", lib="glyphicon")
+      ),
     ),
     mainPanel=mainPanel(width=9, plotlyOutputInsideFluidRow("modelDomainDemoChart"))
   )

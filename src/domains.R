@@ -417,4 +417,6 @@ initDomain <- function(config, stopOnError=TRUE) {
 }
 
 DOMAIN <- initDomain(obsmonConfig$domain)
+EMPTY_DOMAIN <- initDomain(list(), stopOnError=FALSE)
 lockBinding("DOMAIN", globalenv())
+lockBinding("EMPTY_DOMAIN", globalenv())
