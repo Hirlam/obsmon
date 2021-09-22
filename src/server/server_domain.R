@@ -126,6 +126,7 @@ output$modelDomainDemoChart <- renderPlotly({
     drawDomain(domain) %>%
     drawGridPts(domain$grid) %>%
     configPlotlyWrapper(
-      edits=list(titleText=TRUE)
+      edits=list(titleText=TRUE),
+      toImageButtonOptions=list(filename="obsmon_domain")
     )
 })
