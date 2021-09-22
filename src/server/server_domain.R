@@ -88,6 +88,7 @@ output$modelDomainDemoChart <- renderPlotly({
 
   plot_geo() %>%
     layout(
+      title="Adopted Domain's Geometry and Grid",
       margin = list(
         t=100, # To leave space for the title
         b=10, # Looks better when figure is exported
