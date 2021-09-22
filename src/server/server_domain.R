@@ -30,8 +30,11 @@ observe({
 
 drawGridPts <- function(fig, grid, maxDisplayNLon=10, maxDisplayNLat=10) {
     # Add to fig a trace containing a selection of grid points.
-    if(!grid$hasPoints) return(fig)
-    if(any(c(maxDisplayNLon, maxDisplayNLat) <= 0)) return (fig)
+    if(!grid$hasPoints || any(c(maxDisplayNLon, maxDisplayNLat) <= 0)) {
+      # Just add an empty trace with mode="markers" in these cases,
+      # to get rid of a "No scattergeo mode specifed" warning
+      return(fig %>% add_trace(type="scattergeo",mode="markers"))
+    }
 
     lonDrawEvery <- as.integer(max(1, round(grid$nx / maxDisplayNLon)))
     latDrawEvery <- as.integer(max(1, round(grid$ny / maxDisplayNLat)))
