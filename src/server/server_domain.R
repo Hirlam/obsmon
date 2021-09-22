@@ -2,14 +2,16 @@
 #       Observers/reactives related to domain grid & geometry            #
 ##########################################################################
 
-updateNumericInput(session, "domainLonc", value=DOMAIN$center_lonlat[1])
-updateNumericInput(session, "domainLatc", value=DOMAIN$center_lonlat[2])
-updateNumericInput(session, "domainLon0", value=DOMAIN$proj_lon0_lat0[1])
-updateNumericInput(session, "domainLat0", value=DOMAIN$proj_lon0_lat0[2])
-updateNumericInput(session, "domainNlon", value=DOMAIN$ngrid_lonlat[1])
-updateNumericInput(session, "domainNlat", value=DOMAIN$ngrid_lonlat[2])
-updateNumericInput(session, "domainGridSpacing", value=DOMAIN$grid_spacing)
-updateMaterialSwitch(session, "domainLmrt", value=DOMAIN$lmrt)
+if(DOMAIN$grid$hasPoints) {
+  updateNumericInput(session, "domainLonc", value=DOMAIN$center_lonlat[1])
+  updateNumericInput(session, "domainLatc", value=DOMAIN$center_lonlat[2])
+  updateNumericInput(session, "domainLon0", value=DOMAIN$proj_lon0_lat0[1])
+  updateNumericInput(session, "domainLat0", value=DOMAIN$proj_lon0_lat0[2])
+  updateNumericInput(session, "domainNlon", value=DOMAIN$ngrid_lonlat[1])
+  updateNumericInput(session, "domainNlat", value=DOMAIN$ngrid_lonlat[2])
+  updateNumericInput(session, "domainGridSpacing", value=DOMAIN$grid_spacing)
+  updateMaterialSwitch(session, "domainLmrt", value=DOMAIN$lmrt)
+}
 
 sessionDomainParams <- reactive(
   list(
