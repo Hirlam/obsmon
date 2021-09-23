@@ -1,3 +1,5 @@
+SPINNER_IMAGE_PATH <- base64enc::dataURI(file="data/loading.gif")
+
 # Flagging that this file has been sourced
 initFileSourced <- TRUE
 

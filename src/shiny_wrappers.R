@@ -162,7 +162,8 @@ interactivePlotTabPanel <- function(plotOutputId) {
       style="display:flex; align-items:center; justify-items: center;",
       div(
         style="flex-grow:1; overflow:auto;",
-        plotlyOutputInsideFluidRow(plotOutputId) %>% withSpinner(color="#0dc5c1")
+        plotlyOutputInsideFluidRow(plotOutputId) %>%
+          withSpinner(image=SPINNER_IMAGE_PATH)
       ),
       div(
         style="float:right;",
@@ -174,7 +175,8 @@ interactivePlotTabPanel <- function(plotOutputId) {
 
 nonInteractivePlotTabPanel <- function(plotOutputId) {
   tabPanel("Plot", value="plotTab",
-    plotOutputInsideFluidRow(plotOutputId) %>% withSpinner(color="#0dc5c1")
+    plotOutputInsideFluidRow(plotOutputId) %>%
+      withSpinner(image=SPINNER_IMAGE_PATH)
   )
 }
 

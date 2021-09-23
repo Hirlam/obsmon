@@ -1,3 +1,29 @@
+# SPINNER_CHART just shows a spinner at the middle of an empty plot
+SPINNER_CHART <- plotly_empty(type="scatter", mode="markers") %>%
+  config(
+    displayModeBar=FALSE,
+    scrollZoom=FALSE,
+    editable=FALSE,
+    staticPlot=TRUE
+  ) %>%
+  layout(
+    images=list(
+      list(
+        # Add the spinner gif
+        source=SPINNER_IMAGE_PATH,
+        x=0.44,
+        y=0.4125,
+        sizex=0.3,
+        sizey = 0.15,
+        xref="paper",
+        yref="paper",
+        xanchor="left",
+        yanchor="bottom"
+      )
+    )
+  )
+lockBinding("SPINNER_CHART", globalenv())
+
 plotTypeClass <- setRefClass(Class="obsmonPlotType",
   fields=list(
     name="character",

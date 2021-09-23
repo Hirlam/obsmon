@@ -52,7 +52,7 @@ obsmonPlotObj <- reactiveVal()
 resetObsmonPlotObj <- function(new) {
   obsmonPlotObj(NULL)
   leafletMap(NULL)
-  chart(NULL)
+  chart(SPINNER_CHART)
 
   notifId <- showNotification(
     "Updating plot...", duration=NULL, type="message"
@@ -95,7 +95,7 @@ observeEvent(input$doPlot, {
 
   # Erase any plot currently on display
   obsmonPlotObj(NULL)
-  chart(NULL)
+  chart(SPINNER_CHART)
   leafletMap(NULL)
 
   if(activePlotType()$requiresSingleStation && length(input$station) !=1) {
@@ -236,7 +236,7 @@ observeEvent(sessionDomain(), {
 # We'll produce these in an async manner before rendering, to keep the UI
 # responsive.
 observeEvent(obsmonPlotObj(), {
-  chart(NULL)
+  chart(SPINNER_CHART)
   req(obsmonPlotObj())
 
   notifId <- showNotification(
@@ -330,10 +330,12 @@ observe({
 # (i.i) Interactive plot, if plot is a plotly object
 output$plotly <- renderPlotly({
   req("plotly" %in% class(req(chart())))
-  notifId <- showNotification(
-    "Rendering plot...", duration=NULL, type="message"
-  )
-  on.exit(removeNotification(notifId))
+  if(!identical(chart(), SPINNER_CHART)) {
+    notifId <- showNotification(
+      "Rendering plot...", duration=NULL, type="message"
+    )
+    on.exit(removeNotification(notifId))
+  }
   chart()
 })
 # (i.ii) Non-interactive plot, if plot is not a plotly object

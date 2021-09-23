@@ -51,7 +51,7 @@ plotOutputInsideFluidRow <- function(plotOutputId) {
     fluidRow(
       column(12, align="center",
         plotOutput(plotOutputId, height="755px", width="auto") %>%
-           withSpinner(color="#0dc5c1")
+           withSpinner(image=SPINNER_IMAGE_PATH, image.width=100, image.height=100)
       )
     )
   )
@@ -62,7 +62,7 @@ plotlyOutputInsideFluidRow <- function(plotlyOutputId) {
     fluidRow(
       column(12, align="center",
         plotlyOutput(plotlyOutputId, height="755px", width="auto") %>%
-          withSpinner(color="#0dc5c1")
+          withSpinner(image=SPINNER_IMAGE_PATH, , image.width=100, image.height=100)
       )
     )
   )
@@ -80,7 +80,7 @@ mapAndMapTitleOutput <- function(mapOutputId, mapTitleOutputId) {
       column(12, align="center",
         tags$head(tags$style("#map{height:80vh !important;}")),
         leafletOutput(outputId=mapOutputId, width="auto") %>%
-          withSpinner(color="#0dc5c1"),
+          withSpinner(image=SPINNER_IMAGE_PATH),
         tags$style(type="text/css", "body { overflow-y: scroll; }")
       )
     )
@@ -99,7 +99,8 @@ queryUsedAndRawDataTableOutput <- function(queryUsedOutputId, dataTableOutputId)
         ),
         downloadButton(downloadButtonTxtId, "Download as TXT"),
         downloadButton(downloadButtonCsvId, "Download as CSV"),
-        dataTableOutput(dataTableOutputId) %>% withSpinner(color="#0dc5c1")
+        dataTableOutput(dataTableOutputId) %>%
+          withSpinner(image=SPINNER_IMAGE_PATH)
       )
     )
   )
@@ -127,7 +128,8 @@ plotDataTableOutput <- function(dataTableOutputId){
         ),
         downloadButton(downloadButtonTxtId, "Download as TXT"),
         downloadButton(downloadButtonCsvId, "Download as CSV"),
-        dataTableOutput(dataTableOutputId) %>% withSpinner(color="#0dc5c1")
+        dataTableOutput(dataTableOutputId) %>%
+          withSpinner(image=SPINNER_IMAGE_PATH)
       )
     )
   )
