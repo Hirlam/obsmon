@@ -30,8 +30,17 @@ sessionDomainParams <- reactive(
 ) %>% debounce(500)
 
 sessionDomain <- reactiveVal(initDomain(list(), stopOnError=FALSE))
+
+domainInitialised <- reactiveVal(FALSE)
+observeEvent(sessionDomainParams(), {
+  req(isFALSE(domainInitialised()))
+  sessionDomain(initDomain(sessionDomainParams(), stopOnError=FALSE))
+  req(sessionDomain()$grid$hasPoints)
+  domainInitialised(TRUE)
+})
+
 observeEvent({
-  sessionDomainParams()
+  input$domainApplyChanges
   input$enableDomainUse
 }, {
 
@@ -43,7 +52,6 @@ observeEvent({
 
   if(input$enableDomainUse && !newDomain$grid$hasPoints) {
     showNotification("Invalid domain configs", duration=1, type="error")
-    updateSwitchInput(session, "enableDomainUse", value=FALSE)
   }
 
   sessionDomain(newDomain)
