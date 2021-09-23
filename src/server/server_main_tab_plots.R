@@ -230,7 +230,7 @@ observeEvent(obsmonPlotObj(), {
 
   leafletMap(NULL)
   shouldProduceLeafletMap <- (
-    "maps" %in% tolower(obsmonPlotObj()$parentType$category) ||
+    isTRUE(grepl("maps", tolower(obsmonPlotObj()$parentType$category))) ||
     class(obsmonPlotObj()$parentType$leafletPlottingFunction) != "uninitializedField"
   )
   req(shouldProduceLeafletMap)

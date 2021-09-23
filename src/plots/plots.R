@@ -405,7 +405,7 @@ obsmonPlotClass <- setRefClass(Class="obsmonPlot",
     },
 
     .defaultGenerateLeafletMap = function() {
-      if(!("maps" %in% tolower(parentType$category))) return(NULL)
+      if(!isTRUE(grepl("maps", tolower(parentType$category)))) return(NULL)
       # Use "check.names=FALSE" so that names such as "fg_dep+biascrl"
       # are not modified
       localPlotData <- data.frame(.self$data, check.names=FALSE)
