@@ -194,6 +194,17 @@ observeEvent(input$groupLevelsIntoStandardSwitch, {
   obsmonPlotObj(newObsmonPlotObj)
 })
 
+# Modify the plot, without performing a new query, if
+# sessionDomain is changed
+observeEvent(sessionDomain(), {
+  req(grepl("maps", tolower(obsmonPlotObj()$parentType$category)))
+  newObsmonPlotObj <- obsmonPlotObj()
+  obsmonPlotObj(NULL)
+
+  newObsmonPlotObj$modelDomain <- sessionDomain()
+  obsmonPlotObj(newObsmonPlotObj)
+})
+
 # Finally, producing the output
 # Long computations may be required when producing the charts/leaflet plots.
 # We'll produce these in an async manner before rendering, to keep the UI
