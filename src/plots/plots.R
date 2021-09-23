@@ -233,6 +233,32 @@ plotTypeClass <- setRefClass(Class="obsmonPlotType",
   )
 )
 
+.refClassObjHash <- function(.self) {
+  componentsHashes <- c()
+  for (fieldName in names(.self$getRefClass()$fields())) {
+    fieldClass <- .self$getRefClass()$fields()[[fieldName]]
+
+    # Skip fields that are actually methods under the hood
+    if(fieldClass == "activeBindingFunction") next
+
+    # Skip fields that are allowed to change
+    if(fieldName %in% c("hash", ".cache")) next
+
+    component <- .self$field(fieldName)
+    # Hash just the function code, not environment or other attrs
+    if(is.function(component)) component <- deparse(component)
+
+    if(is(component, "envRefClass")) {
+      # Parse recursively so that we also handle the special cases listed above
+      componentsHash <- .refClassObjHash(component)
+    } else {
+      componentsHash <- digest::digest(component)
+    }
+    componentsHashes <- c(componentsHashes, componentsHash)
+  }
+  return(digest::digest(componentsHashes))
+}
+
 obsmonPlotClass <- setRefClass(Class="obsmonPlot",
   fields=list(
     parentType="obsmonPlotType",
@@ -249,28 +275,14 @@ obsmonPlotClass <- setRefClass(Class="obsmonPlot",
     data = function(...) return(drop_units(.self$dataWithUnits)),
     dataWithUnits = function(...) {
       if(length(.self$rawData)==0) .self$fetchRawData()
-      return(
-        .self$.memoise(FUN=.self$.getDataFromRawData,
-        # This only depends on .self$rawData, so we shouldn't need
-        # to modify the cached value if the raw data doesn't change
-        usedHash=digest::digest(.self$rawData))
-      )
+      return(.self$.memoise(FUN=.self$.getDataFromRawData))
     },
     sqliteQuery = function(...) {.self$.getSqliteQuery()},
     paramsAsInSqliteDbs = function(...) {
       .self$parentType$getSqliteParamsFromUiParams(.self$paramsAsInUiInput)
     },
     title = function(...) {.self$.getTitle()},
-    hash = function(...) {
-      components <- list()
-      for (fieldName in names(.self$getRefClass()$fields())) {
-        fieldClass <- .self$getRefClass()$fields()[[fieldName]]
-        if(fieldClass == "activeBindingFunction") next
-        if(fieldName %in% c("hash", ".cache")) next
-        components <- c(components, .self$field(fieldName))
-      }
-      return(digest::digest(components))
-    },
+    hash = function(...) .refClassObjHash(.self),
     ##############################
     .cache="list"
   ),
@@ -564,19 +576,10 @@ obsmonPlotClass <- setRefClass(Class="obsmonPlot",
       return (rtn)
     },
 
-    .memoise = function(FUN, ..., usedHash=NULL) {
-      if(is.null(usedHash)) usedHash <- .self$hash
-      functionName <- substitute(FUN)
-      functionHash <- digest::digest(functionName)
-      cachedValue <- .self$.cache[[usedHash]][[functionHash]]
-      if(!is.null(cachedValue)) return(cachedValue)
-
-      value <- FUN(...)
-      newCacheEntry <- list(value)
-      names(newCacheEntry) <- functionHash
-      .self$.cache[[usedHash]] <- c(.self$.cache[[usedHash]], newCacheEntry)
-
-      return(value)
+    .memoise = function(FUN, ...) {
+      usedHash <- digest::digest(list(.self$hash, deparse(FUN), list(...)))
+      if(is.null(.self$.cache[[usedHash]])) .self$.cache[[usedHash]] <- FUN(...)
+      return(.self$.cache[[usedHash]])
     }
   )
 )
