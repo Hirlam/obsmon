@@ -2,12 +2,21 @@ modelDomainTab <- function() {
   sidebarLayout(
     sidebarPanel(
       width=3,
-      switchInput(
-        inputId="enableDomainUse",
-        label="<i class=\"fa fa-power-off\"></i>",
-        onLabel="Enabled",
-        offLabel="Disabled",
-        value=TRUE
+      fluidRow(
+        column(6,
+          switchInput(
+            inputId="enableDomainUse",
+            label="<i class=\"fa fa-power-off\"></i>",
+            onLabel="Enabled",
+            offLabel="Disabled",
+            value=TRUE
+          )
+        ),
+        column(6,
+          actionButton("domainResetDefaults", "Reload Defaults", width="100%",
+            icon("refresh", lib="glyphicon")
+          )
+        )
       ),
       fluidRow(
         column(6,
@@ -83,7 +92,7 @@ modelDomainTab <- function() {
         status="warning",
         right=TRUE
       ),
-      actionButton("domainResetDefaults", "Reset to Defaults", width="100%",
+      actionButton("domainApplyChanges", "Apply New Values", width="100%",
         icon("ok", lib="glyphicon")
       ),
     ),
