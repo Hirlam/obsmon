@@ -46,9 +46,40 @@ observeEvent(plotProgressStatus()(), {
   )
 })
 
-obsmonPlotObj <- reactiveVal()
 chart <- reactiveVal()
 leafletMap <- reactiveVal()
+obsmonPlotObj <- reactiveVal()
+resetObsmonPlotObj <- function(new) {
+  obsmonPlotObj(NULL)
+  leafletMap(NULL)
+  chart(NULL)
+
+  notifId <- showNotification(
+    "Updating plot...", duration=NULL, type="message"
+  )
+
+  futureNewObsmonPlotObj <- future(seed=TRUE, {
+    invisible(new$data)
+    new
+  })
+  then(futureNewObsmonPlotObj,
+    onFulfilled=function(value) {
+      obsmonPlotObj(value)
+    },
+    onRejected=function(e) {
+      showNotification("Could not create plot", duration=1, type="error")
+      flog.error(e)
+      obsmonPlotObj(NULL)
+    }
+  )
+  futureNewObsmonPlotObjCleanup <- finally(futureNewObsmonPlotObj, function() {
+    removeNotification(notifId)
+  })
+
+  # This NULL is necessary in order to prevent the future from blocking
+  NULL
+}
+
 observeEvent(input$doPlot, {
   # Make sure a plot cannot be requested if another is being produced.
   # Although the plot button is hidden when the plot is being prepared,
@@ -173,36 +204,31 @@ updatePlotAfterUnitsChange <- reactive({
   levelsUnits()
 }) %>% debounce(1000)
 observeEvent(updatePlotAfterUnitsChange(), {
-  req(obsmonPlotObj())
-  newObsmonPlotObj <- obsmonPlotObj()
+  newObsmonPlotObj <- req(obsmonPlotObj())
   obsmonPlotObj(NULL)
-
   newObsmonPlotObj$paramsAsInUiInput$levelsUnits <- levelsUnits()
   newObsmonPlotObj$paramsAsInUiInput$variableUnits <- variableUnits()
-  obsmonPlotObj(newObsmonPlotObj)
+  resetObsmonPlotObj(newObsmonPlotObj)
 }, ignoreNULL=FALSE)
 
 # Modify the plot, without performing a new query, if
 # user asks for levels to be grouped into standard ones
 observeEvent(input$groupLevelsIntoStandardSwitch, {
-  req(obsmonPlotObj())
-  newObsmonPlotObj <- obsmonPlotObj()
+  newObsmonPlotObj <- req(obsmonPlotObj())
   obsmonPlotObj(NULL)
-
   newObsmonPlotObj$paramsAsInUiInput$groupLevelsIntoStandardSwitch <-
     input$groupLevelsIntoStandardSwitch
-  obsmonPlotObj(newObsmonPlotObj)
+  resetObsmonPlotObj(newObsmonPlotObj)
 })
 
 # Modify the plot, without performing a new query, if
 # sessionDomain is changed
 observeEvent(sessionDomain(), {
-  req(grepl("maps", tolower(obsmonPlotObj()$parentType$category)))
-  newObsmonPlotObj <- obsmonPlotObj()
+  newObsmonPlotObj <- req(obsmonPlotObj())
+  req(grepl("maps", tolower(newObsmonPlotObj$parentType$category)))
   obsmonPlotObj(NULL)
-
   newObsmonPlotObj$modelDomain <- sessionDomain()
-  obsmonPlotObj(newObsmonPlotObj)
+  resetObsmonPlotObj(newObsmonPlotObj)
 })
 
 # Finally, producing the output
@@ -210,9 +236,9 @@ observeEvent(sessionDomain(), {
 # We'll produce these in an async manner before rendering, to keep the UI
 # responsive.
 observeEvent(obsmonPlotObj(), {
+  chart(NULL)
   req(obsmonPlotObj())
 
-  chart(NULL)
   notifId <- showNotification(
     "Producing plot...", duration=NULL, type="message"
   )
@@ -234,12 +260,12 @@ observeEvent(obsmonPlotObj(), {
 
   # This NULL is necessary in order to prevent the future from blocking
   NULL
-})
+}, ignoreNULL=FALSE)
 
 observeEvent(obsmonPlotObj(), {
+  leafletMap(NULL)
   req(obsmonPlotObj())
 
-  leafletMap(NULL)
   shouldProduceLeafletMap <- (
     isTRUE(grepl("maps", tolower(obsmonPlotObj()$parentType$category))) ||
     class(obsmonPlotObj()$parentType$leafletPlottingFunction) != "uninitializedField"
@@ -267,7 +293,7 @@ observeEvent(obsmonPlotObj(), {
 
   # This NULL is necessary in order to prevent the future from blocking
   NULL
-})
+}, ignoreNULL=FALSE)
 
 # Enable/disable, show/hide appropriate inputs
 observe({
