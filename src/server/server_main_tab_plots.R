@@ -49,27 +49,43 @@ observeEvent(plotProgressStatus()(), {
 chart <- reactiveVal()
 leafletMap <- reactiveVal()
 obsmonPlotObj <- reactiveVal()
-resetObsmonPlotObj <- function(new) {
+
+replaceObsmonPlotObj <- reactiveVal()
+observeEvent(replaceObsmonPlotObj(), {
+  newPlot <- replaceObsmonPlotObj()
+
   obsmonPlotObj(NULL)
   leafletMap(NULL)
-  chart(SPINNER_CHART)
+  if(is(newPlot, "obsmonPlot") || is.null(newPlot)) chart(SPINNER_CHART)
+  else chart(NULL)
 
+  req(is(newPlot, "obsmonPlot"))
   notifId <- showNotification(
     "Updating plot...", duration=NULL, type="message"
   )
 
-  futureNewObsmonPlotObj <- future(seed=TRUE, {
-    invisible(new$data)
-    new
-  })
+  # Using an environment as a trick to pass newPlot by reference to the
+  # function used in the futureCall. If we don't do this, and pass newPlot to
+  # the function instead, then the computations triggered by newPlot$data are
+  # initiated not inside future call, but rather at the time newPlot is copied
+  # to be passed to the function (as R passes by value). See, for instance,
+  # https://stat.ethz.ch/pipermail/r-devel/2009-January/051899.html
+  env <- new.env(parent=emptyenv())
+  env$newObsmonPlotObj <- newPlot
+
+  futureNewObsmonPlotObj <- futureCall(FUN=function(env) {
+    newObsmonPlotObj <- env$newObsmonPlotObj
+    invisible(newObsmonPlotObj$data)
+    return(newObsmonPlotObj)
+  },
+    args=list(env=env)
+  )
   then(futureNewObsmonPlotObj,
-    onFulfilled=function(value) {
-      obsmonPlotObj(value)
-    },
+    onFulfilled=function(value) {obsmonPlotObj(value)},
     onRejected=function(e) {
-      showNotification("Could not create plot", duration=1, type="error")
-      flog.error(e)
       obsmonPlotObj(NULL)
+      flog.error(e)
+      showNotification("Could not update plot", duration=1, type="error")
     }
   )
   futureNewObsmonPlotObjCleanup <- finally(futureNewObsmonPlotObj, function() {
@@ -78,7 +94,7 @@ resetObsmonPlotObj <- function(new) {
 
   # This NULL is necessary in order to prevent the future from blocking
   NULL
-}
+}, ignoreNULL=FALSE)
 
 observeEvent(input$doPlot, {
   # Make sure a plot cannot be requested if another is being produced.
@@ -94,9 +110,7 @@ observeEvent(input$doPlot, {
   req(currentPlotPid()==-1)
 
   # Erase any plot currently on display
-  obsmonPlotObj(NULL)
-  chart(SPINNER_CHART)
-  leafletMap(NULL)
+  replaceObsmonPlotObj(NULL)
 
   if(activePlotType()$requiresSingleStation && length(input$station) !=1) {
     showNotification(
@@ -155,9 +169,10 @@ observeEvent(input$doPlot, {
 
   then(asyncNewPlotAndOutput,
     onFulfilled=function(value) {
-      obsmonPlotObj(value$newPlot)
+      replaceObsmonPlotObj(value$newPlot)
     },
     onRejected=function(e) {
+      replaceObsmonPlotObj(NA)
       if(!plotInterrupted()) {
         showNotification("Could not fetch plot data", duration=1, type="error")
         flog.error(e)
@@ -205,20 +220,18 @@ updatePlotAfterUnitsChange <- reactive({
 }) %>% debounce(1000)
 observeEvent(updatePlotAfterUnitsChange(), {
   newObsmonPlotObj <- req(obsmonPlotObj())
-  obsmonPlotObj(NULL)
   newObsmonPlotObj$paramsAsInUiInput$levelsUnits <- levelsUnits()
   newObsmonPlotObj$paramsAsInUiInput$variableUnits <- variableUnits()
-  resetObsmonPlotObj(newObsmonPlotObj)
+  replaceObsmonPlotObj(newObsmonPlotObj)
 }, ignoreNULL=FALSE)
 
 # Modify the plot, without performing a new query, if
 # user asks for levels to be grouped into standard ones
 observeEvent(input$groupLevelsIntoStandardSwitch, {
   newObsmonPlotObj <- req(obsmonPlotObj())
-  obsmonPlotObj(NULL)
   newObsmonPlotObj$paramsAsInUiInput$groupLevelsIntoStandardSwitch <-
     input$groupLevelsIntoStandardSwitch
-  resetObsmonPlotObj(newObsmonPlotObj)
+  replaceObsmonPlotObj(newObsmonPlotObj)
 })
 
 # Modify the plot, without performing a new query, if
@@ -226,9 +239,8 @@ observeEvent(input$groupLevelsIntoStandardSwitch, {
 observeEvent(sessionDomain(), {
   newObsmonPlotObj <- req(obsmonPlotObj())
   req(grepl("maps", tolower(newObsmonPlotObj$parentType$category)))
-  obsmonPlotObj(NULL)
   newObsmonPlotObj$modelDomain <- sessionDomain()
-  resetObsmonPlotObj(newObsmonPlotObj)
+  replaceObsmonPlotObj(newObsmonPlotObj)
 })
 
 # Finally, producing the output
@@ -236,7 +248,6 @@ observeEvent(sessionDomain(), {
 # We'll produce these in an async manner before rendering, to keep the UI
 # responsive.
 observeEvent(obsmonPlotObj(), {
-  chart(SPINNER_CHART)
   req(obsmonPlotObj())
 
   notifId <- showNotification(
@@ -260,10 +271,9 @@ observeEvent(obsmonPlotObj(), {
 
   # This NULL is necessary in order to prevent the future from blocking
   NULL
-}, ignoreNULL=FALSE)
+})
 
 observeEvent(obsmonPlotObj(), {
-  leafletMap(NULL)
   req(obsmonPlotObj())
 
   shouldProduceLeafletMap <- (
@@ -293,7 +303,7 @@ observeEvent(obsmonPlotObj(), {
 
   # This NULL is necessary in order to prevent the future from blocking
   NULL
-}, ignoreNULL=FALSE)
+})
 
 # Enable/disable, show/hide appropriate inputs
 observe({
