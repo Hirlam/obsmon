@@ -1,11 +1,12 @@
 # SPINNER_CHART just shows a spinner at the middle of an empty plot
-SPINNER_CHART <- plotly_empty(type="scatter", mode="markers") %>%
+EMPTY_CHART <- plotly_empty(type="scatter", mode="markers") %>%
   config(
     displayModeBar=FALSE,
     scrollZoom=FALSE,
     editable=FALSE,
     staticPlot=TRUE
-  ) %>%
+  )
+SPINNER_CHART <- EMPTY_CHART %>%
   layout(
     images=list(
       list(
@@ -22,6 +23,7 @@ SPINNER_CHART <- plotly_empty(type="scatter", mode="markers") %>%
       )
     )
   )
+lockBinding("EMPTY_CHART", globalenv())
 lockBinding("SPINNER_CHART", globalenv())
 
 plotTypeClass <- setRefClass(Class="obsmonPlotType",

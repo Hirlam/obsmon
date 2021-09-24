@@ -46,23 +46,19 @@ observeEvent(plotProgressStatus()(), {
   )
 })
 
-chart <- reactiveVal()
-leafletMap <- reactiveVal()
-obsmonPlotObj <- reactiveVal()
-
+obsmonPlotObj <- reactiveVal(NA)
 replaceObsmonPlotObj <- reactiveVal()
 observeEvent(replaceObsmonPlotObj(), {
   newPlot <- replaceObsmonPlotObj()
 
-  obsmonPlotObj(NULL)
-  leafletMap(NULL)
-  if(is(newPlot, "obsmonPlot") || is.null(newPlot)) chart(SPINNER_CHART)
-  else chart(NULL)
+  newValueIsObsmonPlotObj <- is(newPlot, "obsmonPlot")
+  # The NULL value signals that we're waiting for a new plot to be computed,
+  # which will be performed in the futureCall below
+  if(newValueIsObsmonPlotObj || is.null(newPlot)) obsmonPlotObj(NULL)
+  else obsmonPlotObj(newPlot)
 
-  req(is(newPlot, "obsmonPlot"))
-  notifId <- showNotification(
-    "Updating plot...", duration=NULL, type="message"
-  )
+  req(newValueIsObsmonPlotObj)
+  notifId <- showNotification("Producing plot...", duration=NULL, type="message")
 
   # Using an environment as a trick to pass newPlot by reference to the
   # function used in the futureCall. If we don't do this, and pass newPlot to
@@ -75,7 +71,12 @@ observeEvent(replaceObsmonPlotObj(), {
 
   futureNewObsmonPlotObj <- futureCall(FUN=function(env) {
     newObsmonPlotObj <- env$newObsmonPlotObj
-    invisible(newObsmonPlotObj$data)
+    # Long computations may be required when producing the charts/leaflet plots.
+    # We'll produce these in an async manner before rendering, to keep the UI
+    # responsive.
+    # Trigger processing of data, chart and leafletMap
+    invisible(newObsmonPlotObj$chart)
+    invisible(newObsmonPlotObj$leafletMap)
     return(newObsmonPlotObj)
   },
     args=list(env=env)
@@ -83,9 +84,9 @@ observeEvent(replaceObsmonPlotObj(), {
   then(futureNewObsmonPlotObj,
     onFulfilled=function(value) {obsmonPlotObj(value)},
     onRejected=function(e) {
-      obsmonPlotObj(NULL)
+      obsmonPlotObj(NA)
       flog.error(e)
-      showNotification("Could not update plot", duration=1, type="error")
+      showNotification("Could not produce plot", duration=1, type="error")
     }
   )
   futureNewObsmonPlotObjCleanup <- finally(futureNewObsmonPlotObj, function() {
@@ -148,12 +149,7 @@ observeEvent(input$doPlot, {
           modelDomain=modelDomain,
           paramsAsInUiInput=paramsAsInUiInput
         )
-        # Trigger data fetching & eventual post-processing
-        # Calling fetchRawData is needed in order to pass the
-        # progressFile arg. Then newPlot$data just triggers the
-        # post-processing of the fetched data.
         newPlot$fetchRawData(...)
-        invisible(newPlot$data)
       })
       return(list(newPlot=newPlot, output=output))
     },
@@ -244,72 +240,12 @@ observeEvent(sessionDomain(), {
 })
 
 # Finally, producing the output
-# Long computations may be required when producing the charts/leaflet plots.
-# We'll produce these in an async manner before rendering, to keep the UI
-# responsive.
-observeEvent(obsmonPlotObj(), {
-  req(obsmonPlotObj())
-
-  notifId <- showNotification(
-    "Producing plot...", duration=NULL, type="message"
-  )
-
-  futureChart <- future(obsmonPlotObj()$chart, seed=TRUE)
-  then(futureChart,
-    onFulfilled=function(value) {
-      chart(value)
-    },
-    onRejected=function(e) {
-      showNotification("Could not create plot chart", duration=1, type="error")
-      flog.error(e)
-      chart(NULL)
-    }
-  )
-  futureChartCleanup <- finally(futureChart, function() {
-    removeNotification(notifId)
-  })
-
-  # This NULL is necessary in order to prevent the future from blocking
-  NULL
-})
-
-observeEvent(obsmonPlotObj(), {
-  req(obsmonPlotObj())
-
-  shouldProduceLeafletMap <- (
-    isTRUE(grepl("maps", tolower(obsmonPlotObj()$parentType$category))) ||
-    class(obsmonPlotObj()$parentType$leafletPlottingFunction) != "uninitializedField"
-  )
-  req(shouldProduceLeafletMap)
-
-  notifId <- showNotification(
-    "Producing leaflet map...", duration=NULL, type="message"
-  )
-
-  futureLeafletMap <- future(obsmonPlotObj()$leafletMap, seed=TRUE)
-  then(futureLeafletMap,
-    onFulfilled=function(value) {
-      leafletMap(value)
-    },
-    onRejected=function(e) {
-      showNotification("Could not create leaflet map", duration=1, type="error")
-      flog.error(e)
-      leafletMap(NULL)
-    }
-  )
-  futureLeafletMapCleanup <- finally(futureLeafletMap, function() {
-    removeNotification(notifId)
-  })
-
-  # This NULL is necessary in order to prevent the future from blocking
-  NULL
-})
 
 # Enable/disable, show/hide appropriate inputs
 observe({
   req(obsmonPlotObj())
   # (i) Maps tab
-  if(is.null(leafletMap())) {
+  if(is.null(obsmonPlotObj()$leafletMap)) {
     if(isTRUE(input$mainAreaTabsetPanel=="mapTab")) {
       updateTabsetPanel(session, "mainAreaTabsetPanel", "plotlyTab")
     }
@@ -319,7 +255,7 @@ observe({
   }
 
   # (ii) Interactive or regular plot tabs
-  interactive <- isTRUE("plotly" %in% class(chart()))
+  interactive <- is.null(obsmonPlotObj()) || isTRUE("plotly" %in% class(obsmonPlotObj()$chart))
   if(interactive) {
     hideTab("mainAreaTabsetPanel", "plotTab")
     showTab("mainAreaTabsetPanel", "plotlyTab")
@@ -338,6 +274,12 @@ observe({
 # Rendering plot/map/dataTable
 # (i) Rendering plots
 # (i.i) Interactive plot, if plot is a plotly object
+chart <- reactiveVal()
+observeEvent(obsmonPlotObj(), {
+  if(is(obsmonPlotObj(), "obsmonPlot")) chart(obsmonPlotObj()$chart)
+  else if(is.null(obsmonPlotObj())) chart(SPINNER_CHART)
+  else chart(NULL)
+}, ignoreNULL=FALSE)
 output$plotly <- renderPlotly({
   req("plotly" %in% class(req(chart())))
   if(!identical(chart(), SPINNER_CHART)) {
@@ -403,12 +345,12 @@ output$plotDataTableDownloadAsCsv <- downloadHandler(
 
 # (iii) Rendering leaflet maps
 output$map <- renderLeaflet({
-  req(leafletMap())
+  req(obsmonPlotObj()$leafletMap)
   notifId <- showNotification(
     "Rendering map...", duration=NULL, type="message"
   )
   on.exit(removeNotification(notifId))
-  leafletMap()
+  obsmonPlotObj()$leafletMap
 })
 output$mapTitle <- renderText(obsmonPlotObj()$title)
 
