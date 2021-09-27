@@ -365,6 +365,15 @@ obsmonPlotClass <- setRefClass(Class="obsmonPlot",
 
     ############################
     .generate = function() {
+
+      if(
+        .self$modelDomain$grid$hasPoints &&
+        isTRUE(grepl("maps", tolower(.self$parentType$category))) &&
+        !isTRUE(.self$parentType$interactive)
+      ) {
+        flog.warn("Ignoring domain info: only supported in interactive maps.")
+      }
+
       plot <- tryCatch({
         if(nrow(.self$data)==0) {
           rtn <- errorPlot("Could not produce plot: No data.")
@@ -388,6 +397,7 @@ obsmonPlotClass <- setRefClass(Class="obsmonPlot",
       if("plotly" %in% class(plot)) {
         plot <- plot %>% configPlotlyWrapper()
       }
+
       return(plot)
     },
 
