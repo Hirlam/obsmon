@@ -382,7 +382,7 @@ initDomain <- function(config, stopOnError=TRUE) {
       stop(msg)
     }
     else {
-      flog.error(msg)
+      flog.debug(msg)
       return(domainClass())
     }
   }
@@ -408,7 +408,7 @@ initDomain <- function(config, stopOnError=TRUE) {
         stop(e)
       }
       else {
-        flog.error(e)
+        flog.debug(e)
         return(domainClass())
       }
     }
