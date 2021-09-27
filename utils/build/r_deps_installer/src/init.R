@@ -1,9 +1,12 @@
 # Install argparse locally if not available globally
-.localInstallLib <- file.path(dirname(callingScriptPath()), "pkg_local_R-libs")
-.libPaths(c(.localInstallLib, .libPaths()))
+INSTALLER_OWN_INSTALL_LIB <- file.path(
+  dirname(callingScriptPath()),
+  "pkg_local_R-libs"
+)
+.libPaths(c(INSTALLER_OWN_INSTALL_LIB, .libPaths()))
 .depsDbDf <- tryCatch({
-  tools::write_PACKAGES(.localInstallLib, unpacked=TRUE)
-  readRDS(file.path(.localInstallLib, "PACKAGES.rds"))
+  tools::write_PACKAGES(INSTALLER_OWN_INSTALL_LIB, unpacked=TRUE)
+  readRDS(file.path(INSTALLER_OWN_INSTALL_LIB, "PACKAGES.rds"))
 },
   error=function(e) NULL
 )
@@ -31,10 +34,10 @@
 .installPkgLocallyIfMissingGlobally <- function(pkg, minPkgVersion="0") {
   if(!.pkgCanBeLoaded(pkg, minPkgVersion)) {
     cat(paste0('Setting up R-pkg "', pkg, '" needed by the installer...\n'))
-    dir.create(.localInstallLib, recursive=TRUE, showWarnings=FALSE)
-    .libPaths(c(.localInstallLib, .libPaths()))
+    dir.create(INSTALLER_OWN_INSTALL_LIB, recursive=TRUE, showWarnings=FALSE)
+    .libPaths(c(INSTALLER_OWN_INSTALL_LIB, .libPaths()))
     install.packages(
-      pkg, lib=.localInstallLib, quiet=TRUE,
+      pkg, lib=INSTALLER_OWN_INSTALL_LIB, quiet=TRUE,
       repos="https://cloud.r-project.org"
     )
   }
