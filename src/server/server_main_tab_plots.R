@@ -8,8 +8,26 @@ appendTab(inputId="mainAreaTabsetPanel", leafletMapTabPanel())
 hideTab("mainAreaTabsetPanel", "mapTab") # Show mapTab only when applicable
 appendTab(inputId="mainAreaTabsetPanel", queryAndDataTabPanel())
 
+##################################
+# Logic for "Cancel Plot" button #
+##################################
 currentPlotPid <- reactiveVal(-1)
-plotStartedNotifId <- reactiveVal(-1)
+observeEvent(currentPlotPid(), {
+  # Prevent another plot from being requested which another is
+  # on course, and offer possibility to cancel plot
+  thereIsAPlotInPreparation <- isTRUE(currentPlotPid() >= 0)
+
+  shinyjs::toggle("doPlot", condition=!thereIsAPlotInPreparation)
+  shinyjs::toggle("cancelPlot", condition=thereIsAPlotInPreparation)
+
+  if(thereIsAPlotInPreparation) {
+    disableShinyInputs(input, except=c("^multiPlots*", "^cancelPlot$"))
+    plotInterrupted(FALSE)
+  } else {
+    enableShinyInputs(input, except="^multiPlots*")
+  }
+})
+
 plotInterrupted <- reactiveVal()
 observeEvent(input$cancelPlot, {
   showNotification("Cancelling plot", type="warning", duration=1)
@@ -17,7 +35,10 @@ observeEvent(input$cancelPlot, {
   killProcessTree(currentPlotPid(), warnFail=TRUE)
 }, priority=2000, ignoreInit=TRUE)
 
-# Management of plot progress bar
+
+###################################################
+# Management of "fetching plot data" progress bar #
+###################################################
 plotProgressFile <- reactiveVal(NULL)
 plotProgressStatus <- reactiveVal(function() NULL)
 plotProgressBar <- reactiveVal(NULL)
@@ -26,6 +47,7 @@ observeEvent(plotProgressFile(), {
     500, session, isolate(plotProgressFile()), readPlotProgressFile
   ))
 })
+plotStartedNotifId <- reactiveVal(-1)
 observeEvent(plotProgressStatus()(), {
   pProgress <- plotProgressStatus()()
   req(isTRUE(pProgress$total>0), isTRUE(pProgress$current<=pProgress$total))
@@ -46,22 +68,25 @@ observeEvent(plotProgressStatus()(), {
   )
 })
 
-obsmonPlotObj <- reactiveVal()
+
+###############################################################################
+# Fetch plot data when user clicks in "Plot". Then update the obsmonPlotObj   #
+# (using replaceObsmonPlotObj) to trigger data post-processing and production #
+# of figures to the next observer (which is performed in another observer)    #
+###############################################################################
+replaceObsmonPlotObj <- reactiveVal()
 observeEvent(input$doPlot, {
   # Make sure a plot cannot be requested if another is being produced.
-  # Although the plot button is hidden when the plot is being prepared,
-  # such an action may sometimes not be quick enough (e.g., when rendering
-  # is ongoing).
-  if(currentPlotPid()>-1) {
+  if(currentPlotPid() > -1) {
     showNotification(
       "Another plot is being produced. Please wait.",
       type="warning", duration=1
     )
   }
-  req(currentPlotPid()==-1)
+  req(currentPlotPid() == -1)
 
   # Erase any plot currently on display
-  obsmonPlotObj(NULL)
+  replaceObsmonPlotObj(NULL)
 
   if(activePlotType()$requiresSingleStation && length(input$station) !=1) {
     showNotification(
@@ -71,17 +96,7 @@ observeEvent(input$doPlot, {
     return(NULL)
   }
 
-  ##########################################################
-  # All checks performed: We can now proceed with the plot #
-  ##########################################################
-  # Prevent another plot from being requested
-  disableShinyInputs(input, except=c("^multiPlots*", "^cancelPlot$"))
-  shinyjs::hide("doPlot")
-
-  # Offer possibility to cancel plot
-  plotInterrupted(FALSE)
-  shinyjs::show("cancelPlot")
-
+  # All checks performed: We can now proceed with the plot request
   plotStartedNotifId(showNotification(
     "Processing plot request...", type="message", duration=NULL
   ))
@@ -89,13 +104,14 @@ observeEvent(input$doPlot, {
   # Trigger creation of progress bar
   plotProgressFile(tempfile(pattern="plotProgress"))
 
-  # Fetch raw data asyncronously so app doesn't freeze
+  # Fetch raw data asyncronously so that the app ramins responsive
   asyncNewPlotAndOutput <- futureCall(
-    FUN=function(parentType, db, paramsAsInUiInput, ...) {
+    FUN=function(parentType, db, paramsAsInUiInput, modelDomain, ...) {
       output <- capture.output({
         newPlot <- obsmonPlotClass$new(
           parentType=parentType,
           db=db,
+          modelDomain=modelDomain,
           paramsAsInUiInput=paramsAsInUiInput
         )
         newPlot$fetchRawData(...)
@@ -106,16 +122,18 @@ observeEvent(input$doPlot, {
       parentType=activePlotType(),
       db=req(activeDb()),
       paramsAsInUiInput=reactiveValuesToList(input),
-      progressFile=plotProgressFile()
+      progressFile=plotProgressFile(),
+      modelDomain=sessionDomain()
     )
   )
   currentPlotPid(asyncNewPlotAndOutput$job$pid)
 
   then(asyncNewPlotAndOutput,
     onFulfilled=function(value) {
-      obsmonPlotObj(value$newPlot)
+      replaceObsmonPlotObj(value$newPlot)
     },
     onRejected=function(e) {
+      replaceObsmonPlotObj(NA)
       if(!plotInterrupted()) {
         showNotification("Could not fetch plot data", duration=1, type="error")
         flog.error(e)
@@ -123,7 +141,7 @@ observeEvent(input$doPlot, {
     }
   )
   plotCleanup <- finally(asyncNewPlotAndOutput, function() {
-    # Force-kill eventual zombie forked processes and reset pid
+    # Force-kill eventual lingering forked processes and reset pid
     killProcessTree(currentPlotPid())
     currentPlotPid(-1)
 
@@ -136,76 +154,247 @@ observeEvent(input$doPlot, {
       plotProgressBar(NULL)
     }
 
-    # Hide/show and disable/enable relevant inputs
-    shinyjs::hide("cancelPlot")
-    shinyjs::show("doPlot")
-    enableShinyInputs(input, except="^multiPlots*")
-
     # Printing output produced during async plot, if any
     producedOutput <- value(asyncNewPlotAndOutput)$output
     if(length(producedOutput)>0) message(paste0(producedOutput, "\n"))
   })
-  catch(plotCleanup, function(e) {
-    # This prevents printing the annoying "Unhandled promise error" msg when
-    # plots are cancelled
-    if(!plotInterrupted()) flog.error(e)
-    NULL
-  })
+  catch(plotCleanup, function(e) {if(!plotInterrupted()) flog.error(e)})
   # This NULL is necessary in order to prevent the future from blocking
   NULL
 }, priority=2000)
 
-# Modify the plot data, without performing a new query, if
-# units change
+
+###############################################################################
+# Observe replaceObsmonPlotObj and update the obsmonPlotObj reactiveVal when  #
+# needed. obsmonPlotObj holds the latest used obsmonPlot object. Keeping this #
+# in a variable enables us to modify the plot without making news queries if  #
+# the modifications don't change the plot's raw data. This is handy whenever  #
+# users request things like changes in color schemes, units, domain, etc.     #
+###############################################################################
+obsmonPlotObj <- reactiveVal(NA)
+observeEvent(replaceObsmonPlotObj(), {
+  plotInterrupted(FALSE)
+
+  newPlot <- replaceObsmonPlotObj()
+
+  newValueIsObsmonPlotObj <- is(newPlot, "obsmonPlot")
+  # The NULL value signals that we're waiting for a new plot to be computed,
+  # which will be performed in the futureCall below
+  if(newValueIsObsmonPlotObj || is.null(newPlot)) obsmonPlotObj(NULL)
+  else obsmonPlotObj(newPlot)
+
+  req(newValueIsObsmonPlotObj)
+  notifId <- showNotification("Producing plot...", duration=NULL, type="message")
+
+  # Process data and gen plots asyncronously so that the app ramins responsive
+  # Using an environment as a trick to pass newPlot by reference to the
+  # function used in the futureCall. If we don't do this, and pass newPlot to
+  # the function instead, then the computations triggered by newPlot$data are
+  # initiated not inside future call, but rather at the time newPlot is copied
+  # to be passed to the function (as R passes by value). See, for instance,
+  # https://stat.ethz.ch/pipermail/r-devel/2009-January/051899.html
+  env <- new.env(parent=emptyenv())
+  env$newObsmonPlotObj <- newPlot
+
+  futureNewObsmonPlotObj <- futureCall(FUN=function(env) {
+    newObsmonPlotObj <- env$newObsmonPlotObj
+    # Long computations may be required when producing the charts/leaflet plots.
+    # We'll produce these in an async manner before rendering, to keep the UI
+    # responsive.
+    # Trigger processing of data, chart and leafletMap
+    invisible(newObsmonPlotObj$chart)
+    invisible(newObsmonPlotObj$leafletMap)
+    return(newObsmonPlotObj)
+  },
+    args=list(env=env)
+  )
+  currentPlotPid(futureNewObsmonPlotObj$job$pid)
+
+  then(futureNewObsmonPlotObj,
+    onFulfilled=function(value) {obsmonPlotObj(value)},
+    onRejected=function(e) {
+      obsmonPlotObj(NA)
+      if(!plotInterrupted()) {
+        showNotification("Could not produce plot", duration=1, type="error")
+        flog.error(e)
+      }
+    }
+  )
+  futureNewObsmonPlotObjCleanup <- finally(futureNewObsmonPlotObj, function() {
+    removeNotification(notifId)
+    # Force-kill eventual zombie forked processes and reset pid
+    killProcessTree(currentPlotPid())
+    currentPlotPid(-1)
+  })
+  catch(futureNewObsmonPlotObjCleanup, function(e) {
+    if(!plotInterrupted()) flog.error(e)
+  })
+
+  # This NULL is necessary in order to prevent the future from blocking
+  NULL
+}, ignoreNULL=FALSE)
+
+
+#########################################################
+# Modifying the current plot without making a new query #
+#########################################################
+# If units are changed
 updatePlotAfterUnitsChange <- reactive({
   variableUnits()
   levelsUnits()
 }) %>% debounce(1000)
 observeEvent(updatePlotAfterUnitsChange(), {
-  req(obsmonPlotObj())
-  newObsmonPlotObj <- obsmonPlotObj()
-  obsmonPlotObj(NULL)
-
+  newObsmonPlotObj <- req(obsmonPlotObj())
   newObsmonPlotObj$paramsAsInUiInput$levelsUnits <- levelsUnits()
   newObsmonPlotObj$paramsAsInUiInput$variableUnits <- variableUnits()
-  obsmonPlotObj(newObsmonPlotObj)
+  replaceObsmonPlotObj(newObsmonPlotObj)
 }, ignoreNULL=FALSE)
 
-# Modify the plot, without performing a new query, if
-# user asks for levels to be grouped into standard ones
-observeEvent(input$groupLevelsIntoStandardSwitch, {
-  req(obsmonPlotObj())
-  newObsmonPlotObj <- obsmonPlotObj()
-  obsmonPlotObj(NULL)
+# If sessionDomain is changed
+observeEvent(sessionDomain(), {
+  newObsmonPlotObj <- req(obsmonPlotObj())
+  req(grepl("maps", tolower(newObsmonPlotObj$parentType$category)))
+  newObsmonPlotObj$modelDomain <- sessionDomain()
+  replaceObsmonPlotObj(newObsmonPlotObj)
+})
 
+# If user asks for levels to be grouped into standard ones
+observeEvent(input$groupLevelsIntoStandardSwitch, {
+  newObsmonPlotObj <- req(obsmonPlotObj())
   newObsmonPlotObj$paramsAsInUiInput$groupLevelsIntoStandardSwitch <-
     input$groupLevelsIntoStandardSwitch
-  obsmonPlotObj(newObsmonPlotObj)
+  replaceObsmonPlotObj(newObsmonPlotObj)
 })
 
-# Finally, producing the output
-chart <- reactive({
-  if (is.null(obsmonPlotObj())) return(NULL)
-  notifId <- showNotification(
-    "Producing plot...", duration=NULL, type="message"
-  )
-  on.exit(removeNotification(notifId))
-  obsmonPlotObj()$chart
-})
-leafletMap <- reactive({
-  if (is.null(obsmonPlotObj())) return(NULL)
-  notifId <- showNotification(
-    "Producing leaflet map...", duration=NULL, type="message"
-  )
-  on.exit(removeNotification(notifId))
-  obsmonPlotObj()$leafletMap
+# If user requests updates in colorbar (when applicable)
+initialColorbarRange <- reactive({
+  cmin <- Inf
+  cmax <- -Inf
+  for (dataProperty in req(chart()$x$data)) {
+    cmin <- min(cmin, dataProperty$marker$cmin)
+    cmax <- max(cmin, dataProperty$marker$cmax)
+  }
+  return(c(floor(cmin), ceiling(cmax)))
 })
 
-# Enable/disable, show/hide appropriate inputs
+colorscaleInputsJustInitialised <- reactiveVal()
+output$plotlyPlotEditingOptions <- renderUI({
+  req(all(is.finite(initialColorbarRange())))
+
+  colorMapsDf <- RColorBrewer::brewer.pal.info
+  colorMapChoices <- list()
+  for(categ in unique(colorMapsDf$category)) {
+    colorMapChoices[[categ]] <- rownames(subset(colorMapsDf, category==categ))
+  }
+
+  initialColormap <- .getSuitableColorScale(obsmonPlotObj()$data)
+  initialColormapName <- intersect(initialColormap$name, unlist(colorMapChoices))
+
+  colorscaleInputsJustInitialised(TRUE)
+  shinyBS::bsCollapse(shinyBS::bsCollapsePanel(
+    title=shiny::icon("cog"),
+    value="Colour Options",
+    pickerInput(
+      "mainTabPlotColorscaleColorMap",
+      label="Colour Map",
+      choices=colorMapChoices,
+      selected=initialColormapName,
+      multiple=TRUE,
+      options=list(
+        `max-options`=1,
+        `none-selected-text`="Select colour map",
+        `live-search`=TRUE
+      ),
+      inline=TRUE
+    ),
+    materialSwitch(
+      inputId='reverseColorscaleSwitch',
+      label="Reverse",
+      status="info",
+      inline=TRUE,
+      right=TRUE,
+      value=TRUE
+    ),
+    numericRangeInput(
+      "mainTabPlotColorscaleRange",
+      label="Colour Scale Range",
+      value=initialColorbarRange()
+    )
+  ))
+})
+
+triggerColorscaleUpdate <- eventReactive({
+  input$mainTabPlotColorscaleColorMap
+  input$mainTabPlotColorscaleRange
+  input$reverseColorscaleSwitch
+}, {
+  if(isTRUE(colorscaleInputsJustInitialised())) {
+    colorscaleInputsJustInitialised(FALSE)
+    return(NULL)
+  }
+  return(TRUE)
+})
+
+newColorscale <- eventReactive(triggerColorscaleUpdate(), {
+  colorScaleName <- req(input$mainTabPlotColorscaleColorMap)
+  palette <- brewer.pal(brewer.pal.info[colorScaleName,]$maxcolors, colorScaleName)
+  palette <- colorRampPalette(palette)(25)
+  if(isTRUE(input$reverseColorscaleSwitch)) palette <- rev(palette)
+
+  return(list(
+    name=colorScaleName,
+    palette=palette,
+    domain=req(input$mainTabPlotColorscaleRange)
+  ))
+})
+
+observeEvent(newColorscale(), {
+  palette <- newColorscale()$palette
+  colorMap <- t(mapply(c, seq(0, 1, length.out=length(palette)), palette))
+  plotlyProxy(outputId="plotly", session) %>%
+    plotlyProxyInvoke(
+      method="update",
+      list(
+        marker.cmin=req(newColorscale()$domain[1]),
+        marker.cmax=req(newColorscale()$domain[2])
+      )
+    ) %>%
+    plotlyProxyInvoke(
+      method="restyle",
+      list(marker.colorscale=list(colorMap))
+    )
+})
+
+observeEvent(newColorscale(), {
+  req("grid_i" %in% colnames(obsmonPlotObj()$data))
+
+  dataPal <- colorNumeric(palette=newColorscale()$palette, domain=newColorscale()$domain)
+  indices <- list()
+  values <- list()
+  for(iData in seq_along(chart()$x$data)) {
+    dataEntry <- tryCatch(chart()$x$data[[iData]], error=function(e) NULL)
+    if(!isTRUE(dataEntry$type == "scattergeo")) next
+    value <- as.numeric(dataEntry$customdata[[1]])
+    if(length(value) == 0) next
+    values <- append(values, dataPal(value))
+    indices <- append(indices, iData-1)
+  }
+
+  plotlyProxy(outputId="plotly", session) %>%
+    plotlyProxyInvoke(
+      method="restyle",
+      list(fillcolor=values),
+      indices
+    )
+})
+
+###########################################################################
+# Enable/disable, show/hide appropriate outputs depending on type of plot #
+###########################################################################
 observe({
   req(obsmonPlotObj())
   # (i) Maps tab
-  if(is.null(leafletMap())) {
+  if(is.null(obsmonPlotObj()$leafletMap)) {
     if(isTRUE(input$mainAreaTabsetPanel=="mapTab")) {
       updateTabsetPanel(session, "mainAreaTabsetPanel", "plotlyTab")
     }
@@ -215,7 +404,7 @@ observe({
   }
 
   # (ii) Interactive or regular plot tabs
-  interactive <- isTRUE("plotly" %in% class(chart()))
+  interactive <- is.null(obsmonPlotObj()) || isTRUE("plotly" %in% class(obsmonPlotObj()$chart))
   if(interactive) {
     hideTab("mainAreaTabsetPanel", "plotTab")
     showTab("mainAreaTabsetPanel", "plotlyTab")
@@ -226,27 +415,35 @@ observe({
 
   if(isTRUE(interactive && input$mainAreaTabsetPanel=="plotTab")) {
     updateTabsetPanel(session, "mainAreaTabsetPanel", "plotlyTab")
-  } else if(!interactive && input$mainAreaTabsetPanel=="plotlyTab") {
+  } else if(isTRUE(!interactive && input$mainAreaTabsetPanel=="plotlyTab")) {
     updateTabsetPanel(session, "mainAreaTabsetPanel", "plotTab")
   }
 })
 
-# Rendering plot/map/dataTable
+#################################
+# Finally, rendering the output #
+#################################
 # (i) Rendering plots
 # (i.i) Interactive plot, if plot is a plotly object
+chart <- reactiveVal()
+observeEvent(obsmonPlotObj(), {
+  if(is(obsmonPlotObj(), "obsmonPlot")) chart(obsmonPlotObj()$chart)
+  else if(is.null(obsmonPlotObj())) chart(SPINNER_CHART)
+  else chart(NULL)
+}, ignoreNULL=FALSE)
 output$plotly <- renderPlotly({
-  if(is.null(obsmonPlotObj())) return(NULL)
-  req("plotly" %in% class(chart()))
-  notifId <- showNotification(
-    "Rendering plot...", duration=NULL, type="message"
-  )
-  on.exit(removeNotification(notifId))
+  req("plotly" %in% class(req(chart())))
+  if(!identical(chart(), SPINNER_CHART)) {
+    notifId <- showNotification(
+      "Rendering plot...", duration=NULL, type="message"
+    )
+    on.exit(removeNotification(notifId))
+  }
   chart()
 })
 # (i.ii) Non-interactive plot, if plot is not a plotly object
 output$plot <- renderPlot({
-  if(is.null(obsmonPlotObj())) return(NULL)
-  req(!("plotly" %in% class(chart())))
+  req(!("plotly" %in% class(req(chart()))))
   notifId <- showNotification(
     "Rendering plot...", duration=NULL, type="message"
   )
@@ -258,7 +455,7 @@ output$plot <- renderPlot({
 
 # (ii) Rendering dataTables
 output$rawDataTable <- renderDataTable({
-  if(is.null(obsmonPlotObj())) return(NULL)
+  req(obsmonPlotObj())
   notifId <- showNotification(
     "Rendering data table...", duration=NULL, type="message"
   )
@@ -279,7 +476,7 @@ output$rawDataTableDownloadAsCsv <- downloadHandler(
 )
 
 output$plotDataTable <- renderDataTable({
-  if(is.null(obsmonPlotObj())) return(NULL)
+  req(obsmonPlotObj())
   notifId <- showNotification(
     "Rendering data table...", duration=NULL, type="message"
   )
@@ -299,82 +496,11 @@ output$plotDataTableDownloadAsCsv <- downloadHandler(
 
 # (iii) Rendering leaflet maps
 output$map <- renderLeaflet({
-  if(is.null(leafletMap())) return(NULL)
+  req(obsmonPlotObj()$leafletMap)
   notifId <- showNotification(
     "Rendering map...", duration=NULL, type="message"
   )
   on.exit(removeNotification(notifId))
-  leafletMap()
+  obsmonPlotObj()$leafletMap
 })
 output$mapTitle <- renderText(obsmonPlotObj()$title)
-
-# Interactively update colorbar range in charts where this applies
-output$plotlyPlotEditingOptions <- renderUI({
-  chart <- req(obsmonPlotObj()$chart)
-
-  cmin <- Inf
-  cmax <- -Inf
-  for (dataProperty in chart$x$data) {
-    cmin <- min(cmin, dataProperty$marker$cmin)
-    cmax <- max(cmin, dataProperty$marker$cmax)
-  }
-
-  req(all(is.finite(c(cmin, cmax))))
-
-  colorMapsDf <- RColorBrewer::brewer.pal.info
-  colorMapChoices <- list()
-  for(categ in unique(colorMapsDf$category)) {
-    colorMapChoices[[categ]] <- rownames(subset(colorMapsDf, category==categ))
-  }
-
-  shinyBS::bsCollapse(shinyBS::bsCollapsePanel(
-    title=shiny::icon("cog"),
-    value="Colour Options",
-    pickerInput(
-      "mainTabPlotColorscaleColorMap",
-      label="Colour Map",
-      choices=colorMapChoices,
-      multiple=TRUE,
-      options=list(
-        `max-options`=1,
-        `none-selected-text`="Select colour map",
-        `live-search`=TRUE
-      )
-    ),
-    numericRangeInput(
-      "mainTabPlotColorscaleRange",
-      label="Colour Scale Range",
-      value=as.numeric(format(c(cmin, cmax), digits=3))
-    )
-  ))
-})
-
-observe(
-  plotlyProxy(outputId="plotly", session) %>%
-    plotlyProxyInvoke(
-      method="update",
-      list(
-        marker.cmin=req(input$mainTabPlotColorscaleRange[1]),
-        marker.cmax=req(input$mainTabPlotColorscaleRange[2])
-      )
-    )
-)
-
-observeEvent(input$mainTabPlotColorscaleColorMap,{
-  colorScaleName <- input$mainTabPlotColorscaleColorMap
-
-  pallete <- brewer.pal(brewer.pal.info[colorScaleName,]$maxcolors, colorScaleName)
-  pallete <- colorRampPalette(pallete)(25)
-  palleteRgba <- sapply(pallete, plotly::toRGB, USE.NAMES=FALSE)
-
-  colorMap <- t(mapply(c,
-    seq(0, 1, length.out=length(palleteRgba)),
-    palleteRgba
-  ))
-
-  plotlyProxy(outputId="plotly", session) %>%
-    plotlyProxyInvoke(
-      method="restyle",
-      list(marker.colorscale=list(colorMap))
-    )
-})

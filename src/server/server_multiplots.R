@@ -119,7 +119,8 @@ observeEvent(input$multiPlotsDoPlot, {
       plotType=pConfig$plotType,
       inputsForAllPlots=inputsForAllPlots,
       db=db,
-      progressFile=multiPlotsProgressFile()
+      progressFile=multiPlotsProgressFile(),
+      modelDomain=sessionDomain()
     )
   )
   multiPlotCurrentPid(multiPlotsAsyncAndOutput$job$pid)

@@ -133,6 +133,7 @@ shinyServer(function(input, output, session) {
   session$userData$UiChoices <- list()
 
   # Separating the logic for these sections, as they are quite distinct
+  source("src/server/server_domain.R", local=TRUE)
   source("src/server/server_main_tab.R", local=TRUE)
   source("src/server/server_cache.R", local=TRUE)
   source("src/server/server_main_tab_plots.R", local=TRUE)

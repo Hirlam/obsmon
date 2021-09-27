@@ -47,6 +47,15 @@ runAppHandlingBusyPort <- function(
   }
 }
 
+# Wrapper to shinycssloaders::withSpinner with useful defaults
+withSpinnerWrapper <- function(...) {
+  return(withSpinner(...,
+    image=SPINNER_IMAGE_PATH,
+    image.width=100,
+    image.height=100
+  ))
+}
+
 # Showing messages in the UI
 signalError <- function(message, title="Error") {
   showModal(modalDialog(
@@ -162,7 +171,7 @@ interactivePlotTabPanel <- function(plotOutputId) {
       style="display:flex; align-items:center; justify-items: center;",
       div(
         style="flex-grow:1; overflow:auto;",
-        plotlyOutputInsideFluidRow(plotOutputId) %>% withSpinner(color="#0dc5c1")
+        plotlyOutputInsideFluidRow(plotOutputId) %>% withSpinnerWrapper()
       ),
       div(
         style="float:right;",
@@ -174,7 +183,7 @@ interactivePlotTabPanel <- function(plotOutputId) {
 
 nonInteractivePlotTabPanel <- function(plotOutputId) {
   tabPanel("Plot", value="plotTab",
-    plotOutputInsideFluidRow(plotOutputId) %>% withSpinner(color="#0dc5c1")
+    plotOutputInsideFluidRow(plotOutputId) %>% withSpinnerWrapper()
   )
 }
 

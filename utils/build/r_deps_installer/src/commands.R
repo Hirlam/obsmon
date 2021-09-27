@@ -65,8 +65,12 @@ create_local_repo <- function(args) {
 clean <- function(args) {
   dirList <- args$output_dirs
   if("all" %in% args$clean) {
-    cat("Removing dir", args$output_rootdir, "\n")
-    unlink(args$output_rootdir, recursive=TRUE)
+    cat("Removing the following directories:\n")
+    dirsToRemove <- c(args$output_rootdir, INSTALLER_OWN_INSTALL_LIB)
+    for(directory in dirsToRemove) {
+      cat(sprintf("    > %s\n", directory))
+      unlink(directory, recursive=TRUE)
+    }
   } else {
     for (dirType in names(dirList)) {
       if(!dirType %in% args$clean) next
