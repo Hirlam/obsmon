@@ -163,7 +163,7 @@ multiPlotsMakeShinyInputs <- function(pConfig) {
 }
 
 prepareMultiPlots <- function(
-  plotType, inputsForAllPlots, db, progressFile=NULL
+  plotType, inputsForAllPlots, db, modelDomain, progressFile=NULL
 ) {
   allPlots <- list()
   for(iPlot in seq_along(inputsForAllPlots)) {
@@ -176,7 +176,8 @@ prepareMultiPlots <- function(
    newPlot <- obsmonPlotClass$new(
      parentType=plotType,
      db=db,
-     paramsAsInUiInput=inputsForAllPlots[[iPlot]]
+     paramsAsInUiInput=inputsForAllPlots[[iPlot]],
+     modelDomain=modelDomain
    )
    newPlot$fetchRawData()
    allPlots[[multiPlotsGenId(iPlot)]] <- newPlot
@@ -276,7 +277,7 @@ datesCompatibleWithPlotType <- function(pConfig) {
     msg <- paste(
       msg,
       "Missing required date info. Needs one of the following: (i) startDate",
-      " and endDate, (ii) startDate and nDays, or (iii) a negative startDate. "
+      "and endDate, (ii) startDate and nDays, or (iii) a negative startDate. "
     )
     compatible <- FALSE
   }
