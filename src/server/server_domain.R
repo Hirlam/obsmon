@@ -3,6 +3,9 @@
 ##########################################################################
 
 fillInDomainDefaults <- function() {
+  defaultsDefined <- DOMAIN$grid$hasPoints
+  shinyjs::toggle("domainResetDefaults", condition=defaultsDefined)
+  if(!defaultsDefined) return(NULL)
   updateNumericInput(session, "domainLonc", value=DOMAIN$center_lonlat[1])
   updateNumericInput(session, "domainLatc", value=DOMAIN$center_lonlat[2])
   updateNumericInput(session, "domainLon0", value=DOMAIN$proj_lon0_lat0[1])
@@ -13,7 +16,7 @@ fillInDomainDefaults <- function() {
   updateMaterialSwitch(session, "domainLmrt", value=isTRUE(DOMAIN$lmrt))
 }
 
-if(DOMAIN$grid$hasPoints) fillInDomainDefaults()
+fillInDomainDefaults()
 observeEvent(input$domainResetDefaults, fillInDomainDefaults())
 
 sessionDomainParams <- reactive(
