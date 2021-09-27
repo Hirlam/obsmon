@@ -52,7 +52,10 @@ getChildPIDs <- function(pid) {
 
 killProcessTree <- function(pid, warnFail=FALSE) {
   pidsToKill <- c(pid, getChildPIDs(pid))
-  killSuccess <- tools::pskill(pidsToKill, tools::SIGTERM)
+  flog.debug("Killing jobs with PID(s) %s", paste(pidsToKill, collapse=", "))
+  killWithSIGTERM <- tools::pskill(pidsToKill, tools::SIGTERM)
+  killWithSIGKILL <- tools::pskill(pidsToKill, tools::SIGKILL)
+  killSuccess <- killWithSIGTERM | killWithSIGKILL
   gc()
   if(warnFail && !all(killSuccess)) {
     msg <- "killProcessTree: Failed to kill procs with the following PIDs:"
