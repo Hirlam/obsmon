@@ -13,18 +13,17 @@ appendTab(inputId="mainAreaTabsetPanel", queryAndDataTabPanel())
 ##################################
 currentPlotPid <- reactiveVal(-1)
 observeEvent(currentPlotPid(), {
-  if(currentPlotPid() >= 0) {
-    # Prevent another plot from being requested
-    disableShinyInputs(input, except=c("^multiPlots*", "^cancelPlot$"))
-    shinyjs::hide("doPlot")
+  # Prevent another plot from being requested which another is
+  # on course, and offer possibility to cancel plot
+  thereIsAPlotInPreparation <- isTRUE(currentPlotPid() >= 0)
 
-    # Offer possibility to cancel plot
+  shinyjs::toggle("doPlot", condition=!thereIsAPlotInPreparation)
+  shinyjs::toggle("cancelPlot", condition=thereIsAPlotInPreparation)
+
+  if(thereIsAPlotInPreparation) {
+    disableShinyInputs(input, except=c("^multiPlots*", "^cancelPlot$"))
     plotInterrupted(FALSE)
-    shinyjs::show("cancelPlot")
   } else {
-    # Hide/show and disable/enable relevant inputs
-    shinyjs::hide("cancelPlot")
-    shinyjs::show("doPlot")
     enableShinyInputs(input, except="^multiPlots*")
   }
 })
