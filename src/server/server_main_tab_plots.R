@@ -8,8 +8,27 @@ appendTab(inputId="mainAreaTabsetPanel", leafletMapTabPanel())
 hideTab("mainAreaTabsetPanel", "mapTab") # Show mapTab only when applicable
 appendTab(inputId="mainAreaTabsetPanel", queryAndDataTabPanel())
 
+##################################
+# Logic for "Cancel Plot" button #
+##################################
 currentPlotPid <- reactiveVal(-1)
-plotStartedNotifId <- reactiveVal(-1)
+observeEvent(currentPlotPid(), {
+  if(currentPlotPid() >= 0) {
+    # Prevent another plot from being requested
+    disableShinyInputs(input, except=c("^multiPlots*", "^cancelPlot$"))
+    shinyjs::hide("doPlot")
+
+    # Offer possibility to cancel plot
+    plotInterrupted(FALSE)
+    shinyjs::show("cancelPlot")
+  } else {
+    # Hide/show and disable/enable relevant inputs
+    shinyjs::hide("cancelPlot")
+    shinyjs::show("doPlot")
+    enableShinyInputs(input, except="^multiPlots*")
+  }
+})
+
 plotInterrupted <- reactiveVal()
 observeEvent(input$cancelPlot, {
   showNotification("Cancelling plot", type="warning", duration=1)
@@ -17,7 +36,10 @@ observeEvent(input$cancelPlot, {
   killProcessTree(currentPlotPid(), warnFail=TRUE)
 }, priority=2000, ignoreInit=TRUE)
 
-# Management of plot progress bar
+
+###################################################
+# Management of "fetching plot data" progress bar #
+###################################################
 plotProgressFile <- reactiveVal(NULL)
 plotProgressStatus <- reactiveVal(function() NULL)
 plotProgressBar <- reactiveVal(NULL)
@@ -26,6 +48,7 @@ observeEvent(plotProgressFile(), {
     500, session, isolate(plotProgressFile()), readPlotProgressFile
   ))
 })
+plotStartedNotifId <- reactiveVal(-1)
 observeEvent(plotProgressStatus()(), {
   pProgress <- plotProgressStatus()()
   req(isTRUE(pProgress$total>0), isTRUE(pProgress$current<=pProgress$total))
@@ -46,69 +69,22 @@ observeEvent(plotProgressStatus()(), {
   )
 })
 
-obsmonPlotObj <- reactiveVal(NA)
+
+###############################################################################
+# Fetch plot data when user clicks in "Plot". Then update the obsmonPlotObj   #
+# (using replaceObsmonPlotObj) to trigger data post-processing and production #
+# of figures to the next observer (which is performed in another observer)    #
+###############################################################################
 replaceObsmonPlotObj <- reactiveVal()
-observeEvent(replaceObsmonPlotObj(), {
-  newPlot <- replaceObsmonPlotObj()
-
-  newValueIsObsmonPlotObj <- is(newPlot, "obsmonPlot")
-  # The NULL value signals that we're waiting for a new plot to be computed,
-  # which will be performed in the futureCall below
-  if(newValueIsObsmonPlotObj || is.null(newPlot)) obsmonPlotObj(NULL)
-  else obsmonPlotObj(newPlot)
-
-  req(newValueIsObsmonPlotObj)
-  notifId <- showNotification("Producing plot...", duration=NULL, type="message")
-
-  # Using an environment as a trick to pass newPlot by reference to the
-  # function used in the futureCall. If we don't do this, and pass newPlot to
-  # the function instead, then the computations triggered by newPlot$data are
-  # initiated not inside future call, but rather at the time newPlot is copied
-  # to be passed to the function (as R passes by value). See, for instance,
-  # https://stat.ethz.ch/pipermail/r-devel/2009-January/051899.html
-  env <- new.env(parent=emptyenv())
-  env$newObsmonPlotObj <- newPlot
-
-  futureNewObsmonPlotObj <- futureCall(FUN=function(env) {
-    newObsmonPlotObj <- env$newObsmonPlotObj
-    # Long computations may be required when producing the charts/leaflet plots.
-    # We'll produce these in an async manner before rendering, to keep the UI
-    # responsive.
-    # Trigger processing of data, chart and leafletMap
-    invisible(newObsmonPlotObj$chart)
-    invisible(newObsmonPlotObj$leafletMap)
-    return(newObsmonPlotObj)
-  },
-    args=list(env=env)
-  )
-  then(futureNewObsmonPlotObj,
-    onFulfilled=function(value) {obsmonPlotObj(value)},
-    onRejected=function(e) {
-      obsmonPlotObj(NA)
-      flog.error(e)
-      showNotification("Could not produce plot", duration=1, type="error")
-    }
-  )
-  futureNewObsmonPlotObjCleanup <- finally(futureNewObsmonPlotObj, function() {
-    removeNotification(notifId)
-  })
-
-  # This NULL is necessary in order to prevent the future from blocking
-  NULL
-}, ignoreNULL=FALSE)
-
 observeEvent(input$doPlot, {
   # Make sure a plot cannot be requested if another is being produced.
-  # Although the plot button is hidden when the plot is being prepared,
-  # such an action may sometimes not be quick enough (e.g., when rendering
-  # is ongoing).
-  if(currentPlotPid()>-1) {
+  if(currentPlotPid() > -1) {
     showNotification(
       "Another plot is being produced. Please wait.",
       type="warning", duration=1
     )
   }
-  req(currentPlotPid()==-1)
+  req(currentPlotPid() == -1)
 
   # Erase any plot currently on display
   replaceObsmonPlotObj(NULL)
@@ -121,17 +97,7 @@ observeEvent(input$doPlot, {
     return(NULL)
   }
 
-  ##########################################################
-  # All checks performed: We can now proceed with the plot #
-  ##########################################################
-  # Prevent another plot from being requested
-  disableShinyInputs(input, except=c("^multiPlots*", "^cancelPlot$"))
-  shinyjs::hide("doPlot")
-
-  # Offer possibility to cancel plot
-  plotInterrupted(FALSE)
-  shinyjs::show("cancelPlot")
-
+  # All checks performed: We can now proceed with the plot request
   plotStartedNotifId(showNotification(
     "Processing plot request...", type="message", duration=NULL
   ))
@@ -139,7 +105,7 @@ observeEvent(input$doPlot, {
   # Trigger creation of progress bar
   plotProgressFile(tempfile(pattern="plotProgress"))
 
-  # Fetch raw data asyncronously so app doesn't freeze
+  # Fetch raw data asyncronously so that the app ramins responsive
   asyncNewPlotAndOutput <- futureCall(
     FUN=function(parentType, db, paramsAsInUiInput, modelDomain, ...) {
       output <- capture.output({
@@ -176,7 +142,7 @@ observeEvent(input$doPlot, {
     }
   )
   plotCleanup <- finally(asyncNewPlotAndOutput, function() {
-    # Force-kill eventual zombie forked processes and reset pid
+    # Force-kill eventual lingering forked processes and reset pid
     killProcessTree(currentPlotPid())
     currentPlotPid(-1)
 
@@ -189,27 +155,91 @@ observeEvent(input$doPlot, {
       plotProgressBar(NULL)
     }
 
-    # Hide/show and disable/enable relevant inputs
-    shinyjs::hide("cancelPlot")
-    shinyjs::show("doPlot")
-    enableShinyInputs(input, except="^multiPlots*")
-
     # Printing output produced during async plot, if any
     producedOutput <- value(asyncNewPlotAndOutput)$output
     if(length(producedOutput)>0) message(paste0(producedOutput, "\n"))
   })
-  catch(plotCleanup, function(e) {
-    # This prevents printing the annoying "Unhandled promise error" msg when
-    # plots are cancelled
-    if(!plotInterrupted()) flog.error(e)
-    NULL
-  })
+  catch(plotCleanup, function(e) {if(!plotInterrupted()) flog.error(e)})
   # This NULL is necessary in order to prevent the future from blocking
   NULL
 }, priority=2000)
 
-# Modify the plot data, without performing a new query, if
-# units change
+
+###############################################################################
+# Observe replaceObsmonPlotObj and update the obsmonPlotObj reactiveVal when  #
+# needed. obsmonPlotObj holds the latest used obsmonPlot object. Keeping this #
+# in a variable enables us to modify the plot without making news queries if  #
+# the modifications don't change the plot's raw data. This is handy whenever  #
+# users request things like changes in color schemes, units, domain, etc.     #
+###############################################################################
+obsmonPlotObj <- reactiveVal(NA)
+observeEvent(replaceObsmonPlotObj(), {
+  plotInterrupted(FALSE)
+
+  newPlot <- replaceObsmonPlotObj()
+
+  newValueIsObsmonPlotObj <- is(newPlot, "obsmonPlot")
+  # The NULL value signals that we're waiting for a new plot to be computed,
+  # which will be performed in the futureCall below
+  if(newValueIsObsmonPlotObj || is.null(newPlot)) obsmonPlotObj(NULL)
+  else obsmonPlotObj(newPlot)
+
+  req(newValueIsObsmonPlotObj)
+  notifId <- showNotification("Producing plot...", duration=NULL, type="message")
+
+  # Process data and gen plots asyncronously so that the app ramins responsive
+  # Using an environment as a trick to pass newPlot by reference to the
+  # function used in the futureCall. If we don't do this, and pass newPlot to
+  # the function instead, then the computations triggered by newPlot$data are
+  # initiated not inside future call, but rather at the time newPlot is copied
+  # to be passed to the function (as R passes by value). See, for instance,
+  # https://stat.ethz.ch/pipermail/r-devel/2009-January/051899.html
+  env <- new.env(parent=emptyenv())
+  env$newObsmonPlotObj <- newPlot
+
+  futureNewObsmonPlotObj <- futureCall(FUN=function(env) {
+    newObsmonPlotObj <- env$newObsmonPlotObj
+    # Long computations may be required when producing the charts/leaflet plots.
+    # We'll produce these in an async manner before rendering, to keep the UI
+    # responsive.
+    # Trigger processing of data, chart and leafletMap
+    invisible(newObsmonPlotObj$chart)
+    invisible(newObsmonPlotObj$leafletMap)
+    return(newObsmonPlotObj)
+  },
+    args=list(env=env)
+  )
+  currentPlotPid(futureNewObsmonPlotObj$job$pid)
+
+  then(futureNewObsmonPlotObj,
+    onFulfilled=function(value) {obsmonPlotObj(value)},
+    onRejected=function(e) {
+      obsmonPlotObj(NA)
+      if(!plotInterrupted()) {
+        showNotification("Could not produce plot", duration=1, type="error")
+        flog.error(e)
+      }
+    }
+  )
+  futureNewObsmonPlotObjCleanup <- finally(futureNewObsmonPlotObj, function() {
+    removeNotification(notifId)
+    # Force-kill eventual zombie forked processes and reset pid
+    killProcessTree(currentPlotPid())
+    currentPlotPid(-1)
+  })
+  catch(futureNewObsmonPlotObjCleanup, function(e) {
+    if(!plotInterrupted()) flog.error(e)
+  })
+
+  # This NULL is necessary in order to prevent the future from blocking
+  NULL
+}, ignoreNULL=FALSE)
+
+
+#########################################################
+# Modifying the current plot without making a new query #
+#########################################################
+# If units are changed
 updatePlotAfterUnitsChange <- reactive({
   variableUnits()
   levelsUnits()
@@ -221,17 +251,7 @@ observeEvent(updatePlotAfterUnitsChange(), {
   replaceObsmonPlotObj(newObsmonPlotObj)
 }, ignoreNULL=FALSE)
 
-# Modify the plot, without performing a new query, if
-# user asks for levels to be grouped into standard ones
-observeEvent(input$groupLevelsIntoStandardSwitch, {
-  newObsmonPlotObj <- req(obsmonPlotObj())
-  newObsmonPlotObj$paramsAsInUiInput$groupLevelsIntoStandardSwitch <-
-    input$groupLevelsIntoStandardSwitch
-  replaceObsmonPlotObj(newObsmonPlotObj)
-})
-
-# Modify the plot, without performing a new query, if
-# sessionDomain is changed
+# If sessionDomain is changed
 observeEvent(sessionDomain(), {
   newObsmonPlotObj <- req(obsmonPlotObj())
   req(grepl("maps", tolower(newObsmonPlotObj$parentType$category)))
@@ -239,122 +259,15 @@ observeEvent(sessionDomain(), {
   replaceObsmonPlotObj(newObsmonPlotObj)
 })
 
-# Finally, producing the output
-
-# Enable/disable, show/hide appropriate inputs
-observe({
-  req(obsmonPlotObj())
-  # (i) Maps tab
-  if(is.null(obsmonPlotObj()$leafletMap)) {
-    if(isTRUE(input$mainAreaTabsetPanel=="mapTab")) {
-      updateTabsetPanel(session, "mainAreaTabsetPanel", "plotlyTab")
-    }
-    hideTab("mainAreaTabsetPanel", "mapTab")
-  } else {
-    showTab("mainAreaTabsetPanel", "mapTab")
-  }
-
-  # (ii) Interactive or regular plot tabs
-  interactive <- is.null(obsmonPlotObj()) || isTRUE("plotly" %in% class(obsmonPlotObj()$chart))
-  if(interactive) {
-    hideTab("mainAreaTabsetPanel", "plotTab")
-    showTab("mainAreaTabsetPanel", "plotlyTab")
-  } else {
-    hideTab("mainAreaTabsetPanel", "plotlyTab")
-    showTab("mainAreaTabsetPanel", "plotTab")
-  }
-
-  if(isTRUE(interactive && input$mainAreaTabsetPanel=="plotTab")) {
-    updateTabsetPanel(session, "mainAreaTabsetPanel", "plotlyTab")
-  } else if(isTRUE(!interactive && input$mainAreaTabsetPanel=="plotlyTab")) {
-    updateTabsetPanel(session, "mainAreaTabsetPanel", "plotTab")
-  }
+# If user asks for levels to be grouped into standard ones
+observeEvent(input$groupLevelsIntoStandardSwitch, {
+  newObsmonPlotObj <- req(obsmonPlotObj())
+  newObsmonPlotObj$paramsAsInUiInput$groupLevelsIntoStandardSwitch <-
+    input$groupLevelsIntoStandardSwitch
+  replaceObsmonPlotObj(newObsmonPlotObj)
 })
 
-# Rendering plot/map/dataTable
-# (i) Rendering plots
-# (i.i) Interactive plot, if plot is a plotly object
-chart <- reactiveVal()
-observeEvent(obsmonPlotObj(), {
-  if(is(obsmonPlotObj(), "obsmonPlot")) chart(obsmonPlotObj()$chart)
-  else if(is.null(obsmonPlotObj())) chart(SPINNER_CHART)
-  else chart(NULL)
-}, ignoreNULL=FALSE)
-output$plotly <- renderPlotly({
-  req("plotly" %in% class(req(chart())))
-  if(!identical(chart(), SPINNER_CHART)) {
-    notifId <- showNotification(
-      "Rendering plot...", duration=NULL, type="message"
-    )
-    on.exit(removeNotification(notifId))
-  }
-  chart()
-})
-# (i.ii) Non-interactive plot, if plot is not a plotly object
-output$plot <- renderPlot({
-  req(!("plotly" %in% class(req(chart()))))
-  notifId <- showNotification(
-    "Rendering plot...", duration=NULL, type="message"
-  )
-  on.exit(removeNotification(notifId))
-  chart()
-},
-  res=96, pointsize=18
-)
-
-# (ii) Rendering dataTables
-output$rawDataTable <- renderDataTable({
-  req(obsmonPlotObj())
-  notifId <- showNotification(
-    "Rendering data table...", duration=NULL, type="message"
-  )
-  on.exit(removeNotification(notifId))
-  obsmonPlotObj()$rawData
-},
-  options=list(scrollX=TRUE, scrollY="300px")
-)
-output$queryUsed <- renderText(obsmonPlotObj()$sqliteQuery)
-
-output$rawDataTableDownloadAsTxt <- downloadHandler(
-  filename = function() "raw_data.txt",
-  content = function(file) req(obsmonPlotObj())$exportData(file, format="txt", raw=TRUE)
-)
-output$rawDataTableDownloadAsCsv <- downloadHandler(
-  filename = function() "raw_data.csv",
-  content = function(file) req(obsmonPlotObj())$exportData(file, format="csv", raw=TRUE)
-)
-
-output$plotDataTable <- renderDataTable({
-  req(obsmonPlotObj())
-  notifId <- showNotification(
-    "Rendering data table...", duration=NULL, type="message"
-  )
-  on.exit(removeNotification(notifId))
-  obsmonPlotObj()$dataWithUnits
-},
-  options=list(scrollX=TRUE, scrollY="300px")
-)
-output$plotDataTableDownloadAsTxt <- downloadHandler(
-  filename = function() "plot_data.txt",
-  content = function(file) req(obsmonPlotObj())$exportData(file, format="txt")
-)
-output$plotDataTableDownloadAsCsv <- downloadHandler(
-  filename = function() "plot_data.csv",
-  content = function(file) req(obsmonPlotObj())$exportData(file, format="csv")
-)
-
-# (iii) Rendering leaflet maps
-output$map <- renderLeaflet({
-  req(obsmonPlotObj()$leafletMap)
-  notifId <- showNotification(
-    "Rendering map...", duration=NULL, type="message"
-  )
-  on.exit(removeNotification(notifId))
-  obsmonPlotObj()$leafletMap
-})
-output$mapTitle <- renderText(obsmonPlotObj()$title)
-
-# Interactively update colorbar range in charts where this applies
+# If user requests updates in colorbar (when applicable)
 initialColorbarRange <- reactive({
   cmin <- Inf
   cmax <- -Inf
@@ -475,3 +388,120 @@ observeEvent(newColorscale(), {
       indices
     )
 })
+
+###########################################################################
+# Enable/disable, show/hide appropriate outputs depending on type of plot #
+###########################################################################
+observe({
+  req(obsmonPlotObj())
+  # (i) Maps tab
+  if(is.null(obsmonPlotObj()$leafletMap)) {
+    if(isTRUE(input$mainAreaTabsetPanel=="mapTab")) {
+      updateTabsetPanel(session, "mainAreaTabsetPanel", "plotlyTab")
+    }
+    hideTab("mainAreaTabsetPanel", "mapTab")
+  } else {
+    showTab("mainAreaTabsetPanel", "mapTab")
+  }
+
+  # (ii) Interactive or regular plot tabs
+  interactive <- is.null(obsmonPlotObj()) || isTRUE("plotly" %in% class(obsmonPlotObj()$chart))
+  if(interactive) {
+    hideTab("mainAreaTabsetPanel", "plotTab")
+    showTab("mainAreaTabsetPanel", "plotlyTab")
+  } else {
+    hideTab("mainAreaTabsetPanel", "plotlyTab")
+    showTab("mainAreaTabsetPanel", "plotTab")
+  }
+
+  if(isTRUE(interactive && input$mainAreaTabsetPanel=="plotTab")) {
+    updateTabsetPanel(session, "mainAreaTabsetPanel", "plotlyTab")
+  } else if(isTRUE(!interactive && input$mainAreaTabsetPanel=="plotlyTab")) {
+    updateTabsetPanel(session, "mainAreaTabsetPanel", "plotTab")
+  }
+})
+
+#################################
+# Finally, rendering the output #
+#################################
+# (i) Rendering plots
+# (i.i) Interactive plot, if plot is a plotly object
+chart <- reactiveVal()
+observeEvent(obsmonPlotObj(), {
+  if(is(obsmonPlotObj(), "obsmonPlot")) chart(obsmonPlotObj()$chart)
+  else if(is.null(obsmonPlotObj())) chart(SPINNER_CHART)
+  else chart(NULL)
+}, ignoreNULL=FALSE)
+output$plotly <- renderPlotly({
+  req("plotly" %in% class(req(chart())))
+  if(!identical(chart(), SPINNER_CHART)) {
+    notifId <- showNotification(
+      "Rendering plot...", duration=NULL, type="message"
+    )
+    on.exit(removeNotification(notifId))
+  }
+  chart()
+})
+# (i.ii) Non-interactive plot, if plot is not a plotly object
+output$plot <- renderPlot({
+  req(!("plotly" %in% class(req(chart()))))
+  notifId <- showNotification(
+    "Rendering plot...", duration=NULL, type="message"
+  )
+  on.exit(removeNotification(notifId))
+  chart()
+},
+  res=96, pointsize=18
+)
+
+# (ii) Rendering dataTables
+output$rawDataTable <- renderDataTable({
+  req(obsmonPlotObj())
+  notifId <- showNotification(
+    "Rendering data table...", duration=NULL, type="message"
+  )
+  on.exit(removeNotification(notifId))
+  obsmonPlotObj()$rawData
+},
+  options=list(scrollX=TRUE, scrollY="300px")
+)
+output$queryUsed <- renderText(obsmonPlotObj()$sqliteQuery)
+
+output$rawDataTableDownloadAsTxt <- downloadHandler(
+  filename = function() "raw_data.txt",
+  content = function(file) req(obsmonPlotObj())$exportData(file, format="txt", raw=TRUE)
+)
+output$rawDataTableDownloadAsCsv <- downloadHandler(
+  filename = function() "raw_data.csv",
+  content = function(file) req(obsmonPlotObj())$exportData(file, format="csv", raw=TRUE)
+)
+
+output$plotDataTable <- renderDataTable({
+  req(obsmonPlotObj())
+  notifId <- showNotification(
+    "Rendering data table...", duration=NULL, type="message"
+  )
+  on.exit(removeNotification(notifId))
+  obsmonPlotObj()$dataWithUnits
+},
+  options=list(scrollX=TRUE, scrollY="300px")
+)
+output$plotDataTableDownloadAsTxt <- downloadHandler(
+  filename = function() "plot_data.txt",
+  content = function(file) req(obsmonPlotObj())$exportData(file, format="txt")
+)
+output$plotDataTableDownloadAsCsv <- downloadHandler(
+  filename = function() "plot_data.csv",
+  content = function(file) req(obsmonPlotObj())$exportData(file, format="csv")
+)
+
+# (iii) Rendering leaflet maps
+output$map <- renderLeaflet({
+  req(obsmonPlotObj()$leafletMap)
+  notifId <- showNotification(
+    "Rendering map...", duration=NULL, type="message"
+  )
+  on.exit(removeNotification(notifId))
+  obsmonPlotObj()$leafletMap
+})
+output$mapTitle <- renderText(obsmonPlotObj()$title)
