@@ -295,15 +295,35 @@ obsmonPlotClass <- setRefClass(Class="obsmonPlot",
     rawData="data.frame",
     modelDomain="domain",
     ##############################
-    chart = function(...) {return (.self$.memoise(FUN=.self$.generate))},
-    leafletMap = function(...) {
-      return (.self$.memoise(FUN=.self$.generateLeafletMap))
+    chart = function(newValue) {
+      if(missing(newValue)) {
+        return (.self$.memoise(FUN=.self$.generate))
+      } else {
+        flog.debug("Cannot set chart. Ignoring assignment.")
+      }
+    },
+    leafletMap = function(newValue) {
+      if(missing(newValue)) {
+        return (.self$.memoise(FUN=.self$.generateLeafletMap))
+      } else {
+        flog.debug("Cannot set leafletMap. Ignoring assignment.")
+      }
     },
     # ggplot2 doesn't like units: Remove them from data used in plots
-    data = function(...) return(drop_units(.self$dataWithUnits)),
-    dataWithUnits = function(...) {
-      if(length(.self$rawData)==0) .self$fetchRawData()
-      return(.self$.memoise(FUN=.self$.getDataFromRawData))
+    data = function(newValue) {
+      if(missing(newValue)) {
+        return(drop_units(.self$dataWithUnits))
+      } else {
+        flog.debug("Cannot set data. Ignoring assignment.")
+      }
+    },
+    dataWithUnits = function(newValue) {
+      if(missing(newValue)) {
+        if(length(.self$rawData)==0) .self$fetchRawData()
+        return(.self$.memoise(FUN=.self$.getDataFromRawData))
+      } else {
+        flog.debug("Cannot set dataWithUnits. Ignoring assignment.")
+      }
     },
     sqliteQuery = function(...) {.self$.getSqliteQuery()},
     paramsAsInSqliteDbs = function(...) {
@@ -541,7 +561,7 @@ obsmonPlotClass <- setRefClass(Class="obsmonPlot",
 
       # Apply eventual user-defined data post-processing
       if(class(.self$parentType$dataPostProcessingFunction) != "uninitializedField") {
-        rtn <- .self$parentType$dataPostProcessingFunction(rtn, obsmonPlotObj=.self)
+        rtn <- .self$parentType$dataPostProcessingFunction(data=rtn, obsmonPlotObj=.self)
       }
 
       return(rtn[complete.cases(rtn),])

@@ -208,7 +208,7 @@ mockNonInteractivePlotType$name <- "First Guess Departure Map (static)"
 mockNonInteractivePlotType$interactive <- FALSE
 
 mockPlotTypeWithDataPP <- mockPlotType$copy()
-mockPlotTypeWithDataPP$dataPostProcessingFunction <- function(data) {
+mockPlotTypeWithDataPP$dataPostProcessingFunction <- function(data, ...) {
   data$obsvalue <- 2.0 * data$obsvalue
   return (data)
 }
@@ -243,9 +243,13 @@ test_that("obsmonPlotClass can be copied", {
     db=obsmonDb,
     paramsAsInUiInput=mockUiInput
   )
+  # Trigger fetching data manually because this will be used in the comparisons
+  newPlot$fetchRawData()
 
   for (shallow in c(TRUE, FALSE)) {
     plotCopy <- newPlot$copy(shallow=shallow)
+    # Trigger fetching data because this will be used in the comparisons
+    plotCopy$fetchRawData()
     expect_equal(class(newPlot), class(plotCopy))
     classFieldNamesToClasses <- newPlot$getRefClass()$fields()
     for (field in names(classFieldNamesToClasses)) {

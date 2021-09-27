@@ -133,6 +133,12 @@ domainProjectionClass <- setRefClass(Class="domainProjection",
   methods=list(
     lonlat2xy=function(lon, lat) {
       # Convert (lon, lat), in degrees, into projected (x, y) in meters.
+
+      # Handling case when the class is instantiated without any args
+      if(length(lon)==1 && is.na(lon) && length(lat)==1 && is.na(lat)) {
+        return(data.frame(x=NA, y=NA))
+      }
+
       xyData <- st_as_sf(
         data.frame(lon=lon, lat=lat),
         coords=c("lon", "lat"),
@@ -153,6 +159,12 @@ domainProjectionClass <- setRefClass(Class="domainProjection",
     },
     xy2lonlat=function(x, y) {
       # Convert projected (x, y), in meters, into (lon, lat) in degrees.
+
+      # Handling case when the class is instantiated without any args
+      if(length(x)==1 && is.na(x) && length(y)==1 && is.na(y)) {
+        return(data.frame(lon=NA, lat=NA))
+      }
+
       lonlatData <- st_as_sf(
         data.frame(x=x, y=y),
         coords=c("x", "y"),

@@ -770,7 +770,7 @@ for(templatePlotType in plotRegistry$plotTypes) {
     force(templatePT) # Important: Force the evaluation of the func arg.
     function(data, obsmonPlotObj) {
       # Calculate averages as a post-process step upon the queried data
-      data <- templatePT$dataPostProcessingFunction(data)
+      data <- templatePT$dataPostProcessingFunction(data, obsmonPlotObj=obsmonPlotObj)
       domain <- obsmonPlotObj$modelDomain
       originalDataComments <- comment(data)
 
