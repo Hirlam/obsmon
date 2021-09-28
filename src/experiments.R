@@ -4,7 +4,7 @@ dbType2DbDescription <- function(dbType) {
   rtn <- switch(dbType,
     "ecma"="Upper Air (3D/4D-VAR) - Screening",
     "ccma"="Upper Air (3D/4D-VAR) - Minimization",
-    "ecma_sfc"="Surface (CANARI)",
+    "ecma_sfc"="Surface",
     dbType
   )
   return(rtn)
