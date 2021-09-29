@@ -454,21 +454,11 @@ observe({
 # (i.i) Interactive plot, if plot is a plotly object
 output$plotly <- renderPlotly({
   req("plotly" %in% class(chart()))
-  if(!identical(chart(), SPINNER_CHART)) {
-    notifId <- showNotification(
-      "Rendering plot...", duration=NULL, type="message"
-    )
-    on.exit(removeNotification(notifId))
-  }
   chart()
 }) %>% bindCache(obsmonPlotObjID())
 # (i.ii) Non-interactive plot, if plot is not a plotly object
 output$plot <- renderPlot({
   req(!("plotly" %in% class(req(chart()))))
-  notifId <- showNotification(
-    "Rendering plot...", duration=NULL, type="message"
-  )
-  on.exit(removeNotification(notifId))
   chart()
 },
   res=96, pointsize=18
@@ -476,16 +466,11 @@ output$plot <- renderPlot({
 
 # (ii) Rendering dataTables
 output$rawDataTable <- renderDataTable({
-  req(obsmonPlotObj())
-  notifId <- showNotification(
-    "Rendering data table...", duration=NULL, type="message"
-  )
-  on.exit(removeNotification(notifId))
-  obsmonPlotObj()$rawData
+  req(obsmonPlotObj())$rawData
 },
   options=list(scrollX=TRUE, scrollY="300px")
 )
-output$queryUsed <- renderText(obsmonPlotObj()$sqliteQuery)
+output$queryUsed <- renderText(req(obsmonPlotObj())$sqliteQuery)
 
 output$rawDataTableDownloadAsTxt <- downloadHandler(
   filename = function() "raw_data.txt",
@@ -497,12 +482,7 @@ output$rawDataTableDownloadAsCsv <- downloadHandler(
 )
 
 output$plotDataTable <- renderDataTable({
-  req(obsmonPlotObj())
-  notifId <- showNotification(
-    "Rendering data table...", duration=NULL, type="message"
-  )
-  on.exit(removeNotification(notifId))
-  obsmonPlotObj()$dataWithUnits
+  req(obsmonPlotObj())$dataWithUnits
 },
   options=list(scrollX=TRUE, scrollY="300px")
 )
@@ -517,11 +497,6 @@ output$plotDataTableDownloadAsCsv <- downloadHandler(
 
 # (iii) Rendering leaflet maps
 output$map <- renderLeaflet({
-  req(obsmonPlotObj()$leafletMap)
-  notifId <- showNotification(
-    "Rendering map...", duration=NULL, type="message"
-  )
-  on.exit(removeNotification(notifId))
-  obsmonPlotObj()$leafletMap
+  req(req(obsmonPlotObj())$leafletMap)
 }) %>% bindCache(obsmonPlotObjID())
-output$mapTitle <- renderText(obsmonPlotObj()$title)
+output$mapTitle <- renderText(req(obsmonPlotObj())$title)
