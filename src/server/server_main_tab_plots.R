@@ -258,6 +258,19 @@ observeEvent(sessionDomain(), {
   replaceObsmonPlotObj(newObsmonPlotObj)
 })
 
+# If user changes min number of obs for grid-averaged data
+newMinNObsGriddedAvgs <- eventReactive(input$minNobsForGriddedAverages, {
+  req(input$minNobsForGriddedAverages > 0)
+  req(grepl("average maps", tolower(req(obsmonPlotObj())$parentType$category)))
+  return(input$minNobsForGriddedAverages)
+}) %>% debounce(1000)
+observeEvent(newMinNObsGriddedAvgs(), {
+  newObsmonPlotObj <- req(obsmonPlotObj())
+  newObsmonPlotObj$paramsAsInUiInput$minNobsForGriddedAverages <-
+    newMinNObsGriddedAvgs()
+  replaceObsmonPlotObj(newObsmonPlotObj)
+})
+
 # If user asks for levels to be grouped into standard ones
 observeEvent(input$groupLevelsIntoStandardSwitch, {
   newObsmonPlotObj <- req(obsmonPlotObj())
@@ -391,6 +404,14 @@ observeEvent(newColorscale(), {
 ###########################################################################
 # Enable/disable, show/hide appropriate outputs depending on type of plot #
 ###########################################################################
+observe({
+  isAvgMap <- isTRUE(grepl("average maps", tolower(activePlotType()$category)))
+  shinyjs::toggle(
+    "minNobsForGriddedAverages",
+    condition=isAvgMap && sessionDomain()$grid$hasPoints
+  )
+})
+
 observe({
   req(obsmonPlotObj())
   # (i) Maps tab

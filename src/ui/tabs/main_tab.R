@@ -183,6 +183,12 @@ mainTab <- function() {fluidPage(
         choices=c(),
         options=list(`dropup-auto`=FALSE, `live-search`=TRUE, size=10)
       ),
+      hidden(numericInput("minNobsForGriddedAverages",
+        label=HTML("Gridded Average: Min &numero; Obs per Grid Element"),
+        value=1,
+        min=1,
+        step=1
+      )),
       hidden(pickerInput("station",
         label=getDefLabel("station"),
         choices=c(),

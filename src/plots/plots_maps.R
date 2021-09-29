@@ -797,10 +797,13 @@ for(templatePlotType in plotRegistry$plotTypes) {
       colsToDrop <- c("DTG", setdiff(nonNumericCols, groupByCols))
       data <- data[!(colnames(data) %in% colsToDrop)]
 
-      data <- data %>%
-        group_by(!!!syms(groupByCols)) %>%
-        add_count(name="n_obs") %>%
-        summarize_all(mean)
+      data <- data %>% group_by(!!!syms(groupByCols))
+      if(performGridAverage) {
+        min_nObs <- obsmonPlotObj$paramsAsInUiInput$minNobsForGriddedAverages
+        min_nObs <- max(c(min_nObs, 1))
+        data <- data %>% add_tally(name="n_obs") %>% filter(n_obs >= min_nObs)
+      }
+      data <- data %>% summarize_all(mean)
 
       if(performGridAverage) {
         lonlatData <- domain$grid$grid2lonlat(i=data$grid_i, j=data$grid_j)
