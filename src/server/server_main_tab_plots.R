@@ -74,7 +74,7 @@ observeEvent(plotProgressStatus()(), {
 # (using replaceObsmonPlotObj) to trigger data post-processing and production #
 # of figures to the next observer (which is performed in another observer)    #
 ###############################################################################
-replaceObsmonPlotObj <- reactiveVal()
+replaceObsmonPlotObj <- reactiveVal(NA)
 observeEvent(input$doPlot, {
   # Make sure a plot cannot be requested if another is being produced.
   if(currentPlotPid() > -1) {
@@ -93,6 +93,7 @@ observeEvent(input$doPlot, {
       "This plot requires choosing one station!",
       type="error", duration=2
     )
+    replaceObsmonPlotObj(NA)
     return(NULL)
   }
 
@@ -172,6 +173,17 @@ observeEvent(input$doPlot, {
 # users request things like changes in color schemes, units, domain, etc.     #
 ###############################################################################
 obsmonPlotObj <- reactiveVal(NA)
+obsmonPlotObjID <- eventReactive(obsmonPlotObj(), {
+  if(is(obsmonPlotObj(), "obsmonPlot")) obsmonPlotObj()$hash
+  else if(is.null(obsmonPlotObj())) "WAITING"
+  else "INVALID"
+}, ignoreNULL=FALSE)
+
+chart <- eventReactive(obsmonPlotObjID(), {
+  if(obsmonPlotObjID() == "WAITING") return(SPINNER_CHART)
+  else if(obsmonPlotObjID() == "INVALID") return(EMPTY_CHART)
+  return(obsmonPlotObj()$chart)
+}, ignoreNULL=FALSE)
 observeEvent(replaceObsmonPlotObj(), {
   plotInterrupted(FALSE)
 
@@ -440,14 +452,8 @@ observe({
 #################################
 # (i) Rendering plots
 # (i.i) Interactive plot, if plot is a plotly object
-chart <- reactiveVal()
-observeEvent(obsmonPlotObj(), {
-  if(is(obsmonPlotObj(), "obsmonPlot")) chart(obsmonPlotObj()$chart)
-  else if(is.null(obsmonPlotObj())) chart(SPINNER_CHART)
-  else chart(NULL)
-}, ignoreNULL=FALSE)
 output$plotly <- renderPlotly({
-  req("plotly" %in% class(req(chart())))
+  req("plotly" %in% class(chart()))
   if(!identical(chart(), SPINNER_CHART)) {
     notifId <- showNotification(
       "Rendering plot...", duration=NULL, type="message"
@@ -455,7 +461,7 @@ output$plotly <- renderPlotly({
     on.exit(removeNotification(notifId))
   }
   chart()
-}) %>% bindCache(obsmonPlotObj()$hash)
+}) %>% bindCache(obsmonPlotObjID())
 # (i.ii) Non-interactive plot, if plot is not a plotly object
 output$plot <- renderPlot({
   req(!("plotly" %in% class(req(chart()))))
@@ -466,7 +472,7 @@ output$plot <- renderPlot({
   chart()
 },
   res=96, pointsize=18
-) %>% bindCache(obsmonPlotObj()$hash)
+) %>% bindCache(obsmonPlotObjID())
 
 # (ii) Rendering dataTables
 output$rawDataTable <- renderDataTable({
@@ -517,5 +523,5 @@ output$map <- renderLeaflet({
   )
   on.exit(removeNotification(notifId))
   obsmonPlotObj()$leafletMap
-}) %>% bindCache(obsmonPlotObj()$hash)
+}) %>% bindCache(obsmonPlotObjID())
 output$mapTitle <- renderText(obsmonPlotObj()$title)
