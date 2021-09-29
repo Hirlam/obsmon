@@ -74,7 +74,7 @@ observeEvent(plotProgressStatus()(), {
 # (using replaceObsmonPlotObj) to trigger data post-processing and production #
 # of figures to the next observer (which is performed in another observer)    #
 ###############################################################################
-replaceObsmonPlotObj <- reactiveVal()
+replaceObsmonPlotObj <- reactiveVal(NA)
 observeEvent(input$doPlot, {
   # Make sure a plot cannot be requested if another is being produced.
   if(currentPlotPid() > -1) {
@@ -93,6 +93,7 @@ observeEvent(input$doPlot, {
       "This plot requires choosing one station!",
       type="error", duration=2
     )
+    replaceObsmonPlotObj(NA)
     return(NULL)
   }
 
@@ -172,6 +173,17 @@ observeEvent(input$doPlot, {
 # users request things like changes in color schemes, units, domain, etc.     #
 ###############################################################################
 obsmonPlotObj <- reactiveVal(NA)
+obsmonPlotObjID <- eventReactive(obsmonPlotObj(), {
+  if(is(obsmonPlotObj(), "obsmonPlot")) obsmonPlotObj()$hash
+  else if(is.null(obsmonPlotObj())) "WAITING"
+  else "INVALID"
+}, ignoreNULL=FALSE)
+
+chart <- eventReactive(obsmonPlotObjID(), {
+  if(obsmonPlotObjID() == "WAITING") return(SPINNER_CHART)
+  else if(obsmonPlotObjID() == "INVALID") return(EMPTY_CHART)
+  return(obsmonPlotObj()$chart)
+}, ignoreNULL=FALSE)
 observeEvent(replaceObsmonPlotObj(), {
   plotInterrupted(FALSE)
 
@@ -255,6 +267,19 @@ observeEvent(sessionDomain(), {
   newObsmonPlotObj <- req(obsmonPlotObj())
   req(grepl("maps", tolower(newObsmonPlotObj$parentType$category)))
   newObsmonPlotObj$modelDomain <- sessionDomain()
+  replaceObsmonPlotObj(newObsmonPlotObj)
+})
+
+# If user changes min number of obs for grid-averaged data
+newMinNObsGriddedAvgs <- eventReactive(input$minNobsForGriddedAverages, {
+  req(input$minNobsForGriddedAverages > 0)
+  req(grepl("average maps", tolower(req(obsmonPlotObj())$parentType$category)))
+  return(input$minNobsForGriddedAverages)
+}) %>% debounce(1000)
+observeEvent(newMinNObsGriddedAvgs(), {
+  newObsmonPlotObj <- req(obsmonPlotObj())
+  newObsmonPlotObj$paramsAsInUiInput$minNobsForGriddedAverages <-
+    newMinNObsGriddedAvgs()
   replaceObsmonPlotObj(newObsmonPlotObj)
 })
 
@@ -392,32 +417,34 @@ observeEvent(newColorscale(), {
 # Enable/disable, show/hide appropriate outputs depending on type of plot #
 ###########################################################################
 observe({
-  req(obsmonPlotObj())
-  # (i) Maps tab
-  if(is.null(obsmonPlotObj()$leafletMap)) {
-    if(isTRUE(input$mainAreaTabsetPanel=="mapTab")) {
-      updateTabsetPanel(session, "mainAreaTabsetPanel", "plotlyTab")
-    }
-    hideTab("mainAreaTabsetPanel", "mapTab")
-  } else {
-    showTab("mainAreaTabsetPanel", "mapTab")
-  }
+  isAvgMap <- isTRUE(grepl("average maps", tolower(activePlotType()$category)))
+  shinyjs::toggle(
+    "minNobsForGriddedAverages",
+    condition=isAvgMap && sessionDomain()$grid$hasPoints
+  )
+})
 
-  # (ii) Interactive or regular plot tabs
-  interactive <- is.null(obsmonPlotObj()) || isTRUE("plotly" %in% class(obsmonPlotObj()$chart))
-  if(interactive) {
-    hideTab("mainAreaTabsetPanel", "plotTab")
-    showTab("mainAreaTabsetPanel", "plotlyTab")
-  } else {
-    hideTab("mainAreaTabsetPanel", "plotlyTab")
-    showTab("mainAreaTabsetPanel", "plotTab")
+# Maps tab
+observe({
+  hasLeaflet <- any(grepl("^leaflet$", class(req(obsmonPlotObj())$leafletMap)))
+  if(isTRUE(input$mainAreaTabsetPanel=="mapTab") && !hasLeaflet) {
+    updateTabsetPanel(session, "mainAreaTabsetPanel", "plotlyTab")
   }
+  toggleTab("mainAreaTabsetPanel", "mapTab", condition=hasLeaflet)
+})
+
+# Interactive or regular plot tabs
+observe({
+  interactive <- isTRUE("plotly" %in% class(chart()))
 
   if(isTRUE(interactive && input$mainAreaTabsetPanel=="plotTab")) {
     updateTabsetPanel(session, "mainAreaTabsetPanel", "plotlyTab")
   } else if(isTRUE(!interactive && input$mainAreaTabsetPanel=="plotlyTab")) {
     updateTabsetPanel(session, "mainAreaTabsetPanel", "plotTab")
   }
+
+  toggleTab("mainAreaTabsetPanel", "plotlyTab", condition=interactive)
+  toggleTab("mainAreaTabsetPanel", "plotTab", condition=!interactive)
 })
 
 #################################
@@ -425,46 +452,25 @@ observe({
 #################################
 # (i) Rendering plots
 # (i.i) Interactive plot, if plot is a plotly object
-chart <- reactiveVal()
-observeEvent(obsmonPlotObj(), {
-  if(is(obsmonPlotObj(), "obsmonPlot")) chart(obsmonPlotObj()$chart)
-  else if(is.null(obsmonPlotObj())) chart(SPINNER_CHART)
-  else chart(NULL)
-}, ignoreNULL=FALSE)
 output$plotly <- renderPlotly({
-  req("plotly" %in% class(req(chart())))
-  if(!identical(chart(), SPINNER_CHART)) {
-    notifId <- showNotification(
-      "Rendering plot...", duration=NULL, type="message"
-    )
-    on.exit(removeNotification(notifId))
-  }
+  req("plotly" %in% class(chart()))
   chart()
-})
+}) %>% bindCache(obsmonPlotObjID())
 # (i.ii) Non-interactive plot, if plot is not a plotly object
 output$plot <- renderPlot({
   req(!("plotly" %in% class(req(chart()))))
-  notifId <- showNotification(
-    "Rendering plot...", duration=NULL, type="message"
-  )
-  on.exit(removeNotification(notifId))
   chart()
 },
   res=96, pointsize=18
-)
+) %>% bindCache(obsmonPlotObjID())
 
 # (ii) Rendering dataTables
 output$rawDataTable <- renderDataTable({
-  req(obsmonPlotObj())
-  notifId <- showNotification(
-    "Rendering data table...", duration=NULL, type="message"
-  )
-  on.exit(removeNotification(notifId))
-  obsmonPlotObj()$rawData
+  req(obsmonPlotObj())$rawData
 },
   options=list(scrollX=TRUE, scrollY="300px")
 )
-output$queryUsed <- renderText(obsmonPlotObj()$sqliteQuery)
+output$queryUsed <- renderText(req(obsmonPlotObj())$sqliteQuery)
 
 output$rawDataTableDownloadAsTxt <- downloadHandler(
   filename = function() "raw_data.txt",
@@ -476,12 +482,7 @@ output$rawDataTableDownloadAsCsv <- downloadHandler(
 )
 
 output$plotDataTable <- renderDataTable({
-  req(obsmonPlotObj())
-  notifId <- showNotification(
-    "Rendering data table...", duration=NULL, type="message"
-  )
-  on.exit(removeNotification(notifId))
-  obsmonPlotObj()$dataWithUnits
+  req(obsmonPlotObj())$dataWithUnits
 },
   options=list(scrollX=TRUE, scrollY="300px")
 )
@@ -496,11 +497,6 @@ output$plotDataTableDownloadAsCsv <- downloadHandler(
 
 # (iii) Rendering leaflet maps
 output$map <- renderLeaflet({
-  req(obsmonPlotObj()$leafletMap)
-  notifId <- showNotification(
-    "Rendering map...", duration=NULL, type="message"
-  )
-  on.exit(removeNotification(notifId))
-  obsmonPlotObj()$leafletMap
-})
-output$mapTitle <- renderText(obsmonPlotObj()$title)
+  req(req(obsmonPlotObj())$leafletMap)
+}) %>% bindCache(obsmonPlotObjID())
+output$mapTitle <- renderText(req(obsmonPlotObj())$title)
