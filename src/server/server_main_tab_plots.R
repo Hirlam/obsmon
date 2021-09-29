@@ -461,7 +461,7 @@ output$plotly <- renderPlotly({
     on.exit(removeNotification(notifId))
   }
   chart()
-})
+}) %>% bindCache(obsmonPlotObj()$hash)
 # (i.ii) Non-interactive plot, if plot is not a plotly object
 output$plot <- renderPlot({
   req(!("plotly" %in% class(req(chart()))))
@@ -472,7 +472,7 @@ output$plot <- renderPlot({
   chart()
 },
   res=96, pointsize=18
-)
+) %>% bindCache(obsmonPlotObj()$hash)
 
 # (ii) Rendering dataTables
 output$rawDataTable <- renderDataTable({
@@ -523,5 +523,5 @@ output$map <- renderLeaflet({
   )
   on.exit(removeNotification(notifId))
   obsmonPlotObj()$leafletMap
-})
+}) %>% bindCache(obsmonPlotObj()$hash)
 output$mapTitle <- renderText(obsmonPlotObj()$title)
