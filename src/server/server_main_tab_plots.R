@@ -412,33 +412,27 @@ observe({
   )
 })
 
+# Maps tab
 observe({
-  req(obsmonPlotObj())
-  # (i) Maps tab
-  if(is.null(obsmonPlotObj()$leafletMap)) {
-    if(isTRUE(input$mainAreaTabsetPanel=="mapTab")) {
-      updateTabsetPanel(session, "mainAreaTabsetPanel", "plotlyTab")
-    }
-    hideTab("mainAreaTabsetPanel", "mapTab")
-  } else {
-    showTab("mainAreaTabsetPanel", "mapTab")
+  hasLeaflet <- any(grepl("^leaflet$", class(req(obsmonPlotObj())$leafletMap)))
+  if(isTRUE(input$mainAreaTabsetPanel=="mapTab") && !hasLeaflet) {
+    updateTabsetPanel(session, "mainAreaTabsetPanel", "plotlyTab")
   }
+  toggleTab("mainAreaTabsetPanel", "mapTab", condition=hasLeaflet)
+})
 
-  # (ii) Interactive or regular plot tabs
-  interactive <- is.null(obsmonPlotObj()) || isTRUE("plotly" %in% class(obsmonPlotObj()$chart))
-  if(interactive) {
-    hideTab("mainAreaTabsetPanel", "plotTab")
-    showTab("mainAreaTabsetPanel", "plotlyTab")
-  } else {
-    hideTab("mainAreaTabsetPanel", "plotlyTab")
-    showTab("mainAreaTabsetPanel", "plotTab")
-  }
+# Interactive or regular plot tabs
+observe({
+  interactive <- isTRUE("plotly" %in% class(chart()))
 
   if(isTRUE(interactive && input$mainAreaTabsetPanel=="plotTab")) {
     updateTabsetPanel(session, "mainAreaTabsetPanel", "plotlyTab")
   } else if(isTRUE(!interactive && input$mainAreaTabsetPanel=="plotlyTab")) {
     updateTabsetPanel(session, "mainAreaTabsetPanel", "plotTab")
   }
+
+  toggleTab("mainAreaTabsetPanel", "plotlyTab", condition=interactive)
+  toggleTab("mainAreaTabsetPanel", "plotTab", condition=!interactive)
 })
 
 #################################

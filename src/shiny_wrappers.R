@@ -47,6 +47,11 @@ runAppHandlingBusyPort <- function(
   }
 }
 
+toggleTab <- function(..., condition) {
+  if(isTRUE(condition)) showTab(...)
+  else hideTab(...)
+}
+
 # Wrapper to shinycssloaders::withSpinner with useful defaults
 withSpinnerWrapper <- function(...) {
   return(withSpinner(...,
