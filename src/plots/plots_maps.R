@@ -64,24 +64,46 @@ domainProj2ggplotProj <- function(domain) {
     scale_shape_manual(
       name="Legend",
       values=c(
-        "Active"=21, "Active(2)"=21, "Rejected"=22, "Passive"=23,
-        "Blacklisted"=24, "NA"=13
+        "Active"=21, "Active(2)"=21,
+        "Rejected"=22, "Passive"=23,
+        "Blacklisted"=24, "NA"=13,
+        "Rejected in TITAN"=22, "Domain"=22,
+        "TITAN: blacklisted"=22, "TITAN: nometa"=22,
+        "TITAN: plaus"=22, "TITAN: clim"=22,
+        "TITAN: buddy"=22, "TITAN: SCT"=22,
+        "TITAN: DEM"=22, "TITAN: isol"=22,
+        "TITAN: fg"=22, "Fraction"=22
       )
     ) +
     scale_fill_manual(
       name="Legend",
       values=c(
-        "Active"="green", "Active(2)"="blue", "Rejected"="red",
-        "Passive"="magenta3", "Blacklisted"="black", "NA"=NA
+        "Active"="green", "Active(2)"="blue",
+        "Rejected"="red", "Passive"="magenta3",
+        "Blacklisted"="black", "NA"=NA,
+        "Rejected in TITAN"="purple", "Domain"="cadetblue",
+        "TITAN: blacklisted"="black", "TITAN: nometa"="lightblue",
+        "TITAN: plaus"="lightgreen", "TITAN: clim"="darkblue",
+        "TITAN: buddy"="lightgray", "TITAN: SCT"="darkred",
+        "TITAN: DEM"="lightgray", "TITAN: isol"="blue",
+        "TITAN: fg"="orange", "Fraction"="beige"
       )
     ) +
     scale_colour_manual(
       name="Legend",
       values=c(
-        "Active"="green", "Active(2)"="blue", "Rejected"="red",
-        "Passive"="black", "Blacklisted"="black", "NA"="grey"
+        "Active"="green", "Active(2)"="blue",
+        "Rejected"="red", "Passive"="black",
+        "Blacklisted"="black", "NA"="grey",
+        "Rejected in TITAN"="purple", "Domain"="cadetblue",
+        "TITAN: blacklisted"="black", "TITAN: nometa"="lightblue",
+        "TITAN: plaus"="lightgreen", "TITAN: clim"="darkblue",
+        "TITAN: buddy"="lightgray", "TITAN: SCT"="darkred",
+        "TITAN: DEM"="lightgray", "TITAN: isol"="blue",
+        "TITAN: fg"="orange", "Fraction"="beige"
       )
     )
+
   return(ggplotMap)
 }
 
@@ -369,9 +391,15 @@ drawGriddedScattergeoTrace <- function(
 
 .mapUsageInteractivePlottingFunction <- function(plot) {
   colors <- c(
-    "Active"="green", "Active(2)"="blue",
+    "Active"="green", "Active(2)"="green",
     "Rejected"="red", "Passive"="magenta3",
-    "Blacklisted"="black", "NA"="grey"
+    "Blacklisted"="black", "NA"="grey",
+    "Rejected in TITAN"="purple", "Domain"="cadetblue",
+    "TITAN: blacklisted"="black", "TITAN: nometa"="lightblue",
+    "TITAN: plaus"="lightgreen", "TITAN: clim"="darkblue",
+    "TITAN: buddy"="lightgray", "TITAN: SCT"="darkred",
+    "TITAN: DEM"="lightgray", "TITAN: isol"="blue",
+    "TITAN: fg"="orange", "Fraction"="beige"
   )
 
   plotlyMap <- .getInteractiveGenericMapPlot(plot) %>%
@@ -386,6 +414,7 @@ drawGriddedScattergeoTrace <- function(
             if("level" %in% names(plot$data)) paste("Level:", level),
             if("channel" %in% names(plot$data)) paste("Channel:", channel),
             sprintf("Coords: (%.3f\u00B0, %.3f\u00B0)", longitude, latitude),
+            if("obsvalue" %in% names(plot$data)) paste("Obsvalue:", signif(obsvalue, digits=5)),
             paste("Anflag:", anflag),
             paste("Status:", status),
             sep="<br />"
@@ -583,35 +612,58 @@ drawGriddedScattergeoTrace <- function(
 
 .mapUsageLeafletPlottingFunction <- function(plot) {
   zoomLevel <- .getLeafletMapZoomLevel(plot$data)
-  pallete <- colorFactor(
-    c("green", "blue", "black", "grey", "magenta3", "red"),
-    domain=c("Active", "Active(2)", "Blacklisted", "NA", "Passive", "Rejected")
+
+  colors <- c(
+    "Active"="green", "Active(2)"="green",
+    "Rejected"="red", "Passive"="magenta3",
+    "Blacklisted"="black", "NA"="grey",
+    "Rejected in TITAN"="purple", "Domain"="cadetblue",
+    "TITAN: blacklisted"="black", "TITAN: nometa"="lightblue",
+    "TITAN: plaus"="lightgreen", "TITAN: clim"="darkblue",
+    "TITAN: buddy"="lightgray", "TITAN: SCT"="darkred",
+    "TITAN: DEM"="lightgray", "TITAN: isol"="blue",
+    "TITAN: fg"="orange", "Fraction"="beige"
+  )
+  domains <- c(
+    "Active", "Active(2)", "Blacklisted", "NA",   "Rejected", "Passive",
+    "Rejected in TITAN", "Domain",    "TITAN: blacklisted", "TITAN: nometa",
+    "TITAN: plaus", "TITAN: clim", "TITAN: buddy", "TITAN: SCT", "TITAN: DEM",
+    "TITAN: isol", "TITAN: fg", "Fraction"
+  )
+
+  get_color <- function(stat) return(colors[[stat]])
+  color <- unname(sapply(plot$data$status, get_color))
+
+  used_colors <- unique(color)
+  used_labels <- unique(plot$data$status)
+  obsvalue <- signif(plot$data$obsvalue, digits=5)
+
+  myIcons <- makeAwesomeIcon(
+    icon="home", library="ion",
+    markerColor=color, iconColor="white", spin=FALSE,
+    extraClasses=NULL, squareMarker=FALSE, iconRotate=0,
+    fontFamily="monospace", text=as.character(obsvalue)
   )
 
   leafletMap <- leaflet(data=plot$data) %>%
     addProviderTiles(
       "Esri.WorldStreetMap",
-      options=providerTileOptions(opacity=0.7)
+      options=providerTileOptions(opacity=0.5)
     ) %>%
-    addCircleMarkers(
+    addAwesomeMarkers(
       lng=~longitude,
       lat=~latitude,
       popup=.getLeafletPopupContents(plot$data),
-      radius=8,
-      stroke=FALSE,
-      fillColor=~pallete(status),
-      fillOpacity=.5,
-      weight=1,
-      opacity=1,
-      color="black",
-      clusterOptions=markerClusterOptions(disableClusteringAtZoom=zoomLevel)
+      clusterOptions=markerClusterOptions(disableClusteringAtZoom=zoomLevel),
+      icon=myIcons
     ) %>%
     addLegend(
       "topright",
-      pal=pallete,
-      values=~status,
-      opacity=1
+      opacity=1,
+      colors=used_colors,
+      labels=used_labels
     )
+
   return(leafletMap)
 }
 
