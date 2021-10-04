@@ -414,6 +414,7 @@ drawGriddedScattergeoTrace <- function(
             if("level" %in% names(plot$data)) paste("Level:", level),
             if("channel" %in% names(plot$data)) paste("Channel:", channel),
             sprintf("Coords: (%.3f\u00B0, %.3f\u00B0)", longitude, latitude),
+            if("obsvalue" %in% names(plot$data)) paste("Obsvalue:", signif(obsvalue, digits=5)),
             paste("Anflag:", anflag),
             paste("Status:", status),
             sep="<br />"
