@@ -4,7 +4,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com)
 and this project adheres to [Semantic Versioning](http://semver.org).
 
-## [Unreleased]
+## [4.2.0] 2021-01-04
 ### Added
 - Support to specifying domain geometry and grid for use in interactive map plots
     - If set, domains are employed so that:
@@ -19,6 +19,7 @@ and this project adheres to [Semantic Versioning](http://semver.org).
     - "Station Average First Guess and Analysis Departure"
 - "Standardise Levels in the Final Plot" UI switch
 - Option to reverse colorscale in maps
+- Support to TITAN QC flags
 ### Fixed
 - Fix name of "First Guess and Analysis Bias/RMS" plot
     - Which was wrongly named "First Guess and Analysis Departure" before
