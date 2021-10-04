@@ -1,3 +1,5 @@
+SPINNER_IMAGE_PATH <- base64enc::dataURI(file="data/loading.gif")
+
 # Flagging that this file has been sourced
 initFileSourced <- TRUE
 
@@ -62,6 +64,7 @@ suppressPackageStartupMessages(library(promises))
 suppressPackageStartupMessages(library(RColorBrewer))
 suppressPackageStartupMessages(library(RcppTOML))
 suppressPackageStartupMessages(library(reshape2))
+suppressPackageStartupMessages(library(sf))
 suppressPackageStartupMessages(library(shiny))
 suppressPackageStartupMessages(library(shinycssloaders))
 suppressPackageStartupMessages(library(shinyjs))
@@ -115,6 +118,7 @@ setPackageOptions <- function(config) {
 
 sourceObsmonFiles <- function() {
   source("src/units.R")
+  source("src/domains.R")
   source("src/observation_definitions.R")
   source("src/utils.R")
   source("src/sqlite/sqlite_wrappers.R")

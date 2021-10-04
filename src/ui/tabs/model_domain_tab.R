@@ -1,0 +1,101 @@
+modelDomainTab <- function() {
+  sidebarLayout(
+    sidebarPanel(
+      width=3,
+      fluidRow(
+        column(6,
+          switchInput(
+            inputId="enableDomainUse",
+            label="<i class=\"fa fa-power-off\"></i>",
+            onLabel="Enabled",
+            offLabel="Disabled",
+            value=TRUE
+          )
+        ),
+        column(6,
+          actionButton("domainResetDefaults", "Reload Defaults", width="100%",
+            icon("refresh", lib="glyphicon")
+          )
+        )
+      ),
+      fluidRow(
+        column(6,
+          numericInput(
+            "domainLonc",
+            "lonc",
+            value=numeric(0),
+            min=-180.0,
+            max=180.0,
+          )
+        ),
+        column(6,
+          numericInput(
+            "domainLatc",
+            "latc",
+            value=numeric(0),
+            min=-90.0,
+            max=90.0,
+          )
+        )
+      ),
+      fluidRow(
+        column(6,
+          numericInput(
+            "domainLon0",
+            "lon0",
+            value=numeric(0),
+            min=-180.0,
+            max=180.0,
+          )
+        ),
+        column(6,
+          numericInput(
+            "domainLat0",
+            "lat0",
+            value=numeric(0),
+            min=-90.0,
+            max=90.0,
+          )
+        )
+      ),
+      fluidRow(
+        column(4,
+          numericInput(
+            "domainNlon",
+            "nLon",
+            value=numeric(0),
+            min=1,
+            step=1
+          )
+        ),
+        column(4,
+          numericInput(
+            "domainNlat",
+            "nLat",
+            value=numeric(0),
+            min=1,
+            step=1
+          )
+        ),
+        column(4,
+          numericInput(
+            "domainGridSpacing",
+            "Grid Spacing (m)",
+            value=numeric(0),
+            min=0
+          )
+        )
+      ),
+      materialSwitch(
+        inputId="domainLmrt",
+        label="LMRT",
+        status="warning",
+        right=TRUE
+      ),
+      actionButton("domainApplyChanges", "Apply New Values", width="100%",
+        icon("ok", lib="glyphicon")
+      ),
+    ),
+    mainPanel=mainPanel(width=9, plotlyOutputInsideFluidRow("modelDomainDemoChart"))
+  )
+}

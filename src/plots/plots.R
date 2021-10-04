@@ -1,3 +1,31 @@
+# SPINNER_CHART just shows a spinner at the middle of an empty plot
+EMPTY_CHART <- plotly_empty(type="scatter", mode="markers") %>%
+  config(
+    displayModeBar=FALSE,
+    scrollZoom=FALSE,
+    editable=FALSE,
+    staticPlot=TRUE
+  )
+SPINNER_CHART <- EMPTY_CHART %>%
+  layout(
+    images=list(
+      list(
+        # Add the spinner gif
+        source=SPINNER_IMAGE_PATH,
+        x=0.44,
+        y=0.4125,
+        sizex=0.3,
+        sizey = 0.15,
+        xref="paper",
+        yref="paper",
+        xanchor="left",
+        yanchor="bottom"
+      )
+    )
+  )
+lockBinding("EMPTY_CHART", globalenv())
+lockBinding("SPINNER_CHART", globalenv())
+
 plotTypeClass <- setRefClass(Class="obsmonPlotType",
   fields=list(
     name="character",
@@ -8,7 +36,9 @@ plotTypeClass <- setRefClass(Class="obsmonPlotType",
     extraDataFields="list",
     stationChoiceType="character",
     interactive="logical",
-    dataPostProcessingFunction="ANY", # A function of 1 arg: data (data.frame)
+    # dataPostProcessingFunction: A function where the 1st arg is
+    # data (data.frame) and the 2nd, if used, is obsmonPlotObj (obsmonPlot)
+    dataPostProcessingFunction="ANY",
     plottingFunction="ANY", # A function of 1 arg: plot (an obsmonPlot object)
     leafletPlottingFunction="ANY", # A function of 1 arg: plot (an obsmonPlot object)
     plotTitleFunction="ANY", # A function of 1 arg: plot (an obsmonPlot object)
@@ -29,6 +59,9 @@ plotTypeClass <- setRefClass(Class="obsmonPlotType",
     },
     requiresSingleStation = function(...) {
       return(isTRUE(.self$stationChoiceType == "single"))
+    },
+    queriedDbTable = function(...) {
+      return(ifelse(.self$supportsStationSelection, "usage", "obsmon"))
     }
   ),
   methods=list(
@@ -112,10 +145,9 @@ plotTypeClass <- setRefClass(Class="obsmonPlotType",
     ############################
     getQueryStub = function() {
       # stationIDs are not stored in the "obsmon" table, only in "usage"
-      dbTable <- ifelse(.self$supportsStationSelection, "usage", "obsmon")
       whereStub <- "WHERE %s"
       if (
-        (dbTable == "obsmon") &&
+        (.self$queriedDbTable == "obsmon") &&
         !("nobs_total" %in% .self$getRetrievedSqliteFields())
       ) {
         whereStub <- paste(whereStub, "AND (nobs_total > 0)")
@@ -123,14 +155,14 @@ plotTypeClass <- setRefClass(Class="obsmonPlotType",
       stub <- paste(
         "SELECT DISTINCT",
         paste(.self$getRetrievedSqliteFields(), collapse=", "),
-        "FROM", dbTable, whereStub
+        "FROM", .self$queriedDbTable, whereStub
       )
       return (stub)
     },
     ############################
     ggplotlyWrapper = function(ggplotPlot) {
-      # Generate a regular ggplot2 plot and then use plotly's
-      # ggplotly function to convert it to a plotly object
+      # Convert ggplot2 object ggplotPlot into a plotly object using
+      # plotly's ggplotly function, and then apply some customisations
       plotlyPlot <- tryCatch({
         ggplotly(ggplotPlot, tooltip=c("x","y")) %>%
           layout(
@@ -229,58 +261,78 @@ plotTypeClass <- setRefClass(Class="obsmonPlotType",
   )
 )
 
+.refClassObjHash <- function(.self) {
+  componentsHashes <- c()
+  for (fieldName in names(.self$getRefClass()$fields())) {
+    fieldClass <- .self$getRefClass()$fields()[[fieldName]]
+
+    # Skip fields that are actually methods under the hood
+    if(fieldClass == "activeBindingFunction") next
+
+    # Skip fields that are allowed to change
+    if(fieldName %in% c("hash", ".cache")) next
+
+    component <- .self$field(fieldName)
+    # Hash just the function code, not environment or other attrs
+    if(is.function(component)) component <- deparse(component)
+
+    if(is(component, "envRefClass")) {
+      # Parse recursively so that we also handle the special cases listed above
+      componentsHash <- .refClassObjHash(component)
+    } else {
+      componentsHash <- digest::digest(component)
+    }
+    componentsHashes <- c(componentsHashes, componentsHash)
+  }
+  return(digest::digest(componentsHashes))
+}
+
 obsmonPlotClass <- setRefClass(Class="obsmonPlot",
   fields=list(
     parentType="obsmonPlotType",
     db="obsmonDatabase",
     paramsAsInUiInput="list",
     rawData="data.frame",
+    modelDomain="domain",
     ##############################
-    chart = function(...) {return (.self$.memoise(FUN=.self$.generate))},
-    leafletMap = function(...) {
-      return (.self$.memoise(FUN=.self$.generateLeafletMap))
+    chart = function(newValue) {
+      if(missing(newValue)) {
+        return (.self$.memoise(FUN=.self$.generate))
+      } else {
+        flog.debug("Cannot set chart. Ignoring assignment.")
+      }
     },
+    leafletMap = function(newValue) {
+      if(missing(newValue)) {
+        return (.self$.memoise(FUN=.self$.generateLeafletMap))
+      } else {
+        flog.debug("Cannot set leafletMap. Ignoring assignment.")
+      }
+    },
+    # ggplot2 doesn't like units: Remove them from data used in plots
     data = function(newValue) {
       if(missing(newValue)) {
-        if(nrow(.self$.data)==0) .self$.data <- .self$.getDataFromRawData()
-        # Remove units from data used in plot, as ggplot2 doesn't
-        # behave very well along with the units package.
         return(drop_units(.self$dataWithUnits))
+      } else {
+        flog.debug("Cannot set data. Ignoring assignment.")
       }
-      .self$.data <- newValue
     },
-    dataWithUnits = function(...) {
-      if(nrow(.self$.data)==0) .self$.data <- .self$.getDataFromRawData()
-      rtn <- .self$.memoise(
-        FUN=fillObsmonDataFrameWithUnits,
-        df=.self$.data,
-        # varname & obname are used to get the default units
-        varname=.self$paramsAsInUiInput$variable,
-        obname=.self$paramsAsInUiInput$obname,
-        # These two lines provide info to enable unit conversions
-        varUnits=.self$paramsAsInUiInput$variableUnits,
-        levelsUnits=.self$paramsAsInUiInput$levelsUnits
-      )
-      return (rtn)
+    dataWithUnits = function(newValue) {
+      if(missing(newValue)) {
+        if(length(.self$rawData)==0) .self$fetchRawData()
+        return(.self$.memoise(FUN=.self$.getDataFromRawData))
+      } else {
+        flog.debug("Cannot set dataWithUnits. Ignoring assignment.")
+      }
     },
     sqliteQuery = function(...) {.self$.getSqliteQuery()},
     paramsAsInSqliteDbs = function(...) {
       .self$parentType$getSqliteParamsFromUiParams(.self$paramsAsInUiInput)
     },
     title = function(...) {.self$.getTitle()},
-    hash = function(...) {
-      components <- list()
-      for (fieldName in names(.self$getRefClass()$fields())) {
-        fieldClass <- .self$getRefClass()$fields()[[fieldName]]
-        if(fieldClass == "activeBindingFunction") next
-        if(fieldName %in% c("hash", ".cache")) next
-        components <- c(components, .self$field(fieldName))
-      }
-      return(digest::digest(components))
-    },
+    hash = function(...) .refClassObjHash(.self),
     ##############################
-    .cache="list",
-    .data="data.frame"
+    .cache="list"
   ),
   methods=list(
     fetchRawData = function(...) {
@@ -333,6 +385,15 @@ obsmonPlotClass <- setRefClass(Class="obsmonPlot",
 
     ############################
     .generate = function() {
+
+      if(
+        .self$modelDomain$grid$hasPoints &&
+        isTRUE(grepl("maps", tolower(.self$parentType$category))) &&
+        !isTRUE(.self$parentType$interactive)
+      ) {
+        flog.warn("Ignoring domain info: only supported in interactive maps.")
+      }
+
       plot <- tryCatch({
         if(nrow(.self$data)==0) {
           rtn <- errorPlot("Could not produce plot: No data.")
@@ -356,14 +417,24 @@ obsmonPlotClass <- setRefClass(Class="obsmonPlot",
       if("plotly" %in% class(plot)) {
         plot <- plot %>% configPlotlyWrapper()
       }
+
       return(plot)
     },
 
     .generateLeafletMap = function() {
-      if(class(.self$parentType$leafletPlottingFunction) != "uninitializedField") {
-        return(.self$parentType$leafletPlottingFunction(.self))
-      }
-      return(.self$.defaultGenerateLeafletMap())
+      rtn <- tryCatch({
+        if(class(.self$parentType$leafletPlottingFunction) != "uninitializedField") {
+          .self$parentType$leafletPlottingFunction(.self)
+        } else {
+          .self$.defaultGenerateLeafletMap()
+        }
+      },
+        error=function(e) {
+          flog.error("Problems creating leaflet plot: %s", e)
+          return(NULL)
+        }
+      )
+      return(rtn)
     },
 
     .defaultGenerate = function() {
@@ -392,7 +463,7 @@ obsmonPlotClass <- setRefClass(Class="obsmonPlot",
     },
 
     .defaultGenerateLeafletMap = function() {
-      if(!("maps" %in% tolower(parentType$category))) return(NULL)
+      if(!isTRUE(grepl("maps", tolower(parentType$category)))) return(NULL)
       # Use "check.names=FALSE" so that names such as "fg_dep+biascrl"
       # are not modified
       localPlotData <- data.frame(.self$data, check.names=FALSE)
@@ -440,12 +511,57 @@ obsmonPlotClass <- setRefClass(Class="obsmonPlot",
       if(length(.self$rawData)==0) .self$fetchRawData()
       rtn <- data.frame(.self$rawData, check.names=FALSE)
 
+      # Filter out unwanted cols from the rawData
       if(length(.self$parentType$dataFieldsInRetrievedPlotData)>0) {
-        rtn <- rtn[unlist(.self$parentType$dataFieldsInRetrievedPlotData)]
+        selectedCols <- intersect(
+          unlist(.self$parentType$dataFieldsInRetrievedPlotData),
+          colnames(rtn)
+        )
+        rtn <- rtn[selectedCols]
       }
 
+      # Add units
+      rtn <- .self$.memoise(
+        FUN=fillObsmonDataFrameWithUnits,
+        df=rtn,
+        # varname & obname are used to get the default units
+        varname=.self$paramsAsInUiInput$variable,
+        obname=.self$paramsAsInUiInput$obname,
+        # These two lines provide info to enable unit conversions
+        varUnits=.self$paramsAsInUiInput$variableUnits,
+        levelsUnits=.self$paramsAsInUiInput$levelsUnits
+      )
+
+      if(
+        isTRUE(.self$parentType$queriedDbTable == "usage") &&
+        isTRUE(.self$paramsAsInUiInput$groupLevelsIntoStandardSwitch) &&
+        ("level" %in% colnames(rtn))
+      ) {
+        # Group levels into reference/standard levels
+        refLevels <- NULL
+        if(ud_are_convertible(units(rtn$level), "Pa")) {
+          refLevels <- refPressures
+        } else if(ud_are_convertible(units(rtn$level), "m")) {
+          refLevels <- refHeights
+        }
+
+        if(!is.null(refLevels)) {
+          units(refLevels) <- units(rtn$level)
+          refLevels <- drop_units(refLevels)
+
+          reportedLevels <- rtn$level
+          reportedLevel2Level <- Vectorize(function(reportedLevel) {
+            refLevelIndex <- which.min(abs(refLevels - reportedLevel))
+            return(refLevels[refLevelIndex])
+          })
+          rtn$level <- reportedLevel2Level(drop_units(reportedLevels))
+          units(rtn$level) <- units(reportedLevels)
+        }
+      }
+
+      # Apply eventual user-defined data post-processing
       if(class(.self$parentType$dataPostProcessingFunction) != "uninitializedField") {
-        rtn <- .self$parentType$dataPostProcessingFunction(rtn)
+        rtn <- .self$parentType$dataPostProcessingFunction(data=rtn, obsmonPlotObj=.self)
       }
 
       return(rtn[complete.cases(rtn),])
@@ -519,17 +635,9 @@ obsmonPlotClass <- setRefClass(Class="obsmonPlot",
     },
 
     .memoise = function(FUN, ...) {
-      functionName <- substitute(FUN)
-      functionHash <- digest::digest(functionName)
-      cachedValue <- .self$.cache[[.self$hash]][[functionHash]]
-      if(!is.null(cachedValue)) return(cachedValue)
-
-      value <- FUN(...)
-      newCacheEntry <- list(value)
-      names(newCacheEntry) <- functionHash
-      .self$.cache[[.self$hash]] <- c(.self$.cache[[.self$hash]], newCacheEntry)
-
-      return(value)
+      usedHash <- digest::digest(list(.self$hash, deparse(FUN), list(...)))
+      if(is.null(.self$.cache[[usedHash]])) .self$.cache[[usedHash]] <- FUN(...)
+      return(.self$.cache[[usedHash]])
     }
   )
 )
@@ -698,12 +806,19 @@ addTitleToPlot <- function(myPlot, title) {
   # in the data, but use a sequential colormap otherwise.
   # Red/blue colors will represent +/- values.
   cm <- list(name=NULL, palette=NULL, direction=NULL, domain=NULL)
-  dataColumnName <- unname(attributes(plotData)$comment["dataColumn"])
-  if(is.null(dataColumnName)) {
-    dataColumnName <- colnames(plotData)[ncol(plotData)]
-  }
 
-  dataRange <- range(plotData[[dataColumnName]])
+  if(is.data.frame(plotData)) {
+    dataColumnName <- unname(attributes(plotData)$comment["dataColumn"])
+    if(is.null(dataColumnName)) {
+      dataColumnName <- colnames(plotData)[ncol(plotData)]
+    }
+    dataRange <- range(plotData[[dataColumnName]], na.rm=TRUE)
+  } else {
+    dataRange <- range(plotData, na.rm=TRUE)
+  }
+  # Use integers as default upper/lower limits
+  dataRange <- c(floor(dataRange[1]), ceiling(dataRange[2]))
+
   if (prod(dataRange) >= 0) {
     spread <- diff(dataRange)
     if (sign(sum(dataRange)) < 0) {
@@ -742,7 +857,7 @@ addTitleToPlot <- function(myPlot, title) {
   return(plotData[["popupContents"]])
 }
 
-fillDataWithQualityControlStatus <- function(data) {
+fillDataWithQualityControlStatus <- function(data, ...) {
   status <- rep("NA", nrow(data))
   status <- ifelse(data$anflag == 0, "Rejected", status)
   status <- ifelse(data$active  > 0, "Active", status)
@@ -752,6 +867,25 @@ fillDataWithQualityControlStatus <- function(data) {
   status <- ifelse(data$anflag  > 0, "Active(2)", status)
   status <- ifelse(data$anflag == 4, "Rejected", status)
   status <- ifelse(data$anflag == 8, "Blacklisted", status)
+  status <- ifelse(data$anflag > 100, "Rejected in TITAN", status)
+  status <- ifelse(data$anflag == 100, "TITAN: blacklisted", status)
+  status <- ifelse(data$anflag == 101, "TITAN: nometa", status)
+  status <- ifelse(data$anflag == 102, "TITAN: plaus", status)
+  status <- ifelse(data$anflag == 103, "TITAN: clim", status)
+  status <- ifelse(data$anflag == 104, "TITAN: buddy", status)
+  status <- ifelse(data$anflag == 105, "TITAN: SCT", status)
+  status <- ifelse(data$anflag == 106, "TITAN: DEM", status)
+  status <- ifelse(data$anflag == 107, "TITAN: isol", status)
+  status <- ifelse(data$anflag == 108, "TITAN: fg", status)
+  status <- ifelse(data$anflag == 109, "TITAN: STEVE", status)
+  status <- ifelse(data$anflag == 110, "TITAN: fge", status)
+  status <- ifelse(data$anflag == 111, "TITAN: ccrrt", status)
+  status <- ifelse(data$anflag == 112, "TITAN: puddle", status)
+  status <- ifelse(data$anflag == 113, "TITAN: buddy_eve", status)
+  status <- ifelse(data$anflag == 114, "TITAN: fg2", status)
+  status <- ifelse(data$anflag == 151, "Fraction", status)
+  status <- ifelse(data$anflag == 199, "Domain", status)
+
   data$status <- status
   data <- data[rev(order(data$status)),]
   return(data)

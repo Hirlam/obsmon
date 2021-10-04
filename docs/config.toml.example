@@ -27,6 +27,22 @@
     appTimeout = 5 # In seconds. Optional.
     multiPlotsEnableInteractivity = true # The default value is false
 
+######################################
+# Configuring domain grid & geometry #
+######################################
+# See
+# <https://hirlam.org/trac/wiki/HarmonieSystemDocumentation/ModelDomain>
+# for an explanation of what these parameters mean.
+[domain]
+    nlon = 90
+    nlat = 96
+    lonc = 16.763011639
+    latc = 63.489212956
+    lon0 = 15.0
+    lat0 = 63.0
+    gsize = 25000
+    lmrt = false
+
 ###########################
 # Configuring experiments #
 ###########################

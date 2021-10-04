@@ -305,8 +305,17 @@
 }
 
 statDiagPlottingFunction <- function(plot) {
-  if(plot$parentType$interactive) return (.getInteractiveStatDiagPlot(plot))
-  return (.getStaticStatDiagPlot(plot))
+  withCallingHandlers({
+    if(plot$parentType$interactive) return (.getInteractiveStatDiagPlot(plot))
+    return (.getStaticStatDiagPlot(plot))
+  },
+    warning = function(w) {
+      # Suppress annoying "Can only have one: config" warnings
+      if (startsWith(conditionMessage(w), "Can only have one: config")) {
+        invokeRestart("muffleWarning")
+      }
+    }
+  )
 }
 
 plotRegistry$registerPlotType(

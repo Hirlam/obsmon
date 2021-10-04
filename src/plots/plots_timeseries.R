@@ -1,4 +1,4 @@
-.filterOutZeroNobsTotal <- function(data) {
+.filterOutZeroNobsTotal <- function(data, ...) {
   # Filters out data for which nobs_total==0, so that we don't end up with
   # these showing up in the plots. Returns the data unchanged if it does not
   # contain info on nobs_total
@@ -15,7 +15,7 @@
   return(data)
 }
 
-.numberOfActiveObsDataPostProcessingFunction <- function(data) {
+.numberOfActiveObsDataPostProcessingFunction <- function(data, ...) {
   data <- fillDataWithQualityControlStatus(data) %>%
     subset(grepl("active", tolower(status))) %>%
     group_by(DTG, level) %>%
@@ -23,7 +23,7 @@
   return(data)
 }
 
-landSeaDeparturesTimeseriesPlotPostProcessingFunction <- function(data) {
+landSeaDeparturesTimeseriesPlotPostProcessingFunction <- function(data, ...) {
   data <- .filterOutZeroNobsTotal(data)
   data <- within(data, rm("nobs_total"))
   seaCols <- c("fg_uncorr_sea", "fg_dep_sea", "an_dep_sea")
@@ -263,7 +263,6 @@ plotRegistry$registerPlotType(
   dataFieldsInRetrievedPlotData=list("DTG", "level", "obsvalue"),
   dataFieldsInSqliteWhereClause=list("statid", "obnumber", "obname", "varname"),
   stationChoiceType="single",
-  dataPostProcessingFunction=.filterOutZeroNobsTotal,
   plottingFunction=genericTimeseriesPlottingFunction
 )
 
@@ -274,7 +273,6 @@ plotRegistry$registerPlotType(
   dataFieldsInRetrievedPlotData=list("DTG", "level", "fg_dep"),
   dataFieldsInSqliteWhereClause=list("statid", "obnumber", "obname", "varname"),
   stationChoiceType="single",
-  dataPostProcessingFunction=.filterOutZeroNobsTotal,
   plottingFunction=genericTimeseriesPlottingFunction
 )
 
@@ -285,7 +283,6 @@ plotRegistry$registerPlotType(
   dataFieldsInRetrievedPlotData=list("DTG", "level", "an_dep"),
   dataFieldsInSqliteWhereClause=list("statid", "obnumber", "obname", "varname"),
   stationChoiceType="single",
-  dataPostProcessingFunction=.filterOutZeroNobsTotal,
   plottingFunction=genericTimeseriesPlottingFunction
 )
 

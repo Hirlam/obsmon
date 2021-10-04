@@ -89,7 +89,7 @@ plotRegistry$registerPlotType(
   dataFieldsInSqliteWhereClause=list("statid", "obnumber", "obname", "varname"),
   stationChoiceType="single",
   plottingFunction=stationVerticalProfilePlottingFunction,
-  dataPostProcessingFunction = function(data) {
+  dataPostProcessingFunction = function(data, ...) {
     data$first_guess <- data$obsvalue - data$fg_dep
     data$analysis <- data$obsvalue - data$an_dep
     data <- subset(data, select=-c(fg_dep, an_dep))
@@ -115,7 +115,7 @@ plotRegistry$registerPlotType(
   dataFieldsInSqliteWhereClause=list("statid", "obnumber", "obname", "varname"),
   stationChoiceType="single",
   plottingFunction=stationVerticalProfilePlottingFunction,
-  dataPostProcessingFunction = function(data) {
+  dataPostProcessingFunction = function(data, ...) {
     colnames(data)[colnames(data) == 'obsvalue'] <- 'obsvalue_corrected'
     data$obsvalue_raw <- data$obsvalue_corrected + data$biascrl
     return(data)

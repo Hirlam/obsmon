@@ -208,7 +208,7 @@ mockNonInteractivePlotType$name <- "First Guess Departure Map (static)"
 mockNonInteractivePlotType$interactive <- FALSE
 
 mockPlotTypeWithDataPP <- mockPlotType$copy()
-mockPlotTypeWithDataPP$dataPostProcessingFunction <- function(data) {
+mockPlotTypeWithDataPP$dataPostProcessingFunction <- function(data, ...) {
   data$obsvalue <- 2.0 * data$obsvalue
   return (data)
 }
@@ -243,9 +243,13 @@ test_that("obsmonPlotClass can be copied", {
     db=obsmonDb,
     paramsAsInUiInput=mockUiInput
   )
+  # Trigger fetching data manually because this will be used in the comparisons
+  newPlot$fetchRawData()
 
   for (shallow in c(TRUE, FALSE)) {
     plotCopy <- newPlot$copy(shallow=shallow)
+    # Trigger fetching data because this will be used in the comparisons
+    plotCopy$fetchRawData()
     expect_equal(class(newPlot), class(plotCopy))
     classFieldNamesToClasses <- newPlot$getRefClass()$fields()
     for (field in names(classFieldNamesToClasses)) {
@@ -314,40 +318,42 @@ test_that("Hash changes if rawData modified", {
   expect_equal(initialHash, newPlot$hash)
 })
 
-test_that("data can be modified", {
-  newPlot <- obsmonPlotClass$new(
-    parentType=mockPlotType,
-    db=obsmonDb,
-    paramsAsInUiInput=mockUiInput
-  )
-  originalData <- newPlot$data
-  expect_true("level" %in% colnames(originalData))
-
-  newData <- data.frame(originalData, check.names=FALSE)
-  multFactor <- 2
-  newData$level <- multFactor * originalData$level
-
-  newPlot$data <- newData
-  expect_true(all(newPlot$data$level == newData$level))
-  expect_true(all(newPlot$data$level == multFactor * originalData$level))
-})
-
-test_that("Hash changes if data modified", {
+test_that("rawData can be modified", {
   newPlot <- obsmonPlotClass$new(
     parentType=mockPlotType,
     db=obsmonDb,
     paramsAsInUiInput=mockUiInput
   )
   newPlot$fetchRawData()
-  originalData <- newPlot$data
+
+  originalData <- newPlot$rawData
+  expect_true("level" %in% colnames(originalData))
+
+  newData <- data.frame(originalData, check.names=FALSE)
+  multFactor <- 2
+  newData$level <- multFactor * originalData$level
+
+  newPlot$rawData <- newData
+  expect_true(all(newPlot$rawData$level == newData$level))
+  expect_true(all(newPlot$rawData$level == multFactor * originalData$level))
+})
+
+test_that("Hash changes if rawData modified", {
+  newPlot <- obsmonPlotClass$new(
+    parentType=mockPlotType,
+    db=obsmonDb,
+    paramsAsInUiInput=mockUiInput
+  )
+  newPlot$fetchRawData()
+  originalData <- newPlot$rawData
   initialHash <- newPlot$hash
 
-  newPlot$data <- rbind(originalData, originalData)
+  newPlot$rawData <- rbind(originalData, originalData)
   hashAfterModifyingData <- newPlot$hash
 
   expect_false(hashAfterModifyingData == initialHash)
 
-  newPlot$data <- originalData
+  newPlot$rawData <- originalData
   expect_equal(initialHash, newPlot$hash)
 })
 
@@ -659,6 +665,12 @@ test_that("plotTypes in actual obsmon plotRegistry can produce interactive plots
       db=obsmonDb,
       paramsAsInUiInput=mockUiInput
     )
-    expect_s3_class(newPlot$chart, "plotly")
+    testResult <- tryCatch(
+      expect_s3_class(newPlot$chart, "plotly"),
+      error=function(e) {
+        sprintf("Failure in plot '%s'", pType$name)
+        stop(e)
+      }
+    )
   }
 })

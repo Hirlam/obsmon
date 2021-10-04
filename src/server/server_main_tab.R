@@ -471,6 +471,7 @@ updateLevels <- reactive({
   input$station
   updateVariables()
   reloadInfoFromCache()
+  activePlotType()
   if(length(availableLevels())==0) invalidateLater(500)
 }) %>% throttle(500)
 observeEvent({
@@ -487,10 +488,18 @@ observeEvent({
   )
 
   # Toggle the choice between all levels or standard-only
-  hasStandardLevels <- length(levels$obsmon) > 0
-  allLevelsAreStandard <- all(levels$all %in% levels$obsmon)
-  showStandardLevelsToggle <- hasStandardLevels && !allLevelsAreStandard
-  shinyjs::toggle("standardLevelsSwitch", condition=showStandardLevelsToggle)
+  queryFromUsageDbTable <- activePlotType()$queriedDbTable == "usage"
+  retrievedDataHasLevels <- "level" %in% activePlotType()$getRetrievedSqliteFields()
+  usageHasStandardLevels <- length(intersect(levels$obsmon, levels$usage)) > 0
+  allUsageLevelsAreStandard <- all(levels$usage %in% levels$obsmon)
+  shinyjs::toggle(
+    "standardLevelsSwitch",
+    condition=queryFromUsageDbTable && usageHasStandardLevels && !allUsageLevelsAreStandard
+  )
+  shinyjs::toggle(
+    "groupLevelsIntoStandardSwitch",
+    condition=retrievedDataHasLevels && queryFromUsageDbTable && !allUsageLevelsAreStandard
+  )
 
   availableLevels(levels)
 }, ignoreNULL=FALSE)
@@ -500,9 +509,22 @@ observeEvent({
   availableLevels()
   input$standardLevelsSwitch
   levelsUnitsChanged()
+  activePlotType()
 }, {
-    if(isTRUE(input$standardLevelsSwitch)) choices <- availableLevels()$obsmon
-    else choices <- availableLevels()$all
+    queryFromUsageDbTable <- activePlotType()$queriedDbTable == "usage"
+    if(queryFromUsageDbTable) {
+      availableStandardLevels <- intersect(
+        availableLevels()$obsmon,
+        availableLevels()$usage
+      )
+      if(isTRUE(input$standardLevelsSwitch)) {
+        choices <- availableStandardLevels
+      } else {
+        choices <- unique(c(availableStandardLevels, availableLevels()$usage))
+      }
+    } else {
+      choices <- availableLevels()$obsmon
+    }
 
     # Present level choices in the units picked by the user, but make sure
     # to pass it to the query with the expected (default) units

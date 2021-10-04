@@ -66,7 +66,8 @@ shinyUI(ui=tagList(
         title="User-configured multiPlots",
         value="multiPlotsTab",
         multiPlotsTab()
-      )
+      ),
+      tabPanel("Domain Geometry & Grid", value="modelDomainTab", modelDomainTab())
     )
   ))
 ))

@@ -154,13 +154,41 @@ mainTab <- function() {fluidPage(
           status="warning",
           inline=TRUE,
           right=TRUE
-        ))
+        )),
+        hidden(
+          shinyInput_label_embed(
+            materialSwitch(
+              inputId='groupLevelsIntoStandardSwitch',
+              label="Standardise Levels in the Final Plot",
+              status="warning",
+              inline=TRUE,
+              right=TRUE
+            ),
+            tags$span(
+              HTML('&emsp;'),
+              shiny::icon("info") %>%
+                bs_embed_tooltip(
+                  title=paste(
+                    "Change the values of the plotted levels to the",
+                    "nearest corresponding standard/reference levels."
+                  ),
+                  placement="right"
+                )
+            )
+          )
+        )
       ),
       pickerInput("plottype",
         label=getDefLabel("plottype"),
         choices=c(),
         options=list(`dropup-auto`=FALSE, `live-search`=TRUE, size=10)
       ),
+      hidden(numericInput("minNobsForGriddedAverages",
+        label=HTML("Gridded Average: Min &numero; Obs per Grid Element"),
+        value=1,
+        min=1,
+        step=1
+      )),
       hidden(pickerInput("station",
         label=getDefLabel("station"),
         choices=c(),
