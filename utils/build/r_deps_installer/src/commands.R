@@ -1,10 +1,17 @@
 .getDependenciesSummaryDf <- function(args, verbose=TRUE) {
   # Get imports and deps
+
+  repos <- args$repos
+  if("INSTALLER_DEPS_LOCK" %in% names(repos)) {
+      # Constrain deps search to local database, if available
+      repos <- repos["INSTALLER_DEPS_LOCK"]
+  }
+
   if(verbose) {
     cat("Getting imports and dependencies...\n")
-    cat("  * Getting recursive dependencies from", args$repos, "\n")
+    cat("  * Getting recursive dependencies from", repos, "\n")
   }
-  availablePkgsDb <- available.packages(repos=args$repos)
+  availablePkgsDb <- available.packages(repos=repos)
   pkgDepsDf <- getImportedPkgsDepsDf(
     path=args$sources_dir,
     ignore_regex=args$ignore,
@@ -18,7 +25,7 @@
   )
   rtn <- list(
     depsSummaryDf=depsSummaryDf,
-    availablePkgsDb=availablePkgsDb    
+    availablePkgsDb=availablePkgsDb
   )
   return(rtn)
 }
@@ -31,7 +38,9 @@ install <- function(args) {
   cat("\n")
   installPkgsFromDf(
     df=depsSummaryDf,
-    repos=args$repos,
+    # Remove INSTALLER_DEPS_LOCK from the repos used for install, as
+    # it is used only to help lock the versions of the dependencies
+    repos=args$repos[names(args$repos) != "INSTALLER_DEPS_LOCK"],
     binDirs=args$bin_repo_path,
     outputDirs=args$output_dirs,
     liveViewLog=args$live_view_install_log,

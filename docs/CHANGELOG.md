@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](http://semver.org).
 ## [4.3.0]
 ### Fixed
 - Install issue related to config args
+- Install issue that caused dependencies to be queried for the most
+  recent versions of the R-packages, even if the versions of the
+  dependencies were locked using the .installer\_pkg\_versions.txt file
 
 
 ## [4.2.0] 2021-01-04
