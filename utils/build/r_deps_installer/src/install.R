@@ -83,20 +83,50 @@ getPathToBinary <- function(pkgName, pkgVersion, binDirs) {
   return(NULL)
 }
 
+.download_pkg_source <- Vectorize(function(
+    package,
+    version,
+    repos=c(CRAN="https://cloud.r-project.org"),
+    dest_dir=getwd(),
+    ...
+) {
+    downloaded_file_fpath <- remotes::download_version(
+        package=package,
+        version=version,
+        repos=repos,
+        type="source",
+        ...
+    )
+
+    # Get actual version of the downloaded package. Needed, e.g., if "version"
+    # is not specified as an exact number.
+    description_file_relative_fpath = file.path(package, "DESCRIPTION")
+    untar(downloaded_file_fpath, files=description_file_relative_fpath, exdir=tempdir())
+    description_file_fpath <- file.path(tempdir(), description_file_relative_fpath)
+    downloadedPkgVersion <- .get_pkg_version_from_description_file(description_file_fpath)
+    if(is.null(downloadedPkgVersion)) {
+        msg <- "ERROR: Could not determine version of downloaded pkg"
+        msg <- paste(msg, sprintf("'%s'.", package), "\n")
+        cat(msg)
+        return (NULL)
+    }
+
+    # Rename the downloaded file to a standard name and move it to the dest dir
+    standard_pkg_fname <- paste0(package, "_", downloadedPkgVersion, ".tar.gz")
+    destination_fpath <- file.path(dest_dir, standard_pkg_fname)
+    dir.create(dest_dir, recursive=TRUE, showWarnings=FALSE)
+    file.copy(from=downloaded_file_fpath, to=destination_fpath)
+    file.remove(downloaded_file_fpath)
+
+    return(destination_fpath)
+}, vectorize.args=c("package", "version"))
+
 .install_a_pkg_version <- function(pkgName, version, lib, repos, ...) {
   # Download source with specified version
-  fpath <- remotes::download_version(pkgName, version=version, repos=repos)
+  fpath <- .download_pkg_source(pkgName, version=version, repos=repos)
 
-  # Get actuall version of the downloaded package. Needed if "version" is
-  # not specified as an exact number.
-  descriptionFileRelativePath <- file.path(pkgName, "DESCRIPTION")
-  untar(fpath, files=descriptionFileRelativePath, exdir=tempdir())
-  descriptionFilePath <- file.path(tempdir(), descriptionFileRelativePath)
-  downloadedPkgVersion <- .get_pkg_version_from_description_file(descriptionFilePath)
-  if(is.null(downloadedPkgVersion)) {
-    msg <- "ERROR: Could not determine version of downloaded pkg "
-    msg <- paste(msg, sprintf("'%s'.", pkgName), "Skipping it.\n")
-    cat(msg)
+  if(is.null(fpath)) {
+    msg <- sprintf("ERROR: Problems downloading pkg %s (%s).", pkgName, version)
     return (NULL)
   }
 
@@ -107,13 +137,8 @@ getPathToBinary <- function(pkgName, pkgVersion, binDirs) {
   tmpRepoSrcContribDir <- file.path(tmpRepo, "src", "contrib")
   dir.create(tmpRepoSrcContribDir, recursive=TRUE)
   on.exit(unlink(tmpRepo, recursive=TRUE))
-  file.rename(
-    fpath,
-    file.path(
-      tmpRepoSrcContribDir,
-      paste0(pkgName, "_", downloadedPkgVersion, ".tar.gz")
-    )
-  )
+  file.copy(from=fpath, to=tmpRepoSrcContribDir)
+  file.remove(fpath)
   tools::write_PACKAGES(tmpRepoSrcContribDir)
 
   # Install from our temp repo
