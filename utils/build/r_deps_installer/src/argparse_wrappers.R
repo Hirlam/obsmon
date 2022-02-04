@@ -291,3 +291,9 @@ if(("repos" %in% names(args)) || args$command == "create-local-repo") {
     args$repos <- .validateRepos(args$repos)
   }
 }
+
+# Some versions of argparse since Jan 2021 seem to be adding
+# an NA to these when the getOption used as default returns NULL.
+.remove_na <- function(vec) vec[!is.na(vec)]
+if ("configure_args" %in% names(args)) args$configure_args <- .remove_na(args$configure_args)
+if ("configure_vars" %in% names(args)) args$configure_vars <- .remove_na(args$configure_vars)
