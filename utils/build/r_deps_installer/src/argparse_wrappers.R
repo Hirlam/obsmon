@@ -277,6 +277,11 @@ if(("repos" %in% names(args)) || args$command == "create-local-repo") {
     # servers worldwide.
     repos <- getOption("repos")
     repos["CRAN"] <- "https://cloud.r-project.org"
+    local_repo_path <- file.path(getwd(), ".installer_local_pkg_repo")
+    if (file.exists(file.path(local_repo_path, "src", "contrib", "PACKAGES"))) {
+      repos["INSTALLER_DEPS_LOCK"] <- paste0("file:", local_repo_path)
+      repos <- c(repos["INSTALLER_DEPS_LOCK"], repos[names(repos) != "INSTALLER_DEPS_LOCK"])
+    }
     args$repos <- repos
   } else {
     .validateRepos <- Vectorize(function(repo) {
@@ -291,3 +296,10 @@ if(("repos" %in% names(args)) || args$command == "create-local-repo") {
     args$repos <- .validateRepos(args$repos)
   }
 }
+
+# Some versions of argparse since Jan 2021 seem to be adding
+# an NA to these when the getOption used as default returns NULL.
+.remove_na <- function(vec) vec[!is.na(vec)]
+if ("configure_args" %in% names(args)) args$configure_args <- .remove_na(args$configure_args)
+if ("configure_vars" %in% names(args)) args$configure_vars <- .remove_na(args$configure_vars)
+
