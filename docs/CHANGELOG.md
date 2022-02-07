@@ -4,7 +4,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com)
 and this project adheres to [Semantic Versioning](http://semver.org).
 
-## [4.3.0]
+## [4.3.0] 2022-02-07
 ### Fixed
 - Install issue related to config args
 - Install issue that caused dependencies to be queried for the most
