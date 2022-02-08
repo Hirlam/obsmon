@@ -111,9 +111,11 @@ output$modelDomainDemoChart <- renderPlotly({
 
   rangeLon <- NULL
   rangeLat <- NULL
+  map_center <- NULL
   if(domain$grid$hasPoints) {
-     rangeLon <- c(domain$ezone_minlon - 2, domain$ezone_maxlon + 2)
-     rangeLat <- c(domain$ezone_minlat - 2, domain$ezone_maxlat + 2)
+     rangeLon <- c(domain$ezone_minlon - 1, domain$ezone_maxlon + 1)
+     rangeLat <- c(domain$ezone_minlat - 1, domain$ezone_maxlat + 1)
+     map_center <- list(lon=domain$center_lonlat[1], lat=domain$center_lonlat[2])
   }
 
   projParams <- domainProj2plotlyProj(domain=domain)
@@ -157,7 +159,8 @@ output$modelDomainDemoChart <- renderPlotly({
           range = rangeLon,
           showgrid = TRUE,
           dtick = 15
-        )
+        ),
+        center = map_center
       )
     ) %>%
     drawDomain(domain) %>%

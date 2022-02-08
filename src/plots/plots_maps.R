@@ -335,15 +335,17 @@ drawGriddedScattergeoTrace <- function(
 
 .getInteractiveGenericMapPlot <- function(plot) {
   domain <- plot$modelDomain
-  if(!domain$grid$hasPoints) {
-    rangeLat <- range(plot$data$latitude)
-    rangeLon <- range(plot$data$longitude)
-  } else {
+  if(domain$grid$hasPoints) {
     rangeLat <- c(domain$ezone_minlat, domain$ezone_maxlat)
     rangeLon <- c(domain$ezone_minlon, domain$ezone_maxlon)
+    map_center <- list(lon=domain$center_lonlat[1], lat=domain$center_lonlat[2])
+  } else {
+    rangeLat <- range(plot$data$latitude)
+    rangeLon <- range(plot$data$longitude)
+    map_center <- list(lon=mean(rangeLon), lat=mean(rangeLat))
   }
-  rangeLat <- rangeLat + c(-2, 2)
-  rangeLon <- rangeLon + c(-2, 2)
+  rangeLat <- rangeLat + c(-1, 1)
+  rangeLon <- rangeLon + c(-1, 1)
 
   projParams <- domainProj2plotlyProj(domain=domain)
   myPlotly <- plot_geo(
@@ -383,7 +385,8 @@ drawGriddedScattergeoTrace <- function(
           range = rangeLon,
           showgrid = TRUE,
           dtick = 15
-        )
+        ),
+        center = map_center
       )
     )
   return(myPlotly)
