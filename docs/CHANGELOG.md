@@ -4,6 +4,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com)
 and this project adheres to [Semantic Versioning](http://semver.org).
 
+## [4.3.2] 2022-05-24
+### Fixed
+- Fix excessive jitter in interactive map plots when the number of
+  plotted observations is small.
+
+
+## [4.3.1] 2022-02-08
+### Changed
+- Center maps using domain center if a domain is configured.
+
+
 ## [4.3.0] 2022-02-07
 ### Fixed
 - Install issue related to config args

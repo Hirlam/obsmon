@@ -349,7 +349,9 @@ drawGriddedScattergeoTrace <- function(
 
   projParams <- domainProj2plotlyProj(domain=domain)
   myPlotly <- plot_geo(
-    data=plot$data, lat=~jitter(latitude, 1), lon =~jitter(longitude, 1)
+    data=plot$data,
+    lat=~jitter(latitude, amount=1E-6),
+    lon =~jitter(longitude, amount=1E-6)
   ) %>%
     layout(
       margin = list(
