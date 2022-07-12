@@ -20,9 +20,10 @@ rtags.R
 TAGS
 .obsmon_git_info
 tmp/
+.idea/
 
 # Stuff generated at run time or during installation
-.installer_local_R-libs/
+*installer_local_R-libs*/
 batch_mode_plots/
 Rprof.out
 failed_install*.log

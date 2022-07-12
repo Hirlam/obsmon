@@ -149,13 +149,13 @@ summarisePkgDepsDf <- function(
   return(depsSummary)
 }
 
-printDepsFromDf <- function(df, verbose=TRUE) {
+printDepsFromDf <- function(df, verbose=TRUE, filePath=NULL) {
   if(nrow(df)==0) {
     if(verbose) cat("No imports (and, consequently, no dependencies) found.\n")
     return(NULL)
   }
 
-  .printDep <- function(pkg, version, verbose) {
+  .printDep <- function(pkg, version, verbose, filePath=NULL) {
     msg <- pkg
     if(verbose) {
       msg <- paste0("    ", msg)
@@ -163,14 +163,16 @@ printDepsFromDf <- function(df, verbose=TRUE) {
     } else if(!is.null(version)) {
       msg <- paste(msg, version)
     }
+
+    if (!is.null(filePath)) cat(msg, file=filePath, append=TRUE, sep="\n")
     cat(paste0(msg, "\n"))
   }
 
-  .printDfSummary <- function(df, dfName=NULL) {
+  .printDfSummary <- function(df, dfName=NULL, filePath=NULL) {
     if(nrow(df)>0) {
       if(!is.null(dfName)) cat(paste0(dfName, ":\n"))
       for(irow in seq_len(nrow(df))) {
-        .printDep(df$Package[irow], df$Version[irow], verbose)
+        .printDep(df$Package[irow], df$Version[irow], verbose, filePath)
       }
     }
   }
@@ -194,6 +196,7 @@ printDepsFromDf <- function(df, verbose=TRUE) {
     cat("#Essential dependencies for the main R-libs:", nrow(dfEssentialDeps), "\n")
     if(nrow(dfSuggests)>0) cat("#Suggests-type dependencies:", nrow(dfSuggests), "\n")
   } else {
-    .printDfSummary(df[order(df$Package), ])
+    if(!is.null(filePath)) unlink(filePath)
+    .printDfSummary(df[order(df$Package), ], filePath=filePath)
   }
 }

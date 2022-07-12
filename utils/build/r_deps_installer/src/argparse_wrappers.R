@@ -191,6 +191,12 @@ parser_listdeps$add_argument(
   help="Keep stdout simple."
 )
 
+parser_listdeps$add_argument(
+  "--lock-versions",
+  dest="lock_pkg_versions",
+  action="store_true",
+  help="Create a file locking the versions of the R-packages to be installed."
+)
 
 ###############################
 # Parsing and validating args #

@@ -52,11 +52,12 @@ install <- function(args) {
 }
 
 list_deps <- function(args) {
-  depsSummaryAndAvPkgs <- .getDependenciesSummaryDf(
-    args, verbose=!args$simple_listdeps
-  )
+  verbose= !args$simple_listdeps & !args$lock_pkg_versions
+  depsSummaryAndAvPkgs <- .getDependenciesSummaryDf(args, verbose=verbose)
+  filePath <- NULL
+  if(args$lock_pkg_versions) filePath <- ".installer_pkg_versions.txt"
   invisible(printDepsFromDf(
-    depsSummaryAndAvPkgs$depsSummaryDf, verbose=!args$simple_listdeps
+    depsSummaryAndAvPkgs$depsSummaryDf, verbose=verbose, filePath=filePath
   ))
 }
 
