@@ -157,10 +157,12 @@ printDepsFromDf <- function(df, verbose=TRUE, filePath=NULL) {
 
   .printDep <- function(pkg, version, verbose, filePath=NULL) {
     msg <- pkg
+    version <- unlist(version, use.names=FALSE)
+    versionHasBeenSpecified <- !is.null(version) && version != ""
     if(verbose) {
       msg <- paste0("    ", msg)
-      if(!is.null(version)) msg <- paste0(msg, " (", version,")")
-    } else if(!is.null(version)) {
+      if(versionHasBeenSpecified) msg <- paste0(msg, " (", version,")")
+    } else if(versionHasBeenSpecified) {
       msg <- paste(msg, version)
     }
 
