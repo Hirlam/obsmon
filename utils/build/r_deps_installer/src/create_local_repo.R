@@ -1,4 +1,4 @@
-createLocalRepo <- function(pkgsDf, destdir) {
+createLocalRepo <- function(pkgsDf, destdir, onlyMetadata=FALSE) {
   repos <- c(CRAN="https://cloud.r-project.org")
   srcDir <- file.path(destdir, "contrib")
   unlink(srcDir, recursive=TRUE)
@@ -16,4 +16,7 @@ createLocalRepo <- function(pkgsDf, destdir) {
   }
   .printOnSameLine("Done downloading sources. Updating PACKAGES database...\n")
   tools::write_PACKAGES(dir=srcDir)
+  if (onlyMetadata) {
+    unlink(file.path(srcDir, paste0("*", "_", "*", ".tar.gz")))
+  }
 }

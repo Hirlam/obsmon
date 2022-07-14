@@ -198,6 +198,16 @@ parser_listdeps$add_argument(
   help="Create a file locking the versions of the R-packages to be installed."
 )
 
+
+############################################################
+# Options that apply only to the create-local-repo command #
+############################################################
+parser_create_local_repo$add_argument(
+  "--only-metadata",
+  action="store_true",
+  help="Keep only the repo's metadata, not the source files."
+)
+
 ###############################
 # Parsing and validating args #
 ###############################

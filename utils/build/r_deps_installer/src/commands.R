@@ -67,9 +67,16 @@ create_local_repo <- function(args) {
   invisible(printDepsFromDf(depsSummaryAndAvPkgs$depsSummaryDf))
   cat("\n")
   depsSummaryDf <- depsSummaryAndAvPkgs$depsSummaryDf
-  createLocalRepo(pkgsDf=depsSummaryDf, destdir=args$output_dirs$sources)
-  cat("Done creating local CRAN-like repo.\n")
-  cat("  > Path to sources:", args$output_dirs$sources, "\n")
+  createLocalRepo(
+    pkgsDf=depsSummaryDf,
+    destdir=args$output_dirs$sources,
+    onlyMetadata=args$only_metadata
+  )
+
+  msg <- "Done creating local CRAN-like repo"
+  if(args$only_metadata) msg <- paste(msg, "metadata")
+  msg <- paste(msg, "at", args$output_dirs$sources, "\n")
+  cat(msg)
 }
 
 clean <- function(args) {
