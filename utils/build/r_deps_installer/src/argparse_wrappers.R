@@ -313,6 +313,10 @@ if(("repos" %in% names(args)) || args$command == "create-local-repo") {
   }
 }
 
+if(("lock_pkg_versions" %in% names(args)) || args$command == "listdeps") {
+  args$include_suggests <- TRUE
+}
+
 # Some versions of argparse since Jan 2021 seem to be adding
 # an NA to these when the getOption used as default returns NULL.
 .remove_na <- function(vec) vec[!is.na(vec)]
