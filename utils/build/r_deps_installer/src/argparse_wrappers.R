@@ -306,13 +306,15 @@ if(("repos" %in% names(args)) || args$command == "create-local-repo") {
     args$repos <- repos
   } else {
     .validateRepos <- Vectorize(function(repo) {
-      if(startsWith(repo, "file:")) {
+      if(tolower(repo) == "cran") {
+          repo <- "https://cloud.r-project.org"
+      } else if(startsWith(repo, "file:")) {
         repo <- paste0(
           "file:",
           normalizePath(sub("file:", "", repo), mustWork=FALSE)
         )
       }
-    return(repo)
+      return(repo)
     })
     args$repos <- .validateRepos(args$repos)
   }
