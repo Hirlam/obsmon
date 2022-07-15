@@ -1,6 +1,7 @@
 createLocalRepo <- function(pkgsDf, destdir, onlyMetadata=FALSE) {
   repos <- c(CRAN="https://cloud.r-project.org")
   srcDir <- file.path(destdir, "src", "contrib")
+  pkgsDf <- pkgsDf[order(pkgsDf$Package),]
   unlink(srcDir, recursive=TRUE)
   .download_pkg_source(pkgsDf$Package, pkgsDf$Version, repos=repos, dest_dir=srcDir)
   .printOnSameLine("Done downloading sources. Updating PACKAGES database...\n")
