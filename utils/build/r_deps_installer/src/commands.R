@@ -62,20 +62,22 @@ list_deps <- function(args) {
 }
 
 create_local_repo <- function(args) {
-  cat("Creating local CRAN-like repo under", args$output_dirs$sources, "...\n\n")
+  local_repo_path <- file.path(getwd(), ".installer_local_pkg_repo")
+  cat("Creating local CRAN-like repo under", local_repo_path, "...\n\n")
+  unlink(local_repo_path, recursive=TRUE)
   depsSummaryAndAvPkgs <- .getDependenciesSummaryDf(args)
   invisible(printDepsFromDf(depsSummaryAndAvPkgs$depsSummaryDf))
   cat("\n")
   depsSummaryDf <- depsSummaryAndAvPkgs$depsSummaryDf
   createLocalRepo(
     pkgsDf=depsSummaryDf,
-    destdir=args$output_dirs$sources,
+    destdir=local_repo_path,
     onlyMetadata=args$only_metadata
   )
 
   msg <- "Done creating local CRAN-like repo"
   if(args$only_metadata) msg <- paste(msg, "metadata")
-  msg <- paste(msg, "at", args$output_dirs$sources, "\n")
+  msg <- paste(msg, "at", local_repo_path, "\n")
   cat(msg)
 }
 

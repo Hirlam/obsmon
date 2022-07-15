@@ -90,6 +90,7 @@ getPathToBinary <- function(pkgName, pkgVersion, binDirs) {
     dest_dir=getwd(),
     ...
 ) {
+    cat(paste("Downloading source for R-pkg", package, version, "\n"))
     downloaded_file_fpath <- remotes::download_version(
         package=package,
         version=version,

@@ -294,9 +294,14 @@ if(("repos" %in% names(args)) || args$command == "create-local-repo") {
     repos <- getOption("repos")
     repos["CRAN"] <- "https://cloud.r-project.org"
     local_repo_path <- file.path(getwd(), ".installer_local_pkg_repo")
-    if (file.exists(file.path(local_repo_path, "src", "contrib", "PACKAGES"))) {
-      repos["INSTALLER_DEPS_LOCK"] <- paste0("file:", local_repo_path)
-      repos <- c(repos["INSTALLER_DEPS_LOCK"], repos[names(repos) != "INSTALLER_DEPS_LOCK"])
+    if(args$command != "create-local-repo") {
+      if (file.exists(file.path(local_repo_path, "src", "contrib", "PACKAGES"))) {
+        repos["INSTALLER_DEPS_LOCK"] <- paste0("file:", local_repo_path)
+        repos <- c(
+          repos["INSTALLER_DEPS_LOCK"],
+          repos[names(repos) != "INSTALLER_DEPS_LOCK"]
+        )
+      }
     }
     args$repos <- repos
   } else {
@@ -313,7 +318,10 @@ if(("repos" %in% names(args)) || args$command == "create-local-repo") {
   }
 }
 
-if(("lock_pkg_versions" %in% names(args)) || args$command == "listdeps") {
+if(
+  ("lock_pkg_versions" %in% names(args)) ||
+  (args$command %in% c("listdeps", "create-local-repo"))
+) {
   args$include_suggests <- TRUE
 }
 
