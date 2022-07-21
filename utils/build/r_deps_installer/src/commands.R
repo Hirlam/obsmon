@@ -52,23 +52,33 @@ install <- function(args) {
 }
 
 list_deps <- function(args) {
-  depsSummaryAndAvPkgs <- .getDependenciesSummaryDf(
-    args, verbose=!args$simple_listdeps
-  )
+  verbose= !args$simple_listdeps & !args$lock_pkg_versions
+  depsSummaryAndAvPkgs <- .getDependenciesSummaryDf(args, verbose=verbose)
+  filePath <- NULL
+  if(args$lock_pkg_versions) filePath <- ".installer_pkg_versions.txt"
   invisible(printDepsFromDf(
-    depsSummaryAndAvPkgs$depsSummaryDf, verbose=!args$simple_listdeps
+    depsSummaryAndAvPkgs$depsSummaryDf, verbose=verbose, filePath=filePath
   ))
 }
 
 create_local_repo <- function(args) {
-  cat("Creating local CRAN-like repo under", args$output_dirs$sources, "...\n\n")
+  local_repo_path <- file.path(getwd(), ".installer_local_pkg_repo")
+  cat("Creating local CRAN-like repo under", local_repo_path, "...\n\n")
+  unlink(local_repo_path, recursive=TRUE)
   depsSummaryAndAvPkgs <- .getDependenciesSummaryDf(args)
   invisible(printDepsFromDf(depsSummaryAndAvPkgs$depsSummaryDf))
   cat("\n")
   depsSummaryDf <- depsSummaryAndAvPkgs$depsSummaryDf
-  createLocalRepo(pkgsDf=depsSummaryDf, destdir=args$output_dirs$sources)
-  cat("Done creating local CRAN-like repo.\n")
-  cat("  > Path to sources:", args$output_dirs$sources, "\n")
+  createLocalRepo(
+    pkgsDf=depsSummaryDf,
+    destdir=local_repo_path,
+    onlyMetadata=args$only_metadata
+  )
+
+  msg <- "Done creating local CRAN-like repo"
+  if(args$only_metadata) msg <- paste(msg, "metadata")
+  msg <- paste(msg, "at", local_repo_path, "\n")
+  cat(msg)
 }
 
 clean <- function(args) {

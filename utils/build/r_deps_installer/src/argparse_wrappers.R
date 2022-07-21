@@ -191,6 +191,22 @@ parser_listdeps$add_argument(
   help="Keep stdout simple."
 )
 
+parser_listdeps$add_argument(
+  "--lock-versions",
+  dest="lock_pkg_versions",
+  action="store_true",
+  help="Create a file locking the versions of the R-packages to be installed."
+)
+
+
+############################################################
+# Options that apply only to the create-local-repo command #
+############################################################
+parser_create_local_repo$add_argument(
+  "--only-metadata",
+  action="store_true",
+  help="Keep only the repo's metadata, not the source files."
+)
 
 ###############################
 # Parsing and validating args #
@@ -278,23 +294,37 @@ if(("repos" %in% names(args)) || args$command == "create-local-repo") {
     repos <- getOption("repos")
     repos["CRAN"] <- "https://cloud.r-project.org"
     local_repo_path <- file.path(getwd(), ".installer_local_pkg_repo")
-    if (file.exists(file.path(local_repo_path, "src", "contrib", "PACKAGES"))) {
-      repos["INSTALLER_DEPS_LOCK"] <- paste0("file:", local_repo_path)
-      repos <- c(repos["INSTALLER_DEPS_LOCK"], repos[names(repos) != "INSTALLER_DEPS_LOCK"])
+    if(args$command != "create-local-repo") {
+      if (file.exists(file.path(local_repo_path, "src", "contrib", "PACKAGES"))) {
+        repos["INSTALLER_DEPS_LOCK"] <- paste0("file:", local_repo_path)
+        repos <- c(
+          repos["INSTALLER_DEPS_LOCK"],
+          repos[names(repos) != "INSTALLER_DEPS_LOCK"]
+        )
+      }
     }
     args$repos <- repos
   } else {
     .validateRepos <- Vectorize(function(repo) {
-      if(startsWith(repo, "file:")) {
+      if(tolower(repo) == "cran") {
+          repo <- "https://cloud.r-project.org"
+      } else if(startsWith(repo, "file:")) {
         repo <- paste0(
           "file:",
           normalizePath(sub("file:", "", repo), mustWork=FALSE)
         )
       }
-    return(repo)
+      return(repo)
     })
     args$repos <- .validateRepos(args$repos)
   }
+}
+
+if(
+  ("lock_pkg_versions" %in% names(args)) ||
+  (args$command %in% c("listdeps", "create-local-repo"))
+) {
+  args$include_suggests <- TRUE
 }
 
 # Some versions of argparse since Jan 2021 seem to be adding

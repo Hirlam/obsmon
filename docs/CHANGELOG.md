@@ -4,6 +4,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com)
 and this project adheres to [Semantic Versioning](http://semver.org).
 
+## [unreleased]
+### Added
+- Option `--lock` to `install` script, which can be used to create an
+  `.installer_pkg_versions.txt` R-package version locker file
+- Option `--only-metadata` to the `create-local-repo` command of the `install` script
+- Allow passing `-repos=cran` the `install` script wherever applicable
+- Info about advanced installation options, as well as support information, in the PDF doc
+### Changed
+- Update versions of R-packages
+- Default to not having the `.installer_pkg_versions.txt` file
+### Fixed
+- Bugs in the `createrepo` command of the `ìnstall` script
+- Output format in the `listdeps` command of the `ìnstall` script
+
+
 ## [4.3.2] 2022-05-24
 ### Fixed
 - Fix excessive jitter in interactive map plots when the number of
