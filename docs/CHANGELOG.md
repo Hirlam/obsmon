@@ -4,12 +4,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com)
 and this project adheres to [Semantic Versioning](http://semver.org).
 
-## [unreleased]
+## [4.4.0] 2022-08-03
 ### Added
+- Allow passing `-repos=cran` the `install` script wherever applicable
 - Option `--lock` to `install` script, which can be used to create an
   `.installer_pkg_versions.txt` R-package version locker file
 - Option `--only-metadata` to the `create-local-repo` command of the `install` script
-- Allow passing `-repos=cran` the `install` script wherever applicable
 - Info about advanced installation options, as well as support information, in the PDF doc
 ### Changed
 - Update versions of R-packages
