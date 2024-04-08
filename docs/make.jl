@@ -24,7 +24,7 @@ makedocs(
 )
 
 deploydocs(
-    repo = "github.com/Hirlam/Obsmon.git",
+    repo = "github.com/Hirlam/obsmon.git",
     devbranch = "master",   
     devurl = "master",
 )
