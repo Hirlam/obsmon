@@ -150,6 +150,41 @@ NoMachine at ECMWF. For this, we refer you to the \"NX service\" section
 of the [ECaccess Web server
 page](https://confluence.ecmwf.int/display/ECAC/The+Web+server#TheWebserver-NXservice).
 
+### [At ECMWF (Atos Bologna)](@id install-ecmwf-atos)
+To make your own installation of Obsmon:\
+    \
+    Follow the instructions given in
+    [3.1.1](@ref install-standalone).\
+
+    The compilation requires the following modules to provide system dependencies: 
+
+    module load R
+    module load gdal
+    module load gproj
+    module load geos
+
+Tested with current (April 2024) defaults: R/4.2.2 geos/3.11.1 proj/9.1.1 gdal/3.6.2.
+
+Atos HPC currently does not provide a browser to connect to Shinny applications. However, for those using Virtual Desktop Infrastructure (VDI) provided by ECMWF, one option is to use SOCKS port forwarding from the Linux Virtual Desktop:
+
+1. Configure proxy to use SOCKS port-forwarding. 
+
+Open the Firefox browser on DVI virtual machine, and go to Proxy settings (Settings -> Network Settings -> Settings). Choose Manual Proxy Configuration and SOCKSv4. Use SOCKS Host: 127.0.0.1 and Port: 5000.
+
+2. Connect to HPC and run Obsmon.
+
+       ssh -D 5000 your_username@hpc-login
+    
+3. Go to your obsmon installation and execute Obsmon: 
+    
+       module load R
+       ./obsmon
+
+3. Connect to Shinny application through browser
+
+In Firefox, navigate to  http://0.0.0.0:5391/
+where 5391 is the default port used by Obsmon (please change if your Obsmon application is using another port).
+
 ### [At SMHI](@id install-smhi) 
 
 You can follow the instructions given in
