@@ -47,7 +47,7 @@ if you wish to install obsmon in multiple identical computers.
 
 2.  Create a `config.toml`. You can find a detailed discussion about the
     configuration file in [4](@ref config-file). Also, take a look at the template
-    config file `docs/config.toml.example`.
+    config file `docs/example/config.toml`.
 
 3.  To run obsmon, just execute[^3]
  
@@ -107,7 +107,7 @@ running.
         and the shiny server.
 
 3.  Put a valid `config.toml` file inside either the obsmon directory or
-    at `/etc/obsmon`. See the file `docs/config.toml.example` for a
+    at `/etc/obsmon`. See the file `docs/example/config.toml` for a
     template. See also [4](@ref config-file).
 
 4.  Run your Shiny Server and connect to it with your browser.

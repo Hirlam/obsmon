@@ -68,29 +68,22 @@ will discuss the main aspects of how to configure a `multiPlot`. There
 is no limit to the number of `multiPlots` that can be configured. To add
 a new `multiPlot`, just add a new `[[multiPlot]]` section to the
 configuration file. We encourage you to take a look at the template
-config file `docs/config.toml.example` for more concrete examples.
+config file `docs/example/config.toml` for more concrete examples.
 
 ### [Parameters shared by all plots within the same `multiPlot`](@id multiplots-common-params) 
 
 The following parameters apply for all plots contained within a
 `multiPlot` and must be specified when defining a new `multiPlot`:
 
--   `displayName`: Used to identify the `multiPlot` in the web
-    interface.\
-    Accepted values: Any (you are free to choose the name of your
-    `multiPlot`).
+-   `displayName`: Used to identify the `multiPlot` in the web interface.  Accepted values: Any (you are free to choose the name of your `multiPlot`).
 
--   `experiment`: Which experiment to use.\
-    Accepted values: The `displayName` of a valid `[[experiments]]`
-    entry. See [4.2](@ref config-file-experiments).
+-   `experiment`: Which experiment to use.  Accepted values: The `displayName` of a valid `[[experiments]]` entry. See [4.2](@ref config-file-experiments).
 
--   `database`: Which experiment database to get data from.\
-    Accepted values: `ccma`, `ecma` or `ecma_sfc`.
+-   `database`: Which experiment database to get data from.Accepted values: `ccma`, `ecma` or `ecma_sfc`.
 
--   `plotType`: The type of plot that will be performed.\
-    Accepted values: Any `plotType` ordinarily supported by obsmon
+-   `plotType`: The type of plot that will be performed.  Accepted values: Any `plotType` ordinarily supported by obsmon
 
--   DTG-related parameters.\
+-   DTG-related parameters.
 
     -   `startDate`: A date in the `"YYYY-MM-DD"` format or an integer
         number `N` less than or equal to zero. If the integer number
@@ -114,10 +107,7 @@ The following parameters apply for all plots contained within a
 
 ### [Minimal `[[multiPlot]]` entry configuration](@id multiplots-minimal-config) 
 
-The parameters described in
-[5.4.1](@ref multiplots-common-params) are already enough for a
-minimal `[[multiPlot]]` configuration. The following definition, for
-instance, is a perfectly valid `multiPlot` entry:
+The parameters described in [5.4.1](@ref multiplots-common-params) are already enough for a minimal `[[multiPlot]]` configuration. The following definition, for instance, is a perfectly valid `multiPlot` entry:
 
 ```
     [[multiPlots]]
@@ -127,108 +117,66 @@ instance, is a perfectly valid `multiPlot` entry:
         database = "ecma"
         startDate = -30
 ```
-Such an entry will create a `multiPlot` that will contain one plot of
-the "Number of Observations\" type for every valid combination of
-observation type, name, variable, levels, station, satellite name,
-sensor, channels, etc. The default behaviour can thus be summarised as:
-*Everything is included unless otherwise specified.*
+Such an entry will create a `multiPlot` that will contain one plot of the "Number of Observations" type for every valid combination of observation type, name, variable, levels, station, satellite name, sensor, channels, etc. The default behaviour can thus be summarised as: *Everything is included unless otherwise specified.*
 
 ### Selecting what to include/exclude from a `multiPlot`
 
-The total number of individual plots composing a `multiPlot` depends on
-what you choose to include and/or exclude. As explained in
-[5.4.2](@ref multiplots-minimal-config), obsmon adopts the convention
-that a `multiPlot` will include everything that can possibly make sense
-within its context, unless specified otherwise.
+The total number of individual plots composing a `multiPlot` depends on what you choose to include and/or exclude. As explained in [5.4.2](@ref multiplots-minimal-config), obsmon adopts the convention that a `multiPlot` will include everything that can possibly make sense within its context, unless specified otherwise.
 
-Including and/or excluding parameters such as observation types,
-variables, levels, stations, satellites, channels, etc. is relatively
-simple. There are, however, many such options, and explaining them all
-here would take many more lines than actually writing down the
-corresponding entries in the configuration file. For this reason, we
-have instead produced a template `config.toml.example` file containing a
-comprehensive selection of examples on how to setup `multiPlots`. This
-file can be found under the `docs` directory.
+Including and/or excluding parameters such as observation types, variables, levels, stations, satellites, channels, etc. is relatively simple. There are, however, many such options, and explaining them all here would take many more lines than actually writing down the corresponding entries in the configuration file. For this reason, we have instead produced a template `config.toml.example` file containing a comprehensive selection of examples on how to setup `multiPlots`. This file can be found under the `docs` directory.
 
-We highly recommend that you read and understand the template config
-file if you want to setup `multiPlots`, and we encourage you to copy the
-entries from that file and adapt them to what you need. Finally, feel
-free to get in touch should you think something is missing.
+We highly recommend that you read and understand the template config file if you want to setup `multiPlots`, and we encourage you to copy the entries from that file and adapt them to what you need. Finally, feel free to get in touch should you think something is missing.
 
 [Batch mode](@id batch-mode) 
 ----------
 
-Batch mode allows producing plots without the use of the GUI. When run
-in batch mode, obsmon will produce the appropriate pre-configured
-plot(s), save the results in individual files (under appropriately named
-directories, see more below), and then exit.
+Batch mode allows producing plots without the use of the GUI. When run in batch mode, obsmon will produce the appropriate pre-configured plot(s), save the results in individual files (under appropriately named directories, see more below), and then exit.
 
-There are many usage scenarios where such a functionality can come in
-handy. For instance, remotely opening a web browser from ECMWF can be
-very slow, as discussed in
-[3.1.3](@ref install-ecmwf). In such cases, one can run obsmon in
-batch mode and then retrieve the generated files via, e.g., `ftp`.
-Another usage case example would be calling obsmon from a script that
-runs as part of a `cron` job, thus allowing one to regularly produce
-plots without user intervention.
+There are many usage scenarios where such a functionality can come in handy. For instance, remotely opening a web browser from ECMWF can be very slow, as discussed in [3.1.3](@ref install-ecmwf). In such cases, one can run obsmon in batch mode and then retrieve the generated files via, e.g., `ftp`.  Another usage case example would be calling obsmon from a script that runs as part of a `cron` job, thus allowing one to regularly produce plots without user intervention.
 
 ### [Configuration of batch-mode plots](@id batch-mode-configuration) 
 
-Batch-mode plots in obsmon are simply `multiPlots` activated for this
-type of use. Therefore, the first step to configure a batch-mode plot is
-to setup a valid `multiPlot` as described in
-[5.4](@ref multiplots).
-Properly configured `multiPlots` can then be activated for use in batch
-mode by adding, *under the main level in the corresponding
-`[[multiPlots]]` entry*, either:
+Batch-mode plots in obsmon are simply `multiPlots` activated for this type of use. Therefore, the first step to configure a batch-mode plot is to setup a valid `multiPlot` as described in [5.4](@ref multiplots).  Properly configured `multiPlots` can then be activated for use in batch mode by adding, *under the main level in the corresponding `[[multiPlots]]` entry*, either:
 
--   A `[multiPlots.batchMode]` table, which may be empty or contain any
-    of the the following entries:
+-   A `[multiPlots.batchMode]` table, which may be empty or contain any of the the following entries:
 
-    -   `enable`: Whether or not to enable the `multiPlot` for use in
-        batch mode.\
-        Default: `true`\
+    -   `enable`: Whether or not to enable the `multiPlot` for use in batch mode.
+        Default: `true`
         Accepted values: `true` or `false`
 
-    -   `parentDir`: Where to put the directory containing the plots
-        produced by the `multiPlot` when run in batch mode.\
-        Default: The directory obsmon is being executed from.\
-        Accepted values: Any path where the user running obsmon has
-        write access to. Both relative and absolute paths are accepted.
-        Relative paths are assumed to be relative to where obsmon is
-        being executed from. A `parentDir` may be shared by multiple
-        `multiPlots`.
+    -   `parentDir`: Where to put the directory containing the plots produced by the `multiPlot` when run in batch mode.  Default: The directory obsmon is being executed from.  Accepted values: Any path where the user running obsmon has write access to. Both relative and absolute paths are accepted.  Relative paths are assumed to be relative to where obsmon is being executed from. A `parentDir` may be shared by multiple `multiPlots`.
 
-    -   `dirName`: The name of the directory where to put the produced
-        plots. *This is just the directory name*. It will be prepended
-        by `parentDir` to generate a full path.\
-        Default: `obsmon_batch_MPNAME_TIMESTAMP`, where `MPNAME` is a
-        version of the `multiPlot`'s `displayName` in lowercase and with
-        any non-[word
-        characters](https://www.regular-expressions.info/shorthand.html)
-        (or sequence of such characters) replaced by a single
-        underscore, and `TIMESTAMP` is the time (in [%H%M%S
-        format](http://pubs.opengroup.org/onlinepubs/009695399/functions/strftime.html))
-        when the directory was created.\
-        Accepted values: Any valid directory name such that the full
-        path `parentDir`/`dirName` does not already exist.
+    -   `dirName`: The name of the directory where to put the produced plots. *This is just the directory name*. It will be prepended
+        by `parentDir` to generate a full path. 
 
-    -   `fileType`: The type of the graphics files produced.\
-        Default: `png`\
-        Accepted values: Most of the commonly used file types that
-        support saving graphics (e.g., `pdf`, `jpeg`, `tiff`, `png`,
-        `bmp`). Note, however, that this is system-dependent.[^7]
+        Default: `obsmon_batch_MPNAME_TIMESTAMP`, where `MPNAME` is a version of the `multiPlot`'s `displayName` in lowercase and with any non-[word
+        characters](https://www.regular-expressions.info/shorthand.html) (or sequence of such characters) replaced by a single
+        underscore, and `TIMESTAMP` is the time (in [%H%M%S format](http://pubs.opengroup.org/onlinepubs/009695399/functions/strftime.html)) when the directory was created.
 
-    -   `dpi`: Resolution of the generated figures (in dots per inch).\
-        Default: `300`\
+        Accepted values: Any valid directory name such that the full path `parentDir`/`dirName` does not already exist.
+
+    -   `fileType`: The type of the graphics files produced.
+        
+        Default: `png` 
+
+        Accepted values: Most of the commonly used file types that support saving graphics (e.g., `pdf`, `jpeg`, `tiff`, `png`, `bmp`). Note, however, that this is system-dependent.[^7]
+
+    -   `dpi`: Resolution of the generated figures (in dots per inch).
+
+        Default: `300`
+
         Accepted values: Any integer greater than zero.
 
-    -   `figHeight`: Height of the generated figures (in inches).\
-        Default: `6`\
+    -   `figHeight`: Height of the generated figures (in inches).
+    
+        Default: `6`
+
         Accepted values: Any number greater than zero.
 
-    -   `figWidth`: Width of the generated figures (in inches).\
-        Default: `10`\
+    -   `figWidth`: Width of the generated figures (in inches).
+
+        Default: `10`
+
         Accepted values: Any number greater than zero.
 
     Example (compare with
@@ -247,12 +195,13 @@ mode by adding, *under the main level in the corresponding
 
 or, if you want to keep it simple,
 
--   `batchMode = true`\
-    \
+-   `batchMode = true`
+    
     And that is it. This is of course much simpler than going via option
     (a), but it does not allow any customisation. Example (compare with
     [5.4.2](@ref multiplots-minimal-config)):
 
+    ```toml
         [[multiPlots]]
             displayName = "An arbitrary multiPlot"
             experiment = "My experiment"
@@ -260,7 +209,7 @@ or, if you want to keep it simple,
             database = "ecma"
             startDate = -30
             batchMode = true
-
+    ```
 Using option (a) with an empty `[multiPlots.batchMode]` table has the
 same effect as using option (b). Finally, setting `batchMode = false` in
 option (b) is also allowed, in which case the corresponding `multiPlot`
@@ -270,7 +219,7 @@ will, rather unsurprisingly, not become activated for use in batch mode.
 
 Just use the `–batch` command line option:
 ```
-      ./obsmon --batch
+./obsmon --batch
 ```
 
 [Domain Geometry & Grid](@id domains) 
@@ -295,6 +244,7 @@ you need to add a `[domain]` section to your config file. For example,
 to configure a coarser version of the the `METCOOP25C` domain, you can
 add the following section to your config file:
 
+```toml
     [domain]
         nlon = 90      
         nlat = 96
@@ -304,7 +254,7 @@ add the following section to your config file:
         lat0 = 63.0
         gsize = 25000
         lmrt = false
-
+```
 **N.B.:** Please pay special attention to the `nlon`, `nlat` and `gsize`
 parameters when copying configs from Harmonie domains. [The Harmonie
 grids are normally much thinner than you would typically want to use in
