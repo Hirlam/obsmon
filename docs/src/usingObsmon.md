@@ -132,7 +132,7 @@ We highly recommend that you read and understand the template config file if you
 
 Batch mode allows producing plots without the use of the GUI. When run in batch mode, obsmon will produce the appropriate pre-configured plot(s), save the results in individual files (under appropriately named directories, see more below), and then exit.
 
-There are many usage scenarios where such a functionality can come in handy. For instance, remotely opening a web browser from ECMWF can be very slow, as discussed in [3.1.3](@ref install-ecmwf). In such cases, one can run obsmon in batch mode and then retrieve the generated files via, e.g., `ftp`.  Another usage case example would be calling obsmon from a script that runs as part of a `cron` job, thus allowing one to regularly produce plots without user intervention.
+There are many usage scenarios where such a functionality can come in handy. For instance, remotely opening a web browser from ECMWF can be very slow, as discussed. In such cases, one can run obsmon in batch mode and then retrieve the generated files via, e.g., `ftp`.  Another usage case example would be calling obsmon from a script that runs as part of a `cron` job, thus allowing one to regularly produce plots without user intervention.
 
 ### [Configuration of batch-mode plots](@id batch-mode-configuration) 
 
