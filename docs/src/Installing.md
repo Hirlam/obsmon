@@ -26,7 +26,10 @@ if you wish to install obsmon in multiple identical computers.
 
 1.  Go to the `obsmon` directory and execute:[^2]
 
-            ./install
+
+    ```
+    ./install
+    ```
 
     -   If required system packages are missing, then the installation
         will stop. Install the relevant system package(s) and execute
@@ -47,24 +50,31 @@ if you wish to install obsmon in multiple identical computers.
     config file `docs/config.toml.example`.
 
 3.  To run obsmon, just execute[^3]
-
-            ./obsmon 
+ 
+    ```
+    ./obsmon 
+    ```
 
     The output will show something similar to
 
-            Listening on http://127.0.0.1:5391
+    ```
+    Listening on http://127.0.0.1:5391
+    ```
 
     Point your browser to the address you see in your output.[^4]
 
 4.  Alternatively, if you want the browser to open automatically, you
     can run obsmon as
 
-            ./obsmon --launch
+    ```
+    ./obsmon --launch
+    ```
 
 Finally, for a list of command line options currently supported by
 obsmon in standalone mode, please run:
-
+    ```
     ./obsmon -h
+    ```
 
 ### [Through a Shiny Server](@id install-server) 
 
@@ -107,36 +117,31 @@ running.
 There are different options to get obsmon running at ECMWF (ecgate). In
 any case, the first step is to load the `obsmon` module, which is done
 by running the following commands (assumes that you are a member of the
-`hirald` group):
+`accord` group):
 
+    ```  
     module use /perm/ms/se/snz/modulefiles
     module load obsmon
+    ```
 
 After this, you can choose to:
 
-1.  Use the pre-installed version of obsmon (*recommended*):\
-    \
+1.  Use the pre-installed version of obsmon (*recommended*):
+    
     Just set up a valid configuration file (see
     [4](@ref config-file) for details about this) and then run
     the `obsmon` command.
 
-2.  Make your own install of obsmon:\
-    \
-    Follow the instructions given in
-    [3.1.1](@ref install-standalone).\
-    Take note of the `major.minor` version of R that was loaded when you
-    installed obsmon, and *make sure to always use that same version of
-    R later on, when executing the code*. This is because the
-    `module load obsmon` command sets up the environment so that (i) a
-    specific version of R is loaded and (ii) the installer can find
-    R-libraries pre-compiled for that particular version.\
+2.  Make your own install of obsmon:
+    
+    Follow the instructions given in [3.1.1](@ref install-standalone).  Take note of the `major.minor` version of R that was loaded when you
+    installed obsmon, and *make sure to always use that same version of R later on, when executing the code*. This is because the
+    `module load obsmon` command sets up the environment so that (i) a specific version of R is loaded and (ii) the installer can find
+    R-libraries pre-compiled for that particular version.
 
-    If you are not installing the latest version of obsmon, there may
-    not be pre-compiled R-libraries available for your particular
-    install. We unfortunately cannot provide much support if this
-    happens, and installation of the necessary R-libraries may require
-    help from ECMWF support. Therefore, we recommend that you use the
-    latest official release whenever possible if you want to have your
+    If you are not installing the latest version of obsmon, there may not be pre-compiled R-libraries available for your particular
+    install. We unfortunately cannot provide much support if this happens, and installation of the necessary R-libraries may require
+    help from ECMWF support. Therefore, we recommend that you use the latest official release whenever possible if you want to have your
     own install of obsmon.
 
 Finally, a remark on using the browser remotely from ECMWF: *This can
@@ -151,34 +156,39 @@ of the [ECaccess Web server
 page](https://confluence.ecmwf.int/display/ECAC/The+Web+server#TheWebserver-NXservice).
 
 ### [At ECMWF (Atos Bologna)](@id install-ecmwf-atos)
-To make your own installation of Obsmon:\
-    \
-    Follow the instructions given in
-    [3.1.1](@ref install-standalone).\
 
-    The compilation requires the following modules to provide system dependencies: 
+To make your own installation of Obsmon:
+    
+Follow the instructions given ini [3.1.1](@ref install-standalone). 
 
-    module load R
-    module load gdal
-    module load gproj
-    module load geos
+The compilation requires the following modules to provide system dependencies: 
 
-Tested with current (April 2024) defaults: R/4.2.2 geos/3.11.1 proj/9.1.1 gdal/3.6.2.
+```
+module load R
+module load gdal
+module load gproj
+module load geos
+
+Tested with current (April 2024) defaults: `R/4.2.2 geos/3.11.1 proj/9.1.1 gdal/3.6.2`.
 
 Atos HPC currently does not provide a browser to connect to Shinny applications. However, for those using Virtual Desktop Infrastructure (VDI) provided by ECMWF, one option is to use SOCKS port forwarding from the Linux Virtual Desktop:
 
 1. Configure proxy to use SOCKS port-forwarding. 
 
-Open the Firefox browser on DVI virtual machine, and go to Proxy settings (Settings -> Network Settings -> Settings). Choose Manual Proxy Configuration and SOCKSv4. Use SOCKS Host: 127.0.0.1 and Port: 5000.
+   Open the Firefox browser on DVI virtual machine, and go to Proxy settings (Settings -> Network Settings -> Settings). Choose Manual Proxy Configuration and SOCKSv4. Use SOCKS Host: 127.0.0.1 and Port: 5000.
 
 2. Connect to HPC and run Obsmon.
 
-       ssh -D 5000 your_username@hpc-login
+   ```
+   ssh -D 5000 your_username@hpc-login
+   ```
     
 3. Go to your obsmon installation and execute Obsmon: 
-    
-       module load R
-       ./obsmon
+
+   ```
+   module load R
+   ./obsmon
+   ```
 
 3. Connect to Shinny application through browser
 
@@ -201,7 +211,9 @@ produce a package that you can install using our package manager.
 
 Please run:
 
-`git pull –rebase && ./install`
+```
+git pull –rebase && ./install
+```
 
 This assumes that:
 
