@@ -3,20 +3,19 @@
 Use the `install` script to install the `R` libraries needed. The main
 system requirements are:
 
--   A Linux operating system
+- A Linux operating system
+- A working `R (>= 4.0.5)` interpreter
 
--   A working `R (>= 4.0.5)` interpreter
+- `python (>= 3.6.7)`
 
--   `python (>= 3.6.7)`
-
--   Internet connection
+- Internet connection
 
 Instructions for the various installation modes are given in
-[install-standalone](@ref install-standalone) [install-server](@ref install-server), [install-ecmwf](@ref install-ecmwf).
+[install-standalone](@ref install-standalone) [install-server](@ref install-server) 
 goes through the recommended steps to update the code. The required
 system packages are listed in [3.4](@ref sysdeps), and the paths where obsmon looks for installed
-`R` libraries are listed in [3.3](#libPaths). Finally, the information presented in
-[3.5.2](#install-precompiled) about the use of pre-compiled
+`R` libraries are listed in [3.3](@ref libPaths). Finally, the information presented in
+[3.5.2](@ref install-precompiled) about the use of pre-compiled
 binaries for the `R` libraries may save you a significant amount of time
 if you wish to install obsmon in multiple identical computers.
 
@@ -24,133 +23,111 @@ if you wish to install obsmon in multiple identical computers.
 
 ### [Standalone mode](@id install-standalone)
 
-1.  Go to the `obsmon` directory and execute:[^2]
+1. Go to the `obsmon` directory and execute:[^2]
 
-            ./install
+   ```bash
+   ./install
+   ```
 
-    -   If required system packages are missing, then the installation
-        will stop. Install the relevant system package(s) and execute
-        `./install` again. [Obsmon has helper scripts to install system
-        dependencies in some Linux distributions]{.underline} -- see
-        [3.4](@ref sysdeps) for more details.
+   - If required system packages are missing, then the installation
+     will stop. Install the relevant system package(s) and execute
+     `./install` again. [Obsmon has helper scripts to install system
+     dependencies in some Linux distributions]{.underline} -- see
+     [3.4](@ref sysdeps) for more details.
 
-    -   You may need to customise installation for some R-packages
-        (non-standard paths for system libraries, for instance). In such
-        cases, please use the `install` script's `-ca` and/or `-cv`
-        arguments. These options are, respectively, passed to the
-        `configure.args` and `configure.vars` arguments of R's
-        [`install.packages`
-        function](https://www.rdocumentation.org/packages/utils/versions/3.6.2/topics/install.packages).
+   - You may need to customise installation for some R-packages
+     (non-standard paths for system libraries, for instance). In such
+     cases, please use the `install` script's `-ca` and/or `-cv`
+     arguments. These options are, respectively, passed to the
+     `configure.args` and `configure.vars` arguments of R's
+     [`install.packages` function](https://www.rdocumentation.org/packages/utils/versions/3.6.2/topics/install.packages).
 
-2.  Create a `config.toml`. You can find a detailed discussion about the
-    configuration file in [4](@ref config-file). Also, take a look at the template
-    config file `docs/config.toml.example`.
+2. Create a `config.toml`. You can find a detailed discussion about the configuration file in [4](@ref config-file). Also, take a look at the template config file `docs/example/config.toml`.
 
-3.  To run obsmon, just execute[^3]
+3. To run obsmon, just execute[^3]
 
-            ./obsmon 
+   ```bash
+   ./obsmon 
+   ```
 
     The output will show something similar to
 
-            Listening on http://127.0.0.1:5391
+    ```bash
+    Listening on http://127.0.0.1:5391
+    ```
 
     Point your browser to the address you see in your output.[^4]
 
-4.  Alternatively, if you want the browser to open automatically, you
-    can run obsmon as
+4. Alternatively, if you want the browser to open automatically, you can run obsmon as
 
-            ./obsmon --launch
+   ```bash
+   ./obsmon --launch
+   ```
 
 Finally, for a list of command line options currently supported by
 obsmon in standalone mode, please run:
-
-    ./obsmon -h
+   
+```bash
+./obsmon -h
+```
 
 ### [Through a Shiny Server](@id install-server) 
 
-If you want to offer obsmon to a larger number of users, you may want to
-deploy it using a web server. A canonical choice in this case would be
-to use a [Shiny Server](https://www.rstudio.com/products/shiny). Shiny
-Server installation is beyond the scope of this document.In the
-following, we assume that the Shiny Server is already installed and
-running.
+If you want to offer obsmon to a larger number of users, you may want to deploy it using a web server. A canonical choice in this case would be to use a [Shiny Server](https://www.rstudio.com/products/shiny). Shiny Server installation is beyond the scope of this document.In the following, we assume that the Shiny Server is already installed and running.
 
-1.  Put the obsmon directory into the `site_dir` directory as configured
-    in your `shiny-server.conf`, or, alternatively, add a `location`
-    stance to your `shiny-server.conf` listing the obsmon directory.
+1. Put the obsmon directory into the `site_dir` directory as configured in your `shiny-server.conf`, or, alternatively, add a `location`   stance to your `shiny-server.conf` listing the obsmon directory.
 
-    -   You may want to configure in your `shiny-server.conf` the
-        location of your log files. If you do not do so, they will most
-        likely end up somewhere such as
-        `/var/log/shiny-server/obsmon-*.log`, although this cannot be
-        guaranteed
+   - You may want to configure in your `shiny-server.conf` the location of your log files. If you do not do so, they will most likely end up somewhere such as `/var/log/shiny-server/obsmon-*.log`, although this cannot be  guaranteed
 
-2.  Install the required `R` libraries. We recommend that you use the
-    included `install` script with the default settings.
+2. Install the required `R` libraries. We recommend that you use the included `install` script with the default settings.
 
-    -   If you don't follow the recommended install approach, then we
-        *highly recommend* that you manually specify the paths to the
-        directories where you installed the `R` libraries. You can do
-        this by using the `.libPaths` (`R`-language) command inside an
-        `.Rprofile` file placed in the obsmon directory. Otherwise, you
-        may have issues with conflicting `R` libraries between obsmon
-        and the shiny server.
+   - If you don't follow the recommended install approach, then we *highly recommend* that you manually specify the paths to the directories where you installed the `R` libraries. You can do this by using the `.libPaths` (`R`-language) command inside an `.Rprofile` file placed in the obsmon directory. otherwise, you may have issues with conflicting `R` libraries between obsmon and the shiny server.
 
-3.  Put a valid `config.toml` file inside either the obsmon directory or
-    at `/etc/obsmon`. See the file `docs/config.toml.example` for a
-    template. See also [4](@ref config-file).
+3. Put a valid `config.toml` file inside either the obsmon directory or at `/etc/obsmon`. See the file `docs/example/config.toml` for a template. See also [4](@ref config-file).
 
-4.  Run your Shiny Server and connect to it with your browser.
+4. Run your Shiny Server and connect to it with your browser.
 
-### [At ECMWF (ecgb)](@id install-ecmwf)
+### [At ECMWF (Atos Bologna)](@id install-ecmwf-atos)
 
-There are different options to get obsmon running at ECMWF (ecgate). In
-any case, the first step is to load the `obsmon` module, which is done
-by running the following commands (assumes that you are a member of the
-`hirald` group):
+To make your own installation of Obsmon:
+Follow the instructions given ini [3.1.1](@ref install-standalone).
 
-    module use /perm/ms/se/snz/modulefiles
-    module load obsmon
+The compilation requires the following modules to provide system dependencies:
 
-After this, you can choose to:
+```bash
+module load R
+module load gdal
+module load gproj
+module load geos
+```
 
-1.  Use the pre-installed version of obsmon (*recommended*):\
-    \
-    Just set up a valid configuration file (see
-    [4](@ref config-file) for details about this) and then run
-    the `obsmon` command.
+Tested with current (April 2024) defaults: `R/4.2.2 geos/3.11.1 proj/9.1.1 gdal/3.6.2`.
 
-2.  Make your own install of obsmon:\
-    \
-    Follow the instructions given in
-    [3.1.1](@ref install-standalone).\
-    Take note of the `major.minor` version of R that was loaded when you
-    installed obsmon, and *make sure to always use that same version of
-    R later on, when executing the code*. This is because the
-    `module load obsmon` command sets up the environment so that (i) a
-    specific version of R is loaded and (ii) the installer can find
-    R-libraries pre-compiled for that particular version.\
+Atos HPC currently does not provide a browser to connect to Shinny applications. However, for those using Virtual Desktop Infrastructure (VDI) provided by ECMWF, one option is to use SOCKS port forwarding from the Linux Virtual Desktop:
 
-    If you are not installing the latest version of obsmon, there may
-    not be pre-compiled R-libraries available for your particular
-    install. We unfortunately cannot provide much support if this
-    happens, and installation of the necessary R-libraries may require
-    help from ECMWF support. Therefore, we recommend that you use the
-    latest official release whenever possible if you want to have your
-    own install of obsmon.
+1. Configure proxy to use SOCKS port-forwarding.
 
-Finally, a remark on using the browser remotely from ECMWF: *This can
-unfortunately be very slow sometimes*. If this is the case, then *we
-strongly recommend that you run obsmon in batch mode* (see
-[5.5](@ref batch-mode). There is also an alternative to have
-faster access to the browser by using a
-[NoMachine](https://www.nomachine.com/) remote desktop. At the moment,
-however, we cannot provide instructions about the configuration of
-NoMachine at ECMWF. For this, we refer you to the \"NX service\" section
-of the [ECaccess Web server
-page](https://confluence.ecmwf.int/display/ECAC/The+Web+server#TheWebserver-NXservice).
+   Open the Firefox browser on DVI virtual machine, and go to Proxy settings (`Settings -> Network Settings -> Settings`). Choose Manual Proxy Configuration and SOCKSv4. Use SOCKS Host: `127.0.0.1` and Port: `5000`.
 
-### [At SMHI](@id install-smhi) 
+2. Connect to HPC and run Obsmon.
+
+   ```bash
+   ssh -D 5000 your_username@hpc-login
+   ```
+
+3. Go to your obsmon installation and execute Obsmon:
+
+   ```bash
+   module load R
+   ./obsmon
+   ```
+
+4. Connect to Shinny application through browser
+
+In Firefox, navigate to `http://0.0.0.0:5391/`
+where 5391 is the default port used by Obsmon (please change if your Obsmon application is using another port).
+
+### [At SMHI](@id install-smhi)
 
 You can follow the instructions given in
 [3.1.1](@ref install-standalone), but you can substantially reduce
@@ -161,47 +138,36 @@ pre-compiled binaries; more on this on
 internal Obsmon wiki page for more details. If you prefer, we can also
 produce a package that you can install using our package manager.
 
-[Updating](@id install-update)
---------
+## [Updating](@id install-update)
 
 Please run:
 
-`git pull –rebase && ./install`
+```bash
+git pull -rebase && ./install
+```
 
 This assumes that:
 
--   You have not modified obsmon
+- You have not modified obsmon
 
--   You have followed the recommended installation approach when first
-    installing the code.
+- You have followed the recommended installation approach when first installing the code.
 
-Updating is normally faster than performing a completely new install, as
-obsmon tries to use pre-compiled binaries generated during the previous
-install/update (see
-[3.5.2](@ref install-precompiled)). However, you may occasionally
-need to install new system dependencies when you update obsmon (see
-[3.4](@ref sysdeps)).
-**N.B.**: You should always update the code after having switched
+Updating is normally faster than performing a completely new install, as obsmon tries to use pre-compiled binaries generated during the previous install/update (see [3.5.2](@ref install-precompiled)). However, you may occasionally need to install new system dependencies when you update obsmon (see
+[3.4](@ref sysdeps)). **N.B.**: You should always update the code after having switched
 branches.
 
-[R library search paths](@id libPaths)
-----------------------
+## [R library search paths](@id libPaths)
 
 Obsmon looks for R libraries installed in the following paths (listed in
 order of priority):
 
-1.  `.installer_local_R-libs/R-libs`
+1. `.installer_local_R-libs/R-libs`
 
-2.  The default R library search paths. These vary depending on your
-    system.[^5]
+2. The default R library search paths. These vary depending on your system.[^5]
 
-If you wish for obsmon to look somewhere else for R-libs, then you can,
-*e.g.*, edit the
-[`.libPaths`](https://www.rdocumentation.org/packages/base/versions/3.6.2/topics/libPaths)
-call in the `.Rprofile` file located inside the obsmon root directory.
+If you wish for obsmon to look somewhere else for R-libs, then you can, *e.g.*, edit the [`.libPaths`](https://www.rdocumentation.org/packages/base/versions/3.6.2/topics/libPaths) call in the `.Rprofile` file located inside the obsmon root directory.
 
-[System dependencies](@id sysdeps)
--------------------
+## [System dependencies](@id sysdeps)
 
 ### CentOS, RHEL or Ubuntu
 
@@ -216,6 +182,7 @@ guarantee that we will be able to do this for every system]{.underline}.
 If possible, [please refer to your IT department first for problems
 regarding system dependencies]{.underline}.
 
+```bash
    Required system package   First R lib that asks for it during install  
   ------------------------- --------------------------------------------- --
          libXt-devel                            Cairo                     
@@ -229,16 +196,17 @@ regarding system dependencies]{.underline}.
           proj-epsg                leaflet (via rgdal dependency)         
          gdal-devel                leaflet (via rgdal dependency)         
           v8-devel                   shinyjs (via V8 dependency)          
+```
 
-  :  **CentOS 7/RHEL 7** system dependencies for obsmon. The list was
+**CentOS 7/RHEL 7** system dependencies for obsmon. The list was
   produced by installing the code on a newly installed, minimal system
   and keeping note of the packages required during the process. Many
   other system packages are installed as dependencies of those listed
   here and have been omitted. Last updated on 2018-03-22.
-:::
 
-###  [sysdeps-ubuntu](@id sysdeps-ubuntu) 
+### [sysdeps-ubuntu](@id sysdeps-ubuntu)
 
+```bash
     Required system package     First R lib that asks for it during install  
   ---------------------------- --------------------------------------------- --
       libcurl4-openssl-dev                         curl                      
@@ -250,29 +218,15 @@ regarding system dependencies]{.underline}.
           libgdal-dev                              rgdal                     
            libxt-dev                               Cairo                     
          libv8-3.14-dev                             V8                       
+```
 
-  :  **Ubuntu 18.04.2 LTS** system dependencies for obsmon. The list was
-  produced by installing the code on a newly installed system and
-  keeping note of the packages required during the process. Many other
-  system packages are installed as dependencies of those listed here and
-  have been omitted. Last updated on 2019-05-28.
-:::
+**Ubuntu 18.04.2 LTS** system dependencies for obsmon. The list was produced by installing the code on a newly installed system and  keeping note of the packages required during the process. Many other  system packages are installed as dependencies of those listed here and  have been omitted. Last updated on 2019-05-28.
 
 ### Other Linux distributions
 
-There is currently no robust way to programmatically determine the
-system dependencies for all Linux distributions. The recommended
-approach at the moment is to proceed as indicated in
-[install-standalone](@ref install-standalone), [install-server](@ref install-server) ,[install-ecmwf](@ref install-ecmwf) 
-and install the system dependencies as they are requested during
-installation. You can nevertheless use the names of the Linux packages
-shown in
-[sysdeps](@ref sysdeps), [sysdeps-ubuntu](@ref sysdeps-ubuntu) as reference, as, although
-the names change from one distribution to another, they are generally
-similar.
+There is currently no robust way to programmatically determine the system dependencies for all Linux distributions. The recommended approach at the moment is to proceed as indicated in [install-standalone](@ref install-standalone), [install-server](@ref install-server) and install the system dependencies as they are requested during installation. You can nevertheless use the names of the Linux packages shown in [sysdeps](@ref sysdeps), [sysdeps-ubuntu](@ref sysdeps-ubuntu) as reference, as, although the names change from one distribution to another, they are generally similar.
 
-[Advanced install options](@id install-advanced) 
-------------------------
+## [Advanced install options](@id install-advanced) 
 
 ### Changing the versions of the installed `R` libraries
 
@@ -285,29 +239,26 @@ however, where one may want/need to install package versions that are
 different from those in the aforementioned `PACKAGES` file. This can be
 accomplished by using either of the following options:
 
-(a) [\[pkg\_versions\_control:cran\_latest\]]{#pkg_versions_control:cran_latest
-    label="pkg_versions_control:cran_latest"} Running
-    `./install -repos=cran` (instead of just `./install`)
+a. `pkg_versions_control:cran_latest`
+   Running  `./install -repos=cran` (instead of just `./install`)
 
-    This instructs the install script to ignore the metadata in the
-    `.installer_local_pkg_repo/src/contrib/PACKAGES` file and, instead,
-    use CRAN to determine the package versions and dependencies. This is
-    the best option if you want to install the latest versions of all
-    packages.
+   This instructs the install script to ignore the metadata in the
+   `.installer_local_pkg_repo/src/contrib/PACKAGES` file and, instead,
+   use CRAN to determine the package versions and dependencies. This is
+   the best option if you want to install the latest versions of all
+   packages.
 
-(b) [\[pkg\_versions\_control:versions\_file\]]{#pkg_versions_control:versions_file
-    label="pkg_versions_control:versions_file"} Creating an
-    `.installer_pkg_versions.txt` file
+b. `pkg_versions_control:versions_file` Creating an `.installer_pkg_versions.txt` file
 
-    This allows you to handpick the versions of any number of used
-    R-packages. A typical usage case would be to select specific
-    versions of a few packages. Packages not listed in the file will
-    have their versions determined by the default method. You can create
-    a template file by running "`./install listdeps –lock`" and then
-    edit it (keeping the same format).
+   This allows you to handpick the versions of any number of used
+   R-packages. A typical usage case would be to select specific
+   versions of a few packages. Packages not listed in the file will
+   have their versions determined by the default method. You can create
+   a template file by running "`./install listdeps -lock`" and then
+   edit it (keeping the same format).
 
-    **N.B.:** Changing the versions of only selected R-packages can
-    cause some dependencies to be broken. Use this option with caution.
+   **N.B.:** Changing the versions of only selected R-packages can
+   cause some dependencies to be broken. Use this option with caution.
 
 It is also possible to combine these options, which may be handy in some
 cases. Mind, however, that using R-libraries with versions different
@@ -327,12 +278,12 @@ case it fails or is interrupted. Another (perhaps not so obvious)
 advantage is that it can lead to a very significant reduction in the
 installation times whenever:
 
-1.  You need to update obsmon
+1. You need to update obsmon
 
-2.  You need to install the code multiple times in the same computer
+2. You need to install the code multiple times in the same computer
     (e.g., for multiple users in an independent way)
 
-3.  You need to install obsmon in multiple identical computers
+3. You need to install obsmon in multiple identical computers
 
 For updates, you just need to follow the recommended update approach
 ([3.2](@ref install-update)). For the other cases, you only need to

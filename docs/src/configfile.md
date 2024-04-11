@@ -205,7 +205,7 @@ A simple config file may look like the following:
         path = "/full/path/to/experiment2"
 
 For a more complete example, please take a look at the template config
-file `docs/config.toml.example`. A few notes:
+file `docs/example/config.toml`. A few notes:
 
 -   Comments can be added using a `#` character and are optional
 
