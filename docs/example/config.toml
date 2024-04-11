@@ -1,0 +1,188 @@
+#####################################################################################
+# This config file provides examples of how to set up obsmon. The syntax follows    #
+# "Tom's Obvious, Minimal Language" (TOML), which aims to be simple to use and easy #
+# not difficult to understand. For more details about TOML, please take a look at   #
+#           <https://github.com/toml-lang/toml/blob/master/README.md>               #
+#                                                                                   #
+# FYI:                                                                              #
+#    - Comments can be added using a "#" character and are optional                 #
+#    - Indentation is also optional, but highly encouraged                          #
+#    - Please read the PDF doc file for more info on the options below AND on       #
+#      options that do not appear here                                              #
+#####################################################################################
+
+###################
+# General options #
+###################
+[general]
+    # Some of the general options below may be optional even though they are not marked
+    # as such here. There are also other options that have not been listed here.
+    # To know more, and for default values, please see the PDF doc file.
+    configName = "My config name" # Optional. If set, will appear in the GUI and logs.
+    logLevel = "INFO"
+    # cacheDir is optional. However, at ECMWF, we recommend setting it to somewhere
+    # under your $SCRATCH directory.
+    cacheDir = ".Rcache"
+    sessionTimeout = 1800 # In seconds. Optional.
+    appTimeout = 5 # In seconds. Optional.
+    multiPlotsEnableInteractivity = true # The default value is false
+
+######################################
+# Configuring domain grid & geometry #
+######################################
+# See
+# <https://hirlam.org/trac/wiki/HarmonieSystemDocumentation/ModelDomain>
+# for an explanation of what these parameters mean.
+[domain]
+    nlon = 90
+    nlat = 96
+    lonc = 16.763011639
+    latc = 63.489212956
+    lon0 = 15.0
+    lat0 = 63.0
+    gsize = 25000
+    lmrt = false
+
+###########################
+# Configuring experiments #
+###########################
+[[experiments]]
+    # displayName: The name you will see in the GUI to identify your experiments
+    displayName = "First Experiment"
+    # path: The path to your experiments' data files. Obsmon expects to find
+    # directories named "ecma", "ccma", "ecma_sfc" under the selected path
+    path = "/full/path/to/experiment1"
+
+# To keep adding experiments to your list, do like this:
+[[experiments]]
+    displayName = "Second Experiment"
+    path = "/full/path/to/experiment2"
+
+##########################
+# Configuring multiPlots #
+##########################
+[[multiPlots]]
+    # displayName: Choose how you want your multiPlot to be named
+    displayName = "1st Expt: ecma NObs for all obs but satem"
+    # experiment: Must match the dysplayName of one of the experiments configured above
+    experiment = "First Experiment"
+    # plotType: Must match one of the plot types normally supported by obsmon
+    plotType = "Number of Observations"
+    # database: Must be one of: ccma, ecma, ecma_sfc
+    database = "ecma"
+    # startDate: A date in the format "YYYY-MM-DD" or a negative integer number.
+    #            A negative integer N represents a date N days before today
+    #            An endDate "YYYY-MM-DD" can also be passed, but is omitted here
+    startDate = -30
+    ##########################################
+    # Deciding which observations to include #
+    ##########################################
+    # The default behaviour is to include all observation types in the multiPlots unless:
+    # (i) excludeObs is passed, in which case any observation name listed there will
+    #     be excluded
+    # (ii) You explicitely use a [multiPlots.obs] block (see the next example), in which
+    #      case only observations explicitely listed will be included.
+    # This multi plot will include all observatrions except satem.
+    excludeObs = ["satem"]
+    #############################################################################
+    # Optional: Choosing which height/pressure levels to include and/or exclude #
+    #############################################################################
+    # You can select levels for each observation name and variable individually:
+    [multiPlots.levels.aircraft]
+        t = 100000
+        u = [27500, 45000]
+    # Or you can do this globally for any given obname (will apply to all variables)
+    [multiPlots.levels]
+        synop = 0
+        pilot = [1500, 4000, 8500, 45000]
+    # You can also exclude selected levels using a similar syntax:
+    [multiPlots.excludeLevels]
+      pilot = [8500, 100000]
+    [multiPlots.excludeLevels.aircraft]
+      v = [2500, 8500, 60000, 1500]
+    ################################################
+    # Activating a multiPlot for use in batch mode #
+    # ##############################################
+    [multiPlots.batchMode]
+        # Other options exist. See the obsmon_documentation.pdf file for more details.
+        parentDir = "batch_mode_plots"
+
+[[multiPlots]]
+    displayName = "2nd Expt: CANARI NObs, synop only"
+    experiment = "Second Experiment"
+    plotType = "Number of Observations"
+    database = "ecma_sfc"
+    startDate = -30
+    #####################################################################
+    # Explicitely choosing which observations to include in a multiPlot #
+    #####################################################################
+    [multiPlots.obs]
+        # Select specific obs and variables. Nothing else will be included.
+        synop=["t2m","rh2m", "snow"]
+        aircraft=["t"]
+    ###############################################################
+    #  Another way to activate a multiPlot for use in batch mode  #
+    # No options accepted in this mode; defaults are used instead #
+    # #############################################################
+    batchMode = true
+
+[[multiPlots]]
+    displayName = "A multiPlot with station choices"
+    experiment = "Second Experiment"
+    plotType = "Observation Usage"
+    database = "ecma"
+    startDate = "2018-11-19"
+    endDate = "2018-11-19"
+    cycles = "00"
+    ##############################################################
+    # Optional: Choosing which stations (station IDs) to include #
+    ##############################################################
+    [multiPlots.stations]
+        synop = ["01158", "01226"]
+        aircraft = ["2BTQVXZA"]
+
+[[multiPlots]]
+    displayName = "A multiPlot with satem observations"
+    experiment = "First Experiment"
+    plotType = "First Guess and Analysis Departure"
+    database = "ecma"
+    startDate = "2018-11-19"
+    nDays = 1 # To include only the startDate
+    cycles = ["00", "09"] # Specifying multiple cycles
+    [multiPlots.obs]
+        synop=["z"]
+    #############################################
+    # satem observations: a more verbose syntax #
+    #############################################
+    [[multiPlots.obs.satem]]
+        sensor="amsua"
+        satellite="metop1"
+        channels=[1, 3, 5, 7]
+    # Add another satem entry to this multiPlot
+    [[multiPlots.obs.satem]]
+        sensor="iasi"
+        satellite="metop2"
+        channels=[38, 167, 236]
+
+[[multiPlots]]
+    displayName = "A multiPlot with more specific obs removed"
+    experiment = "Second Experiment"
+    plotType = "Observation Usage"
+    database = "ecma"
+    startDate = "2018-11-19"
+    cycles = "00"
+    ###################################################################
+    # Another way to remove observations. Note the syntax for sat obs #
+    ###################################################################
+    [multiPlots.excludeObs]
+        ship=["apd", "snow"]
+        aircraft=["all"]
+        # Remove selected channels from a particulat sat ob
+        [[multiPlots.excludeObs.satem]]
+            sensor="amsua"
+            satellite="metop1"
+            channels=[1, 3, 5, 7]
+        # No channels specified: Completely remove this particular satem ob
+        [[multiPlots.excludeObs.satem]]
+            sensor="amsub"
+            satellite="noaa16"
