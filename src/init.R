@@ -110,10 +110,17 @@ setPackageOptions <- function(config) {
   if(maxNWorkers > availableCores()) maxProcsSecLayer <- availableCores()
   else maxProcsSecLayer <- 1
   maxProcsFirstLayer <- floor(maxNWorkers / maxProcsSecLayer)
-  plan(list(
-    tweak(multiprocess, workers=maxProcsFirstLayer),
-    tweak(multiprocess, workers=maxProcsSecLayer)
-  ))
+  if (future::supportsMulticore()) {
+    future::plan(list(
+      tweak(future::multicore, workers=maxProcsFirstLayer),
+      tweak(future::multicore, workers=maxProcsSecLayer)
+    ))
+  } else {
+    future::plan(list(
+      tweak(future::multisession, workers=maxProcsFirstLayer),
+      tweak(future::multisession, workers=maxProcsSecLayer)
+    ))
+  }
 }
 
 sourceObsmonFiles <- function() {
