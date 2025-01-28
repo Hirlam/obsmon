@@ -175,7 +175,7 @@ MD5sum: dda8ecf0d6c2b287134bb926824f3551
 NeedsCompilation: yes
 
 Package: Cairo
-Version: 1.6-0
+Version: 1.6.2
 Depends: R (>= 2.4.0)
 Imports: grDevices, graphics
 Suggests: png
@@ -1095,7 +1095,7 @@ MD5sum: 53b7ff0192fa7cb094eb71ab751d6b18
 NeedsCompilation: yes
 
 Package: jsonlite
-Version: 1.8.0
+Version: 1.8.9
 Depends: methods
 Suggests: httr, curl, vctrs, testthat, knitr, rmarkdown, R.rsp, sf
 License: MIT + file LICENSE
