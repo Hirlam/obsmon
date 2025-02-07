@@ -23,6 +23,63 @@
   return(data)
 }
 
+
+.obsFitActiveObsDataPostProcessingFunction <- function(data, ...) {
+  # Preserve attributes
+  # Store original column-level attributes (e.g. units)
+  # so we can reattach them later
+  oldColAttrs <- lapply(names(data), function(nm) attributes(data[[nm]]))
+  names(oldColAttrs) <- names(data)
+
+  # Convert to data.table
+  dt <- as.data.table(data)
+  dt <- fillDataWithQualityControlStatus(dt)
+
+  # Filter for active
+  dt <- dt[grepl("active", tolower(status))]
+
+  # Summarize by:
+  #  - nobs_total
+  #  - keep fg_dep, an_dep for next group operation
+  dt <- dt[, .(
+    nobs_total = .N,
+    fg_dep     = fg_dep,
+    an_dep     = an_dep
+  ), by=.(DTG, level, varname)]
+
+  # Now compute rms and bias by groups
+  dt <- dt[, .(
+    # total number of obs in this group
+    nobs_total    = .N,
+    fg_rms_total = sqrt(sum((fg_dep - mean(fg_dep, na.rm=TRUE))^2, na.rm=TRUE) / sum(!is.na(fg_dep))),
+    an_rms_total = sqrt(sum((an_dep - mean(an_dep, na.rm=TRUE))^2, na.rm=TRUE) / sum(!is.na(an_dep))),
+    fg_bias_total = mean(fg_dep, na.rm=TRUE),
+    an_bias_total = mean(an_dep, na.rm=TRUE)
+  ), by=.(DTG, level, varname)]
+
+  # Assign the same units as fg_dep or an_dep
+  # (assuming these units existed originally)
+  if (!is.null(oldColAttrs[["fg_dep"]][["units"]])) {
+    units(dt$fg_rms_total)  <- oldColAttrs[["fg_dep"]][["units"]]
+    units(dt$fg_bias_total) <- oldColAttrs[["fg_dep"]][["units"]]
+  }
+  if (!is.null(oldColAttrs[["an_dep"]][["units"]])) {
+    units(dt$an_rms_total)  <- oldColAttrs[["an_dep"]][["units"]]
+    units(dt$an_bias_total) <- oldColAttrs[["an_dep"]][["units"]]
+  }
+
+  # Convert back to tibble
+  out <- as_tibble(dt)
+
+  # Reattach original column-level attributes for columns that still exist
+  for (nm in intersect(names(out), names(oldColAttrs))) {
+    attributes(out[[nm]]) <- oldColAttrs[[nm]]
+  }
+
+  # Now 'out' is a tibble, but with new columns and (restored) units
+  return(out)
+}
+
 landSeaDeparturesTimeseriesPlotPostProcessingFunction <- function(data, ...) {
   data <- .filterOutZeroNobsTotal(data)
   data <- within(data, rm("nobs_total"))
@@ -99,7 +156,6 @@ genericTimeseriesPlottingFunction <- function(plot) {
     return(.getStaticGenericTimeseriesPlot(plot))
   }
 }
-
 obsFitTimeseriesPlottingFunction <- function(plot) {
   if(nrow(plot$data)==0) return(errorPlot("No data to plot."))
 
@@ -297,6 +353,22 @@ plotRegistry$registerPlotType(
   dataFieldsInSqliteWhereClause=list("obnumber", "obname"),
   dataPostProcessingFunction=.filterOutZeroNobsTotal,
   plottingFunction=obsFitTimeseriesPlottingFunction
+)
+
+# Register the new plot type
+plotRegistry$registerPlotType(
+  name="ObsFit (Active Observations Only)",
+  category="Timeseries",
+  dateType="range",
+  dataFieldsInRetrievedPlotData=list(
+    "DTG", "level", "varname", "fg_dep", "an_dep",
+    "statid", "latitude", "longitude", 
+    "anflag", "active", "rejected", "passive", "blacklisted"
+  ),
+  dataFieldsInSqliteWhereClause=list("obnumber", "obname"),
+  dataPostProcessingFunction=.obsFitActiveObsDataPostProcessingFunction,
+  # Use the same plotting function as "ObsFit" but with different data
+  plottingFunction=obsFitTimeseriesPlottingFunction 
 )
 
 plotRegistry$registerPlotType(

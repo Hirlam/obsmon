@@ -42,6 +42,7 @@ for(path in .libPaths()) {
 cat("\n")
 suppressPackageStartupMessages(library(bsplus))
 suppressPackageStartupMessages(library(Cairo))
+suppressPackageStartupMessages(library(data.table))
 suppressPackageStartupMessages(library(DBI))
 suppressPackageStartupMessages(library(dbplyr))
 suppressPackageStartupMessages(library(dplyr))
