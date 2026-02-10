@@ -1,0 +1,31 @@
+name: Verify CHANGELOG update
+
+on:
+  pull_request:
+
+jobs:
+  verify-changelog:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check changed files
+        uses: dorny/paths-filter@v3
+        id: changes
+        with:
+          filters: |
+            changelog:
+              - 'CHANGELOG.md'
+            code:
+              - '**'
+              - '!CHANGELOG.md'
+              - '!.github/**'
+              - '!docs/**'
+
+      - name: Fail if changelog not updated
+        if: steps.changes.outputs.code == 'true' && steps.changes.outputs.changelog == 'false'
+        run: |
+          echo "::error::CHANGELOG.md is not updated."
+          echo "Please update CHANGELOG.md for your changes before merging."
+          exit 1
