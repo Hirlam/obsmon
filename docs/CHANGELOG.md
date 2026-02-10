@@ -6,6 +6,10 @@ and this project adheres to [Semantic Versioning](http://semver.org).
 
 ## [Unreleased]
 
+## [4.5.1] 2026-02-10
+### Fixed
+-  Correct version and merge this time! [!40](https://github.com/Hirlam/obsmon/pull/40)
+
 ## [4.5.0] 2026-02-10
 ### Added
 -  Add documentation in markdown using Julia [!31](https://github.com/Hirlam/obsmon/pull/31)
