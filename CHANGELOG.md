@@ -8,6 +8,7 @@ Obsmon is a tool for observation monitoring in the Harmonie-Arome NWP System. It
 
 ### Changed
 
+ *  Add Change Log and check on PRs [!38](https://github.com/Hirlam/obsmon/pull/38)
  *  Update R packages installed by Obsmon [!37](https://github.com/Hirlam/obsmon/pull/37)
  *  Remove deprecated use of `multiprocess` [!33](https://github.com/Hirlam/obsmon/pull/33)
  *  Updates to the documentation [!32](https://github.com/Hirlam/obsmon/pull/32)
