@@ -6,13 +6,16 @@ and this project adheres to [Semantic Versioning](http://semver.org).
 
 ## [Unreleased]
 
+## [4.5.0] 2026-02-10
+### Added
+-  Add documentation in markdown using Julia [!31](https://github.com/Hirlam/obsmon/pull/31)
 ### Changed
-
+-  Correct Change Log [!39](https://github.com/Hirlam/obsmon/pull/39)
 -  Add Change Log and check on PRs [!38](https://github.com/Hirlam/obsmon/pull/38)
 -  Update R packages installed by Obsmon [!37](https://github.com/Hirlam/obsmon/pull/37)
 -  Remove deprecated use of `multiprocess` [!33](https://github.com/Hirlam/obsmon/pull/33)
 -  Updates to the documentation [!32](https://github.com/Hirlam/obsmon/pull/32)
--  Add documentation in markdown using Julia [!31](https://github.com/Hirlam/obsmon/pull/31)
+### Fixed
 
 
 ## [4.4.0] 2022-08-03
