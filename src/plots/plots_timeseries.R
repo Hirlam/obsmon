@@ -23,14 +23,19 @@
   return(data)
 }
 
-
 .obsFitActiveObsDataPostProcessingFunction <- function(data, ...) {
+  .rms <- function(x) {
+    n <- sum(!is.na(x))
+    if(n == 0) return(NA_real_)
+    sqrt(sum(x^2, na.rm=TRUE) / n)
+  }
+
   # Preserve attributes
   # Store original column-level attributes (e.g. units)
   # so we can reattach them later
   oldColAttrs <- lapply(names(data), function(nm) attributes(data[[nm]]))
   names(oldColAttrs) <- names(data)
-
+  
   # Convert to data.table
   dt <- as.data.table(data)
   dt <- fillDataWithQualityControlStatus(dt)
@@ -38,21 +43,12 @@
   # Filter for active
   dt <- dt[grepl("active", tolower(status))]
 
-  # Summarize by:
-  #  - nobs_total
-  #  - keep fg_dep, an_dep for next group operation
-  dt <- dt[, .(
-    nobs_total = .N,
-    fg_dep     = fg_dep,
-    an_dep     = an_dep
-  ), by=.(DTG, level, varname)]
-
   # Now compute rms and bias by groups
   dt <- dt[, .(
     # total number of obs in this group
     nobs_total    = .N,
-    fg_rms_total = sqrt(sum((fg_dep - mean(fg_dep, na.rm=TRUE))^2, na.rm=TRUE) / sum(!is.na(fg_dep))),
-    an_rms_total = sqrt(sum((an_dep - mean(an_dep, na.rm=TRUE))^2, na.rm=TRUE) / sum(!is.na(an_dep))),
+    fg_rms_total = .rms(fg_dep),
+    an_rms_total = .rms(an_dep),
     fg_bias_total = mean(fg_dep, na.rm=TRUE),
     an_bias_total = mean(an_dep, na.rm=TRUE)
   ), by=.(DTG, level, varname)]
