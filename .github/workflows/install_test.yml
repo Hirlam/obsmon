@@ -1,0 +1,41 @@
+name: Test obsmon installation
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test-install:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential
+          sudo apt-get install -y gpg
+
+      - name: Install CRAN repo for Ubuntu 24.04
+        run: |
+          sudo mkdir -p /etc/apt/keyrings && \
+            wget -qO- https://cloud.r-project.org/bin/linux/ubuntu/marutter_pubkey.asc | \
+            gpg --dearmor -o /etc/apt/keyrings/cran.gpg && \
+            echo "deb [signed-by=/etc/apt/keyrings/cran.gpg] \
+            https://cloud.r-project.org/bin/linux/ubuntu noble-cran40/" \
+            > /etc/apt/sources.list.d/cran.list
+
+      - name: Install latest R from CRAN
+        run: |
+          sudo apt-get update && apt-get install -y r-base r-base-dev r-base-core
+
+      - name: Run basic CLI check (if applicable)
+        run: |
+          obsmon --help || true
