@@ -29,6 +29,7 @@
   # so we can reattach them later
   oldColAttrs <- lapply(names(data), function(nm) attributes(data[[nm]]))
   names(oldColAttrs) <- names(data)
+  
   # Convert to data.table
   dt <- as.data.table(data)
   dt <- fillDataWithQualityControlStatus(dt)
