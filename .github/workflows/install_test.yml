@@ -14,7 +14,15 @@ jobs:
     steps:
       # 1. Checkout code
       - name: Checkout repo
-        uses: actions/checkout@v4
+        uses: actions/checkout@v
+
+      - name: Set up R
+        uses: r-lib/actions/setup-r@v2
+        with:
+          r-version: '4.5.1'
+
+      - name: Ensure R library directory exists
+        run: mkdir -p "$R_LIBS_USER"
 
       # 2. Cache R packages
       - name: Cache R packages
