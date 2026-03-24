@@ -1,4 +1,20 @@
 #!/usr/bin/env Rscript
+
+# Check R version
+required <- package_version("4.4.0")
+
+if (getRversion() < required) {
+  stop(
+    paste0(
+      "\n\n",
+      "obsmon requires R >= ", required,
+      " (found ", getRversion(), ")",
+      "\n\n"
+    ),
+    call. = FALSE
+  )
+}
+
 # Initialise
 callingScriptPath <- function(resolve_symlink=TRUE) {
   argv <- commandArgs(trailingOnly=FALSE)
