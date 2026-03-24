@@ -23,13 +23,14 @@
   return(data)
 }
 
+
 .obsFitActiveObsDataPostProcessingFunction <- function(data, ...) {
   # Preserve attributes
   # Store original column-level attributes (e.g. units)
   # so we can reattach them later
   oldColAttrs <- lapply(names(data), function(nm) attributes(data[[nm]]))
   names(oldColAttrs) <- names(data)
-  
+
   # Convert to data.table
   dt <- as.data.table(data)
   dt <- fillDataWithQualityControlStatus(dt)
