@@ -233,10 +233,14 @@ plotTypeClass <- setRefClass(Class="obsmonPlotType",
       }
 
       res$level <- list()
-      if(length(levels)>0 && levels!="") res$level <- levels
+      if (!is.null(levels)) {
+        validLevels <- !is.na(levels) & nzchar(as.character(levels))
+        if (any(validLevels)) res$level <- levels[validLevels]
+      }
       res$excludeLevels <- list()
-      if(length(excludeLevels)>0 && excludeLevels!="") {
-        res$excludeLevels <- excludeLevels
+      if (!is.null(excludeLevels)) {
+        validExcludeLevels <- !is.na(excludeLevels) & nzchar(as.character(excludeLevels))
+        if (any(validExcludeLevels)) res$excludeLevels <- excludeLevels[validExcludeLevels]
       }
 
       if(obSupportsStationChoice(obname)) {
