@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com)
 and this project adheres to [Semantic Versioning](http://semver.org).
 
+## [4.5.3] 2026-03-24
+### Fixed
+-  Fix typo from !42 [!47](https://github.com/Hirlam/obsmon/pull/47)
 ## [4.5.2] 2026-03-24
 ### Fixed
 -  Fix multi-channel timeperiod plot filter handling [!43](https://github.com/Hirlam/obsmon/pull/43)
