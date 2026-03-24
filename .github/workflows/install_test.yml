@@ -19,23 +19,14 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v4
 
+      # 2. Set up R
       - name: Set up R
         uses: r-lib/actions/setup-r@v2
         with:
           r-version: ${{ matrix.r-version }}
 
-
       - name: Ensure R library directory exists
         run: mkdir -p "$R_LIBS_USER"
-
-      # 2. Cache R packages
-      - name: Cache R packages
-        uses: actions/cache@v3
-        with:
-          path: ${{ env.R_LIBS_USER }}
-          key: ${{ runner.os }}-r-${{ matrix.r-version }}-${{ hashFiles('**/DESCRIPTION') }}
-          restore-keys: |
-            ${{ runner.os }}-r-
 
       # 3. Install all system dependencies in one step
       - name: Install packages needed by obsmon
@@ -56,7 +47,16 @@ jobs:
         run: |
           ./install
 
-      # 8. Verify obsmon CLI
+      # 8. Cache R packages after installation
+      - name: Cache R packages
+        uses: actions/cache@v3
+        with:
+          path: ${{ env.R_LIBS_USER }}
+          key: ${{ runner.os }}-r-${{ matrix.r-version }}-${{ hashFiles('**/DESCRIPTION') }}
+          restore-keys: |
+            ${{ runner.os }}-r-
+
+      # 9. Verify obsmon CLI
       - name: Run basic CLI check (if applicable)
         run: |
           ./obsmon --help
