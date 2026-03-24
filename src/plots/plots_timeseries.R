@@ -24,12 +24,6 @@
 }
 
 .obsFitActiveObsDataPostProcessingFunction <- function(data, ...) {
-  .rms <- function(x) {
-    n <- sum(!is.na(x))
-    if(n == 0) return(NA_real_)
-    sqrt(sum(x^2, na.rm=TRUE) / n)
-  }
-
   # Preserve attributes
   # Store original column-level attributes (e.g. units)
   # so we can reattach them later
@@ -47,8 +41,8 @@
   dt <- dt[, .(
     # total number of obs in this group
     nobs_total    = .N,
-    fg_rms_total = .rms(fg_dep),
-    an_rms_total = .rms(an_dep),
+    fg_rms_total = sqrt(mean(fg_dep^2, na.rm = TRUE)),
+    an_rms_total = sqrt(mean(an_dep^2 na.rm = TRUE)),
     fg_bias_total = mean(fg_dep, na.rm=TRUE),
     an_bias_total = mean(an_dep, na.rm=TRUE)
   ), by=.(DTG, level, varname)]
