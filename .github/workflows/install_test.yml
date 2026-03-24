@@ -27,8 +27,8 @@ jobs:
         run: |
           sudo mkdir -p /etc/apt/keyrings && \
             wget -qO- https://cloud.r-project.org/bin/linux/ubuntu/marutter_pubkey.asc | \
-            gpg --dearmor -o /etc/apt/keyrings/cran.gpg && \
-            echo "deb [signed-by=/etc/apt/keyrings/cran.gpg] \
+            sudo gpg --dearmor -o /etc/apt/keyrings/cran.gpg && \
+            sudo echo "deb [signed-by=/etc/apt/keyrings/cran.gpg] \
             https://cloud.r-project.org/bin/linux/ubuntu noble-cran40/" \
             > /etc/apt/sources.list.d/cran.list
 
