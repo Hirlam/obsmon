@@ -10,6 +10,8 @@ and this project adheres to [Semantic Versioning](http://semver.org).
 ### Fixed
 -  Fix multi-channel timeperiod plot filter handling [!43](https://github.com/Hirlam/obsmon/pull/43)
 -  Bugfix for new plot "ObsFit (Active Observations Only)" [!42](https://github.com/Hirlam/obsmon/pull/42)
+### Added
+-  Bump version [!45](https://github.com/Hirlam/obsmon/pull/45)
 
 ## [4.5.1] 2026-02-10
 ### Fixed
