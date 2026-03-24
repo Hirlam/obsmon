@@ -50,6 +50,10 @@ jobs:
           sudo apt-get install -y libcairo2 libcairo2-dev
           sudo apt-get install -y libssl-dev
 
+      - name: Install obsmon R packages
+        run: |
+          ./install
+
       - name: Run basic CLI check (if applicable)
         run: |
-          obsmon --help || true
+          ./obsmon --help || true
