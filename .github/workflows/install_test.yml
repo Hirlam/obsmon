@@ -34,6 +34,33 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y r-base r-base-dev r-base-core
 
+      - name: Test R version 
+        run: |
+          R --version
+
+      - name: Install packages needed by obsmon
+        run: |
+          sudo apt-get install -y \
+            curl \
+            libcurl4-openssl-dev
+            libfontconfig1-dev \
+            libfreetype6-dev \
+            libharfbuzz-dev \
+            libfribidi-dev \
+            libpng-dev \
+            libtiff-dev \
+            libjpeg-dev \
+            libgdal-dev \
+            libgeos-dev \
+            libproj-dev \
+            libnetcdf-dev \
+            libsqlite3-dev \
+            libudunits2-dev \
+            libv8-dev \
+            libcairo2 \
+            libcairo2-dev \
+            libssl-dev
+
       - name: Run basic CLI check (if applicable)
         run: |
           obsmon --help || true
