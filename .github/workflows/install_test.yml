@@ -40,26 +40,15 @@ jobs:
 
       - name: Install packages needed by obsmon
         run: |
-          sudo apt-get install -y \
-            curl \
-            libcurl4-openssl-dev
-            libfontconfig1-dev \
-            libfreetype6-dev \
-            libharfbuzz-dev \
-            libfribidi-dev \
-            libpng-dev \
-            libtiff-dev \
-            libjpeg-dev \
-            libgdal-dev \
-            libgeos-dev \
-            libproj-dev \
-            libnetcdf-dev \
-            libsqlite3-dev \
-            libudunits2-dev \
-            libv8-dev \
-            libcairo2 \
-            libcairo2-dev \
-            libssl-dev
+          sudo apt-get install -y curl libcurl4-openssl-dev
+          sudo apt-get install -y libfontconfig1-dev libfreetype6-dev libharfbuzz-dev libfribidi-dev
+          sudo apt-get install -y libpng-dev libtiff-dev libjpeg-dev
+          sudo apt-get install -y libgdal-dev libgeos-dev libproj-dev
+          sudo apt-get install -y libnetcdf-dev libudunits2-dev
+          sudo apt-get install -y libsqlite3-dev
+          sudo apt-get install -y libv8-dev
+          sudo apt-get install -y libcairo2 libcairo2-dev
+          sudo apt-get install -y libssl-dev
 
       - name: Run basic CLI check (if applicable)
         run: |
