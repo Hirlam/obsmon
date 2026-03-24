@@ -38,21 +38,12 @@
   # Filter for active
   dt <- dt[grepl("active", tolower(status))]
 
-  # Summarize by:
-  #  - nobs_total
-  #  - keep fg_dep, an_dep for next group operation
-  dt <- dt[, .(
-    nobs_total = .N,
-    fg_dep     = fg_dep,
-    an_dep     = an_dep
-  ), by=.(DTG, level, varname)]
-
   # Now compute rms and bias by groups
   dt <- dt[, .(
     # total number of obs in this group
     nobs_total    = .N,
-    fg_rms_total = sqrt(sum((fg_dep - mean(fg_dep, na.rm=TRUE))^2, na.rm=TRUE) / sum(!is.na(fg_dep))),
-    an_rms_total = sqrt(sum((an_dep - mean(an_dep, na.rm=TRUE))^2, na.rm=TRUE) / sum(!is.na(an_dep))),
+    fg_rms_total = sqrt(mean(fg_dep^2, na.rm = TRUE)),
+    an_rms_total = sqrt(mean(an_dep^2 na.rm = TRUE)),
     fg_bias_total = mean(fg_dep, na.rm=TRUE),
     an_bias_total = mean(an_dep, na.rm=TRUE)
   ), by=.(DTG, level, varname)]
