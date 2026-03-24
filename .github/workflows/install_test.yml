@@ -31,7 +31,8 @@ jobs:
 
       - name: Install latest R from CRAN
         run: |
-          sudo apt-get update && apt-get install -y r-base r-base-dev r-base-core
+          sudo apt-get update
+          sudo apt-get install -y r-base r-base-dev r-base-core
 
       - name: Run basic CLI check (if applicable)
         run: |
