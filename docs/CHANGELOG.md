@@ -6,12 +6,15 @@ and this project adheres to [Semantic Versioning](http://semver.org).
 
 ## [Unreleased]
 
-## [4.5.2] 2026-02-10
+## [4.5.2] 2026-03-24
 ### Fixed
 -  Fix multi-channel timeperiod plot filter handling [!43](https://github.com/Hirlam/obsmon/pull/43)
 -  Bugfix for new plot "ObsFit (Active Observations Only)" [!42](https://github.com/Hirlam/obsmon/pull/42)
 ### Added
 -  Bump version [!45](https://github.com/Hirlam/obsmon/pull/45)
+
+### Added
+-  Add check on R version before installation [!44](https://github.com/Hirlam/obsmon/pull/44)
 
 ## [4.5.1] 2026-02-10
 ### Fixed
