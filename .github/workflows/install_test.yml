@@ -8,52 +8,56 @@ jobs:
   test-install:
     runs-on: ubuntu-latest
 
+    env:
+      R_LIBS_USER: ${{ github.workspace }}/Rlibs  # local R package library for caching
+
     steps:
+      # 1. Checkout code
       - name: Checkout repo
         uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      # 2. Cache R packages
+      - name: Cache R packages
+        uses: actions/cache@v3
         with:
-          python-version: "3.11"
+          path: ${{ env.R_LIBS_USER }}
+          key: ${{ runner.os }}-r-${{ hashFiles('**/DESCRIPTION') }}
+          restore-keys: |
+            ${{ runner.os }}-r-
 
-      - name: Install system dependencies
+      # 3. Install all system dependencies in one step
+      - name: Install packages needed by obsmon
         run: |
           sudo apt-get update
-          sudo apt-get install -y build-essential
-          sudo apt-get install -y gpg
+          sudo apt-get install -y build-essential gpg curl libcurl4-openssl-dev
+          sudo apt-get install -y libfontconfig1-dev libfreetype6-dev libharfbuzz-dev libfribidi-dev
+          sudo apt-get install -y libpng-dev libtiff-dev libjpeg-dev libgdal-dev libgeos-dev libproj-dev
+          sudo apt-get install -y libnetcdf-dev libudunits2-dev libsqlite3-dev libv8-dev libcairo2 libcairo2-dev libssl-dev
 
+      # 4. Add CRAN repository (Ubuntu 24.04)
       - name: Install CRAN repo for Ubuntu 24.04
         run: |
           sudo mkdir -p /etc/apt/keyrings
           wget -qO- https://cloud.r-project.org/bin/linux/ubuntu/marutter_pubkey.asc | sudo gpg --dearmor -o /etc/apt/keyrings/cran.gpg
           echo "deb [signed-by=/etc/apt/keyrings/cran.gpg] https://cloud.r-project.org/bin/linux/ubuntu noble-cran40/" | sudo tee /etc/apt/sources.list.d/cran.list
 
+      # 5. Add CRAN repository (Ubuntu 24.04)
       - name: Install latest R from CRAN
         run: |
           sudo apt-get update
           sudo apt-get install -y r-base r-base-dev r-base-core
 
+      # 6. Verify R installation
       - name: Test R version 
         run: |
           R --version
 
-      - name: Install packages needed by obsmon
-        run: |
-          sudo apt-get install -y curl libcurl4-openssl-dev
-          sudo apt-get install -y libfontconfig1-dev libfreetype6-dev libharfbuzz-dev libfribidi-dev
-          sudo apt-get install -y libpng-dev libtiff-dev libjpeg-dev
-          sudo apt-get install -y libgdal-dev libgeos-dev libproj-dev
-          sudo apt-get install -y libnetcdf-dev libudunits2-dev
-          sudo apt-get install -y libsqlite3-dev
-          sudo apt-get install -y libv8-dev
-          sudo apt-get install -y libcairo2 libcairo2-dev
-          sudo apt-get install -y libssl-dev
-
+      # 7. Install obsmon R packages
       - name: Install obsmon R packages
         run: |
           ./install
 
+      # 8. Verify obsmon CLI
       - name: Run basic CLI check (if applicable)
         run: |
-          ./obsmon --help || true
+          ./obsmon --help
