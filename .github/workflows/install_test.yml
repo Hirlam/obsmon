@@ -102,8 +102,9 @@ jobs:
       # 11. Verify the cached directory contains packages
       - name: Verify cached packages
         run: |
-          ls -lhR ~/.installer_local_R-libs/R-libs
-          ls -lhR ~/.cache/Rlibs/${{ matrix.r-version }}
+          ls -latr /home/runner/work/obsmon/obsmon/.installer_local_R-libs
+          ls -latr /home/runner/work/obsmon/obsmon/.installer_local_R-libs/Rlibs
+          ls -latr ~/.cache/Rlibs/${{ matrix.r-version }}
 
       # 12. Cache R packages (will now actually store installed packages)
       - name: Cache R packages
