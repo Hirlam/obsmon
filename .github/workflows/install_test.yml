@@ -2,8 +2,8 @@ name: Test obsmon installation
 
 on:
   push:
-  pull_request:
-  workflow_dispatch:  # optional, allows manual run
+    pull_request:
+      workflow_dispatch:  # optional, allows manual run
 
 jobs:
   test-install:
@@ -18,21 +18,21 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v4
 
-      # 2. Set up R
+          # 2. Set up R
       - name: Set up R
         uses: r-lib/actions/setup-r@v2
         with:
           r-version: ${{ matrix.r-version }}
 
-      # 3. Create R cache directory
+            # 3. Create R cache directory
       - name: Create R cache directory
         run: mkdir -p ~/.cache/Rlibs/${{ matrix.r-version }}
 
-      # 3. Show cache contents
+          # 3. Show cache contents
       - name: Show cache contents
         run: ls -lhR ~/.cache/Rlibs/${{ matrix.r-version }}
 
-      # 3. Restore cached R packages (BEFORE install)
+          # 3. Restore cached R packages (BEFORE install)
       - name: Restore R package cache
         uses: actions/cache@v4
         with:
@@ -42,7 +42,7 @@ jobs:
             ${{ runner.os }}-r-${{ matrix.r-version }}-
             ${{ runner.os }}-r-
 
-      # 5. Symlink for obsmon installer
+            # 5. Symlink for obsmon installer
       - name: Symlink .installer_local_R-libs/R-libs
         run: |
           pwd
@@ -52,48 +52,53 @@ jobs:
           ls -latr .installer_local_R-libs
           ls -latr .installer_local_R-libs/R-libs
 
-      # 6. Force R to use the cache path
+          # 6. Force R to use the cache path
       - name: Force R library path
         run: echo "R_LIBS_USER=${{ github.workspace }}/.installer_local_R-libs/R-libs" >> ~/.Renviron
 
-      # 7. Install system dependencies
+          # 7. Install system dependencies
       - name: Install system packages
         run: |
           sudo apt-get update
           sudo apt-get install -y build-essential gpg curl \
-            libcurl4-openssl-dev libfontconfig1-dev libfreetype6-dev \
-            libharfbuzz-dev libfribidi-dev libpng-dev libtiff-dev \
-            libjpeg-dev libgdal-dev libgeos-dev libproj-dev \
-            libnetcdf-dev libudunits2-dev libsqlite3-dev libv8-dev \
-            libcairo2 libcairo2-dev libssl-dev
+          libcurl4-openssl-dev libfontconfig1-dev libfreetype6-dev \
+          libharfbuzz-dev libfribidi-dev libpng-dev libtiff-dev \
+          libjpeg-dev libgdal-dev libgeos-dev libproj-dev \
+          libnetcdf-dev libudunits2-dev libsqlite3-dev libv8-dev \
+          libcairo2 libcairo2-dev libssl-dev
 
-      # 8. Verify R version
+          # 8. Verify R version
       - name: Test R version
         run: R --version
 
-      # 9. Optional: show library paths for debugging
+          # 9. Optional: show library paths for debugging
       - name: Debug R library paths
-        run: Rscript -e '.libPaths()'
+        run: |
+          Rscript -e 'print(.libPaths())'
+          ls -latrd $R_LIBS_USER || true
+          ls -latr $R_LIBS_USER || true
+          du -sh $R_LIBS_USER || true
 
+      # 12. Cache R packages
+      - name: Cache R packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/Rlibs/${{ matrix.r-version }}
+          key: ${{ runner.os }}-r-${{ matrix.r-version }}
+          restore-keys: |
+            ${{ runner.os }}-r-${{ matrix.r-version }}-
+            ${{ runner.os }}-r-
+      
       # 5. Install a single package (for testing)
       - name: Install test R package
         run: |
           cat ~/.Renviron
           Rscript -e 'install.packages("jsonlite", repos="https://cloud.r-project.org")'
 
-      # 6. List installed packages to verify
+          # 6. List installed packages to verify
       - name: List installed R packages
         run: |
           Rscript -e 'installed.packages()[,c("Package","Version")]'
-
-      # 7. Cache R libraries after install
-      - name: Cache R libraries
-        uses: actions/cache@v3
-        with:
-          path: ${{ env.R_LIBS_USER }}
-          key: ${{ runner.os }}-r-${{ matrix.r-version }}
-          restore-keys: |
-            ${{ runner.os }}-r-
 
 #EW       # 10. Install obsmon R packages
 #EW       - name: Install obsmon R packages
@@ -106,15 +111,6 @@ jobs:
           ls -latr /home/runner/work/obsmon/obsmon/.installer_local_R-libs/R-libs
           ls -latr ~/.cache/Rlibs/${{ matrix.r-version }}
 
-      # 12. Cache R packages (will now actually store installed packages)
-      - name: Cache R packages
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/Rlibs/${{ matrix.r-version }}
-          key: ${{ runner.os }}-r-${{ matrix.r-version }}
-          restore-keys: |
-            ${{ runner.os }}-r-${{ matrix.r-version }}-
-            ${{ runner.os }}-r-
 
 #EW       # 13. Optional: test obsmon CLI
 #EW       - name: Run obsmon CLI check
