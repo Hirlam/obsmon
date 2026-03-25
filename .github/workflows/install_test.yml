@@ -77,10 +77,7 @@ jobs:
 
       # 10. Install obsmon R packages
       - name: Install obsmon R packages
-        run: |
-          ./install
-          ls -latr .installer_local_R-libs
-          ls -latr .installer_local_R-libs/R-libs
+        run: ./install
 
       # 11. Verify the cached directory contains packages
       - name: Verify cached packages
