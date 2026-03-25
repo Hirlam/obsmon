@@ -2,13 +2,13 @@ name: Test obsmon installation
 
 on:
   push:
-    pull_request:
-      workflow_dispatch:  # optional, allows manual run
+  pull_request:
+  workflow_dispatch:
 
 jobs:
   test-install:
-    # 0. Test installation on Ubuntu with R-4.4.1 and R-4.5.1
     runs-on: ubuntu-latest
+
     strategy:
       matrix:
         r-version: [4.4.1, 4.5.1]
@@ -24,13 +24,19 @@ jobs:
         with:
           r-version: ${{ matrix.r-version }}
 
-      # 3. Create R cache directory
+      # 3. Create cache directory
       - name: Create R cache directory
         run: mkdir -p ~/.cache/Rlibs/${{ matrix.r-version }}
 
-      # 3. Show cache contents
-      - name: Show cache contents
-        run: ls -lhR ~/.cache/Rlibs/${{ matrix.r-version }}
+      # 4. Restore cache (MUST be before install)
+      - name: Cache R packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/Rlibs/${{ matrix.r-version }}
+          key: ${{ runner.os }}-r-${{ matrix.r-version }}
+          restore-keys: |
+            ${{ runner.os }}-r-${{ matrix.r-version }}-
+            ${{ runner.os }}-r-
 
       # 5. Symlink for obsmon installer
       - name: Symlink .installer_local_R-libs/R-libs
@@ -42,7 +48,7 @@ jobs:
           ls -latr .installer_local_R-libs
           ls -latr .installer_local_R-libs/R-libs
 
-      # 6. Force R to use the cache path
+      # 6. Force R to use cached library path
       - name: Force R library path
         run: echo "R_LIBS_USER=${{ github.workspace }}/.installer_local_R-libs/R-libs" >> ~/.Renviron
 
@@ -51,35 +57,25 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y build-essential gpg curl \
-          libcurl4-openssl-dev libfontconfig1-dev libfreetype6-dev \
-          libharfbuzz-dev libfribidi-dev libpng-dev libtiff-dev \
-          libjpeg-dev libgdal-dev libgeos-dev libproj-dev \
-          libnetcdf-dev libudunits2-dev libsqlite3-dev libv8-dev \
-          libcairo2 libcairo2-dev libssl-dev
+            libcurl4-openssl-dev libfontconfig1-dev libfreetype6-dev \
+            libharfbuzz-dev libfribidi-dev libpng-dev libtiff-dev \
+            libjpeg-dev libgdal-dev libgeos-dev libproj-dev \
+            libnetcdf-dev libudunits2-dev libsqlite3-dev libv8-dev \
+            libcairo2 libcairo2-dev libssl-dev
 
-          # 8. Verify R version
+      # 8. Verify R version
       - name: Test R version
         run: R --version
 
-          # 9. Optional: show library paths for debugging
+      # 9. Debug R library paths
       - name: Debug R library paths
         run: |
           Rscript -e 'print(.libPaths())'
           ls -latrd $R_LIBS_USER || true
           ls -latr $R_LIBS_USER || true
           du -sh $R_LIBS_USER || true
-
-      # 12. Cache R packages
-      - name: Cache R packages
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/Rlibs/${{ matrix.r-version }}
-          key: ${{ runner.os }}-r-${{ matrix.r-version }}
-          restore-keys: |
-            ${{ runner.os }}-r-${{ matrix.r-version }}-
-            ${{ runner.os }}-r-
       
-      # 5. Install a single package (for testing)
+      # 10. Install a single package (for testing)
       - name: Install test R package
         run: |
           cat ~/.Renviron
@@ -100,6 +96,7 @@ jobs:
           ls -latr /home/runner/work/obsmon/obsmon/.installer_local_R-libs
           ls -latr /home/runner/work/obsmon/obsmon/.installer_local_R-libs/R-libs
           ls -latr ~/.cache/Rlibs/${{ matrix.r-version }}
+          du -sh ~/.cache/Rlibs/${{ matrix.r-version }}
 
 
 #EW       # 13. Optional: test obsmon CLI
