@@ -83,4 +83,6 @@ jobs:
 
       # 13. Optional: test obsmon CLI
       - name: Run obsmon CLI check
-        run: ./obsmon --help
+        run: |
+          export R_LIBS_USER=~/.cache/Rlibs/${{ matrix.r-version }}
+          ./obsmon --help
