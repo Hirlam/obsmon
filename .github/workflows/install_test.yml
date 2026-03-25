@@ -79,6 +79,7 @@ jobs:
       - name: Install test R package
         run: |
           cat ~/.Renviron
+          ls -altr ~/.cache/Rlibs/${{ matrix.r-version }}
           Rscript -e 'install.packages("jsonlite", repos="https://cloud.r-project.org")'
 
           # 6. List installed packages to verify
