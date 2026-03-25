@@ -46,7 +46,7 @@ jobs:
       - name: Symlink .installer_local_R-libs/R-libs
         run: |
           pwd
-          ls -ltr
+          ls -latr
           mkdir -p .installer_local_R-libs
           ln -sfn ~/.cache/Rlibs/${{ matrix.r-version }} .installer_local_R-libs/R-libs
 
