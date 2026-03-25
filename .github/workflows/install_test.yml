@@ -49,6 +49,8 @@ jobs:
           ls -latr
           mkdir -p .installer_local_R-libs
           ln -sfn ~/.cache/Rlibs/${{ matrix.r-version }} .installer_local_R-libs/R-libs
+          ls -latr .installer_local_R-libs
+          ls -latr .installer_local_R-libs/R-libs
 
       # 6. Force R to use the cache path
       - name: Force R library path
