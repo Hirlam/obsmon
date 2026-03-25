@@ -27,6 +27,10 @@ jobs:
         with:
           r-version: ${{ matrix.r-version }}
 
+      # 3. Show cache contents
+      - name: Show cache contents
+        run: ls -lhR ~/.cache/Rlibs/${{ matrix.r-version }}
+
       # 3. Restore cached R packages (BEFORE install)
       - name: Restore R package cache
         uses: actions/cache@v4
