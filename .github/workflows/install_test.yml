@@ -63,7 +63,6 @@ jobs:
       # 10. Install a single package (for testing)
       - name: Install test R package
         run: |
-          cat ~/.Renviron
           ls -altr ~/.cache/Rlibs/${{ matrix.r-version }}
           Rscript -e 'install.packages("jsonlite", repos="https://cloud.r-project.org")'
 
