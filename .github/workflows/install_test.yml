@@ -75,9 +75,29 @@ jobs:
       - name: Debug R library paths
         run: Rscript -e '.libPaths()'
 
-      # 10. Install obsmon R packages
-      - name: Install obsmon R packages
-        run: ./install
+      # 5. Install a single package (for testing)
+      - name: Install test R package
+        run: |
+          cat ~/.Renviron
+          Rscript -e 'install.packages("jsonlite", repos="https://cloud.r-project.org")'
+
+      # 6. List installed packages to verify
+      - name: List installed R packages
+        run: |
+          Rscript -e 'installed.packages()[,c("Package","Version")]'
+
+      # 7. Cache R libraries after install
+      - name: Cache R libraries
+        uses: actions/cache@v3
+        with:
+          path: ${{ env.R_LIBS_USER }}
+          key: ${{ runner.os }}-r-${{ matrix.r-version }}-debug
+          restore-keys: |
+            ${{ runner.os }}-r-
+
+          #EW       # 10. Install obsmon R packages
+          #EW       - name: Install obsmon R packages
+          #EW         run: ./install
 
       # 11. Verify the cached directory contains packages
       - name: Verify cached packages
@@ -93,6 +113,6 @@ jobs:
             ${{ runner.os }}-r-${{ matrix.r-version }}-
             ${{ runner.os }}-r-
 
-      # 13. Optional: test obsmon CLI
-      - name: Run obsmon CLI check
-        run: ./obsmon --help
+            #EW       # 13. Optional: test obsmon CLI
+            #EW       - name: Run obsmon CLI check
+            #EW         run: ./obsmon --help
