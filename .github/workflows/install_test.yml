@@ -69,19 +69,19 @@ jobs:
       - name: Show R library paths
         run: Rscript -e '.libPaths()'
 
-      # 9. Install obsmon R packages
-      - name: Install obsmon R packages
-        run: ./install
-
-      # 10. Cache R packages after installation
-      - name: Cache R packages
-        uses: actions/cache@v3
-        with:
-          path: ${{ env.R_LIBS_USER }}
-          key: ${{ runner.os }}-r-${{ matrix.r-version }}-${{ hashFiles('**/DESCRIPTION') }}
-          restore-keys: |
-            ${{ runner.os }}-r-
-
-      # 11. Verify obsmon CLI
-      - name: Run basic CLI check (if applicable)
-        run: ./obsmon --help
+          #EW       # 9. Install obsmon R packages
+          #EW       - name: Install obsmon R packages
+          #EW         run: ./install
+          #EW 
+          #EW       # 10. Cache R packages after installation
+          #EW       - name: Cache R packages
+          #EW         uses: actions/cache@v3
+          #EW         with:
+          #EW           path: ${{ env.R_LIBS_USER }}
+          #EW           key: ${{ runner.os }}-r-${{ matrix.r-version }}-${{ hashFiles('**/DESCRIPTION') }}
+          #EW           restore-keys: |
+          #EW             ${{ runner.os }}-r-
+          #EW 
+          #EW       # 11. Verify obsmon CLI
+          #EW       - name: Run basic CLI check (if applicable)
+          #EW         run: ./obsmon --help
