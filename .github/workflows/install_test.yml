@@ -78,12 +78,13 @@ jobs:
       # 11. Verify the cached directory contains packages
       - name: Verify cached packages
         run: |
-          ls -latr ~/.cache/Rlibs/${{ matrix.r-version }}
           du -sh ~/.cache/Rlibs/${{ matrix.r-version }}
+          ls -latr ~/.cache/Rlibs/${{ matrix.r-version }}
+          ls -latr ~/.cache/Rlibs/${{ matrix.r-version }}/R-libs
 
       # 13. Optional: test obsmon CLI
       - name: Run obsmon CLI check
         env:
-          R_LIBS_USER: /home/runner/.cache/Rlibs/${{ matrix.r-version }}
+          R_LIBS_USER: /home/runner/.cache/Rlibs/${{ matrix.r-version }}/R-libs
         run: |
           ./obsmon --help
