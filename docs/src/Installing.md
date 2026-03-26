@@ -100,7 +100,9 @@ module load gdal/
 module load geos
 module load proj
 ```
-Note: `prgenv/gnu` and `gcc/8.5.0` should be loaded by default.
+> [!NOTE]
+> `prgenv/gnu` and `gcc/8.5.0` should be loaded by default.
+> If not, they are required and should be loaded.
 
 ~~Tested with current (April 2024) defaults: `R/4.2.2 geos/3.11.1 proj/9.1.1 gdal/3.6.2`~~.
 Tested with current (April 2026) defaults: `R/4.4.3 gdal/3.10.2 geos/3.13.1 proj/9.4.1
