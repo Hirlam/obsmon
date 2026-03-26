@@ -41,7 +41,7 @@ jobs:
       - name: Cache R packages
         uses: actions/cache@v4
         with:
-          path: /home/runner/.cache/Rlibs/${{ matrix.r-version }}/R-libs
+          path: /home/runner/.cache/Rlibs/${{ matrix.r-version }}
           key: ${{ runner.os }}-r-${{ matrix.r-version }}-${{ hashFiles('**/DESCRIPTION') }}
           restore-keys: |
             ${{ runner.os }}-r-${{ matrix.r-version }}-
