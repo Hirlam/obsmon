@@ -1,0 +1,86 @@
+name: Test obsmon installation
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  test-install:
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        r-version: [4.4.1, 4.5.1]
+
+    steps:
+      # 1. Checkout code
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      # 2. Set up R
+      - name: Set up R
+        uses: r-lib/actions/setup-r@v2
+        with:
+          r-version: ${{ matrix.r-version }}
+
+      - name: Force R library path
+        run: echo "R_LIBS_USER=/home/runner/.cache/Rlibs/${{ matrix.r-version }}/R-libs" >> $GITHUB_ENV
+
+      # 3. Create cache directory
+      - name: Create R cache directory
+        run: mkdir -p /home/runner/.cache/Rlibs/${{ matrix.r-version }}/R-libs
+
+      # 4. Restore/save cache
+      - name: Cache R packages
+        uses: actions/cache@v4
+        with:
+          path: /home/runner/.cache/Rlibs/${{ matrix.r-version }}/R-libs
+          key: ${{ runner.os }}-r-${{ matrix.r-version }}-${{ hashFiles('**/DESCRIPTION') }}
+          restore-keys: |
+            ${{ runner.os }}-r-${{ matrix.r-version }}-
+            ${{ runner.os }}-r-
+
+      # 5. Install system dependencies
+      - name: Install system packages
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential gpg curl \
+            libcurl4-openssl-dev libfontconfig1-dev libfreetype6-dev \
+            libharfbuzz-dev libfribidi-dev libpng-dev libtiff-dev \
+            libjpeg-dev libgdal-dev libgeos-dev libproj-dev \
+            libnetcdf-dev libudunits2-dev libsqlite3-dev libv8-dev \
+            libcairo2 libcairo2-dev libssl-dev
+
+      # 6. Verify R version + library path
+      - name: Debug R library paths
+        run: |
+          R --version
+          Rscript -e 'print(.libPaths())'
+          ls -latr /home/runner/.cache/Rlibs/${{ matrix.r-version }}/R-libs
+          du -sh /home/runner/.cache/Rlibs/${{ matrix.r-version }}/R-libs
+
+      # 7. Install a test package (should go into cache)
+      - name: Install test R package
+        run: |
+          Rscript -e 'install.packages("jsonlite", repos="https://cloud.r-project.org")'
+
+      # 8. Install obsmon R packages
+      - name: Install obsmon R packages
+        run: ./install -output-rootdir /home/runner/.cache/Rlibs/${{ matrix.r-version }}
+
+      # 9. Verify cache contents
+      - name: Verify cached packages
+        run: |
+          du -sh /home/runner/.cache/Rlibs/${{ matrix.r-version }}
+          ls -latr /home/runner/.cache/Rlibs/${{ matrix.r-version }}
+          ls -latr /home/runner/.cache/Rlibs/${{ matrix.r-version }}/R-libs
+
+      # 10. List installed packages (sanity check)
+      - name: List installed R packages
+        run: |
+          Rscript -e 'installed.packages()[,c("Package","Version")]'
+
+      # 11. Run obsmon CLI check
+      - name: Run obsmon CLI check
+        run: ./obsmon --help
