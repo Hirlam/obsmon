@@ -13,10 +13,6 @@ jobs:
       matrix:
         r-version: [4.4.1, 4.5.1]
 
-    env:
-      # Ensure R ALWAYS uses the cached library
-      R_LIBS_USER: ~/.cache/Rlibs/${{ matrix.r-version }}/R-libs
-
     steps:
       # 1. Checkout code
       - name: Checkout repo
@@ -28,15 +24,18 @@ jobs:
         with:
           r-version: ${{ matrix.r-version }}
 
+      - name: Force R library path
+        run: echo "R_LIBS_USER=/home/runner/.cache/Rlibs/${{ matrix.r-version }}/R-libs" >> $GITHUB_ENV
+
       # 3. Create cache directory
       - name: Create R cache directory
-        run: mkdir -p ~/.cache/Rlibs/${{ matrix.r-version }}/R-libs
+        run: mkdir -p /home/runner/.cache/Rlibs/${{ matrix.r-version }}/R-libs
 
       # 4. Restore/save cache
       - name: Cache R packages
         uses: actions/cache@v4
         with:
-          path: ~/.cache/Rlibs/${{ matrix.r-version }}/R-libs
+          path: /home/runner/.cache/Rlibs/${{ matrix.r-version }}/R-libs
           key: ${{ runner.os }}-r-${{ matrix.r-version }}-${{ hashFiles('**/DESCRIPTION') }}
           restore-keys: |
             ${{ runner.os }}-r-${{ matrix.r-version }}-
@@ -58,8 +57,8 @@ jobs:
         run: |
           R --version
           Rscript -e 'print(.libPaths())'
-          ls -latr ~/.cache/Rlibs/${{ matrix.r-version }}
-          du -sh ~/.cache/Rlibs/${{ matrix.r-version }}
+          ls -latr /home/runner/.cache/Rlibs/${{ matrix.r-version }}/R-libs
+          du -sh /home/runner/.cache/Rlibs/${{ matrix.r-version }}/R-libs
 
       # 7. Install a test package (should go into cache)
       - name: Install test R package
@@ -68,14 +67,14 @@ jobs:
 
       # 8. Install obsmon R packages
       - name: Install obsmon R packages
-        run: ./install -output-rootdir ~/.cache/Rlibs/${{ matrix.r-version }}
+        run: ./install -output-rootdir /home/runner/.cache/Rlibs/${{ matrix.r-version }}/R-libs
 
       # 9. Verify cache contents
       - name: Verify cached packages
         run: |
-          du -sh ~/.cache/Rlibs/${{ matrix.r-version }}
-          ls -latr ~/.cache/Rlibs/${{ matrix.r-version }}
-          ls -latr ~/.cache/Rlibs/${{ matrix.r-version }}/R-libs
+          du -sh /home/runner/.cache/Rlibs/${{ matrix.r-version }}
+          ls -latr /home/runner/.cache/Rlibs/${{ matrix.r-version }}
+          ls -latr /home/runner/.cache/Rlibs/${{ matrix.r-version }}/R-libs
 
       # 10. List installed packages (sanity check)
       - name: List installed R packages
