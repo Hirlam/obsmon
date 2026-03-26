@@ -5,6 +5,8 @@ The format is based on [Keep a Changelog](http://keepachangelog.com)
 and this project adheres to [Semantic Versioning](http://semver.org).
 
 ## [Unreleased]
+### Fixed
+-  COrrect ECMWF documentation [!49](https://github.com/Hirlam/obsmon/pull/49)
 ### Added
 -  Add GitHub Action to test installation on Ubuntu 24.04 [!48](https://github.com/Hirlam/obsmon/pull/48)
 ## [4.5.3] 2026-03-24
