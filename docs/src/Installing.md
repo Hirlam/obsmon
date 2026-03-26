@@ -95,14 +95,17 @@ Follow the instructions given ini [3.1.1](@ref install-standalone).
 The compilation requires the following modules to provide system dependencies:
 
 ```bash
+module purge
+module load prgenv/gnu
+module unload gcc
+module load gcc/8.5.0
 module load R/4.4.3
-module load gdal/
-module load geos
-module load proj
+module load gdal/3.10.2
+module load geos/3.13.1
+module load proj/9.4.1
 ```
 > [!NOTE]
 > `prgenv/gnu` and `gcc/8.5.0` should be loaded by default.
-> If not, they are required and should be loaded.
 
 Tested with current (April 2026) defaults: `R/4.4.3 gdal/3.10.2 geos/3.13.1 proj/9.4.1
 
