@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com)
 and this project adheres to [Semantic Versioning](http://semver.org).
 
+## [Unreleased]
+### Added
+-  Add GitHub Action to test installation on Ubuntu 24.04 [!48](https://github.com/Hirlam/obsmon/pull/48)
 ## [4.5.3] 2026-03-24
 ### Fixed
 -  Fix typo from !42 [!47](https://github.com/Hirlam/obsmon/pull/47)
