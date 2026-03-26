@@ -4,10 +4,8 @@ Use the `install` script to install the `R` libraries needed. The main
 system requirements are:
 
 - A Linux operating system
-- A working `R (>= 4.0.5)` interpreter
-
+- A working `R (>= 4.4.0)` interpreter
 - `python (>= 3.6.7)`
-
 - Internet connection
 
 Instructions for the various installation modes are given in
