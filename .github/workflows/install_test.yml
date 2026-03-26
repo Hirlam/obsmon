@@ -2,11 +2,17 @@ name: Test obsmon installation
 
 on:
   push:
+    branches: [ master ]
   pull_request:
+    branches: [ master ]
   workflow_dispatch:
+
 
 jobs:
   test-install:
+    # This workflow should only run in Hirlam/obsmon to not overuse GitHub action minutes in forks
+    if: github.repository == 'Hirlam/Harmonie'
+ 
     runs-on: ubuntu-latest
 
     strategy:

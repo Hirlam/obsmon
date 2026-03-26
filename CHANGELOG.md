@@ -6,7 +6,8 @@ and this project adheres to [Semantic Versioning](http://semver.org).
 
 ## [Unreleased]
 ### Fixed
--  Correct ECMWF documentation [!49](https://github.com/Hirlam/obsmon/pull/49)
+-  Correct Actions [!52](https://github.com/Hirlam/obsmon/pull/52)
+-  Correct ECMWF documentation [!51](https://github.com/Hirlam/obsmon/pull/51)
 ### Added
 -  Add GitHub Action to test installation on Ubuntu 24.04 [!48](https://github.com/Hirlam/obsmon/pull/48)
 ## [4.5.3] 2026-03-24
