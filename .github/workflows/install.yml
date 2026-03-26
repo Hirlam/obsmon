@@ -11,7 +11,7 @@ on:
 jobs:
   test-install:
     # This workflow should only run in Hirlam/obsmon to not overuse GitHub action minutes in forks
-    if: github.repository == 'Hirlam/Harmonie'
+    if: github.repository == 'Hirlam/obsmon'
  
     runs-on: ubuntu-latest
 
@@ -66,14 +66,13 @@ jobs:
           ls -latr /home/runner/.cache/Rlibs/${{ matrix.r-version }}/R-libs
           du -sh /home/runner/.cache/Rlibs/${{ matrix.r-version }}/R-libs
 
-      # 7. Install a test package (should go into cache)
-      - name: Install test R package
-        run: |
-          Rscript -e 'install.packages("jsonlite", repos="https://cloud.r-project.org")'
-
       # 8. Install obsmon R packages
       - name: Install obsmon R packages
-        run: ./install -output-rootdir /home/runner/.cache/Rlibs/${{ matrix.r-version }}
+        run: |
+          ls -ltr /home/runner/.cache/Rlibs/${{ matrix.r-version }}
+          ls -ltr /home/runner/.cache/Rlibs/${{ matrix.r-version }}/R-libs
+          ./install -output-rootdir /home/runner/.cache/Rlibs/${{ matrix.r-version }}
+          ls -ltr /home/runner/.cache/Rlibs/${{ matrix.r-version }}/R-libs
 
       # 9. Verify cache contents
       - name: Verify cached packages
