@@ -67,7 +67,7 @@ jobs:
 
       # 8. Install obsmon R packages
       - name: Install obsmon R packages
-        run: ./install -output-rootdir /home/runner/.cache/Rlibs/${{ matrix.r-version }}/R-libs
+        run: ./install -output-rootdir /home/runner/.cache/Rlibs/${{ matrix.r-version }}
 
       # 9. Verify cache contents
       - name: Verify cached packages
