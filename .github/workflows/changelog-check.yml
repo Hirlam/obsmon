@@ -16,10 +16,10 @@ jobs:
         with:
           filters: |
             changelog:
-              - 'docs/CHANGELOG.md'
+              - 'CHANGELOG.md'
             code:
               - '**'
-              - '!docs/CHANGELOG.md'
+              - '!CHANGELOG.md'
               - '!.github/**'
               - '!docs/**'
 
