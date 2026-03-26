@@ -4,10 +4,8 @@ Use the `install` script to install the `R` libraries needed. The main
 system requirements are:
 
 - A Linux operating system
-- A working `R (>= 4.0.5)` interpreter
-
+- A working `R (>= 4.4.0)` interpreter
 - `python (>= 3.6.7)`
-
 - Internet connection
 
 Instructions for the various installation modes are given in
@@ -95,13 +93,19 @@ Follow the instructions given ini [3.1.1](@ref install-standalone).
 The compilation requires the following modules to provide system dependencies:
 
 ```bash
-module load R
-module load gdal
-module load gproj
-module load geos
+module purge
+module load prgenv/gnu
+module unload gcc
+module load gcc/8.5.0
+module load R/4.4.3
+module load gdal/3.10.2
+module load geos/3.13.1
+module load proj/9.4.1
 ```
+> [!NOTE]
+> `prgenv/gnu` and `gcc/8.5.0` should be loaded by default.
 
-Tested with current (April 2024) defaults: `R/4.2.2 geos/3.11.1 proj/9.1.1 gdal/3.6.2`.
+Tested with current (April 2026) defaults: `R/4.4.3 gdal/3.10.2 geos/3.13.1 proj/9.4.1
 
 Atos HPC currently does not provide a browser to connect to Shinny applications. However, for those using Virtual Desktop Infrastructure (VDI) provided by ECMWF, one option is to use SOCKS port forwarding from the Linux Virtual Desktop:
 
