@@ -6,6 +6,7 @@ and this project adheres to [Semantic Versioning](http://semver.org).
 
 ## [Unreleased]
 ### Fixed
+-  Correct install Action [!56](https://github.com/Hirlam/obsmon/pull/56)
 -  Correct Actions [!52](https://github.com/Hirlam/obsmon/pull/52)
 -  Correct ECMWF documentation [!51](https://github.com/Hirlam/obsmon/pull/51)
 ### Added
