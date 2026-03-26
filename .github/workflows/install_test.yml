@@ -13,6 +13,10 @@ jobs:
       matrix:
         r-version: [4.4.1, 4.5.1]
 
+    env:
+      # Ensure R ALWAYS uses the cached library
+      R_LIBS_USER: ~/.cache/Rlibs/${{ matrix.r-version }}/R-libs
+
     steps:
       # 1. Checkout code
       - name: Checkout repo
@@ -26,19 +30,19 @@ jobs:
 
       # 3. Create cache directory
       - name: Create R cache directory
-        run: mkdir -p ~/.cache/Rlibs/${{ matrix.r-version }}
+        run: mkdir -p ~/.cache/Rlibs/${{ matrix.r-version }}/R-libs
 
-      # 4. Restore cache (MUST be before install)
+      # 4. Restore/save cache
       - name: Cache R packages
         uses: actions/cache@v4
         with:
-          path: ~/.cache/Rlibs/${{ matrix.r-version }}
-          key: ${{ runner.os }}-r-${{ matrix.r-version }}
+          path: ~/.cache/Rlibs/${{ matrix.r-version }}/R-libs
+          key: ${{ runner.os }}-r-${{ matrix.r-version }}-${{ hashFiles('**/DESCRIPTION') }}
           restore-keys: |
             ${{ runner.os }}-r-${{ matrix.r-version }}-
             ${{ runner.os }}-r-
 
-      # 7. Install system dependencies
+      # 5. Install system dependencies
       - name: Install system packages
         run: |
           sudo apt-get update
@@ -49,42 +53,35 @@ jobs:
             libnetcdf-dev libudunits2-dev libsqlite3-dev libv8-dev \
             libcairo2 libcairo2-dev libssl-dev
 
-      # 8. Verify R version
-      - name: Test R version
-        run: R --version
-
-      # 9. Debug R library paths
+      # 6. Verify R version + library path
       - name: Debug R library paths
         run: |
+          R --version
           Rscript -e 'print(.libPaths())'
           ls -latr ~/.cache/Rlibs/${{ matrix.r-version }}
           du -sh ~/.cache/Rlibs/${{ matrix.r-version }}
-      
-      # 10. Install a single package (for testing)
+
+      # 7. Install a test package (should go into cache)
       - name: Install test R package
         run: |
-          ls -altr ~/.cache/Rlibs/${{ matrix.r-version }}
           Rscript -e 'install.packages("jsonlite", repos="https://cloud.r-project.org")'
 
-      # 6. List installed packages to verify
-      - name: List installed R packages
-        run: |
-          Rscript -e 'installed.packages()[,c("Package","Version")]'
-
-      # 10. Install obsmon R packages
+      # 8. Install obsmon R packages
       - name: Install obsmon R packages
         run: ./install -output-rootdir ~/.cache/Rlibs/${{ matrix.r-version }}
 
-      # 11. Verify the cached directory contains packages
+      # 9. Verify cache contents
       - name: Verify cached packages
         run: |
           du -sh ~/.cache/Rlibs/${{ matrix.r-version }}
           ls -latr ~/.cache/Rlibs/${{ matrix.r-version }}
           ls -latr ~/.cache/Rlibs/${{ matrix.r-version }}/R-libs
 
-      # 13. Optional: test obsmon CLI
-      - name: Run obsmon CLI check
-        env:
-          R_LIBS_USER: /home/runner/.cache/Rlibs/${{ matrix.r-version }}/R-libs
+      # 10. List installed packages (sanity check)
+      - name: List installed R packages
         run: |
-          ./obsmon --help
+          Rscript -e 'installed.packages()[,c("Package","Version")]'
+
+      # 11. Run obsmon CLI check
+      - name: Run obsmon CLI check
+        run: ./obsmon --help
