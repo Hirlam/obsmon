@@ -776,7 +776,7 @@ addTitleToPlot <- function(myPlot, title) {
     return(myPlot)
   }
   newPlot <- tryCatch({
-    if(is.ggplot(myPlot)) {
+    if(is_ggplot(myPlot)) {
       myPlot + ggtitle(title) + theme(plot.title=element_text(hjust=0.5))
     } else if("plotly" %in% class(myPlot)) {
       yTitle <- attr(myPlot, "yTitle")
