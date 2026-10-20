@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](http://semver.org).
 -  Correct Actions [!52](https://github.com/Hirlam/obsmon/pull/52)
 -  Correct ECMWF documentation [!51](https://github.com/Hirlam/obsmon/pull/51)
 ### Added
+-  Compare up to three experiments in main plot tab [!NN](https://github.com/Hirlam/obsmon/pull/NN)
 -  Add GitHub Action to test installation on Ubuntu 24.04 [!48](https://github.com/Hirlam/obsmon/pull/48)
 ## [4.5.3] 2026-03-24
 ### Fixed

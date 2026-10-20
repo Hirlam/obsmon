@@ -26,6 +26,489 @@ SPINNER_CHART <- EMPTY_CHART %>%
 lockBinding("EMPTY_CHART", globalenv())
 lockBinding("SPINNER_CHART", globalenv())
 
+.asScalarCharacterOrNa <- function(val) {
+  if (
+    is.null(val) ||
+    inherits(val, "uninitializedField") ||
+    isS4(val) ||
+    is.environment(val) ||
+    is.function(val) ||
+    length(val) == 0 ||
+    (!is.atomic(val) && !is.factor(val))
+  ) {
+    return(NA_character_)
+  }
+
+  res <- tryCatch(as.character(val), error=function(e) character(0))
+  res <- res[!is.na(res) & nzchar(res)]
+  if(length(res) == 0) return(NA_character_)
+  res[[1]]
+}
+
+.plotHasComparison <- function(plot) {
+  length(.getComparisonPlots(plot)) > 0
+}
+
+.plotUsesJointComparison <- function(plot) {
+  .plotHasComparison(plot) &&
+    plot$parentType$category %in% c("Statistical", "Timeseries", "StationVerticalProfiles") &&
+    !(plot$parentType$category == "Timeseries" &&
+      plot$parentType$name %in% c("Hovmöller", "Land-sea departures"))
+}
+
+.plotSupportsComparison <- function(plotType) {
+  category <- plotType$category
+  if(category %in% c("Statistical", "StationVerticalProfiles", "Maps", "Average Maps")) {
+    return(TRUE)
+  }
+  category == "Timeseries"
+}
+
+.getComparisonPlots <- function(plot) {
+  compPlots <- tryCatch(plot$compPlots, error=function(e) NULL)
+  if(!is.list(compPlots) || inherits(compPlots, "uninitializedField")) {
+    compPlots <- list()
+  }
+  Filter(function(compPlot) inherits(compPlot, "obsmonPlot"), compPlots)
+}
+
+.updateComparisonPlotSettings <- function(plot, params=list(), modelDomain=NULL) {
+  for(experimentPlot in c(list(plot), .getComparisonPlots(plot))) {
+    for(name in names(params)) {
+      experimentPlot$paramsAsInUiInput[[name]] <- params[[name]]
+    }
+    if(!is.null(modelDomain)) experimentPlot$modelDomain <- modelDomain
+  }
+  plot
+}
+
+.getPlotExperimentName <- function(plot, fallback) {
+  experimentName <- .asScalarCharacterOrNa(plot$primaryExperimentName)
+  if(is.na(experimentName)) {
+    experimentName <- .asScalarCharacterOrNa(plot$paramsAsInUiInput$experiment)
+  }
+  if(is.na(experimentName)) fallback else experimentName
+}
+
+.getComparisonExperimentNames <- function(plot) {
+  compPlots <- .getComparisonPlots(plot)
+  if(length(compPlots)==0) return(character(0))
+  vapply(
+    seq_along(compPlots),
+    function(i) .getPlotExperimentName(compPlots[[i]], sprintf("comparison %d", i)),
+    character(1)
+  )
+}
+
+.getMissingComparisonExperimentNames <- function(plot) {
+  plots <- c(list(plot), .getComparisonPlots(plot))
+  names <- c(.getPlotExperimentName(plot, "primary"), .getComparisonExperimentNames(plot))
+  names[vapply(plots, .plotHasNoDataRows, logical(1))]
+}
+
+.combinePlotDataByExperiment <- function(plot, maskColumns=character(0)) {
+  plots <- c(list(plot), .getComparisonPlots(plot))
+  experimentNames <- c(
+    .getPlotExperimentName(plot, "primary"),
+    .getComparisonExperimentNames(plot)
+  )
+
+  dataList <- lapply(plots, function(onePlot) {
+    data <- onePlot$data
+    data[!(colnames(data) %in% maskColumns)]
+  })
+  validData <- vapply(dataList, function(data) is.data.frame(data) && nrow(data) > 0, logical(1))
+  missingExperiments <- experimentNames[!validData]
+  if(length(missingExperiments) > 0) {
+    flog.warn("No comparison plot data returned for: %s", paste(missingExperiments, collapse=", "))
+  }
+  dataList <- dataList[validData]
+  experimentNames <- experimentNames[validData]
+  if(length(dataList) == 0) {
+    result <- data.frame(experiment=character(0))
+    attr(result, "missingExperiments") <- missingExperiments
+    return(result)
+  }
+  identifierCols <- c("DTG", "level", "varname", "statid", "latitude", "longitude")
+  commonIdentifiers <- Reduce(intersect, lapply(dataList, colnames))
+  commonIdentifiers <- commonIdentifiers[commonIdentifiers %in% identifierCols]
+  metricColumns <- unique(unlist(lapply(dataList, function(data) {
+    setdiff(colnames(data), identifierCols)
+  }), use.names=FALSE))
+  combinedColumns <- c(commonIdentifiers, setdiff(metricColumns, commonIdentifiers))
+
+  for(i in seq_along(dataList)) {
+    absentColumns <- setdiff(combinedColumns, colnames(dataList[[i]]))
+    for(col in absentColumns) dataList[[i]][[col]] <- rep(NA_real_, nrow(dataList[[i]]))
+    dataList[[i]] <- dataList[[i]][combinedColumns]
+    dataList[[i]]$experiment <- experimentNames[[i]]
+  }
+  result <- do.call(rbind, dataList)
+  row.names(result) <- NULL
+  attr(result, "missingExperiments") <- missingExperiments
+  result
+}
+
+.combineAnyDataByExperiment <- function(plot, dataAccessor) {
+  plots <- c(list(plot), .getComparisonPlots(plot))
+  experimentNames <- c(
+    .getPlotExperimentName(plot, "primary"),
+    .getComparisonExperimentNames(plot)
+  )
+
+  dataList <- lapply(plots, dataAccessor)
+  validData <- vapply(dataList, function(data) is.data.frame(data) && nrow(data) > 0, logical(1))
+  missingExperiments <- experimentNames[!validData]
+  if(length(missingExperiments) > 0) {
+    flog.warn("No comparison data returned for: %s", paste(missingExperiments, collapse=", "))
+  }
+  dataList <- dataList[validData]
+  experimentNames <- experimentNames[validData]
+  if(length(dataList) == 0) {
+    result <- data.frame(experiment=character(0))
+    attr(result, "missingExperiments") <- missingExperiments
+    return(result)
+  }
+  dataColumns <- unique(unlist(lapply(dataList, colnames), use.names=FALSE))
+
+  for(i in seq_along(dataList)) {
+    missingColumns <- setdiff(dataColumns, colnames(dataList[[i]]))
+    for(column in missingColumns) {
+      prototypePlot <- which(vapply(dataList, function(data) column %in% colnames(data), logical(1)))[[1]]
+      prototype <- dataList[[prototypePlot]][[column]]
+      dataList[[i]][[column]] <- prototype[rep(NA_integer_, nrow(dataList[[i]]))]
+    }
+    dataList[[i]] <- dataList[[i]][dataColumns]
+    dataList[[i]]$experiment <- experimentNames[[i]]
+  }
+  dataList <- lapply(dataList, function(data) data[c("experiment", dataColumns)])
+  result <- do.call(rbind, dataList)
+  row.names(result) <- NULL
+  attr(result, "missingExperiments") <- missingExperiments
+  result
+}
+
+.getExperimentColourValues <- function(experimentNames) {
+  experimentNames <- unique(as.character(experimentNames))
+  palette <- c(
+    "#0072B2", "#D55E00", "#009E73", "#56B4E9",
+    "#CC79A7", "#000000", "#F0E442", "#E69F00"
+  )
+  setNames(rep(palette, length.out=length(experimentNames)), experimentNames)
+}
+
+.getVariableLineTypeValues <- function(variableNames) {
+  variableNames <- unique(as.character(variableNames))
+  linetypes <- c("solid", "dashed", "dotted", "dotdash", "longdash", "twodash")
+  setNames(rep(linetypes, length.out=length(variableNames)), variableNames)
+}
+
+# All mapped aesthetics use the same label, so ggplotly preserves the group
+# directly instead of constructing tuples of experiment and metric names.
+.comparisonScaleValues <- function(data, values, column="variable") {
+  groups <- data[!duplicated(data$legendGroup), ]
+  setNames(unname(values[as.character(groups[[column]])]), groups$legendGroup)
+}
+
+.withComparisonLegend <- function(plot, data) {
+  attr(plot, "comparisonLegend") <- unlist(lapply(unique(data$experiment), function(experiment) {
+    unique(data$legendGroup[data$experiment == experiment])
+  }), use.names=FALSE)
+  plot
+}
+
+.applyComparisonLegend <- function(chart, ggplotPlot) {
+  groups <- attr(ggplotPlot, "comparisonLegend")
+  if(is.null(groups)) return(chart)
+  for(i in seq_along(chart$x$data)) {
+    if(identical(chart$x$data[[i]]$mode, "text")) {
+      chart$x$data[[i]]$showlegend <- FALSE
+      next
+    }
+    rank <- match(chart$x$data[[i]]$name, groups)
+    if(length(rank) != 1 || is.na(rank)) next
+    chart$x$data[[i]]$legendgroup <- groups[[rank]]
+    chart$x$data[[i]]$legendrank <- rank
+  }
+  layout(chart, legend=list(traceorder="normal", groupclick="togglegroup"))
+}
+
+.plotHasNoDataRows <- function(plot) {
+  if(length(plot$rawData)==0) plot$fetchRawData()
+  rawData <- plot$rawData
+  if(is.data.frame(rawData) && nrow(rawData)==0) return(TRUE)
+
+  data <- tryCatch(plot$data, error=function(e) NULL)
+  is.data.frame(data) && nrow(data)==0
+}
+
+.plotHasAnyComparisonData <- function(plot) {
+  plots <- c(list(plot), .getComparisonPlots(plot))
+  any(!vapply(plots, .plotHasNoDataRows, logical(1)))
+}
+
+.getFirstNonEmptyComparisonPlot <- function(plot) {
+  plots <- c(list(plot), .getComparisonPlots(plot))
+  nonEmpty <- which(!vapply(plots, .plotHasNoDataRows, logical(1)))
+  if(length(nonEmpty) == 0) return(plot)
+  plots[[nonEmpty[[1]]]]
+}
+
+.generateSingleComparisonPanel <- function(plot, title) {
+  originalCompPlots <- tryCatch(plot$compPlots, error=function(e) list())
+  plot$compPlots <- list()
+  on.exit({
+    plot$compPlots <- originalCompPlots
+  })
+
+  panel <- tryCatch({
+    if(.plotHasNoDataRows(plot)) {
+      errorPlot("No data to plot.")
+    } else if(class(plot$parentType$plottingFunction) == "uninitializedField") {
+      plot$.defaultGenerate()
+    } else {
+      rtn <- plot$parentType$plottingFunction(plot)
+      if(plot$parentType$interactive && !("plotly" %in% class(rtn))) {
+        rtn <- plot$parentType$ggplotlyWrapper(rtn)
+      }
+      rtn
+    }
+  },
+    error=function(e) {
+      flog.error(e)
+      errorPlot("Could not produce plot: Please check the logs.")
+    }
+  )
+
+  if(plot$parentType$category == "Timeseries" && "plotly" %in% class(panel)) {
+    return(panel)
+  }
+  addTitleToPlot(panel, title)
+}
+
+.prefixComparisonMapLegend <- function(panel, experimentName, experimentRank,
+                                       categorical=FALSE) {
+  if(!"plotly" %in% class(panel)) return(panel)
+  panel <- plotly_build(panel)
+
+  prefixColorbar <- function(colorbar) {
+    title <- colorbar$title
+    if(is.null(title)) return(colorbar)
+    if(is.list(title)) {
+      titleText <- .asScalarCharacterOrNa(title$text)
+      if(is.na(titleText) || startsWith(titleText, paste0(experimentName, ": "))) {
+        return(colorbar)
+      }
+      title$text <- paste0(experimentName, ": ", titleText)
+    } else {
+      titleText <- .asScalarCharacterOrNa(title)
+      if(is.na(titleText) || startsWith(titleText, paste0(experimentName, ": "))) {
+        return(colorbar)
+      }
+      colorbar$title <- paste0(experimentName, ": ", titleText)
+    }
+    colorbar
+  }
+
+  if(categorical && !is.null(panel$x$data)) {
+    categoryRanks <- integer(0)
+    for(i in seq_along(panel$x$data)) {
+      trace <- panel$x$data[[i]]
+      if(isFALSE(trace$showlegend)) next
+      traceName <- .asScalarCharacterOrNa(trace$name)
+      if(is.na(traceName) || !nzchar(traceName)) next
+      categoryKey <- .asScalarCharacterOrNa(trace$key)
+      if(is.na(categoryKey)) categoryKey <- .asScalarCharacterOrNa(trace$legendgroup)
+      if(is.na(categoryKey)) categoryKey <- traceName
+
+      if(!categoryKey %in% names(categoryRanks)) {
+        categoryRanks[[categoryKey]] <- length(categoryRanks) + 1L
+      }
+      panel$x$data[[i]]$name <- paste0(experimentName, ": ", traceName)
+      panel$x$data[[i]]$legendgroup <- paste(experimentName, categoryKey, sep=" :: ")
+      panel$x$data[[i]]$legendrank <- experimentRank * 100L + categoryRanks[[categoryKey]]
+      panel$x$data[[i]]$showlegend <- TRUE
+    }
+    if(is.null(panel$x$layout$legend)) panel$x$layout$legend <- list()
+    panel$x$layout$legend$traceorder <- "normal"
+    panel$x$layout$legend$groupclick <- "togglegroup"
+  } else {
+    for(i in seq_along(panel$x$data)) {
+      marker <- panel$x$data[[i]]$marker
+      if(!is.null(marker$colorbar)) {
+        panel$x$data[[i]]$marker$colorbar <- prefixColorbar(marker$colorbar)
+      }
+    }
+    coloraxisNames <- grep("^coloraxis[0-9]*$", names(panel$x$layout), value=TRUE)
+    for(coloraxisName in coloraxisNames) {
+      coloraxis <- panel$x$layout[[coloraxisName]]
+      if(!is.null(coloraxis$colorbar)) {
+        panel$x$layout[[coloraxisName]]$colorbar <- prefixColorbar(coloraxis$colorbar)
+      }
+    }
+  }
+  panel
+}
+
+.shareComparisonMapColorScale <- function(panels, experimentNames) {
+  colorValues <- unlist(lapply(panels, function(panel) {
+    unlist(lapply(panel$x$data, function(trace) {
+      color <- trace$marker$color
+      if(is.numeric(color)) color else numeric(0)
+    }), use.names=FALSE)
+  }), use.names=FALSE)
+  colorValues <- colorValues[is.finite(colorValues)]
+  if(length(colorValues)==0) return(panels)
+
+  colorMap <- .getSuitableColorScale(colorValues)
+  dataPal <- colorNumeric(palette=colorMap$palette, domain=colorMap$domain)
+  scaleColors <- grDevices::colorRampPalette(colorMap$palette)(25)
+  sharedColorscale <- cbind(
+    as.character(seq(0, 1, length.out=length(scaleColors))),
+    scaleColors
+  )
+
+  colorbarLocations <- list()
+  for(panelIndex in seq_along(panels)) {
+    for(traceIndex in seq_along(panels[[panelIndex]]$x$data)) {
+      marker <- panels[[panelIndex]]$x$data[[traceIndex]]$marker
+      if(!is.null(marker$colorbar)) {
+        colorbarLocations[[length(colorbarLocations)+1]] <- c(panelIndex, traceIndex)
+      }
+    }
+  }
+  if(length(colorbarLocations)==0) return(panels)
+  showscaleLocation <- which(vapply(colorbarLocations, function(location) {
+    isTRUE(panels[[location[[1]]]]$x$data[[location[[2]]]]$marker$showscale)
+  }, logical(1)))[1]
+  if(is.na(showscaleLocation)) showscaleLocation <- 1L
+  showscaleLocation <- colorbarLocations[[showscaleLocation]]
+
+  for(panelIndex in seq_along(panels)) {
+    for(traceIndex in seq_along(panels[[panelIndex]]$x$data)) {
+      trace <- panels[[panelIndex]]$x$data[[traceIndex]]
+      if(identical(trace$fill, "toself")) {
+        panels[[panelIndex]]$x$data[[traceIndex]]$fillcolor <- dataPal(trace$customdata$value)
+      }
+      marker <- trace$marker
+      if(!is.numeric(marker$color)) next
+      marker$cmin <- colorMap$domain[[1]]
+      marker$cmax <- colorMap$domain[[2]]
+      marker$colorscale <- sharedColorscale
+      if(!is.null(marker$colorbar)) {
+        isSharedColorbar <- panelIndex == showscaleLocation[[1]] &&
+          traceIndex == showscaleLocation[[2]]
+        marker$showscale <- isSharedColorbar
+        if(isSharedColorbar) {
+          title <- marker$colorbar$title
+          if(is.list(title)) {
+            titleText <- .asScalarCharacterOrNa(title$text)
+            experimentName <- experimentNames[[panelIndex]]
+            if(!is.na(titleText) && startsWith(titleText, paste0(experimentName, ": "))) {
+              title$text <- substring(titleText, nchar(experimentName) + 3L)
+              marker$colorbar$title <- title
+            }
+          } else {
+            titleText <- .asScalarCharacterOrNa(title)
+            experimentName <- experimentNames[[panelIndex]]
+            if(!is.na(titleText) && startsWith(titleText, paste0(experimentName, ": "))) {
+              marker$colorbar$title <- substring(titleText, nchar(experimentName) + 3L)
+            }
+          }
+        }
+      }
+      panels[[panelIndex]]$x$data[[traceIndex]]$marker <- marker
+    }
+  }
+  panels
+}
+
+.generateSideBySideComparisonPlot <- function(plot) {
+  plots <- c(list(plot), .getComparisonPlots(plot))
+  nonEmpty <- !vapply(plots, .plotHasNoDataRows, logical(1))
+  plots <- plots[nonEmpty]
+  if(length(plots) == 0) return(errorPlot("No data to plot."))
+  experimentNames <- c(
+    .getPlotExperimentName(plot, "primary"),
+    .getComparisonExperimentNames(plot)
+  )
+  experimentNames <- experimentNames[nonEmpty]
+
+  if(plot$parentType$name == "Hovmöller") {
+    values <- unlist(lapply(plots, function(p) p$data$fg_bias_total))
+    colourLimits <- range(values[is.finite(values)])
+    panels <- lapply(seq_along(plots), function(i) {
+      panel <- hovmollerTimeseriesPlottingFunction(plots[[i]], colourLimits,
+        showColorbar=i == length(plots))
+      if(!"plotly" %in% class(panel)) panel <- addTitleToPlot(panel, experimentNames[[i]])
+      panel
+    })
+  } else {
+    panels <- mapply(
+      FUN=.generateSingleComparisonPanel,
+      plot=plots,
+      title=experimentNames,
+      SIMPLIFY=FALSE
+    )
+  }
+
+  if(all(vapply(panels, function(panel) "plotly" %in% class(panel), logical(1)))) {
+    if(plot$parentType$category %in% c("Maps", "Average Maps")) {
+      panels <- lapply(seq_along(panels), function(i) {
+        .prefixComparisonMapLegend(
+          panels[[i]], experimentNames[[i]], i,
+          categorical=plot$parentType$name == "Observation Usage"
+        )
+      })
+      if(plot$parentType$name != "Observation Usage") {
+        panels <- .shareComparisonMapColorScale(panels, experimentNames)
+      }
+    }
+    if(plot$parentType$name == "Land-sea departures") {
+      panels <- lapply(seq_along(panels), function(i) {
+        panel <- plotly_build(panels[[i]])
+        for(j in seq_along(panel$x$data)) {
+          trace <- panel$x$data[[j]]
+          label <- paste0(experimentNames[[i]], ": ", trace$name)
+          panel$x$data[[j]]$name <- label
+          panel$x$data[[j]]$legendgroup <- label
+        }
+        panel
+      })
+    }
+    combined <- subplot(panels, nrows=1, shareX=FALSE, shareY=FALSE,
+      margin=0.04, titleX=TRUE, titleY=TRUE)
+    if(plot$parentType$category == "Timeseries") {
+      # Add experiment labels after subplot so nested panels retain them.
+      for(i in seq_along(panels)) {
+        combined <- add_annotations(combined,
+          text=experimentNames[[i]], showarrow=FALSE,
+          xref="paper", x=(i - 0.5) / length(panels), xanchor="center",
+          yref="paper", y=1.02, yanchor="bottom", font=list(size=20)
+        )
+      }
+      combined <- layout(combined, margin=list(t=150))
+      attr(combined, "yTitle") <- 1.1
+    }
+    if(plot$parentType$category %in% c("Maps", "Average Maps")) {
+      domains <- lapply(seq_along(panels), function(i) {
+        panelCount <- length(panels)
+        start <- if(i == 1) 0 else 0.02 + (i - 1) * 0.96 / panelCount
+        end <- if(i == panelCount) 1 else 0.02 + i * 0.96 / panelCount
+        c(start, end)
+      })
+      geoLayout <- setNames(lapply(seq_along(domains), function(i) {
+        list(domain=list(x=domains[[i]]))
+      }), if(length(domains) == 1) "geo" else c("geo", paste0("geo", seq.int(2, length(domains)))))
+      combined <- do.call(layout, c(list(p=combined, margin=list(t=150)), geoLayout))
+      attr(combined, "yTitle") <- 1.1
+    }
+    return(combined)
+  }
+
+  grid.arrange(grobs=panels, ncol=length(panels))
+}
+
 plotTypeClass <- setRefClass(Class="obsmonPlotType",
   fields=list(
     name="character",
@@ -164,7 +647,7 @@ plotTypeClass <- setRefClass(Class="obsmonPlotType",
       # Convert ggplot2 object ggplotPlot into a plotly object using
       # plotly's ggplotly function, and then apply some customisations
       plotlyPlot <- tryCatch({
-        ggplotly(ggplotPlot, tooltip=c("x","y")) %>%
+        .applyComparisonLegend(ggplotly(ggplotPlot, tooltip=c("x","y")), ggplotPlot) %>%
           layout(
             margin=list(t=100),
             legend=list(orientation="v", yanchor="center", y=0.5)
@@ -283,6 +766,10 @@ plotTypeClass <- setRefClass(Class="obsmonPlotType",
     if(is(component, "envRefClass")) {
       # Parse recursively so that we also handle the special cases listed above
       componentsHash <- .refClassObjHash(component)
+    } else if(is.list(component)) {
+      componentsHash <- digest::digest(lapply(component, function(item) {
+        if(is(item, "envRefClass")) .refClassObjHash(item) else digest::digest(item)
+      }))
     } else {
       componentsHash <- digest::digest(component)
     }
@@ -298,6 +785,8 @@ obsmonPlotClass <- setRefClass(Class="obsmonPlot",
     paramsAsInUiInput="list",
     rawData="data.frame",
     modelDomain="domain",
+    compPlots="ANY",
+    primaryExperimentName="ANY",
     ##############################
     chart = function(newValue) {
       if(missing(newValue)) {
@@ -329,6 +818,22 @@ obsmonPlotClass <- setRefClass(Class="obsmonPlot",
         flog.debug("Cannot set dataWithUnits. Ignoring assignment.")
       }
     },
+    queryDataWithUnits = function(newValue) {
+      if(missing(newValue)) {
+        if(!.plotHasComparison(.self)) return(.self$dataWithUnits)
+        .combineAnyDataByExperiment(.self, function(plot) plot$dataWithUnits)
+      } else {
+        flog.debug("Cannot set queryDataWithUnits. Ignoring assignment.")
+      }
+    },
+    queryRawData = function(newValue) {
+      if(missing(newValue)) {
+        if(!.plotHasComparison(.self)) return(.self$rawData)
+        .combineAnyDataByExperiment(.self, function(plot) plot$rawData)
+      } else {
+        flog.debug("Cannot set queryRawData. Ignoring assignment.")
+      }
+    },
     sqliteQuery = function(...) {.self$.getSqliteQuery()},
     paramsAsInSqliteDbs = function(...) {
       .self$parentType$getSqliteParamsFromUiParams(.self$paramsAsInUiInput)
@@ -339,6 +844,16 @@ obsmonPlotClass <- setRefClass(Class="obsmonPlot",
     .cache="list"
   ),
   methods=list(
+    initialize = function(...) {
+      callSuper(...)
+      if (inherits(.self$primaryExperimentName, "uninitializedField") || is.null(.self$primaryExperimentName)) {
+        .self$primaryExperimentName <- character(0)
+      }
+      if (inherits(.self$compPlots, "uninitializedField") || is.null(.self$compPlots)) {
+        .self$compPlots <- list()
+      }
+    },
+
     fetchRawData = function(...) {
       flog.trace("Fetching raw data for plot '%s'...", .self$title)
       fetchedData <- performQuery(
@@ -359,18 +874,15 @@ obsmonPlotClass <- setRefClass(Class="obsmonPlot",
     },
 
     exportData = function(file, format, raw=FALSE) {
+      comparison <- .plotHasComparison(.self)
       if(raw) {
-        dataToBeExported <- .self$rawData
+        dataToBeExported <- .self$queryRawData
       } else {
-        dataToBeExported <- .self$data
+        dataToBeExported <- drop_units(.self$queryDataWithUnits)
       }
 
       format <- tolower(format)
-      if(format=="csv") {
-        write.csv(dataToBeExported, file, row.names=FALSE)
-      } else if (format=="txt") {
-        write.table(dataToBeExported, file, sep="\t", row.names=FALSE)
-      } else {
+      if(!format %in% c("csv", "txt")) {
         flog.error("Format '%s' not supported.", format)
         return(NULL)
       }
@@ -384,7 +896,25 @@ obsmonPlotClass <- setRefClass(Class="obsmonPlot",
         paste0("# ", .self$sqliteQuery, "\n"),
         paste("\n")
       )
-      write(paste0("\n", dataInfo), file, append=TRUE)
+      if(!comparison) {
+        if(format=="csv") {
+          write.csv(dataToBeExported, file, row.names=FALSE)
+        } else {
+          write.table(dataToBeExported, file, sep="\t", row.names=FALSE)
+        }
+        write(paste0("\n", dataInfo), file, append=TRUE)
+      } else {
+        # Comparison downloads put metadata first, followed by the table whose
+        # leading experiment column identifies each row.
+        writeLines(dataInfo, file)
+        if(format=="csv") {
+          write.table(dataToBeExported, file, sep=",", row.names=FALSE,
+            col.names=TRUE, append=TRUE, qmethod="double")
+        } else {
+          write.table(dataToBeExported, file, sep="\t", row.names=FALSE,
+            col.names=TRUE, append=TRUE)
+        }
+      }
     },
 
     ############################
@@ -399,9 +929,12 @@ obsmonPlotClass <- setRefClass(Class="obsmonPlot",
       }
 
       plot <- tryCatch({
-        if(nrow(.self$data)==0) {
+        if(.plotHasNoDataRows(.self) &&
+          (!.plotHasComparison(.self) || !.plotHasAnyComparisonData(.self))) {
           rtn <- errorPlot("Could not produce plot: No data.")
-        }else if(class(.self$parentType$plottingFunction) == "uninitializedField") {
+        } else if(.plotHasComparison(.self) && !.plotUsesJointComparison(.self)) {
+          rtn <- .generateSideBySideComparisonPlot(.self)
+        } else if(class(.self$parentType$plottingFunction) == "uninitializedField") {
           rtn <- .self$.defaultGenerate()
         } else {
           rtn <- .self$parentType$plottingFunction(.self)
@@ -427,6 +960,7 @@ obsmonPlotClass <- setRefClass(Class="obsmonPlot",
 
     .generateLeafletMap = function() {
       rtn <- tryCatch({
+        if(.plotHasComparison(.self)) return(NULL)
         if(class(.self$parentType$leafletPlottingFunction) != "uninitializedField") {
           .self$parentType$leafletPlottingFunction(.self)
         } else {
@@ -599,7 +1133,16 @@ obsmonPlotClass <- setRefClass(Class="obsmonPlot",
       sqliteParams <- .self$paramsAsInSqliteDbs
 
       rtn <- ""
-      if(length(.self$paramsAsInUiInput$experiment) > 0) {
+      hasComp <- .plotHasComparison(.self)
+      if(hasComp) {
+        primaryExptName <- .getPlotExperimentName(.self, "primary")
+        compExperimentNames <- .getComparisonExperimentNames(.self)
+        rtn <- paste0(
+          primaryExptName, " vs ",
+          paste(compExperimentNames, collapse=", "),
+          ": "
+        )
+      } else if(length(.self$paramsAsInUiInput$experiment) > 0) {
         rtn <- paste0(.self$paramsAsInUiInput$experiment, ": ")
       }
 
@@ -776,7 +1319,7 @@ addTitleToPlot <- function(myPlot, title) {
     return(myPlot)
   }
   newPlot <- tryCatch({
-    if(is.ggplot(myPlot)) {
+    if(inherits(myPlot, "ggplot")) {
       myPlot + ggtitle(title) + theme(plot.title=element_text(hjust=0.5))
     } else if("plotly" %in% class(myPlot)) {
       yTitle <- attr(myPlot, "yTitle")

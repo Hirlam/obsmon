@@ -1,4 +1,4 @@
-getSdBarData <- function(plotData) {
+getSdBarData <- function(plotData, keepZeroSd=FALSE) {
     # Identify columns in the data for properties with mean & sd info
     propertiesWithMeanAndSd <- c()
     for(colname in colnames(plotData)) {
@@ -33,20 +33,22 @@ getSdBarData <- function(plotData) {
       rownames(sdBarData) <- NULL
       sdBarData$property <- paste0(sdBarData$property, "_sd")
 
-      # Error bars with zero width are just clutter. Removing these.
-      sdBarData <- sdBarData[sdBarData$sd > 0, ]
+      # Comparison bars retain zero-sd rows to keep their dodge slots.
+      if(!keepZeroSd) sdBarData <- sdBarData[sdBarData$sd > 0, ]
       if(nrow(sdBarData) == 0) sdBarData <- NULL
     }
     return(sdBarData)
 }
 
-addErrorbar <- function(obplot, sdBarData, strObnumber) {
+addErrorbar <- function(obplot, sdBarData, strObnumber, hasComp=FALSE) {
   # Return obplot with added error bars
   if(strObnumber %in% c("1", "4", "9")) {
     xvar <- "variable"
     sdBarData$variable <- sub("_sd$", "_mean", sdBarData$property)
     # Reduce opacity of geom_bar to facilitate visualisation of errorbar
-    obplot <- obplot + aes(alpha=0.9)
+    if (!hasComp) {
+      obplot <- obplot + aes(alpha=0.9)
+    }
     errorbarWidth <- 0.2
   } else {
     xvar <- "level"
@@ -62,38 +64,111 @@ addErrorbar <- function(obplot, sdBarData, strObnumber) {
     errorbarWidth <- min(0.25 * maxRange, 0.2)
   }
 
-
-  obplot <- obplot +
-    geom_errorbar(
-      data=sdBarData,
-      inherit.aes=FALSE,
-      show.legend=TRUE,
-      width=errorbarWidth,
-      mapping=aes_string(
-        x=xvar,
-        y="mean",
-        ymin="mean - sd",
-        ymax="mean + sd",
-        group="property",
-        colour="property",
-        # Shape and fill are not used by geom_errorbar, but if we don't
-        # add these here then the legend is formatted strangely after
-        # making the plot interactive with ggplotly
-        shape="property",
-        fill="property"
+  if (hasComp) {
+    sdBarData$legendGroup <- paste(sdBarData$experiment,
+      sub("_sd$", "_mean", sdBarData$property), sep=": ")
+    if(strObnumber %in% c("1", "4", "9")) {
+      obplot <- obplot +
+        geom_errorbar(
+          data=sdBarData,
+          inherit.aes=TRUE,
+          show.legend=TRUE,
+          width=errorbarWidth,
+          na.rm=TRUE,
+          mapping=aes(
+            x=variable,
+            y=mean,
+            ymin=ifelse(sd == 0, NA_real_, mean - sd),
+            ymax=ifelse(sd == 0, NA_real_, mean + sd),
+            group=experiment,
+            colour=experiment
+          ),
+          position=position_dodge(width=0.8, preserve="single")
+        )
+    } else {
+      obplot <- obplot +
+        geom_errorbar(
+          data=sdBarData,
+          inherit.aes=TRUE,
+          show.legend=TRUE,
+          width=errorbarWidth,
+          mapping=aes(
+            x=level,
+            y=mean,
+            ymin=mean - sd,
+            ymax=mean + sd,
+            group=legendGroup,
+            colour=legendGroup
+          )
+        )
+    }
+  } else {
+    obplot <- obplot +
+      geom_errorbar(
+        data=sdBarData,
+        inherit.aes=FALSE,
+        show.legend=TRUE,
+        width=errorbarWidth,
+        mapping=aes_string(
+          x=xvar,
+          y="mean",
+          ymin="mean - sd",
+          ymax="mean + sd",
+          group="property",
+          colour="property",
+          # Shape and fill are not used by geom_errorbar, but if we don't
+          # add these here then the legend is formatted strangely after
+          # making the plot interactive with ggplotly
+          shape="property",
+          fill="property"
+        )
       )
-    )
+  }
   return(obplot)
 }
 
 firstGuessAndAnPlottingFunction <-  function(plot) {
   sqliteParams <- plot$paramsAsInSqliteDbs
-  plotData <- plot$data
+  hasComp <- .plotHasComparison(plot)
+  if(!.plotHasAnyComparisonData(plot)) return(errorPlot("No data to plot."))
+  metadataPlot <- .getFirstNonEmptyComparisonPlot(plot)
 
-  # Separate main plot data from data used to draw error bars, as these
-  # are formatted differently and handled separately.
-  sdBarData <- getSdBarData(plotData)
-  mainPlotData <- melt(plotData, id="level")
+  if (hasComp) {
+    plots <- c(list(plot), .getComparisonPlots(plot))
+    experimentNames <- c(
+      .getPlotExperimentName(plot, "primary"),
+      .getComparisonExperimentNames(plot)
+    )
+    sdBarDataList <- list()
+    for(i in seq_along(plots)) {
+      oneSdBarData <- getSdBarData(plots[[i]]$data,
+        keepZeroSd=as.character(sqliteParams$obnumber) %in% c("1", "4", "9"))
+      if(is.null(oneSdBarData)) next
+      oneSdBarData$experiment <- experimentNames[[i]]
+      sdBarDataList[[length(sdBarDataList)+1]] <- oneSdBarData
+    }
+
+    if(length(sdBarDataList)>0) {
+      sdBarData <- do.call(rbind, sdBarDataList)
+    } else {
+      sdBarData <- NULL
+    }
+
+    plotData <- metadataPlot$data
+    combinedPlotData <- .combinePlotDataByExperiment(plot)
+    mainPlotData <- melt(combinedPlotData, id=c("level", "experiment"))
+  } else {
+    plotData <- metadataPlot$data
+    sdBarData <- getSdBarData(plotData)
+    mainPlotData <- melt(plotData, id="level")
+    primaryExperimentName <- .asScalarCharacterOrNa(plot$primaryExperimentName)
+    if(is.na(primaryExperimentName)) primaryExperimentName <- "primary"
+    mainPlotData$experiment <- primaryExperimentName
+  }
+
+  if(hasComp) {
+    mainPlotData$legendGroup <- paste(mainPlotData$experiment, mainPlotData$variable, sep=": ")
+  }
   dataIsStdMask <- endsWith(as.character(mainPlotData$variable), "_sd")
   mainPlotData <- mainPlotData[!dataIsStdMask, ]
 
@@ -149,81 +224,112 @@ firstGuessAndAnPlottingFunction <-  function(plot) {
         varname <- sqliteParams$varname
         xlab <- varname
 
-        if(any(startsWith(colnames(plotData), "fg_dep"))) {
+        if(any(startsWith(colnames(metadataPlot$data), "fg_dep"))) {
           ylab <- "Departure"
           colnameStartToGetUnits <- "fg_dep"
         } else {
           ylab <- "Bias/RMS"
           colnameStartToGetUnits <- "fg_bias"
         }
-        for(colname in colnames(plot$dataWithUnits)) {
+        for(colname in colnames(metadataPlot$dataWithUnits)) {
           if(startsWith(colname, colnameStartToGetUnits)) {
-            ylabUnits <- units(plot$dataWithUnits[[colname]])
+            ylabUnits <- units(metadataPlot$dataWithUnits[[colname]])
             ylab <- sprintf("%s (%s)", ylab, ylabUnits)
             break
           }
         }
 
         # Main plot, without stdev data. These will be plotted as errorbars
-        obplot <- ggplot(data=mainPlotData) +
-          aes(
-            x=variable,
-            y=value,
-            group=variable,
-            color=variable,
-            fill=variable,
-            # shape is not used in geom_bar, but if we don't add this here
-            # then the legend becomes strange after using ggplotly
-            shape=variable
-          ) +
-          geom_bar(stat="identity") +
-          scale_colour_manual(name=NULL, values=dataCol2ScaleFillColor) +
-          scale_fill_manual(name=NULL, values=dataCol2ScaleFillColor) +
-          theme(legend.title=element_blank()) +
-          labs(x=xlab, y=ylab)
+        if (hasComp) {
+          experimentColours <- .getExperimentColourValues(mainPlotData$experiment)
+          obplot <- ggplot(data=mainPlotData) +
+            aes(
+              x=variable,
+              y=value,
+              color=experiment,
+              fill=experiment,
+              group=experiment
+            ) +
+            geom_bar(
+              stat="identity",
+              position=position_dodge(width=0.8, preserve="single"),
+              width=0.7
+            ) +
+            scale_colour_manual(name="Experiment", values=experimentColours) +
+            scale_fill_manual(name="Experiment", values=experimentColours) +
+            labs(x=xlab, y=ylab)
+        } else {
+          obplot <- ggplot(data=mainPlotData) +
+            aes(
+              x=variable,
+              y=value,
+              group=variable,
+              color=variable,
+              fill=variable,
+              shape=variable
+            ) +
+            geom_bar(stat="identity") +
+            scale_colour_manual(name=NULL, values=dataCol2ScaleFillColor) +
+            scale_fill_manual(name=NULL, values=dataCol2ScaleFillColor) +
+            theme(legend.title=element_blank()) +
+            labs(x=xlab, y=ylab)
+        }
       },
       {
-        yLabUnits <- units(plot$dataWithUnits[[mainPlotData[["variable"]][1]]])
+        yLabUnits <- units(metadataPlot$dataWithUnits[[mainPlotData[["variable"]][1]]])
         if(strObnumber=="7") {
           # Mind that channels appear as "level" in the databases
           xlab <- "Channel"
           ylab <- "Brightness Temperature"
         } else {
           varname <- sqliteParams$varname
-          xlab <- sprintf("Level [%s]", units(plot$dataWithUnits$level))
+          xlab <- sprintf("Level [%s]", units(metadataPlot$dataWithUnits$level))
           ylab <- varname
         }
         ylab <- sprintf("%s [%s]", ylab, yLabUnits)
 
         # Main data in plot
-        obplot <- ggplot(data=mainPlotData) +
-          aes_string(x="level", y="value",
-            group="variable", colour="variable",
-            shape="variable", fill="variable"
-          ) +
-          # Add geom_point before geom_line so that plotly includes the shapes
-          # in the legend. See comment on xlim below.
-          geom_point(size=4) +
-          geom_line() +
-          scale_shape_manual(name=NULL, values=dataCol2Shape) +
-          scale_colour_manual(name=NULL, values=dataCol2FillColor) +
-          scale_fill_manual(name=NULL, values=dataCol2FillColor) +
-          coord_flip_wrapper(default=TRUE) +
-          labs(x=xlab, y=ylab)
+        if (hasComp) {
+          experimentColours <- .getExperimentColourValues(mainPlotData$experiment)
+          legendColours <- .comparisonScaleValues(mainPlotData, experimentColours, "experiment")
+          legendShapes <- .comparisonScaleValues(mainPlotData, dataCol2Shape)
+          legendLinetypes <- .comparisonScaleValues(mainPlotData,
+            .getVariableLineTypeValues(mainPlotData$variable))
+          obplot <- ggplot(data=mainPlotData) +
+            aes(x=level, y=value, group=legendGroup, colour=legendGroup,
+              linetype=legendGroup, shape=legendGroup, fill=legendGroup) +
+            geom_line(size=0.85) +
+            geom_point(size=2.8) +
+            scale_shape_manual(name=NULL, values=legendShapes) +
+            scale_colour_manual(name=NULL, values=legendColours) +
+            scale_fill_manual(name=NULL, values=legendColours) +
+            scale_linetype_manual(name=NULL, values=legendLinetypes) +
+            coord_flip_wrapper(default=TRUE) +
+            labs(x=xlab, y=ylab)
+        } else {
+          obplot <- ggplot(data=mainPlotData) +
+            aes_string(x="level", y="value",
+              group="variable", colour="variable",
+              shape="variable", fill="variable"
+            ) +
+            geom_point(size=4) +
+            geom_line() +
+            scale_shape_manual(name=NULL, values=dataCol2Shape) +
+            scale_colour_manual(name=NULL, values=dataCol2FillColor) +
+            scale_fill_manual(name=NULL, values=dataCol2FillColor) +
+            coord_flip_wrapper(default=TRUE) +
+            labs(x=xlab, y=ylab)
+        }
 
         if(strObnumber=="7") {
-          obplot <- obplot + scale_x_continuous(breaks=plotData$level)
+          obplot <- obplot + scale_x_continuous(breaks=metadataPlot$data$level)
         } else {
-          if(ud_are_convertible(units(plot$dataWithUnits$level), "Pa")) {
-            # Using xlim causes ggplotly to omit either the shape or the line
-            # (whichever is added later) from the legend. Not a big deal,
-            # but worth pointing out, as this but may be solved in later
-            # releases of the plotly package
-            units(refPressures) <- units(plot$dataWithUnits$level)
+          if(ud_are_convertible(units(metadataPlot$dataWithUnits$level), "Pa")) {
+            units(refPressures) <- units(metadataPlot$dataWithUnits$level)
             obplot <- obplot +
               xlim(max(drop_units(refPressures), mainPlotData[["level"]]), 0)
-          } else if(ud_are_convertible(units(plot$dataWithUnits$level), "meters")) {
-            units(refHeights) <- units(plot$dataWithUnits$level)
+          } else if(ud_are_convertible(units(metadataPlot$dataWithUnits$level), "meters")) {
+            units(refHeights) <- units(metadataPlot$dataWithUnits$level)
             obplot <- obplot +
               xlim(0, max(drop_units(refHeights), mainPlotData[["level"]]))
           }
@@ -236,13 +342,17 @@ firstGuessAndAnPlottingFunction <-  function(plot) {
     withCallingHandlers(
       # Suppress warnings about the use of shape and fill aesthetics.
       # See comment in the addErrorbar routine.
-      obplot <- addErrorbar(obplot, sdBarData, strObnumber),
+      obplot <- addErrorbar(obplot, sdBarData, strObnumber, hasComp),
       warning = function(w) {
         if (startsWith(conditionMessage(w), "Ignoring unknown aesthetics:")) {
           invokeRestart("muffleWarning")
         }
       }
     )
+  }
+  if(hasComp) {
+    if(strObnumber %in% c("1", "4", "9")) mainPlotData$legendGroup <- mainPlotData$experiment
+    obplot <- .withComparisonLegend(obplot, mainPlotData)
   }
   return(obplot)
 }

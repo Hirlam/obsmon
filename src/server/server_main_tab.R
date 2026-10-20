@@ -569,3 +569,134 @@ observeEvent(validateLevelUnits(), {
     }
   )
 })
+
+############################################################################
+#              Comparison experiment: server-side observers                #
+############################################################################
+# Populate comparison experiment choices (same list as primary)
+.removeChoiceValue <- function(choices, value) {
+  if(length(value)==0) return(choices)
+  if(is.list(choices)) {
+    choices <- lapply(choices, .removeChoiceValue, value=value)
+    choices <- choices[lengths(choices)>0]
+    return(choices)
+  }
+  choices[choices != value]
+}
+
+.getSelectedCompExperimentSlots <- function(input) {
+  selected <- as.character(c(input$compExperiment, input$compExperiment2))
+  valid <- !is.na(selected) & nzchar(selected)
+  selected <- selected[valid]
+  slots <- which(valid)
+  keep <- !duplicated(selected)
+  list(slot=slots[keep], experiment=selected[keep])
+}
+
+observeEvent({
+  exptChoices()
+  input$experiment
+  input$compExperiment
+  input$compExperiment2
+}, {
+  firstChoices <- .removeChoiceValue(exptChoices(), input$experiment)
+  firstChoices <- .removeChoiceValue(firstChoices, input$compExperiment2)
+  firstSelected <- intersect(input$compExperiment, unlist(firstChoices))
+  updatePickerInput(session, "compExperiment", choices=firstChoices, selected=firstSelected)
+
+  secondChoices <- .removeChoiceValue(exptChoices(), input$experiment)
+  secondChoices <- .removeChoiceValue(secondChoices, input$compExperiment)
+  secondChoices <- c("None"="", secondChoices)
+  secondSelected <- intersect(input$compExperiment2, unlist(secondChoices))
+  updatePickerInput(session, "compExperiment2", choices=secondChoices, selected=secondSelected)
+},
+  ignoreNULL=FALSE
+)
+
+output$compExperimentAvailability <- renderUI({
+  req(isTRUE(input$enableComparison))
+  choices <- .removeChoiceValue(exptChoices(), input$experiment)
+  nChoices <- length(unlist(choices))
+  if(nChoices >= 2) return(NULL)
+
+  tags$small(
+    class="text-muted",
+    sprintf(
+      "Only %d comparison experiment%s available.",
+      nChoices,
+      ifelse(nChoices==1, " is", "s are")
+    )
+  )
+})
+
+.compOdbBaseInputId <- function(index) {
+  paste0("compOdbBase_", index)
+}
+
+.getCompDbChoices <- function(expt) {
+  choices <- unlist(lapply(expt$dbs, function(db) {
+    if(isTRUE(dir.exists(db$dir))) db$dbType
+  }))
+  names(choices) <- unlist(lapply(choices, dbType2DbDescription))
+  if(length(choices)==0) {
+    choices <- c("ERROR: No usable database!"=" ")
+  }
+  choices
+}
+
+output$compOdbBaseChoices <- renderUI({
+  req(isTRUE(input$enableComparison))
+  compSelections <- .getSelectedCompExperimentSlots(input)
+  if(length(compSelections$experiment)==0) return(NULL)
+
+  tags$div(lapply(seq_along(compSelections$experiment), function(i) {
+    slot <- compSelections$slot[[i]]
+    compExperiment <- compSelections$experiment[[i]]
+    expt <- expts[[compExperiment]]
+    if(is.null(expt)) return(NULL)
+
+    id <- .compOdbBaseInputId(slot)
+    choices <- .getCompDbChoices(expt)
+    selected <- isolate(input[[id]])
+    if(length(selected) != 1 || !selected %in% choices) selected <- NULL
+    pickerInput(
+      inputId=id,
+      label=sprintf("%s Database", compExperiment),
+      choices=choices,
+      selected=selected
+    )
+  }))
+})
+
+# Reactive for the comparison experiments' active databases
+compActiveDbs <- reactive({
+  req(isTRUE(input$enableComparison))
+  compSelections <- .getSelectedCompExperimentSlots(input)
+  if(length(compSelections$experiment)==0) return(list())
+
+  compDbs <- list()
+  for(i in seq_along(compSelections$experiment)) {
+    slot <- compSelections$slot[[i]]
+    compExperiment <- compSelections$experiment[[i]]
+    expt <- expts[[compExperiment]]
+    compDb <- NULL
+    if(!is.null(expt)) {
+      availableDbs <- .getCompDbChoices(expt)
+      if(length(availableDbs)>0 && !identical(unname(availableDbs[[1]]), " ")) {
+        compOdbBase <- input[[.compOdbBaseInputId(slot)]]
+        if(is.null(compOdbBase) || length(compOdbBase)==0 || !nzchar(compOdbBase)) {
+          compOdbBase <- unname(availableDbs[[1]])
+        }
+        if(length(compOdbBase)>0 && nzchar(compOdbBase) && compOdbBase!=" ") {
+          compDb <- expt$dbs[[compOdbBase]]
+        }
+      }
+    }
+
+    compDbs[[length(compDbs)+1]] <- list(
+      experimentName=compExperiment,
+      db=compDb
+    )
+  }
+  compDbs
+}) %>% throttle(100)

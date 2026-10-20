@@ -263,6 +263,30 @@ mainTab <- function() {fluidPage(
           )
         )
       ),
+      tags$hr(),
+      materialSwitch(
+        inputId='enableComparison',
+        label='Compare with other experiments',
+        status='primary',
+        inline=TRUE,
+        right=TRUE
+      ),
+      conditionalPanel(
+        condition = "input.enableComparison == true",
+        pickerInput("compExperiment",
+          label="Comparison Experiment 1",
+          choices=c(),
+          options=list(`live-search`=TRUE, size=10)
+        ),
+        pickerInput("compExperiment2",
+          label="Comparison Experiment 2 (optional)",
+          choices=c(),
+          options=list(`live-search`=TRUE, size=10)
+        ),
+        uiOutput("compExperimentAvailability"),
+        uiOutput("compOdbBaseChoices"),
+        helpText("Compared maps appear in the Plot tab. The interactive Map tab is available for a single experiment.")
+      ),
       actionButton("doPlot", "Plot", width="100%",
         icon("ok", lib="glyphicon")
       ),
